@@ -24,8 +24,10 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         queryWithParser(pp, "input_file", m_input_file_path);
         queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
-        m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-        GetEnvelopeFromFileHelper(laser_geom_3D);
+        if (Hipace::HeadRank()) {
+            m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
+            GetEnvelopeFromFileHelper(laser_geom_3D);
+        }
         return;
     }
     else if (m_laser_init_type == "gaussian"){

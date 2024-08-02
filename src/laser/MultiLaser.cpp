@@ -159,15 +159,6 @@ MultiLaser::InitData ()
         m_rhs_mg.resize(amrex::grow(m_slice_box, amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
     }
 
-#ifdef AMREX_USE_MPI
-        // need to communicate m_lambda0 as it is read in from the input file only by the head rank
-        MPI_Bcast(&m_lambda0,
-            1,
-            amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
-            Hipace::HeadRankID(),
-            amrex::ParallelDescriptor::Communicator());
-#endif
-
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
@@ -848,6 +839,15 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
                 AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0,
                 "The central wavelength of laser from openPMD file and other lasers must be identical");
+                m_lambda0 = laser.m_lambda0_from_file;
+                 #ifdef AMREX_USE_MPI
+                // need to communicate m_lambda0 as it is read in from the input file only by the head rank
+                MPI_Bcast(&m_lambda0,
+                1,
+                amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
+                Hipace::HeadRankID(),
+                amrex::ParallelDescriptor::Communicator());
+                #endif
             }
             if (laser.m_laser_init_type == "parser") {
                 amrex::Print()<<"load "+  laser.m_name + "from parser";
