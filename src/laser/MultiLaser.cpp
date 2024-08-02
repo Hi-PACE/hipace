@@ -828,12 +828,11 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             if (laser.m_laser_init_type == "from_file"){
-                amrex::Print()<<"load "+  laser.m_name + "from file";
                 amrex::Box src_box = m_slice_box;
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 //m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                const& arr_ff = laser.m_F_input_file.array();
+                amrex::Array4<amrex::Real> const& arr_ff = laser.m_F_input_file.array();
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -859,7 +858,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 #endif
             }
             if (laser.m_laser_init_type == "parser") {
-                amrex::Print()<<"load "+  laser.m_name + "from parser";
                 auto profile_real = laser.m_profile_real;
                 auto profile_imag = laser.m_profile_imag;
                 amrex::ParallelFor(
@@ -879,7 +877,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 );
             }
             else if (laser.m_laser_init_type == "gaussian") {
-                amrex::Print()<<"load "+  laser.m_name + "from gaussian";
                 const amrex::Real a0 = laser.m_a0;
                 const amrex::Real w0 = laser.m_w0;
                 const amrex::Real cep = laser.m_CEP;
