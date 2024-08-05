@@ -833,10 +833,13 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 src_box.setBig(2, islice);
                 //m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
                 //amrex::Array4<amrex::Real const> const arr_ff = laser.m_F_input_file.const_array();
-                //amrex::MultiFab copy_m_slices;
-                m_slices[0].Add<amrex::RunOn::Device>(m_slices, laser.m_F_input_file, 0, 0, comp, 2);
+                 //m_slices[0].Add<amrex::RunOn::Device>(m_slices, laser.m_F_input_file, 0, 0, comp, 2);
                 //m_slice.ParallelAdd(alias_m_slice, 0, 0);
-                /*
+                amrex::MultiFab copy_m_slices;
+                copy_m_slices.define(
+                    m_laser_slice_ba, m_laser_slice_dm, WhichLaserSlice::N, m_slices_nguards,
+                    amrex::MFInfo().SetArena(amrex::The_Arena()));
+                copy_m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
                 amrex::Array4<amrex::Real const> const arr_ff = copy_m_slices.const_array(mfi);
                 amrex::ParallelFor(
                 bx,
@@ -849,8 +852,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     arr(i, j, k, comp ) += arr_ff(i, j, k, comp );
                     arr(i, j, k, comp + 1 ) += arr_ff(i, j, k, comp + 1 );
                 }
-                );
-                */
+                )
                 AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0 && m_lambda0 != 0,
                 "The central wavelength of laser from openPMD file and other lasers must be identical");
                 m_lambda0 = laser.m_lambda0_from_file;
