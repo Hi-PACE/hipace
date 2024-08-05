@@ -832,7 +832,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 src_box.setSmall(2, islice);
                 src_box.setBig(2, islice);
                 //m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                amrex::Array4<amrex::Real> const& arr_ff = laser.m_F_input_file.array();
+                amrex::Array4<amrex::Real> & arr_ff = laser.m_F_input_file.array();
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -842,10 +842,10 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     arr(i, j, k, comp ) += arr_ff(i, j, k, comp );
-                    arr(i, j, k, comp + 1 ) += arr_ff(i, j, k, comp+1 );
+                    arr(i, j, k, comp + 1 ) += arr_ff(i, j, k, comp + 1 );
                 }
                 );
-                AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0,
+                AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0 && m_lambda0 != 0,
                 "The central wavelength of laser from openPMD file and other lasers must be identical");
                 m_lambda0 = laser.m_lambda0_from_file;
                  #ifdef AMREX_USE_MPI
