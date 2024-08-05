@@ -834,7 +834,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 //m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
                 //amrex::Array4<amrex::Real const> const arr_ff = laser.m_F_input_file.const_array();
                 //amrex::MultiFab copy_m_slices;
-                m_slices[0].add<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
+                m_slices[0].Add<amrex::RunOn::Device>(m_slices, laser.m_F_input_file, 0, 0, comp, 2);
                 //m_slice.ParallelAdd(alias_m_slice, 0, 0);
                 /*
                 amrex::Array4<amrex::Real const> const arr_ff = copy_m_slices.const_array(mfi);
