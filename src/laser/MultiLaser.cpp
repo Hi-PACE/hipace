@@ -835,7 +835,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 //amrex::Array4<amrex::Real const> const arr_ff = laser.m_F_input_file.const_array();
                 amrex::MultiFab alias_m_slices (m_slices, amrex::make_alias, 0, comp);
                 alias_m_slices[0].copy<amrex::RunOn::Device>(laser.m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-                amrex::Array4<amrex::Real const> const arr_ff = alias_m_slices.const_array(mfi);
+                m_slice.ParallelAdd(alias_m_slice, 0, 0);
+                /*amrex::Array4<amrex::Real const> const arr_ff = alias_m_slices.const_array(mfi);
+
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -859,6 +861,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 Hipace::HeadRankID(),
                 amrex::ParallelDescriptor::Communicator());
                 #endif
+                */
 
             }
             if (laser.m_laser_init_type == "parser") {
