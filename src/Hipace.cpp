@@ -100,9 +100,6 @@ Hipace::Hipace () :
         m_max_time = std::copysign(m_max_time, m_dt);
     }
     queryWithParser(pph, "max_time", m_max_time);
-    if (str_dt != "adaptive") {
-        AMREX_ALWAYS_ASSERT(std::signbit(m_dt) == std::signbit(m_max_time));
-    }
     queryWithParser(pph, "verbose", m_verbose);
     m_numprocs = amrex::ParallelDescriptor::NProcs();
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs <= m_max_step+1,
@@ -367,7 +364,9 @@ Hipace::Evolve ()
             m_has_last_step = true;
             m_dt = 0.;
             next_time = std::numeric_limits<amrex::Real>::infinity();
-        } else if (std::abs(m_physical_time + m_dt) >= std::abs(m_max_time)) {
+        } else if (m_physical_time + m_dt == m_max_time ||
+                  (m_physical_time + m_dt > m_max_time && m_physical_time < m_max_time) ||
+                  (m_physical_time + m_dt < m_max_time && m_physical_time > m_max_time)) {
             m_dt = m_max_time - m_physical_time;
             next_time = m_max_time;
         } else {
@@ -613,7 +612,7 @@ Hipace::SolveOneSlice (int islice, int step)
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
-    bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
+    bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This, is_last_step);
 
     // shift all levels
