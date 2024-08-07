@@ -40,7 +40,8 @@ jobs:
           -DHiPACE_COMPUTE=CUDA                            \
           -DHiPACE_PRECISION=DOUBLE                        \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
-          -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
+          -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON               \
+          -DopenPMD_USE_MPI=OFF
         cmake --build build -j 8
     - name: Run Tests
       run: |
