@@ -503,8 +503,8 @@ MultiLaser::ShiftLaserSlices (const int islice)
         const amrex::Box bx = mfi.tilebox();
         Array3<amrex::Real> arr = m_slices.array(mfi);
         amrex::ParallelFor(
-        bx, 2,
-        [=] AMREX_GPU_DEVICE(int i, int j, int, int n) noexcept
+        to2D(bx), 2,
+        [=] AMREX_GPU_DEVICE(int i, int j, int n) noexcept
         {
             using namespace WhichLaserSlice;
             // 2 components for complex numbers.
@@ -633,8 +633,8 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
             const amrex::Real dx_laser = m_laser_geom_3D.CellSize(0);
             const amrex::Real dy_laser = m_laser_geom_3D.CellSize(1);
 
-            amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+            amrex::ParallelFor(to2D(mfi.growntilebox()),
+                [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                     const amrex::Real x = i * dx_laser + poff_laser_x;
                     const amrex::Real y = j * dy_laser + poff_laser_y;
 
@@ -840,8 +840,8 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
             : -2._rt * ( k0 + djn ) / (c*dt);
 
         amrex::ParallelFor(
-            bx, 1,
-            [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
+            to2D(bx),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept
             {
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
@@ -948,7 +948,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         // rhs_fourier is FFT-back-transformed to sol, and sol is normalized and copied into np1j00.
         Array3<Complex> sol_arr = m_sol.array();
         Array3<Complex> rhs_arr = m_rhs.array();
-        amrex::Array4<Complex> rhs_fourier_arr = m_rhs_fourier.array();
+        Array2<Complex> rhs_fourier_arr = m_rhs_fourier.array();
 
         Array3<amrex::Real> arr = m_slices.array(mfi);
 
@@ -1015,8 +1015,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         // D_j^n as defined in Benedetti's 2017 paper
         amrex::Real djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
         amrex::ParallelFor(
-            bx, 1,
-            [=] AMREX_GPU_DEVICE(int i, int j, int, int) noexcept
+            to2D(bx),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept
             {
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
@@ -1079,14 +1079,14 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
             step == 0 ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
              3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) - I * 2._rt * ( k0 + djn ) / (c*dt);
         amrex::ParallelFor(
-            bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept {
+            to2D(bx),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 // divide rhs_fourier by -(k^2+a)
                 amrex::Real kx = (i<imid) ? dkx*i : dkx*(i-Nx);
                 amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
                 const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
                     1._rt/(kx*kx + ky*ky + acoeff) : 0.;
-                rhs_fourier_arr(i,j,k,0) *= -inv_k2a;
+                rhs_fourier_arr(i,j) *= -inv_k2a;
             });
 
         // Transform rhs to Fourier space to get solution in sol
@@ -1097,8 +1097,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         grown_bx.grow(m_slices_nguards);
         const amrex::Real inv_numPts = 1./bx.numPts();
         amrex::ParallelFor(
-            grown_bx,
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+            to2D(grown_bx),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 using namespace WhichLaserSlice;
                 if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
                     arr(i, j, np1j00_r) = sol_arr(i,j,0).real() * inv_numPts;
