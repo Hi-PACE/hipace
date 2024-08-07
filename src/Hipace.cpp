@@ -95,8 +95,14 @@ Hipace::Hipace () :
 
     std::string str_dt {""};
     queryWithParser(pph, "dt", str_dt);
-    if (str_dt != "adaptive") queryWithParser(pph, "dt", m_dt);
+    if (str_dt != "adaptive") {
+        queryWithParser(pph, "dt", m_dt);
+        m_max_time = std::copysign(m_max_time, m_dt);
+    }
     queryWithParser(pph, "max_time", m_max_time);
+    if (str_dt != "adaptive") {
+        AMREX_ALWAYS_ASSERT(std::signbit(m_dt) == std::signbit(m_max_time));
+    }
     queryWithParser(pph, "verbose", m_verbose);
     m_numprocs = amrex::ParallelDescriptor::NProcs();
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs <= m_max_step+1,
@@ -345,7 +351,7 @@ Hipace::Evolve ()
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
 
-        if (m_physical_time > m_max_time) {
+        if (m_physical_time == std::numeric_limits<amrex::Real>::infinity()) {
             if (step+1 <= m_max_step && !m_has_last_step) {
                 m_multi_buffer.put_time(m_physical_time);
             }
@@ -360,8 +366,8 @@ Hipace::Evolve ()
         if (m_physical_time == m_max_time) {
             m_has_last_step = true;
             m_dt = 0.;
-            next_time = 2. * m_max_time + 1.;
-        } else if (m_physical_time + m_dt >= m_max_time) {
+            next_time = std::numeric_limits<amrex::Real>::infinity();
+        } else if (std::abs(m_physical_time + m_dt) >= std::abs(m_max_time)) {
             m_dt = m_max_time - m_physical_time;
             next_time = m_max_time;
         } else {
