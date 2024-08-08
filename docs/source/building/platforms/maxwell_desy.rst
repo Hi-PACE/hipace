@@ -12,7 +12,7 @@ HiPACE++:
 
    #!/usr/bin/env zsh # Shell is assumed to be zsh
    module purge
-   module load maxwell cuda/11.8 openmpi/4 hdf5/1.10.6
+   module load maxwell gcc/12 cuda/12.3s openmpi/4 hdf5/1.10.6
    # pick correct GPU setting (this may differ for V100 nodes)
    export GPUS_PER_SOCKET=2
    export GPUS_PER_NODE=4
