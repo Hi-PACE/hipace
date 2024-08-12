@@ -89,8 +89,8 @@ L0 = 5e-6
 tau = L0 / scc.c     # Laser duration
 
 if chirp_type == 'phi2' :
-    phi2 = get_phi2(Ar, m, tau);
+    phi2 = get_phi2(Ar, m, tau)
     assert(np.abs(phi2-2.4e-26)/2.4e-26 < 2e-3)
 else if chirp_type == 'zeta' :
-    zeta = get_zeta(Ar, m, w0,L0)
+    zeta = get_zeta(Ar, m, w0, L0)
     assert(np.abs(zeta-2.4e-26)/2.4e-26 < 2e-3)
