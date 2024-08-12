@@ -25,10 +25,6 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
-# Relative tolerance for checksum tests depends on the platform
-RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
-
-
 # Run the simulation with initial phi2
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         laser.phi2 = 2.4e-26 \
