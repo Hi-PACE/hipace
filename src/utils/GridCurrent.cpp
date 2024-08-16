@@ -53,8 +53,8 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
         Array2<amrex::Real> const jz_arr = S.array(mfi, Hipace::m_explicit ?
             Comps[WhichSlice::This]["jz_beam"] : Comps[WhichSlice::This]["jz"]);
 
-        amrex::ParallelFor( bx,
-        [=] AMREX_GPU_DEVICE(int i, int j, int)
+        amrex::ParallelFor( to2D(bx),
+        [=] AMREX_GPU_DEVICE(int i, int j)
         {
             const amrex::Real x = plo[0] + (i+0.5_rt)*dx_arr[0];
             const amrex::Real y = plo[1] + (j+0.5_rt)*dx_arr[1];
