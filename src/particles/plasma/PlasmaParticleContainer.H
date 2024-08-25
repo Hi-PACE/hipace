@@ -102,6 +102,27 @@ public:
                            const Fields& fields,
                            const amrex::Real background_density_SI);
 
+    /** Initialize ADK prefactors of Laser ionizable plasmas
+     *
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] product_pc The electron plasma PC that this Ion Plasma ionizes to
+     * \param[in] background_density_SI background plasma density (only needed for normalized units)
+     */
+    void InitLaserIonization (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
+                              const amrex::Real background_density_SI);
+
+    /** Calculates Ionization Probability from a Laser and generates new Plasma Particles
+     *
+     * \param[in] lev MR level
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] fields the general field class
+     * \param[in] background_density_SI background plasma density (only needed for normalized units)
+     */
+    void LaserIonization (const int lev,
+                          const amrex::Geometry& geom,
+                          const Fields& fields,
+                          const amrex::Real background_density_SI);
+
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
      */
@@ -149,6 +170,8 @@ public:
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom);
 
+    // init:
+
     amrex::Parser m_parser; /**< owns data for m_density_func */
     amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
@@ -174,10 +197,16 @@ public:
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
+
+    // general:
+
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
     amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
-    int m_init_ion_lev = -1; /**< initial Ion level of each particle */
     int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
+
+    // ionization:
+
+    int m_init_ion_lev = -1; /**< initial Ion level of each particle */
     bool m_can_ionize = false; /**< whether this plasma can ionize */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
@@ -187,10 +216,19 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
     /** to calculate Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
+
+    /** to calculate laser Ionization probability with ADK formula */
+    amrex::Gpu::DeviceVector<amrex::Real> m_laser_adk_prefactor;
+
+    // plasma sorting/reordering:
+
     /** After how many slices the particles are reordered. 0: off */
     int m_reorder_period = 0;
     /** 2D reordering index type. 0: cell, 1: node, 2: both */
     amrex::IntVect m_reorder_idx_type = {0, 0, 0};
+
+    // in-situ diagnostic:
+
     /** How often the insitu plasma diagnostics should be computed and written
      * Default is 0, meaning no output */
     int m_insitu_period {0};
