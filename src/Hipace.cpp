@@ -42,6 +42,7 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     } else {
         m_phys_const = make_constants_SI();
     }
+    Parser::replaceAmrexParamsWithParser();
 
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
     queryWithParser(pph, "depos_order_xy", m_depos_order_xy);

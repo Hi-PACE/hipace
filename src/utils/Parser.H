@@ -50,6 +50,23 @@ namespace Parser
         pp.add("r_e",       PhysConstSI::r_e);
     }
 
+    /** \brief replace AMReX input parameters with Parsed version
+     *
+     * AMReX uses a slightly different way to get user constants when reading these parameters
+     */
+    inline void
+    replaceAmrexParamsWithParser () {
+        amrex::ParmParse pp_geom("geometry");
+        for (auto str : std::array{"prob_lo", "prob_hi"}) {
+            amrex::RealVect val{};
+            if(queryWithParser(pp_geom, str, val)) {
+                pp_geom.remove(str);
+                std::vector<double> vect(val.begin(), 3);
+                pp_geom.addarr(str, vect);
+            }
+        }
+    }
+
     /** \brief set default ParmParse parameters before AMReX is initialized
      */
     inline void
