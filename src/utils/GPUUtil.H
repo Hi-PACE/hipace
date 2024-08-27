@@ -220,4 +220,10 @@ void AtomicAdd(amrex::Real* ptr, amrex::Real val, [[maybe_unused]] bool do_omp_a
 #endif
 }
 
+AMREX_FORCE_INLINE
+amrex::BoxND<2> to2D (const amrex::BoxND<3>& box) {
+    AMREX_ALWAYS_ASSERT(box.length(2) == 1);
+    return amrex::BoxShrink<2>(box);
+}
+
 #endif

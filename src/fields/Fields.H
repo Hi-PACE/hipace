@@ -312,8 +312,8 @@ public:
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int)
+            amrex::ParallelFor(to2D(mfi.growntilebox()),
+                [=] AMREX_GPU_DEVICE(int i, int j)
                 {
                     for (int n=0; n<ncomps; ++n) {
                         array(i,j,c_idx[n]) = val;
@@ -341,8 +341,8 @@ public:
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int)
+            amrex::ParallelFor(to2D(mfi.growntilebox()),
+                [=] AMREX_GPU_DEVICE(int i, int j)
                 {
                     for (int n=0; n<ncomps; ++n) {
                         array(i,j,c_idx[n]) *= val;
@@ -371,8 +371,8 @@ public:
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int)
+            amrex::ParallelFor(to2D(mfi.growntilebox()),
+                [=] AMREX_GPU_DEVICE(int i, int j)
                 {
                     for (int n=0; n<ncomps; ++n) {
                         array(i,j,c_idx_dst[n]) = array(i,j,c_idx_src[n]);
@@ -408,8 +408,8 @@ public:
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int)
+            amrex::ParallelFor(to2D(mfi.growntilebox()),
+                [=] AMREX_GPU_DEVICE(int i, int j)
                 {
                     for (int n=0; n<ncomps; ++n) {
                         array(i,j,c_idx_dst[n]) = array(i,j,c_idx_src[n]);
@@ -445,8 +445,8 @@ public:
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
             const Array3<amrex::Real> array = mfab.array(mfi);
             // only one Kernel for all fields
-            amrex::ParallelFor(mfi.growntilebox(),
-                [=] AMREX_GPU_DEVICE(int i, int j, int)
+            amrex::ParallelFor(to2D(mfi.growntilebox()),
+                [=] AMREX_GPU_DEVICE(int i, int j)
                 {
                     for (int n=0; n<ncomps; ++n) {
                         array(i,j,c_idx_dst[n]) += array(i,j,c_idx_src[n]);

@@ -12,9 +12,7 @@ HiPACE++:
 
    #!/usr/bin/env zsh # Shell is assumed to be zsh
    module purge
-   module load maxwell gcc/9.3 openmpi/4
-   module load maxwell cuda/11.8
-   module load hdf5/1.10.6
+   module load maxwell gcc/12 cuda/12.3s openmpi/4 hdf5/1.10.6
    # pick correct GPU setting (this may differ for V100 nodes)
    export GPUS_PER_SOCKET=2
    export GPUS_PER_NODE=4
@@ -29,7 +27,7 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
    git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # only the first time
    cd $HOME/src/hipace
    rm -rf build
-   cmake -S . -B build -DHiPACE_COMPUTE=CUDA
+   cmake -S . -B build -DHiPACE_COMPUTE=CUDA -DopenPMD_USE_MPI=OFF
    cmake --build build -j 16
 
 You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started`

@@ -67,7 +67,7 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
         Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
         amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
-            fft_box, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
+            to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
                     amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
@@ -113,8 +113,8 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         Array2<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
         Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
 
-        amrex::ParallelFor( mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+        amrex::ParallelFor( to2D(mfi.growntilebox()),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 tmp_cmplx_arr(i,j) *= eigenvalue_matrix(i,j);
             });
     }
@@ -130,8 +130,8 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
                                          "Slice MFs must be defined on one box only");
-        amrex::ParallelFor( lhs_mf[mfi].box() & mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+        amrex::ParallelFor( to2D(lhs_mf[mfi].box() & mfi.growntilebox()),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 // Copy field
                 lhs_arr(i,j) = tmp_real_arr(i,j);
             });

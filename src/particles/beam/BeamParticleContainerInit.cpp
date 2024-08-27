@@ -236,8 +236,8 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
     const Array2<int> offset_arr {{offsets.dataPtr(), amrex::begin(slice_box),
                                    amrex::end(slice_box), 1}};
 
-    amrex::ParallelForRNG(slice_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int, const amrex::RandomEngine& engine) noexcept
+    amrex::ParallelForRNG(to2D(slice_box),
+        [=] AMREX_GPU_DEVICE (int i, int j, const amrex::RandomEngine& engine) noexcept
         {
             int count = 0;
 
@@ -295,8 +295,8 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
 
     const auto enforceBC = EnforceBC();
 
-    amrex::ParallelForRNG(slice_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int, const amrex::RandomEngine& engine) noexcept
+    amrex::ParallelForRNG(to2D(slice_box),
+        [=] AMREX_GPU_DEVICE (int i, int j, const amrex::RandomEngine& engine) noexcept
         {
             int pidx = offset_arr(i, j);
 

@@ -375,8 +375,8 @@ LinCombination (amrex::MultiFab dst,
         const Array2<amrex::Real> dst_array = dst.array(mfi);
         const auto src_a_array = to_array2(src_a.array(mfi));
         const auto src_b_array = to_array2(src_b.array(mfi));
-        amrex::ParallelFor(mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+        amrex::ParallelFor(to2D(mfi.growntilebox()),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept
             {
                 dst_array(i,j) = factor_a * src_a_array(i,j) + factor_b * src_b_array(i,j);
             });
@@ -399,8 +399,8 @@ Multiply (amrex::MultiFab dst, const amrex::Real factor, const FV& src)
     for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const Array2<amrex::Real> dst_array = dst.array(mfi);
         const auto src_array = to_array2(src.array(mfi));
-        amrex::ParallelFor(mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+        amrex::ParallelFor(to2D(mfi.growntilebox()),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept
             {
                 dst_array(i,j) = factor * src_array(i,j);
             });
@@ -642,8 +642,8 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
     const amrex::Box edge_box = {{0, 0, 0}, {box_len0 + box_len1 - 1, 1, 0}};
 
     // ParallelFor only over the edge of the box
-    amrex::ParallelFor(edge_box,
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+    amrex::ParallelFor(to2D(edge_box),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             const bool i_is_changing = (i < box_len0);
             const bool i_lo_edge = (!i_is_changing) && (!j);
@@ -784,8 +784,8 @@ Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int l
         const amrex::Real offset0 = GetPosOffset(0, geom[lev], fine_box_extended);
         const amrex::Real offset1 = GetPosOffset(1, geom[lev], fine_box_extended);
 
-        amrex::ParallelFor(fine_box_extended,
-            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
+        amrex::ParallelFor(to2D(fine_box_extended),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
                 // set interpolated values near edge of fine field between outer_edge and inner_edge
                 // to compensate for incomplete charge/current deposition in those cells
@@ -820,8 +820,8 @@ Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
         const amrex::Real offset0 = GetPosOffset(0, geom[lev], geom[lev].Domain());
         const amrex::Real offset1 = GetPosOffset(1, geom[lev], geom[lev].Domain());
 
-        amrex::ParallelFor(field_fine[mfi].box(),
-            [=] AMREX_GPU_DEVICE (int i, int j , int) noexcept
+        amrex::ParallelFor(to2D(field_fine[mfi].box()),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
                 // interpolate the full field
                 const amrex::Real x = i * dx + offset0;
@@ -933,8 +933,8 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             const amrex::Real dx_inv = 0.5_rt*geom[lev].InvCellSize(Direction::x);
             const amrex::Real dy_inv = 0.5_rt*geom[lev].InvCellSize(Direction::y);
 
-            amrex::ParallelFor(bx,
-                [=] AMREX_GPU_DEVICE(int i, int j, int)
+            amrex::ParallelFor(to2D(bx),
+                [=] AMREX_GPU_DEVICE(int i, int j)
                 {
                     // derivatives in x and y direction, no guards needed
                     arr(i,j,ExmBy) = - (arr(i+1,j,Psi) - arr(i-1,j,Psi))*dx_inv;
@@ -1086,8 +1086,8 @@ Fields::SymmetrizeFields (int field_comp, const int lev, const int symm_x, const
         quarter_box.setBig(0, full_box.smallEnd(0) + (full_box.length(0)+1)/2 - 1);
         quarter_box.setBig(1, full_box.smallEnd(1) + (full_box.length(1)+1)/2 - 1);
 
-        amrex::ParallelFor(quarter_box,
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        amrex::ParallelFor(to2D(quarter_box),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
                 const amrex::Real avg = 0.25_rt*(arr(i, j) + arr(upper_x - i, j)*symm_x
                     + arr(i, upper_y - j)*symm_y + arr(upper_x - i, upper_y - j)*symm_x*symm_y);
@@ -1247,8 +1247,8 @@ Fields::ComputeRelBFieldError (const int which_slice, const int which_slice_iter
             const amrex::Real factor = geom[lev].CellSize(0) * geom[lev].CellSize(1) /
                 (geom[0].CellSize(0) * geom[0].CellSize(1));
 
-            amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), bx,
-            [=] AMREX_GPU_DEVICE (int i, int j, int, amrex::Gpu::Handler const& handler) noexcept
+            amrex::ParallelFor(amrex::Gpu::KernelInfo().setReduction(true), to2D(bx),
+            [=] AMREX_GPU_DEVICE (int i, int j, amrex::Gpu::Handler const& handler) noexcept
             {
                 amrex::Gpu::deviceReduceSum(p_norm_B, factor * std::sqrt(
                                             arr(i, j, Bx_comp) * arr(i, j, Bx_comp) +

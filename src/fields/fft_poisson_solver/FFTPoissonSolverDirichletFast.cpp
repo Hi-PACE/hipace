@@ -75,8 +75,8 @@ void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amr
                 const int n_data, const int n_batch)
 {
     const int n_half = (n_data+1)/2;
-    amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-        [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+    amrex::ParallelFor(amrex::BoxND<2>{{0,0}, {n_half,n_batch-1}},
+        [=] AMREX_GPU_DEVICE(int i, int j) noexcept
         {
             out(i, j) = to_complex(in, i, j, n_half, n_data);
         });
@@ -85,8 +85,8 @@ void ToComplex (const Array2<amrex::Real> in, const Array2<amrex::GpuComplex<amr
 void ToSine (const Array2<amrex::Real> in, const Array2<amrex::Real> out,
              const amrex::Real* sine_factor, const int n_data, const int n_batch)
 {
-    amrex::ParallelFor({{0,0,0}, {n_data-1,n_batch-1,0}},
-        [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+    amrex::ParallelFor(amrex::BoxND<2>{{0,0}, {n_data-1,n_batch-1}},
+        [=] AMREX_GPU_DEVICE(int i, int j) noexcept
         {
             out(i, j) = to_sine(in, i, j, n_data, sine_factor);
         });
@@ -166,8 +166,8 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
             }
         });
 #else
-    amrex::ParallelFor({{0,0,0}, {n_half,n_data-1,0}},
-        [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+    amrex::ParallelFor(amrex::BoxND<2>{{0,0}, {n_half,n_data-1}},
+        [=] AMREX_GPU_DEVICE(int i, int j) noexcept
         {
             out(i, j) = to_complex(transpose_to_sine, i, j, n_half, n_batch);
         });
@@ -185,8 +185,8 @@ void ToSine_Mult_ToComplex (const Array2<amrex::Real> in,
         return eigenvalue(i, j) * to_sine(in, i, j, n_data, sine_factor);
     };
 
-    amrex::ParallelFor({{0,0,0}, {n_half,n_batch-1,0}},
-        [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept
+    amrex::ParallelFor(amrex::BoxND<2>{{0,0}, {n_half,n_batch-1}},
+        [=] AMREX_GPU_DEVICE(int i, int j) noexcept
         {
             out(i, j) = to_complex(mult_to_sine, i, j, n_half, n_data);
         });
@@ -231,8 +231,8 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     // Calculate the array of m_eigenvalue_matrix
     m_eigenvalue_matrix.resize({{0,0,0}, {ny-1,nx-1,0}});
     Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array();
-    amrex::ParallelFor({{0,0,0}, {ny-1,nx-1,0}},
-        [=] AMREX_GPU_DEVICE (int j, int i, int /* k */) noexcept
+    amrex::ParallelFor(amrex::BoxND<2>{{0,0}, {ny-1,nx-1}},
+        [=] AMREX_GPU_DEVICE (int j, int i) noexcept
         {
             /* fast poisson solver diagonal x coeffs */
             amrex::Real sinex_sq = std::sin(( i + 1 ) * sine_x_factor) * std::sin(( i + 1 ) * sine_x_factor);
