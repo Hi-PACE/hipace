@@ -675,8 +675,8 @@ Hipace::InitializeSxSyWithBeam (const int lev)
 
         const amrex::Real mu0 = m_phys_const.mu0;
 
-        amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        amrex::ParallelFor(to2D(bx),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
                 const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))/(2._rt*dx);
                 const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))/(2._rt*dy);
