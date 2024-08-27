@@ -8,7 +8,7 @@
 
 # Preamble ####################################################################
 #
-cmake_minimum_required(VERSION 3.18.0)
+cmake_minimum_required(VERSION 3.24.0)
 project(HiPACE VERSION 24.08)
 
 # helper functions
