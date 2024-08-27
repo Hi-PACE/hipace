@@ -61,7 +61,7 @@ namespace Parser
             amrex::RealVect val{};
             if(queryWithParser(pp_geom, str, val)) {
                 pp_geom.remove(str);
-                std::vector<double> vect(val.begin(), 3);
+                std::vector<double> vect{val[0], val[1], val[2]};
                 pp_geom.addarr(str, vect);
             }
         }
