@@ -608,6 +608,8 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 void
 MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
 {
+    if (!UseLaser()) return;
+
     HIPACE_PROFILE("MultiLaser::SetInitialChi()");
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
