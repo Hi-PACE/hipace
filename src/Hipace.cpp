@@ -32,6 +32,9 @@
 Hipace_early_init::Hipace_early_init (Hipace* instance)
 {
     Hipace::m_instance = instance;
+
+    Parser::addConstantsToParser();
+
     amrex::ParmParse pph("hipace");
     queryWithParser(pph ,"normalized_units", Hipace::m_normalized_units);
     if (Hipace::m_normalized_units) {
@@ -39,7 +42,6 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     } else {
         m_phys_const = make_constants_SI();
     }
-    Parser::addConstantsToParser();
     Parser::replaceAmrexParamsWithParser();
 
     queryWithParser(pph, "do_device_synchronize", DO_DEVICE_SYNCHRONIZE);
