@@ -117,7 +117,7 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
    #SBATCH --output=hipace-%j-%N.txt
    #SBATCH --error=hipace-%j-%N.err
 
-   source $HOME/hipace.profile
+   source $HOME/profile.hipace
 
    # These options give the best performance, in particular for the threaded FFTW
    export OMP_PROC_BIND=false # true false master close spread

@@ -95,8 +95,8 @@ InitParticles (const amrex::RealVect& a_u_std,
         auto fine_patch_func = m_fine_patch_func;
 
         if (use_fine_patch) {
-            amrex::ParallelFor(tile_box,
-                [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+            amrex::ParallelFor(to2D(tile_box),
+                [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
                     const amrex::Real x = plo[0] + (i + 0.5_rt + x_offset)*dx[0];
                     const amrex::Real y = plo[1] + (j + 0.5_rt + y_offset)*dx[1];
@@ -110,8 +110,8 @@ InitParticles (const amrex::RealVect& a_u_std,
             for (int iter=0; iter<fine_transition_cells; ++iter) {
                 std::swap(comp_a, comp_b);
 
-                amrex::ParallelFor(tile_box,
-                    [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+                amrex::ParallelFor(to2D(tile_box),
+                    [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                     {
                         int max_val = arr_fine(i, j, comp_b);
                         if (i > lo.x) {

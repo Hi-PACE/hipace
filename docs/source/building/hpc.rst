@@ -9,17 +9,17 @@ Follow the guide here instead of the generic installation routines for optimal s
 
 .. _install-hpc-profile:
 
-hipace.profile
+profile.hipace
 --------------
 
-Use a ``hipace.profile`` file to set up your software environment without colliding with other software.
+Use a ``profile.hipace`` file to set up your software environment without colliding with other software.
 Ideally, store that file directly in your ``$HOME/`` and source it after connecting to the machine:
 
 .. code-block:: bash
 
-   source $HOME/hipace.profile
+   source $HOME/profile.hipace
 
-We list example ``hipace.profile`` files below, which can be used to set up HiPACE++ on various HPC systems.
+We list example ``profile.hipace`` files below, which can be used to set up HiPACE++ on various HPC systems.
 
 
 .. _install-hpc-machines:

@@ -6,6 +6,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "HpMultiGrid.H"
+#include "utils/GPUUtil.H"
 #include <algorithm>
 
 using namespace amrex;
@@ -185,8 +186,8 @@ void compute_residual (Box const& box, Array4<Real> const& res,
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
     if (system_type == 1) {
-        hpmg::ParallelFor(valid_domain_box(box),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             res(i,j,0,0) = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0),
                                      acf(i,j,0), facx, facy);
@@ -194,8 +195,8 @@ void compute_residual (Box const& box, Array4<Real> const& res,
                                      acf(i,j,0), facx, facy);
         });
     } else if (system_type == 2) {
-        hpmg::ParallelFor(valid_domain_box(box),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             res(i,j,0,0) = residual2r(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0),
                                       acf(i,j,0,0), acf(i,j,0,1), facx, facy);
@@ -203,8 +204,8 @@ void compute_residual (Box const& box, Array4<Real> const& res,
                                       acf(i,j,0,0), acf(i,j,0,1), facx, facy);
         });
     } else {
-        hpmg::ParallelFor(valid_domain_box(box),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             res(i,j,0,0) = residual3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), facx, facy);
         });
@@ -327,8 +328,8 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
     Real facx = Real(1.)/(dx*dx);
     Real facy = Real(1.)/(dy*dy);
     if (system_type == 1) {
-        hpmg::ParallelFor(valid_domain_box(box),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             if ((i+j+icolor)%2 == 0) {
                 gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), acf(i,j,0), facx, facy);
@@ -336,8 +337,8 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
             }
         });
     } else if (system_type == 2) {
-        hpmg::ParallelFor(valid_domain_box(box),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             if ((i+j+icolor)%2 == 0) {
                 gs2(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), rhs(i,j,0,1),
@@ -345,8 +346,8 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
             }
         });
     } else {
-        hpmg::ParallelFor(valid_domain_box(box),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             if ((i+j+icolor)%2 == 0) {
                 gs3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), facx, facy);
@@ -582,8 +583,8 @@ void gsrb_4_residual (int system_type, Box const& box,
             [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor_out[i] = Real(0.); });
     } else {
         const amrex::Box valid_domain = valid_domain_box(box);
-        hpmg::ParallelFor(box, MultiGrid::get_num_comps(system_type),
-            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept {
+        hpmg::ParallelFor(to2D(box), MultiGrid::get_num_comps(system_type),
+            [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept {
                 if (valid_domain.contains(i,j,0)) {
                     phi_out(i,j,0,n) = phi_in(i,j,0,n);
                 } else {
@@ -606,13 +607,13 @@ void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> c
                   int num_comps)
 {
     if (box.cellCentered()) {
-        hpmg::ParallelFor(box, num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
         {
             restrict_cc(i,j,n,crse,fine);
         });
     } else {
-        hpmg::ParallelFor(valid_domain_box(box), num_comps,
-        [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)), num_comps,
+        [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
         {
             restrict_nd(i,j,n,crse,fine);
         });
@@ -624,13 +625,13 @@ void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in
                                int num_comps)
 {
     if (box.cellCentered()) {
-        hpmg::ParallelFor(box, num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
         {
             interpcpy_cc(i,j,n,fine_in,crse,fine_out);
         });
     } else {
-        hpmg::ParallelFor(valid_domain_box(box), num_comps,
-        [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+        hpmg::ParallelFor(to2D(valid_domain_box(box)), num_comps,
+        [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
         {
             interpcpy_nd(i,j,n,fine_in,crse,fine_out);
         });
@@ -946,8 +947,8 @@ MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_
 
     auto const& array_m_acf = m_acf[0].array();
     auto const& array_a_acf = afab.const_array();
-    hpmg::ParallelFor(m_acf[0].box(),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+    hpmg::ParallelFor(to2D(m_acf[0].box()),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             array_m_acf(i,j,0) = array_a_acf(i,j,0);
         });
@@ -968,8 +969,8 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
 
     auto const& array_m_acf = m_acf[0].array();
 
-    hpmg::ParallelFor(m_acf[0].box(),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+    hpmg::ParallelFor(to2D(m_acf[0].box()),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             array_m_acf(i,j,0,0) = acoef_real;
             array_m_acf(i,j,0,1) = acoef_imag;
@@ -993,8 +994,8 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
 
     amrex::FArrayBox ifab(center_box(acoef_imag.box(), m_domain.front()), 1, acoef_imag.dataPtr());
     auto const& ai = ifab.const_array();
-    hpmg::ParallelFor(m_acf[0].box(),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+    hpmg::ParallelFor(to2D(m_acf[0].box()),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             array_m_acf(i,j,0,0) = acoef_real;
             array_m_acf(i,j,0,1) = ai(i,j,0);
@@ -1018,8 +1019,8 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
 
     amrex::FArrayBox rfab(center_box(acoef_real.box(), m_domain.front()), 1, acoef_real.dataPtr());
     auto const& ar = rfab.const_array();
-    hpmg::ParallelFor(m_acf[0].box(),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+    hpmg::ParallelFor(to2D(m_acf[0].box()),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             array_m_acf(i,j,0,0) = ar(i,j,0);
             array_m_acf(i,j,0,1) = acoef_imag;
@@ -1045,8 +1046,8 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
     amrex::FArrayBox ifab(center_box(acoef_imag.box(), m_domain.front()), 1, acoef_imag.dataPtr());
     auto const& ar = rfab.const_array();
     auto const& ai = ifab.const_array();
-    hpmg::ParallelFor(m_acf[0].box(),
-        [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+    hpmg::ParallelFor(to2D(m_acf[0].box()),
+        [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             array_m_acf(i,j,0,0) = ar(i,j,0);
             array_m_acf(i,j,0,1) = ai(i,j,0);
@@ -1172,8 +1173,8 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
 
     auto const& sol = m_sol.array();
     auto const& cor = m_cor[0].const_array();
-    hpmg::ParallelFor(valid_domain_box(m_domain[0]), m_num_comps,
-    [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+    hpmg::ParallelFor(to2D(valid_domain_box(m_domain[0])), m_num_comps,
+    [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
     {
         sol(i,j,0,n) = cor(i,j,0,n);
     });
@@ -1386,14 +1387,14 @@ MultiGrid::average_down_acoef ()
         auto const& crse = m_acf[ilev].array();
         auto const& fine = m_acf[ilev-1].const_array();
         if (m_domain[ilev].cellCentered()) {
-            hpmg::ParallelFor(m_domain[ilev], m_num_comps_acf,
-            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+            hpmg::ParallelFor(to2D(m_domain[ilev]), m_num_comps_acf,
+            [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
             {
                 restrict_cc(i,j,n,crse,fine);
             });
         } else {
-            hpmg::ParallelFor(valid_domain_box(m_domain[ilev]), m_num_comps_acf,
-            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept
+            hpmg::ParallelFor(to2D(valid_domain_box(m_domain[ilev])), m_num_comps_acf,
+            [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
             {
                 restrict_nd(i,j,n,crse,fine);
             });
