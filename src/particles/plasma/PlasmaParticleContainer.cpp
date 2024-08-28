@@ -533,7 +533,7 @@ LaserIonization (const amrex::Geometry& geom,
             const Complex E1 = i * A - A_dzeta;
             const Complex E2 = - A_dx;
 
-            const amrex::Real Ep = std::abs(std::sqrt( std::abs(E1*E1) + std::abs(E2*E2) )*E0);
+            const amrex::Real Ep = std::sqrt( std::abs(E1*E1) + std::abs(E2*E2) )*E0;
 
             // Compute probability of ionization p
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
