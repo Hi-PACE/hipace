@@ -490,6 +490,7 @@ private:
     std::string m_insitu_file_prefix = "diags/field_insitu";
 };
 
+/** Helper struct to check whether a point is within a valid domain. */
 struct CheckDomainBounds {
     amrex::Real lo[2];
     amrex::Real hi[2];

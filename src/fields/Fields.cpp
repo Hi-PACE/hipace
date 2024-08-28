@@ -546,7 +546,7 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
                            WhichSlice::This, {"jx_beam", "jy_beam"});
         }
         // Set all quantities on WhichSlice::This to 0 except:
-        // fields are set by field solvers
+        // Bx, By, Bz, Psi and Ez which are set by field solvers and
         // jx, jy, jx_beam and jy_beam on WhichSlice::This:
         // shifted from the previous WhichSlice::Next
         // with jx and jy initially set to jx_beam and jy_beam
