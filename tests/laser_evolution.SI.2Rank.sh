@@ -50,3 +50,5 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --rtol $RTOL \
     --file_name $TEST_NAME \
     --test-name $TEST_NAME
+
+rm -rf $TEST_NAME
