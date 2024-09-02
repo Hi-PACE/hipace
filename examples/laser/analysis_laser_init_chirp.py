@@ -47,6 +47,7 @@ def get_phi2(Ar,m,tau):
     temp_chirp = 0
     sum=0
     laser_module1=np.abs(Ar)
+    y_coord1=np.array(m.x)
     z_coord1=np.array(m.z)
     phi_envelop=np.array(np.arctan2(Ar.imag, Ar.real))
 #unwrap phi_envelop
