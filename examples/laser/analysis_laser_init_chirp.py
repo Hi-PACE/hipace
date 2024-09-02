@@ -92,6 +92,6 @@ if args.chirp_type == 'phi2' :
     phi2 = get_phi2(Ar, m, tau)
     print(phi2)
     assert(np.abs(phi2-2.4e-26)/2.4e-26 < 2e-2)
-else if args.chirp_type == 'zeta' :
+elif args.chirp_type == 'zeta' :
     zeta = get_zeta(Ar, m, w0, L0)
     assert(np.abs(zeta-2.4e-26)/2.4e-26 < 2e-2)
