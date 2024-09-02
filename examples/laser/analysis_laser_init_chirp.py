@@ -83,7 +83,7 @@ ts = LpaDiagnostics(args.output_dir)
 Ar, m = ts.get_field(field='laserEnvelope', iteration=0)
 
 
-lam=.8e-6            # Laser wavelength
+lambda0=.8e-6            # Laser wavelength
 w0 = 30.e-6          # Laser waist
 L0 = 5e-6
 tau = L0 / scc.c     # Laser duration
