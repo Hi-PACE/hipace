@@ -21,4 +21,8 @@ void
 ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     amrex::Vector<amrex::Geometry> const& gm, const int lev);
 
+void
+ExplicitDepositionS (PlasmaParticleContainer& plasma, Fields& fields,
+                    amrex::Vector<amrex::Geometry> const& gm, const int lev);
+
 #endif //  EXPLICITDEPOSITION_H_

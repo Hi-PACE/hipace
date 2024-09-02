@@ -63,6 +63,9 @@ public:
     void ExplicitDeposition (Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
                              int const lev);
 
+    void ExplicitDepositionS (Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
+                             int const lev);
+
     /** \brief Return max charge density, to compute the adaptive time step.
      *
      * the max is taken across species AND include m_adaptive_density, giving a way to

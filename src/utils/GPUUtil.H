@@ -122,6 +122,7 @@ struct Array3 {
 #endif
     {}
 
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Array3 (const amrex::Array4<T>& rhs) noexcept
         : p(rhs.p),
           jstride(rhs.jstride),
@@ -134,7 +135,7 @@ struct Array3 {
 #endif
     {
         // slice is only one cell thick if allocated
-        AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin.z + 1 == rhs.end.z);
+        AMREX_IF_ON_HOST((AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin.z + 1 == rhs.end.z);));
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE

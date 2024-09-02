@@ -152,6 +152,8 @@ Hipace::Hipace () :
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
     queryWithParser(pph, "use_amrex_mlmg", m_use_amrex_mlmg);
     queryWithParser(pph, "do_tiling", m_do_tiling);
+    queryWithParser(pph, "do_shared_depos", m_do_shared_depos);
+    queryWithParser(pph, "shared_depos_iter", m_shared_depos_iter);
 #ifdef AMREX_USE_GPU
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif
@@ -555,7 +557,12 @@ Hipace::SolveOneSlice (int islice, int step)
             InitializeSxSyWithBeam(lev);
 
             // Deposit Sx and Sy for every plasma species
-            m_multi_plasma.ExplicitDeposition(m_fields, m_3D_geom, lev);
+            if (m_do_shared_depos) {
+                m_multi_plasma.ExplicitDepositionS(m_fields, m_3D_geom, lev);
+            } else {
+                m_multi_plasma.ExplicitDeposition(m_fields, m_3D_geom, lev);
+            }
+
 
             // Solves Bx, By using Sx, Sy and chi
             ExplicitMGSolveBxBy(lev, WhichSlice::This);
