@@ -30,7 +30,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         laser.phi2 = 2.4e-26 \
         hipace.file_prefix = $TEST_NAME \
         laser.w0 = 30e-6 \
-        laser.L0 = 5e-6
+        laser.L0 = 5e-6 \
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_init_chirp.py --output-dir=$TEST_NAME \
         --chirp_type = phi2
