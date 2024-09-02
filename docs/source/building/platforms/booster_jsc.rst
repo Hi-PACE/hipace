@@ -22,8 +22,6 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    module load CUDA
    module load HDF5
    module load ccache # optional, accelerates recompilation
-   export GPUS_PER_SOCKET=2
-   export GPUS_PER_NODE=4
    # optimize CUDA compilation for A100
    export AMREX_CUDA_ARCH=8.0 # 8.0 for A100, 7.0 for V100
 
@@ -59,6 +57,8 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
    module load OpenMPI
    module load CUDA
    module load HDF5
+   # fix issue with MPI
+   export UCX_CUDA_COPY_REG_WHOLE_ALLOC=on
    srun -n 8 --cpu_bind=sockets $HOME/src/hipace/build/bin/hipace.MPI.CUDA.DP.LF inputs
 
 and use it to submit a simulation.
@@ -117,7 +117,7 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
    #SBATCH --output=hipace-%j-%N.txt
    #SBATCH --error=hipace-%j-%N.err
 
-   source $HOME/hipace.profile
+   source $HOME/profile.hipace
 
    # These options give the best performance, in particular for the threaded FFTW
    export OMP_PROC_BIND=false # true false master close spread

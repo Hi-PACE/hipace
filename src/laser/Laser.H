@@ -19,7 +19,7 @@ class Laser
 {
 public:
 
-    Laser (std::string name, bool laser_from_file);
+    Laser (std::string name);
 
     std::string m_name {""};
     /** The way to initialize a laser (from_file/gaussian/parser)*/

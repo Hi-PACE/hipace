@@ -14,7 +14,7 @@
 #include <AMReX_Vector.H>
 #include <AMReX_ParmParse.H>
 
-Laser::Laser (std::string name, bool laser_from_file)
+Laser::Laser (std::string name)
 {
     m_name = name;
     amrex::ParmParse pp(m_name);

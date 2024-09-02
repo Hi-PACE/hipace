@@ -140,6 +140,7 @@ utils::getUnitDimension ( std::string const & record_name )
     };
     else return {};
 }
+#endif
 
 std::ostream& operator<<(std::ostream& os, utils::format_time ft) {
     long long seconds = static_cast<long long>(std::floor(ft.seconds));
@@ -162,4 +163,3 @@ std::ostream& operator<<(std::ostream& os, utils::format_time ft) {
 
     return os;
 }
-#endif

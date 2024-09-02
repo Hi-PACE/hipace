@@ -117,6 +117,12 @@ General parameters
     ranks there is enough capacity to store every slice to avoid a deadlock, i.e.
     ``comms_buffer.max_trailing_slices * nranks > nslices``.
 
+* ``comms_buffer.pre_register_memory`` (`bool`) optional (default `false`)
+    On some platforms, such as JUWELS booster, the memory passed into MPI needs to be
+    registered to the network card, which can take a long time. When using this option, all ranks
+    can do this at once in initialization instead of one after another
+    as part of the communication pipeline.
+
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
