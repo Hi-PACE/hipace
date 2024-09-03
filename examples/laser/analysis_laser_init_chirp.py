@@ -35,7 +35,7 @@ def get_zeta(Ar,m, w0,L):
         for j in range(len(y_coord1)-2):
             nu=nu+pphi_pzpy[i,j]*laser_module1[i,j]
             sum=sum+laser_module1[i,j]
-    nu= nu/scc.c/ sum
+    nu= nu / scc.c / sum
     a = 4 * nu * w0**2 * L**4
     b = -4 * scc.c
     c = nu * w0**2 * L**2
@@ -91,7 +91,6 @@ tau = L0 / scc.c     # Laser duration
 print(get_zeta(Ar, m, w0, L0))
 if args.chirp_type == 'phi2' :
     phi2 = get_phi2(Ar, m, tau)
-    print(phi2)
     assert(np.abs(phi2-2.4e-26)/2.4e-26 < 2e-2)
 elif args.chirp_type == 'zeta' :
     zeta = get_zeta(Ar, m, w0, L0)
