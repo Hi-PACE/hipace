@@ -36,6 +36,7 @@ def get_zeta(Ar,m, w0,L):
         for j in range(len(y_coord1)-2):
             nu=nu+pphi_pzpy[i,j]*laser_module1[i,j]
             sum=sum+laser_module1[i,j]
+    nu = nu / sum / scc.c
     a = 4 * nu * w0**2 * L**4
     b = -4 * scc.c
     c = nu * w0**2 * L**2
