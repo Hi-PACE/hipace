@@ -17,26 +17,25 @@ import scipy
 from openpmd_viewer.addons import LpaDiagnostics
 
 def get_zeta(Ar,m, w0,L):
-    # get spatial chirp zeta
     nu = 0
     sum=0
     laser_module1=np.abs(Ar**2)
     z_coord1=np.array(m.z)
     y_coord1=np.array(m.x)
     phi_envelop=np.array(np.arctan2(Ar.imag, Ar.real))
-#unwrap phi_envelop
+    #unwrap phi_envelop
     phi_envelop = np.unwrap(phi_envelop, axis=0)
     phi_envelop = np.unwrap(phi_envelop, axis=1)
     #calculate pphi_pz/
     z_diff = np.diff(z_coord1)
     y_diff = np.diff(y_coord1)
-    pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff)
+    pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
     pphi_pzpy = ((np.diff(pphi_pz, axis=0)).T/(y_diff))
     for i in range(len(z_coord1)-2):
         for j in range(len(y_coord1)-2):
             nu=nu+pphi_pzpy[i,j]*laser_module1[i,j]
             sum=sum+laser_module1[i,j]
-    nu = nu / sum / scc.c
+    nu= nu/scc.c/ sum
     a = 4 * nu * w0**2 * L**4
     b = -4 * scc.c
     c = nu * w0**2 * L**2
