@@ -2,7 +2,7 @@ max_step = 30
 hipace.dt = 70.e-6/clight
 hipace.verbose=3
 
-amr.n_cell = 128 128 50 # 128 128 100
+amr.n_cell = 512 512 100 # 128 128 100
 
 my_constants.kp_inv = 10.e-6
 
