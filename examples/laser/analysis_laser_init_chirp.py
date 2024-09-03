@@ -91,7 +91,7 @@ tau = L0 / scc.c     # Laser duration
 print(get_zeta(Ar, m, w0, L0))
 if args.chirp_type == 'phi2' :
     phi2 = get_phi2(Ar, m, tau)
-    assert(np.abs(phi2-2.4e-26)/2.4e-26 < 2e-2)
+    assert(np.abs(phi2-2.4e-26)/2.4e-26 < 1e-2)
 elif args.chirp_type == 'zeta' :
     zeta = get_zeta(Ar, m, w0, L0)
-    assert(np.abs(zeta-2.4e-26)/2.4e-26 < 1e-1)
+    assert(np.abs(zeta-2.4e-19)/2.4e-19 < 1e-2)
