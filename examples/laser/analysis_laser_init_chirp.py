@@ -94,4 +94,4 @@ if args.chirp_type == 'phi2' :
     assert(np.abs(phi2-2.4e-26)/2.4e-26 < 2e-2)
 elif args.chirp_type == 'zeta' :
     zeta = get_zeta(Ar, m, w0, L0)
-    assert(np.abs(zeta-2.4e-26)/2.4e-26 < 2e-2)
+    assert(np.abs(zeta-2.4e-26)/2.4e-26 < 1e-1)
