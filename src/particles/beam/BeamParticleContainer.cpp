@@ -327,31 +327,18 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
     const int lev1_idx = std::min(1, current_N_level-1);
     const int lev2_idx = std::min(2, current_N_level-1);
 
-    const amrex::Real lo_x_lev1 = geom3D[lev1_idx].ProbLo(0);
-    const amrex::Real lo_x_lev2 = geom3D[lev2_idx].ProbLo(0);
-
-    const amrex::Real hi_x_lev1 = geom3D[lev1_idx].ProbHi(0);
-    const amrex::Real hi_x_lev2 = geom3D[lev2_idx].ProbHi(0);
-
-    const amrex::Real lo_y_lev1 = geom3D[lev1_idx].ProbLo(1);
-    const amrex::Real lo_y_lev2 = geom3D[lev2_idx].ProbLo(1);
-
-    const amrex::Real hi_y_lev1 = geom3D[lev1_idx].ProbHi(1);
-    const amrex::Real hi_y_lev2 = geom3D[lev2_idx].ProbHi(1);
+    const CheckDomainBounds lev1_bounds {geom3D[lev1_idx]};
+    const CheckDomainBounds lev2_bounds {geom3D[lev2_idx]};
 
     amrex::ParallelFor(getNumParticlesIncludingSlipped(which_slice),
         [=] AMREX_GPU_DEVICE (int ip) {
             const amrex::Real xp = pos_x[ip];
             const amrex::Real yp = pos_y[ip];
 
-            if (current_N_level > 2 &&
-                lo_x_lev2 < xp && xp < hi_x_lev2 &&
-                lo_y_lev2 < yp && yp < hi_y_lev2) {
+            if (current_N_level > 2 && lev2_bounds.contains(xp,yp)) {
                 // level 2
                 p_mr_level[ip] = 2;
-            } else if (current_N_level > 1 &&
-                lo_x_lev1 < xp && xp < hi_x_lev1 &&
-                lo_y_lev1 < yp && yp < hi_y_lev1) {
+            } else if (current_N_level > 1 && lev1_bounds.contains(xp,yp)) {
                 // level 1
                 p_mr_level[ip] = 1;
             } else {

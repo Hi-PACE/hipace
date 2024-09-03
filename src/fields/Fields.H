@@ -122,15 +122,6 @@ public:
     amrex::MultiFab getStagingArea (const int lev) {
         return amrex::MultiFab(m_poisson_solver[lev]->StagingArea(), amrex::make_alias, 0, 1);
     }
-    /** check whether the fields are initialized correctly */
-    void checkInit() {
-        for (auto& slices_lev : m_slices) {
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                slices_lev.nComp() == 0 || slices_lev.nGrowVect() == m_slices_nguards,
-                "m_slices[lev].nGrowVect() must be equal to m_slices_nguards"
-                "for initialized slices");
-        }
-    }
     /** \brief Copy between the full FArrayBox and slice MultiFab.
      *
      * \param[in] current_N_level number of MR levels active on the current slice
@@ -172,13 +163,12 @@ public:
      * \param[in] which_slice slice of the field
      * \param[in] component which can be Psi, Ez, By, Bx ...
      * \param[in,out] staging_area Target MultiFab where the boundary condition is applied
-     * \param[in] box_grow relative to the domain, how large is the box of staging_area
      * \param[in] offset shift boundary value by offset number of cells
      * \param[in] factor multiply the boundary value by this factor
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                                const int which_slice, std::string component,
-                               amrex::MultiFab&& staging_area, amrex::IntVect box_grow,
+                               amrex::MultiFab&& staging_area,
                                amrex::Real offset, amrex::Real factor);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
@@ -241,6 +231,12 @@ public:
      * \param[in] symm_y type of reflection in y direction
      */
     void SymmetrizeFields (int field_comp, const int lev, const int symm_x, const int symm_y);
+    /** \brief call amrex FillBoundary or SumBoundary for multiple fields on level 0
+     *
+     * \param[in] do_sum if the fields are currents and needs to be summed
+     * \param[in] comp_idx vector of component indexes such as Comps[WhichSlice::This]["Ez"]
+     */
+    void EnforcePeriodic (const bool do_sum, std::vector<int>&& comp_idx);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices
@@ -459,47 +455,8 @@ public:
         }
     }
 
-    /** \brief call amrex FillBoundary for multiple fields
-     *
-     * \param[in] period periodicity of the fields
-     * \param[in] lev level of fields
-     * \param[in] islice slice of fields
-     * \param[in] comps names of fields like "Ez", "Bx", "By", "Bz"
-     */
-    template<class...Args>
-    void FillBoundary (const amrex::Periodicity& period, const int lev, const int islice,
-                       Args...comps) {
-        std::array<int, sizeof...(comps)> c_idx = {Comps[islice][comps]...};
-        amrex::MultiFab& mfab = getSlices(lev);
-
-        if (!period.isAnyPeriodic() && mfab.size() <= 1) {
-            return; // no work to do
-        }
-
-        // optimize adjacent fields to one FillBoundary call
-        std::sort(c_idx.begin(), c_idx.end());
-        int scomp = 0;
-        int ncomp = 0;
-        for (unsigned int i=0; i < c_idx.size(); ++i) {
-            if (ncomp==0) {
-                scomp = c_idx[i];
-                ncomp = 1;
-            }
-            if (i+1 >= c_idx.size() || c_idx[i+1] > scomp+ncomp) {
-                mfab.FillBoundary(scomp, ncomp, period);
-                ncomp = 0;
-            } else if (c_idx[i+1] == scomp+ncomp) {
-                ++ncomp;
-            }
-        }
-    }
-
     /** Number of guard cells for slices MultiFab */
     inline static amrex::IntVect m_slices_nguards {-1, -1, -1};
-    /** Number of guard cells for poisson solver MultiFab */
-    inline static amrex::IntVect m_poisson_nguards {-1, -1, -1};
-    /** If the poisson solver should include the guard cells */
-    bool m_extended_solve = false;
     /** Whether the currents should be symmetrized for the field solve */
     bool m_do_symmetrize = false;
 
@@ -514,16 +471,12 @@ private:
     amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
     /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
     amrex::Gpu::PinnedVector<amrex::Real> m_rel_z_vec_cpu;
-    /** Number of guard cells where ExmBy and EypBx are calculated */
-    amrex::IntVect m_exmby_eypbx_nguard;
-    /** Number of guard cells where sources for poisson equation are included */
-    amrex::IntVect m_source_nguard;
-    /** If lev_0 should be solved with open boundary conditions */
-    bool m_open_boundary = false;
     /** If the explicit solver is being used */
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */
     bool m_any_neutral_background = false;
+    /** periodicity of the fields on level 0 */
+    amrex::Periodicity m_lev0_periodicity;
     /** Number of real field properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nrp = 10;
     /** How often the insitu field diagnostics should be computed and written
@@ -535,6 +488,24 @@ private:
     amrex::Vector<amrex::Real> m_insitu_sum_rdata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "diags/field_insitu";
+};
+
+/** Helper struct to check whether a point is within a valid domain. */
+struct CheckDomainBounds {
+    amrex::Real lo[2];
+    amrex::Real hi[2];
+
+    CheckDomainBounds (const amrex::Geometry& geom) {
+        lo[0] = geom.ProbLo(0);
+        lo[1] = geom.ProbLo(1);
+        hi[0] = geom.ProbHi(0);
+        hi[1] = geom.ProbHi(1);
+    }
+
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    bool contains (const amrex::Real x, const amrex::Real y) const {
+        return lo[0] < x && x < hi[0] && lo[1] < y && y < hi[1];
+    }
 };
 
 #endif
