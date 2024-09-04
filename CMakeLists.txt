@@ -8,7 +8,7 @@
 
 # Preamble ####################################################################
 #
-cmake_minimum_required(VERSION 3.18.0)
+cmake_minimum_required(VERSION 3.24.0)
 project(HiPACE VERSION 24.08)
 
 # helper functions
@@ -36,13 +36,6 @@ endif()
 # https://cmake.org/cmake/help/latest/policy/CMP0104.html
 if(POLICY CMP0104)
     cmake_policy(SET CMP0104 OLD)
-endif()
-
-# We use simple syntax in cmake_dependent_option, so we are compatible with the
-# extended syntax in CMake 3.22+
-# https://cmake.org/cmake/help/v3.22/policy/CMP0127.html
-if(POLICY CMP0127)
-    cmake_policy(SET CMP0127 NEW)
 endif()
 
 
