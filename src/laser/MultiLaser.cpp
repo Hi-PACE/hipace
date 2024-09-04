@@ -1200,8 +1200,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     // Time stretching due to STCs and phi2 complex envelope
                     // (1 if zeta=0, beta=0, phi2=0)
                     Complex stretch_factor = 1._rt \
-                        + 4._rt * (zeta + beta * zfoc * clight * clight / (L0 * L0)) * (zeta + beta * zfoc * inv_complex_waist_2) \
-                        + 2._rt * I * (phi2 - beta * beta * k0 * zfoc) * clight * clight/ (L0 * L0);
+                        + 4._rt * (zeta + beta * zfoc / (tau * tau)) * (zeta + beta * zfoc * inv_complex_waist_2) \
+                        + 2._rt * I * (phi2 - beta * beta * k0 * zfoc) / (tau * tau);
                     Complex prefactor = a0 / diffract_factor;
                     Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
                         amrex::pow(zp - beta * k0 * (x + yp) * clight  - 2._rt * I * (x + yp)*(zeta - beta * zfoc)
