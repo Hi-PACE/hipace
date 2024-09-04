@@ -22,9 +22,9 @@ MultiPlasma::MultiPlasma ()
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
 
-    DeprecatedInput ("plasmas", "collisions",
+    DeprecatedInput("plasmas", "collisions",
                     "hipace.collisions", "", true);
-    DeprecatedInput ("plasmas", "background_density_SI",
+    DeprecatedInput("plasmas", "background_density_SI",
                     "hipace.background_density_SI", "", true);
 
     if (m_names[0] == "no_plasma") return;

@@ -171,8 +171,36 @@ Geometry
 * ``geometry.prob_hi`` (3 `float`)
     Higher end of the simulation box in x, y and z.
 
-* ``geometry.is_periodic`` (3 `bool`)
-    Whether the boundary conditions for particles in x, y and z is periodic. Note that particles in z are always removed. This setting will most likely be changed in the near future.
+* ``boundary.field`` (`string`)
+    Type of boundary condition used to fill the ghost cells of the fields.
+    Possible values:
+
+        * ``Dirichlet`` The field value in ghost cells stays zero.
+
+        * ``Periodic`` The field value in ghost cells is filled using periodic continuation of the domain.
+            This option should usually be selected only in combination with periodic field solvers.
+
+        * ``Open`` Uses a Taylor approximation of the Greens function to solve the Poisson equations with
+            open boundary conditions. Only available with the predictor-corrector solver.
+
+* ``boundary.particle`` (`string`)
+    Type of boundary condition used for particles.
+    Possible values:
+
+        * ``Reflecting`` Particles are reflected into the domain where they exited.
+
+        * ``Periodic`` Particles enter the domain on the opposite side where they exit.
+
+        * ``Absorbing`` Particles exiting the domain are deleted.
+
+* ``boundary.particle_lo`` (2 `float`) optional (default `<first two values of geometry.prob_lo>`)
+    The lower location of the domain boundary the particles experience. By default, this is equal
+    to the boundary of the fields however it may be shrunk to reduce noise originating from
+    the boundary, especially when using open boundary conditions.
+
+* ``boundary.particle_hi`` (2 `float`) optional (default `<first two values of geometry.prob_hi>`)
+    The upper location of the domain boundary the particles experience.
+    See ``boundary.particle_lo``.
 
 * ``mr_lev1.n_cell`` (2 `integer`)
     Number of cells in x and y for level 1.
@@ -293,16 +321,6 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
         Note that this does not work with features that change the boundary values,
         like mesh refinement or open boundaries.
         Preferred resolution: :math:`2^N`.
-
-* ``fields.extended_solve`` (`bool`) optional (default `0`)
-    Extends the area of the FFT Poisson solver to the ghost cells. This can reduce artifacts
-    originating from the boundary for long simulations.
-
-* ``fields.open_boundary`` (`bool`) optional (default `0`)
-    Uses a Taylor approximation of the Greens function to solve the Poisson equations with
-    open boundary conditions. It's recommended to use this together with
-    ``fields.extended_solve = true`` and ``geometry.is_periodic = false false false``.
-    Only available with the predictor-corrector solver.
 
 * ``fields.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes current and charge densities transversely before the field solve.
@@ -485,6 +503,15 @@ When both are specified, the per-species value is used.
     Number of cells that are used just outside of the fine plasma patch to smoothly transition
     between the low and high ppc regions. More transition cells produce less noise but
     require more particles.
+
+* ``<plasma name> or plasmas.prevent_centered_particle`` (`bool`) optional (default `0`)
+    When ``amr.n_cell`` and the plasma ppc are both odd, a plasma particle is initialized
+    in the exact center of the domain. A symmetric beam also initialized at the center of the domain will not be
+    able to push this particle away, causing the plasma particle to pass through the beam and
+    increasing its emittance. Enabling this setting causes all plasma particles to be
+    initialized half a cell to the side so that no plasma particle will be at the exact center of
+    the domain. However, this will also result in a gap at the domain boundary,
+    which can lead to noise.
 
 Beam parameters
 ---------------

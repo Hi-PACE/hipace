@@ -12,7 +12,8 @@ hipace.dt = 1.
 
 hipace.depos_order_xy = 2
 
-geometry.is_periodic = 1     1     0      # Is periodic?
+boundary.field = Dirichlet
+boundary.particle = Periodic
 geometry.prob_lo     = -10.   -10.   -10.    # physical domain
 geometry.prob_hi     =  10.    10.    10.
 

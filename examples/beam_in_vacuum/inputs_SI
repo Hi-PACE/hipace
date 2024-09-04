@@ -5,7 +5,8 @@ amr.max_level = 0
 max_step = 0
 diagnostic.output_period = 1
 
-geometry.is_periodic = 1     1     1      # Is periodic?
+boundary.field = Dirichlet
+boundary.particle = Periodic
 geometry.prob_lo     = -2000.e-6   -2000.e-6   -20.e-6    # physical domain
 geometry.prob_hi     =  2000.e-6    2000.e-6    20.e-6
 
