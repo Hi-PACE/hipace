@@ -40,7 +40,6 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
         // each direction and have the same number of points as the
         // (cell-centered) real space box
         amrex::Box realspace_bx = realspace_ba[i];
-        realspace_bx.grow(Fields::m_poisson_nguards);
         amrex::IntVect fft_size = realspace_bx.length();
         // Because the spectral solver uses real-to-complex FFTs, we only
         // need the positive k values along the fastest axis
@@ -59,7 +58,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
-    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, Fields::m_poisson_nguards);
+    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, 0);
     m_tmpSpectralField = SpectralField(spectralspace_ba, dm, 1, 0);
 
     // This must be true even for parallel FFT.
@@ -78,7 +77,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
         amrex::Box const& bx = mfi.validbox();  // The lower corner of the "2D" slice Box is zero.
         int const Ny = bx.length(1);
         int const mid_point_y = (Ny+1)/2;
-        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
+        amrex::ParallelFor(to2D(bx), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             // kx is always positive (first axis of the real-to-complex FFT)
             amrex::Real kx = dkx*i;
@@ -123,8 +122,8 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         // Multiply `tmpSpectralField` by inv_k2
         Array2<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
         Array2<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
-        amrex::ParallelFor( mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+        amrex::ParallelFor( to2D(mfi.growntilebox()),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 tmp_cmplx_arr(i,j) *= -inv_k2_arr(i,j);
             });
     }
@@ -140,8 +139,8 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         const amrex::Box fft_box = m_stagingArea[mfi].box();
         const amrex::Real inv_N = 1./fft_box.numPts();
-        amrex::ParallelFor( mfi.growntilebox(),
-            [=] AMREX_GPU_DEVICE(int i, int j, int) noexcept {
+        amrex::ParallelFor( to2D(mfi.growntilebox()),
+            [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 // Copy and normalize field
                 lhs_arr(i,j) = inv_N*tmp_real_arr(i,j);
             });

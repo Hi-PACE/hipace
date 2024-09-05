@@ -51,8 +51,8 @@ void ExpandR2R (amrex::FArrayBox& dst, const amrex::FArrayBox& src)
     const Array2<amrex::Real const> src_array = src.array();
     const Array2<amrex::Real> dst_array = dst.array();
 
-    amrex::ParallelFor(bx,
-        [=] AMREX_GPU_DEVICE(int i, int j, int)
+    amrex::ParallelFor(to2D(bx),
+        [=] AMREX_GPU_DEVICE(int i, int j)
         {
             if (i == lox || j == loy) {
                 dst_array(i, j) = 0;
@@ -91,8 +91,8 @@ void Shrink_Mult_Expand (amrex::FArrayBox& dst,
     const Array2<amrex::Real> dst_array = dst.array();
     const Array2<amrex::Real const> eigenvalue_array= eigenvalue.array();
 
-    amrex::ParallelFor(bx,
-        [=] AMREX_GPU_DEVICE(int i, int j, int)
+    amrex::ParallelFor(to2D(bx),
+        [=] AMREX_GPU_DEVICE(int i, int j)
         {
             if (i == lox || j == loy) {
                 dst_array(i, j) = 0;
@@ -118,8 +118,8 @@ void ShrinkC2R (amrex::FArrayBox& dst, const amrex::BaseFab<amrex::GpuComplex<am
 {
     const Array2<amrex::GpuComplex<amrex::Real> const> src_array = src.array();
     const Array2<amrex::Real> dst_array = dst.array();
-    amrex::ParallelFor(bx,
-        [=] AMREX_GPU_DEVICE(int i, int j, int)
+    amrex::ParallelFor(to2D(bx),
+        [=] AMREX_GPU_DEVICE(int i, int j)
         {
             /* upper left quadrant */
             dst_array(i,j) = -src_array(i, j).real();
@@ -141,9 +141,9 @@ FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba
     // These arrays will store the data just before/after the FFT
     // The stagingArea is also created from 0 to nx, because the real space array may have
     // an offset for levels > 0
-    m_stagingArea = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_poisson_nguards);
-    m_eigenvalue_matrix = amrex::MultiFab(a_realspace_ba, dm, 1, Fields::m_poisson_nguards);
-    m_stagingArea.setVal(0.0, Fields::m_poisson_nguards); // this is not required
+    m_stagingArea = amrex::MultiFab(a_realspace_ba, dm, 1, 0);
+    m_eigenvalue_matrix = amrex::MultiFab(a_realspace_ba, dm, 1, 0);
+    m_stagingArea.setVal(0.0); // this is not required
 
     // This must be true even for parallel FFT.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_stagingArea.local_size() == 1,
@@ -168,7 +168,7 @@ FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba
         Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
         amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
-            fft_box, [=] AMREX_GPU_DEVICE (int i, int j, int /* k */) noexcept
+            to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
                     amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);

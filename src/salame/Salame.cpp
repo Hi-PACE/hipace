@@ -219,8 +219,8 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
 
         const amrex::Real mu0 = hipace->m_phys_const.mu0;
 
-        amrex::ParallelFor(mfi.tilebox(),
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        amrex::ParallelFor(to2D(mfi.tilebox()),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
                 const amrex::Real dx_jzb = (arr(i+1,j,jzb)-arr(i-1,j,jzb))*dxih;
                 const amrex::Real dy_jzb = (arr(i,j+1,jzb)-arr(i,j-1,jzb))*dyih;
@@ -260,8 +260,8 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
 
         const amrex::Real mu0_inv = 1._rt / hipace->m_phys_const.mu0;
 
-        amrex::ParallelFor(mfi.tilebox(),
-            [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept
+        amrex::ParallelFor(to2D(mfi.tilebox()),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
                 arr(i,j,jx) =  dz * arr(i,j,chi) * arr(i,j,By) * mu0_inv;
                 arr(i,j,jy) = -dz * arr(i,j,chi) * arr(i,j,Bx) * mu0_inv;
