@@ -22,7 +22,7 @@ def get_zeta(Ar,m, w0,L):
     laser_module=np.abs(Ar**2)
     phi_envelop=np.array(np.arctan2(Ar.imag, Ar.real))
     #unwrap phi_envelop
-    phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0)，axis=1)
+    phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0),axis=1)
     #calculate pphi_pz/
     z_diff = np.diff(m.z)
     x_diff = np.diff(m.x)
@@ -44,9 +44,9 @@ def get_phi2(Ar,m,tau):
     temp_chirp = 0
     sum=0
     laser_module1=np.abs(Ar)
-    phi_envelop=np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real))，axis=0)
+    phi_envelop=np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)),axis=0)
     #calculate pphi_pz/
-    z_diff = np.diff(z_coord1)
+    z_diff = np.diff(m.z)
     pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
     pphi_pz2 = ((np.diff(pphi_pz, axis=1))/(z_diff[:len(z_diff)-1])/scc.c).T
     for i in range(len(m.z)-2):
@@ -57,26 +57,16 @@ def get_phi2(Ar,m,tau):
     a=4*x
     b=-4
     c=tau**4*x
-    return np.max([(-b-np.sqrt(b**2-4*a*c))/(2*a),(-b+np.sqrt(b**2-4*a*c))/(2*a)])
-def get_centroids(F, x, z, dim='x'):
-    """Calculates centroids from matrix F.
-    dim = 'x' or 'y'
-    The laser must propagate along the last dimension.
-    Centroids are calculated along dimension dim """
-    if np.ndim(F) == 2:
-        index_array = np.mgrid[0:F.shape[0],0:F.shape[1]][1]
-        centroids = np.sum(index_array * np.abs(F**2), axis=1)/np.sum(np.abs(F**2),axis=1)
-    elif np.ndim(F) == 3:
-        index_array = np.mgrid[0:F.shape[0],0:F.shape[1],0:F.shape[2]][2]
-        centroids = np.sum(np.sum(index_array * np.abs(F**2), axis=2), axis=1)/\
-                    np.sum(np.sum(np.abs(F**2),axis=2),axis=1)
+    zeta_solutions = np.roots([a, b, c])
+    return np.max(zeta_solutions)
+
+def get_centroids(F, x, z):
+    index_array = np.mgrid[0:F.shape[0],0:F.shape[1]][1]
+    centroids = np.sum(index_array * np.abs(F**2), axis=1)/np.sum(np.abs(F**2),axis=1)
     return z[centroids.astype(int)]
 def get_beta(F,m):
     z_centroids = get_centroids(F.T, m.x, m.z)
-    if np.ndim(F.T) == 2:
-        weight = np.mean(np.abs(F.T)**2,axis=np.ndim(F)-1)
-    if np.ndim(F.T) == 3:
-        weight = np.mean(np.abs(F.T)**2,axis=(np.ndim(F.T)-1, 1))
+    weight = np.mean(np.abs(F.T)**2,axis=np.ndim(F)-1)
     derivative = np.gradient(z_centroids) / ( m.x[1] - m.x[0] )
     return (np.sum(derivative * weight) / np.sum(weight))/k0/scc.c
 
