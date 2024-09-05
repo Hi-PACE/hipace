@@ -19,22 +19,19 @@ from openpmd_viewer.addons import LpaDiagnostics
 def get_zeta(Ar,m, w0,L):
     nu = 0
     sum=0
-    laser_module1=np.abs(Ar**2)
-    z_coord1=np.array(m.z)
-    y_coord1=np.array(m.x)
+    laser_module=np.abs(Ar**2)
     phi_envelop=np.array(np.arctan2(Ar.imag, Ar.real))
     #unwrap phi_envelop
-    phi_envelop = np.unwrap(phi_envelop, axis=0)
-    phi_envelop = np.unwrap(phi_envelop, axis=1)
+    phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0)，axis=1)
     #calculate pphi_pz/
-    z_diff = np.diff(z_coord1)
-    y_diff = np.diff(y_coord1)
+    z_diff = np.diff(m.z)
+    x_diff = np.diff(m.x)
     pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
-    pphi_pzpy = ((np.diff(pphi_pz, axis=0)).T/(y_diff))
-    for i in range(len(z_coord1)-2):
-        for j in range(len(y_coord1)-2):
-            nu=nu+pphi_pzpy[i,j]*laser_module1[i,j]
-            sum=sum+laser_module1[i,j]
+    pphi_pzpy = ((np.diff(pphi_pz, axis=0)).T/(x_diff))
+    for i in range(len(m.z)-2):
+        for j in range(len(m.x)-2):
+            nu=nu+pphi_pzpy[i,j]*laser_module[i,j]
+            sum=sum+laser_module[i,j]
     nu= nu / scc.c / sum
     a = 4 * nu * w0**2 * L**4
     b = -4 * scc.c
@@ -47,17 +44,13 @@ def get_phi2(Ar,m,tau):
     temp_chirp = 0
     sum=0
     laser_module1=np.abs(Ar)
-    y_coord1=np.array(m.x)
-    z_coord1=np.array(m.z)
-    phi_envelop=np.array(np.arctan2(Ar.imag, Ar.real))
-#unwrap phi_envelop
-    phi_envelop = np.unwrap(phi_envelop, axis=0)
+    phi_envelop=np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real))，axis=0)
     #calculate pphi_pz/
     z_diff = np.diff(z_coord1)
     pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
     pphi_pz2 = ((np.diff(pphi_pz, axis=1))/(z_diff[:len(z_diff)-1])/scc.c).T
-    for i in range(len(z_coord1)-2):
-        for j in range(len(y_coord1)-2):
+    for i in range(len(m.z)-2):
+        for j in range(len(m.x)-2):
             temp_chirp=temp_chirp+pphi_pz2[i,j]*laser_module1[i,j]
             sum=sum+laser_module1[i,j]
     x=temp_chirp*scc.c**2/sum
@@ -70,27 +63,20 @@ def get_centroids(F, x, z, dim='x'):
     dim = 'x' or 'y'
     The laser must propagate along the last dimension.
     Centroids are calculated along dimension dim """
-    if dim == 'x':
-        idim_sum = 1
-    elif dim == 'y':
-        idim_sum = 0
     if np.ndim(F) == 2:
         index_array = np.mgrid[0:F.shape[0],0:F.shape[1]][1]
         centroids = np.sum(index_array * np.abs(F**2), axis=1)/np.sum(np.abs(F**2),axis=1)
     elif np.ndim(F) == 3:
         index_array = np.mgrid[0:F.shape[0],0:F.shape[1],0:F.shape[2]][2]
-        centroids = np.sum(np.sum(index_array * np.abs(F**2), axis=2), axis=idim_sum)/\
-                    np.sum(np.sum(np.abs(F**2),axis=2),axis=idim_sum)
-def get_beta(F,m, dim='x'):
+        centroids = np.sum(np.sum(index_array * np.abs(F**2), axis=2), axis=1)/\
+                    np.sum(np.sum(np.abs(F**2),axis=2),axis=1)
+    return z[centroids.astype(int)]
+def get_beta(F,m):
     z_centroids = get_centroids(F.T, m.x, m.z)
     if np.ndim(F.T) == 2:
         weight = np.mean(np.abs(F.T)**2,axis=np.ndim(F)-1)
     if np.ndim(F.T) == 3:
-        if dim == 'x':
-            idim_sum = 1
-        elif dim == 'y':
-            idim_sum = 0
-        weight = np.mean(np.abs(F.T)**2,axis=(np.ndim(F.T)-1, idim_sum))
+        weight = np.mean(np.abs(F.T)**2,axis=(np.ndim(F.T)-1, 1))
     derivative = np.gradient(z_centroids) / ( m.x[1] - m.x[0] )
     return (np.sum(derivative * weight) / np.sum(weight))/k0/scc.c
 
@@ -122,6 +108,6 @@ if args.chirp_type == 'phi2' :
 elif args.chirp_type == 'zeta' :
     zeta = get_zeta(Ar, m, w0, L0)
     assert(np.abs(zeta-2.4e-19)/2.4e-19 < 1e-2)
-    elif args.chirp_type == 'beta' :
-beta = get_beta(Ar, m)
+elif args.chirp_type == 'beta' :
+    beta = get_beta(Ar, m)
     assert(np.abs(beta-2e-17)/2e-17 < 1e-2)
