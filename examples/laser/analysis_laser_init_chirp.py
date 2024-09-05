@@ -19,7 +19,7 @@ from openpmd_viewer.addons import LpaDiagnostics
 def get_zeta(Ar,m, w0,L):
     nu = 0
     sum=0
-    laser_module=np.abs(Ar**2)
+    laser_module=np.abs(Ar)
     phi_envelop=np.array(np.arctan2(Ar.imag, Ar.real))
     #unwrap phi_envelop
     phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0),axis=1)
@@ -65,6 +65,7 @@ def get_centroids(F, x, z):
     centroids = np.sum(index_array * np.abs(F**2), axis=1)/np.sum(np.abs(F**2),axis=1)
     return z[centroids.astype(int)]
 def get_beta(F,m):
+    k0 = 2 *scc.pi / 800e-9
     z_centroids = get_centroids(F.T, m.x, m.z)
     weight = np.mean(np.abs(F.T)**2,axis=np.ndim(F)-1)
     derivative = np.gradient(z_centroids) / ( m.x[1] - m.x[0] )
