@@ -237,9 +237,8 @@ public:
     inline static bool m_do_tiling = false;
 #endif
 
-    bool m_do_shared_depos = false;
+    inline static bool m_do_shared_depos = false;
 
-    inline static int m_shared_depos_iter = 1;
     /** Whether the explicit field solver is used */
     inline static bool m_explicit = true;
     /** Relative tolerance for the multigrid solver, when using the explicit solver */
