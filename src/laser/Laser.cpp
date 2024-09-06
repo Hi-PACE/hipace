@@ -20,7 +20,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
     m_name = name;
     amrex::ParmParse pp(m_name);
     queryWithParser(pp, "init_type", m_laser_init_type);
-     if (m_laser_init_type == "from_file") {
+    if (m_laser_init_type == "from_file") {
         queryWithParser(pp, "input_file", m_input_file_path);
         queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
         queryWithParser(pp, "iteration", m_file_num_iteration);
@@ -30,7 +30,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         }
         return;
     }
-    else if (m_laser_init_type == "gaussian"){
+    else if (m_laser_init_type == "gaussian") {
         queryWithParser(pp, "a0", m_a0);
         queryWithParser(pp, "w0", m_w0);
         queryWithParser(pp, "CEP", m_CEP);
@@ -45,7 +45,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         queryWithParser(pp, "position_mean",  m_position_mean);
         return;
     }
-    else if (m_laser_init_type == "parser"){
+    else if (m_laser_init_type == "parser") {
         std::string profile_real_str = "";
         std::string profile_imag_str = "";
         getWithParser(pp, "laser_real(x,y,z)", profile_real_str);

@@ -88,13 +88,6 @@ public:
      */
     void InitSliceEnvelope (const int islice, const int comp);
 
-    /** \brief Read in a laser from an openPMD file */
-    void GetEnvelopeFromFileHelper ();
-
-    /** \brief Read in a laser from an openPMD file */
-    template<typename input_type>
-    void GetEnvelopeFromFile ();
-
     /** \brief Shift 2D slices in zeta
      * \param[in] islice slice index
      */
@@ -197,8 +190,8 @@ public:
 private:
 
     bool m_use_laser {false}; /**< whether a laser is used or not */
-    /** Laser central wavelength.
-     * he central wavelength influences the solver. As long as all the lasers are on the same grid
+    /** Laser central wavelength defined by user.
+     * the central wavelength influences the solver. As long as all the lasers are on the same grid
      * (part of MultiLaser), this must be a property of MultiLaser. */
     amrex::Real m_lambda0 {0.};
     amrex::Vector<std::string> m_names {"no_laser"}; /**< name of the laser */
@@ -218,20 +211,6 @@ private:
     amrex::Box m_slice_box;
     /** interpolation order for laser to field and field to laser operations */
     int m_interp_order = 1;
-
-    /** if the lasers are initialized from openPMD file */
-    bool m_laser_from_file = false;
-    /** full 3D laser data stored on the host */
-    amrex::FArrayBox m_F_input_file;
-    /** path to input openPMD file */
-    std::string m_input_file_path;
-    /** name of the openPMD species in the file */
-    std::string m_file_envelope_name = "laserEnvelope";
-    /** index of the iteration in the openPMD file */
-    int m_file_num_iteration = 0;
-    /** Geometry of the laser file, 'rt' or 'xyt' */
-    std::string m_file_geometry = "";
-
     /** Array of N slices required to compute current slice */
     amrex::MultiFab m_slices;
     amrex::Real m_MG_tolerance_rel = 1.e-4;
