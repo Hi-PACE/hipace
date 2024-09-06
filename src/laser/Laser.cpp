@@ -59,7 +59,6 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
     }
 }
 
-
 void
 Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
 
@@ -340,4 +339,3 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
                  "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
 #endif // HIPACE_USE_OPENPMD
 }
-
