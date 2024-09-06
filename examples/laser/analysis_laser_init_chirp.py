@@ -4,7 +4,7 @@
 #
 # This file is part of HiPACE++.
 #
-# Authors: MaxThevenet
+# Authors: Xingjian Hui
 # License: BSD-3-Clause-LBNL
 
 
@@ -39,13 +39,13 @@ def get_zeta(Ar,m, w0,L):
     zeta_solutions = np.roots([a, b, c])
     return np.min(zeta_solutions)
 
-def get_phi2(Ar,m,tau):
+def get_phi2 (Ar,m,tau):
     #get temporal chirp phi2
     temp_chirp = 0
     sum=0
     laser_module1=np.abs(Ar)
     phi_envelop=np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)),axis=0)
-    #calculate pphi_pz/
+    #calculate pphi_pz
     z_diff = np.diff(m.z)
     pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
     pphi_pz2 = ((np.diff(pphi_pz, axis=1))/(z_diff[:len(z_diff)-1])/scc.c).T
@@ -60,11 +60,12 @@ def get_phi2(Ar,m,tau):
     zeta_solutions = np.roots([a, b, c])
     return np.max(zeta_solutions)
 
-def get_centroids(F, x, z):
+def get_centroids (F, x, z):
     index_array = np.mgrid[0:F.shape[0],0:F.shape[1]][1]
     centroids = np.sum(index_array * np.abs(F**2), axis=1)/np.sum(np.abs(F**2),axis=1)
     return z[centroids.astype(int)]
-def get_beta(F,m):
+
+def get_beta (F,m):
     k0 = 2 *scc.pi / 800e-9
     z_centroids = get_centroids(F.T, m.x, m.z)
     weight = np.mean(np.abs(F.T)**2,axis=np.ndim(F)-1)
@@ -82,17 +83,13 @@ parser.add_argument('--chirp_type',
                     help='the type of the initialised chirp')
 args = parser.parse_args()
 
-
-
 ts = LpaDiagnostics(args.output_dir)
 
 Ar, m = ts.get_field(field='laserEnvelope', iteration=0)
-
-
 lambda0=.8e-6            # Laser wavelength
-w0 = 30.e-6          # Laser waist
+w0 = 30.e-6              # Laser waist
 L0 = 5e-6
-tau = L0 / scc.c     # Laser duration
+tau = L0 / scc.c         # Laser duration
 if args.chirp_type == 'phi2' :
     phi2 = get_phi2(Ar, m, tau)
     assert(np.abs(phi2-2.4e-26)/2.4e-26 < 1e-2)
