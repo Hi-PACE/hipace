@@ -102,6 +102,12 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     // make the geometry, slice box and ba and dm
     m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
+    m_nlasers = m_names.size();
+
+    for (int i = 0; i < m_nlasers; ++i) {
+        m_all_lasers.emplace_back(Laser(m_names[i], m_laser_geom_3D));
+        amrex::Print()<<"laser"+ m_names[i] + "loaded";
+    }
 
     m_slice_box = domain_3D_laser;
     m_slice_box.setSmall(2, 0);
