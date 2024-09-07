@@ -32,7 +32,7 @@ SharedMemoryDeposition (int num_particles, F1&& is_valid, F2&& get_start_cell, F
                         std::array<int, max_cache> idx_cache,
                         std::array<int, max_depos> idx_depos) {
 
-    if (false) {
+    if (Hipace::m_do_shared_depos) {
 
         constexpr int threads_per_tile = 256;
         constexpr int tile_x = 16;
@@ -355,11 +355,8 @@ SharedMemoryDeposition (int num_particles, F1&& is_valid, F2&& get_start_cell, F
     }
 }
 
-
-
-
 void
-ExplicitDepositionS (PlasmaParticleContainer& plasma, Fields& fields,
+ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     amrex::Vector<amrex::Geometry> const& gm, const int lev) {
     HIPACE_PROFILE("ExplicitDeposition()");
     using namespace amrex::literals;
@@ -563,15 +560,4 @@ ExplicitDepositionS (PlasmaParticleContainer& plasma, Fields& fields,
                 }
             });
     }
-}
-
-
-
-
-
-
-
-void
-ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
-                    amrex::Vector<amrex::Geometry> const& gm, const int lev) {
 }

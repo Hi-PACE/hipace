@@ -613,11 +613,7 @@ Hipace::SolveOneSlice (int islice, int step)
             InitializeSxSyWithBeam(lev);
 
             // Deposit Sx and Sy for every plasma species
-            if (m_do_shared_depos) {
-                m_multi_plasma.ExplicitDepositionS(m_fields, m_3D_geom, lev);
-            } else {
-                m_multi_plasma.ExplicitDeposition(m_fields, m_3D_geom, lev);
-            }
+            m_multi_plasma.ExplicitDeposition(m_fields, m_3D_geom, lev);
 
 
             // Solves Bx, By using Sx, Sy and chi
