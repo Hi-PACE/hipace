@@ -169,6 +169,8 @@ public:
     amrex::ParserExecutor<2> m_fine_patch_func;
     amrex::Array<int, 2> m_ppc {0,0}; /**< Number of particles per cell in each direction */
     amrex::Array<int, 2> m_ppc_fine {0,0}; /**< Number of particles per cell in each direction */
+    /**< Prevent a particle from being initialized at the domain center */
+    bool m_prevent_centered_particle = false;
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */

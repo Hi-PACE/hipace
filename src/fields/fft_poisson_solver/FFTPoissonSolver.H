@@ -48,7 +48,11 @@ public:
     amrex::MultiFab& StagingArea ();
 protected:
     /** Staging area, contains (real) field in real space.
-     * This is where the source term is stored before calling the Poisson solver */
+     * This is where the source term is stored before calling the Poisson solver
+     *
+     * The staging area does not cover ghost cells for all boundary condition types,
+     * however the MultFab has one ghost cell when using the MG poisson solver.
+     */
     amrex::MultiFab m_stagingArea;
 };
 
