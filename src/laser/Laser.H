@@ -29,11 +29,10 @@ public:
     amrex::Real m_CEP {0.}; /**< Laser carrier-envelope phase (CEP) */
     /** Propagation angle of the pulse in the yz plane (0 is the along the z axis) */
     amrex::Real m_propagation_angle_yz {0.};
-    /**Pulse front tilt angle of the pulse in yz plane (pi/2 is no PFT)*/
-    amrex::Real m_PFT_yz {MathConst::pi/2.0};
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
     /**Time stretching factors*/
+    amrex::Real m_chirp_theta_xy {MathConst::pi/2.0};
     amrex::Real m_zeta {0.};
     amrex::Real m_beta {0.};
     amrex::Real m_phi2 {0.};

@@ -879,9 +879,8 @@ Option: ``gaussian``
 * ``<laser name>.propagation_angle_yz`` (`float`) optinal (default `0`)
     Propagation angle of the pulse in the yz plane (0 is the along the z axis)
 
-* ``<laser name>.PFT_yz`` (`float`) optinal (default `pi/2`)
-    Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
-    direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
+* ``<laser name>.chirp_theta_xy`` (`float`) optinal (default `pi/2`)
+    Direction of the linear spatial and angular chirp on XoY plane.
 
 * ``<laser name>.beta`` (`float`) optional (default `0.`)
     Angular dispersion (or angular chirp) at focus defined by `S. Akturk et al., Optics Express 12, 4399 (2004) <https://doi.org/10.1364/OPEX.12.004399>`__.
