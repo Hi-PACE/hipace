@@ -106,12 +106,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 constexpr int use_laser = ctos[2];
                 constexpr int stencil_size = depos_order + 1;
                 if constexpr (use_laser) {
-                    SharedMemoryDeposition<stencil_size, stencil_size>(
+                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         std::array{aabs}, std::array{jx, jy, jz, rho, chi, rhomjz});
                 } else {
-                    SharedMemoryDeposition<stencil_size, stencil_size>(
+                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         std::array<int, 0>{}, std::array{jx, jy, jz, rho, chi, rhomjz});

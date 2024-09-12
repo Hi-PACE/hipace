@@ -78,13 +78,13 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                         derivative_type == 2 ?
                             depos_order + derivative_type + 1 :
                             depos_order + derivative_type + 1 + 2;
-                    SharedMemoryDeposition<stencil_size, stencil_size>(
+                    SharedMemoryDeposition<stencil_size, stencil_size, false>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         std::array{Bz, Ez, ExmBy, EypBx, aabs_comp}, std::array{Sy, Sx});
                 } else {
                     constexpr int stencil_size = depos_order + derivative_type + 1;
-                    SharedMemoryDeposition<stencil_size, stencil_size>(
+                    SharedMemoryDeposition<stencil_size, stencil_size, false>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         std::array{Bz, Ez, ExmBy, EypBx}, std::array{Sy, Sx});

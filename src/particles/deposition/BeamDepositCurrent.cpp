@@ -92,7 +92,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             constexpr auto ctos = deposit.GetOptions();
             constexpr int depos_order = ctos[0];
             constexpr int stencil_size = depos_order + 1;
-            SharedMemoryDeposition<stencil_size, stencil_size>(
+            SharedMemoryDeposition<stencil_size, stencil_size, true>(
                 beam.getNumParticles(which_beam_slice), is_valid, get_cell, deposit,
                 isl_fab.array(), isl_fab.box(),
                 beam.getBeamSlice(which_beam_slice).getParticleTileData(),

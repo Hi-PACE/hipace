@@ -13,7 +13,7 @@
 
 #include "AMReX_GpuLaunch.H"
 
-template<int stencil_x, int stencil_y,
+template<int stencil_x, int stencil_y, bool dynamic_comps,
          class F1, class F2, class F3,
          std::size_t max_depos, std::size_t max_cache,
          class PTD>
@@ -272,12 +272,12 @@ SharedMemoryDeposition (int num_particles,
                     sy += tile_begin_y;
                     if (sx <= hi_x && sy <= hi_y) {
                         for (int n=0; n != max_cache; ++n) {
-                            if (idx_cache[n] != -1) {
+                            if (!dynamic_comps || idx_cache[n] != -1) {
                                 shared_arr(sx, sy, n) = field(sx, sy, idx_cache[n]);
                             }
                         }
                         for (int n=0; n != max_depos; ++n) {
-                            if (idx_depos[n] != -1) {
+                            if (!dynamic_comps || idx_depos[n] != -1) {
                                 shared_arr(sx, sy, n+max_cache) = 0;
                             }
                         }
@@ -288,11 +288,11 @@ SharedMemoryDeposition (int num_particles,
                 std::array<int, max_depos> loc_idx_depos;
 
                 for (int n=0; n != max_cache; ++n) {
-                    loc_idx_cache[n] = idx_cache[n] == -1 ? -1 : n;
+                    loc_idx_cache[n] = (dynamic_comps && idx_cache[n]==-1) ? -1 : n;
                 }
 
                 for (int n=0; n != max_depos; ++n) {
-                    loc_idx_depos[n] = idx_depos[n] == -1 ? -1 : n+int(max_cache);
+                    loc_idx_depos[n] = (dynamic_comps && idx_depos[n]==-1) ? -1 : n+int(max_cache);
                 }
 
                 __syncthreads();
@@ -315,7 +315,7 @@ SharedMemoryDeposition (int num_particles,
                     sy += tile_begin_y;
                     if (sx <= hi_x && sy <= hi_y) {
                         for (int n=0; n != max_depos; ++n) {
-                            if (idx_depos[n] != -1) {
+                            if (!dynamic_comps || idx_depos[n] != -1) {
                                 amrex::Gpu::Atomic::Add(
                                     field.ptr(sx, sy, idx_depos[n]), shared_arr(sx, sy, n+max_cache));
                             }
