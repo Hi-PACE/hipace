@@ -17,10 +17,11 @@ template<int stencil_x, int stencil_y, bool dynamic_comps,
          class F1, class F2, class F3,
          std::size_t max_depos, std::size_t max_cache,
          class PTD>
+AMREX_FLATTEN
 void
 SharedMemoryDeposition (int num_particles,
-                        F1&& is_valid, [[maybe_unused]] F2&& get_start_cell, F3&& do_deposit,
-                        Array3<amrex::Real> field, [[maybe_unused]] amrex::Box box, const PTD& ptd,
+                        F1&& is_valid, F2&& get_start_cell, F3&& do_deposit,
+                        Array3<amrex::Real> field, amrex::Box box, const PTD& ptd,
                         std::array<int, max_cache> idx_cache,
                         std::array<int, max_depos> idx_depos) {
 
@@ -339,30 +340,23 @@ SharedMemoryDeposition (int num_particles,
         const int lo_y = box.smallEnd(1);
         const int ntile_x = (box.length(0) + tile_x - 1) / tile_x;
         const int ntile_y = (box.length(1) + tile_y - 1) / tile_y;
-        constexpr int ll_guard = std::numeric_limits<int>::max();
-        amrex::Gpu::DeviceVector<int> ll_start(ntile_x * ntile_y, ll_guard);
-        amrex::Gpu::DeviceVector<int> ll_next(num_particles);
-        int * const p_ll_start = ll_start.dataPtr();
-        int * const p_ll_next = ll_next.dataPtr();
+        amrex::DenseBins<PTD> bins;
 
-#ifdef AMREX_USE_OMP
-#pragma omp parallel for
-#endif
-        for (int ip=0; ip<num_particles; ++ip) {
-            if (is_valid(ip, ptd)) {
-                auto [cell_x, cell_y] = get_start_cell(ip, ptd);
+        bins.build(num_particles, ptd, ntile_x * ntile_y + 1,
+            [=] (auto loc_ptd, int ip) {
+                if (is_valid(ip, loc_ptd)) {
+                    auto [cell_x, cell_y] = get_start_cell(ip, loc_ptd);
 
-                const int tile_id_x = (cell_x - lo_x) / tile_x;
-                const int tile_id_y = (cell_y - lo_y) / tile_y;
-                const int idx = (tile_id_x + tile_id_y * ntile_x);
+                    const int tile_id_x = (cell_x - lo_x) / tile_x;
+                    const int tile_id_y = (cell_y - lo_y) / tile_y;
+                    return (tile_id_x * ntile_y + tile_id_y);
+                } else {
+                    return ntile_x * ntile_y;
+                }
+            });
 
-#ifdef AMREX_USE_OMP
-#pragma omp atomic capture
-#endif
-                {p_ll_next[ip] = p_ll_start[idx]; p_ll_start[idx] = ip;}
-
-            }
-        }
+        int const * const a_indices = bins.permutationPtr();
+        int const * const a_offsets = bins.offsetsPtr();
 
         for (int tile_perm_x = 0; tile_perm_x < 2; ++tile_perm_x) {
             for (int tile_perm_y = 0; tile_perm_y < 2; ++tile_perm_y) {
@@ -372,15 +366,13 @@ SharedMemoryDeposition (int num_particles,
                 for (int itile_x = tile_perm_x; itile_x < ntile_x; itile_x += 2) {
                     for (int itile_y = tile_perm_y; itile_y < ntile_y; itile_y += 2) {
 
-                        const int tile_id = (itile_x + itile_y * ntile_x);
+                        const int tile_id = (itile_x * ntile_y + itile_y);
 
-                        int current_idx = p_ll_start[tile_id];
-
-                        while (current_idx != ll_guard) {
-
-                            do_deposit(current_idx, ptd, field, idx_cache, idx_depos);
-
-                            current_idx = p_ll_next[current_idx];
+#ifdef AMREX_USE_OMP
+#pragma omp simd
+#endif
+                        for (int ip = a_offsets[tile_id]; ip < a_offsets[tile_id+1]; ++ip) {
+                            do_deposit(a_indices[ip], ptd, field, idx_cache, idx_depos);
                         }
                     }
                 }
