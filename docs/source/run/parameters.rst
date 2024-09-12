@@ -132,7 +132,7 @@ General parameters
     The tile size can be set with ``hipace.tile_size``.
 
 * ``hipace.tile_size`` (`int`) optional (default `32`)
-    Tile size for plasma current deposition, when running on CPU
+    Tile size for beam and plasma current deposition, when running on CPU
     and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``hipace.depos_order_xy`` (`int`) optional (default `2`)
