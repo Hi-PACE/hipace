@@ -29,7 +29,7 @@ python3 ${HIPACE_SOURCE_DIR}/tools/write_beam.py
 
 # Run the simulation
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=${TEST_NAME} \
         amr.n_cell = 16 16 32 \
         hipace.dt = 0 \

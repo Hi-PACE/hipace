@@ -26,7 +26,7 @@ FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         amr.n_cell=128 256 30 \
         beam.radius = 20. \
         diagnostic.field_data = all rho \
@@ -34,7 +34,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         max_step = 1
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         amr.n_cell=128 256 30 \
         beam.radius = 20. \
         diagnostic.field_data = all rho \

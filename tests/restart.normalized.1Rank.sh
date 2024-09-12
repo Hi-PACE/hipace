@@ -25,7 +25,7 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=${TEST_NAME}_1 \
         amr.n_cell = 16 16 32 \
         geometry.prob_lo = -2. -2. -12. \
@@ -34,7 +34,7 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
 
 # Restart the simulation with previous beam output
 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=${TEST_NAME}_2 \
         amr.n_cell = 24 24 48 \
         geometry.prob_lo = -2. -2. -12. \

@@ -21,7 +21,7 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=$TEST_NAME \
         max_step = 0 \
         beams.names = no_beam \

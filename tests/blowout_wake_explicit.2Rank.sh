@@ -30,7 +30,7 @@ rm -rf $TEST_NAME
 rm -rf ${TEST_NAME}_cd2
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=$TEST_NAME \
         max_step=1
 
@@ -44,7 +44,7 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
 echo "Start testing plasma reordering"
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=${TEST_NAME}_cd2 \
         plasmas.reorder_period = 4 \
         max_step=1

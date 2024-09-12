@@ -23,25 +23,25 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         diagnostic.diag_type=xyz \
         amr.n_cell = 64 88 100 \
         hipace.file_prefix=full_io
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         diagnostic.diag_type=xz \
         amr.n_cell = 64 88 100 \
         hipace.file_prefix=slice_io_xz
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         diagnostic.diag_type=yz \
         amr.n_cell = 64 88 100 \
         hipace.file_prefix=slice_io_yz
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         diagnostic.diag_type=xyz \
         amr.n_cell = 64 88 100 \
         diagnostic.patch_lo = -3 -100  0 \
@@ -49,7 +49,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         hipace.file_prefix=slice_io_cut_xy
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         diagnostic.diag_type=xz \
         amr.n_cell = 64 88 100 \
         diagnostic.patch_lo =  0 -3 -10 \

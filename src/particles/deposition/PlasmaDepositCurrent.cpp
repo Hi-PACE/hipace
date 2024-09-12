@@ -11,7 +11,6 @@
 #include "particles/particles_utils/ShapeFactors.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "particles/plasma/PlasmaParticleContainer.H"
-#include "particles/sorting/TileSort.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
 #include "Hipace.H"
@@ -25,8 +24,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
-                amrex::Vector<amrex::Geometry> const& gm, int const lev,
-                [[maybe_unused]] const PlasmaBins& bins, [[maybe_unused]] int bin_size)
+                amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
     using namespace amrex::literals;

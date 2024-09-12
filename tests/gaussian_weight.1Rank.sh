@@ -27,7 +27,7 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         beam.position_mean = '"(z-2)*0.1" "1+(z-2)*(-0.2)" "2"' \
         beam.duz_per_uz0_dzeta = 0.01 \
         beam.position_std = 0.1 0.1 2. \

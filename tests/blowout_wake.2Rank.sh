@@ -34,19 +34,19 @@ rm -rf normalized_data
 rm -rf normalized_data_cd2
 # Run the simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=si_data/ \
         max_step=1
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         beam.injection_type=fixed_weight \
         beam.num_particles=1000000 \
         hipace.file_prefix=si_data_fixed_weight/ \
         max_step=1
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=normalized_data/ \
         max_step=1
 
@@ -67,7 +67,7 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
 echo "Start testing plasma reordering"
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.file_prefix=normalized_data_cd2/ \
         plasmas.reorder_period = 4 \
         max_step=1

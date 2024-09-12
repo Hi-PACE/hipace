@@ -30,7 +30,7 @@ RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         hipace.depos_order_xy = 0 \
         hipace.bxby_solver = predictor-corrector \
         hipace.predcorr_B_mixing_factor = 0.95 \

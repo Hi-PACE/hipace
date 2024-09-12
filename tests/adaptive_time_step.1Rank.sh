@@ -33,7 +33,7 @@ rm -rf positive_gradient.txt
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         amr.n_cell = 32 32 32 \
         max_step = 20 \
         geometry.prob_lo = -2. -2. -2. \
@@ -52,7 +52,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
         > negative_gradient.txt
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         amr.n_cell = 32 32 32 \
         max_step = 20 \
         geometry.prob_lo = -2. -2. -2. \

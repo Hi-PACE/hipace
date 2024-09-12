@@ -30,7 +30,7 @@ RTOL=1e-11 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-        plasmas.sort_bin_size = 8 \
+        hipace.tile_size = 8 \
         beam.profile = gaussian \
         beam.zmin = -59.e-6 \
         beam.zmax = 59.e-6 \
