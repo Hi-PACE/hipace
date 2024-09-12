@@ -237,6 +237,8 @@ public:
     inline static bool m_do_tiling = false;
 #endif
 
+    inline static int m_tile_size = 32;
+
     inline static bool m_do_shared_depos = false;
 
     /** Whether the explicit field solver is used */

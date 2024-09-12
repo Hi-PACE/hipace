@@ -153,6 +153,7 @@ Hipace::Hipace () :
     queryWithParser(pph, "use_amrex_mlmg", m_use_amrex_mlmg);
     queryWithParser(pph, "do_shared_depos", m_do_shared_depos);
     queryWithParser(pph, "do_tiling", m_do_tiling);
+    queryWithParser(pph, "tile_size", m_tile_size);
 #ifdef AMREX_USE_GPU
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif

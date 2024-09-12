@@ -74,10 +74,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 constexpr int derivative_type = ctos[1];
                 constexpr int use_laser = ctos[3];
                 if constexpr (use_laser) {
-                    constexpr int stencil_size =
-                        derivative_type == 2 ?
-                            depos_order + derivative_type + 1 :
-                            depos_order + derivative_type + 1 + 2;
+                    constexpr int stencil_size = depos_order + 2 + 1;
                     SharedMemoryDeposition<stencil_size, stencil_size, false>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
@@ -116,8 +113,14 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 auto [shape_x, shape_dx, i] =
                     single_derivative_shape_factor<derivative_type, depos_order>(xmid, 0);
 
-                if constexpr (use_laser && derivative_type != 2) {
-                    return {i-1, j-1};
+                if constexpr (use_laser) {
+                    if constexpr (derivative_type == 0) {
+                        return {i-1, j-1};
+                    } else if constexpr (derivative_type == 1) {
+                        return {shape_x == 0._rt ? i : i-1, shape_y == 0._rt ? j : j-1};
+                    } else {
+                        return {i, j};
+                    }
                 } else {
                     return {i, j};
                 }

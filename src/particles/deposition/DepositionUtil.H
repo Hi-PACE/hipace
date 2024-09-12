@@ -24,8 +24,8 @@ SharedMemoryDeposition (int num_particles,
                         std::array<int, max_cache> idx_cache,
                         std::array<int, max_depos> idx_depos) {
 
-    if (Hipace::m_do_shared_depos) {
 #ifdef AMREX_USE_GPU
+    if (Hipace::m_do_shared_depos) {
         constexpr int threads_per_tile = 256;
         constexpr int tile_x = 16;
         constexpr int tile_y = 16;
@@ -328,16 +328,73 @@ SharedMemoryDeposition (int num_particles,
         );
 
         amrex::Gpu::streamSynchronize();
-#endif
-    } else {
+    }
+#else
+    if (Hipace::m_do_tiling) {
+        const int tile_x = Hipace::m_tile_size;
+        const int tile_y = Hipace::m_tile_size;
+        AMREX_ALWAYS_ASSERT(tile_x >= stencil_x && tile_y >= stencil_y);
 
+        const int lo_x = box.smallEnd(0);
+        const int lo_y = box.smallEnd(1);
+        const int ntile_x = (box.length(0) + tile_x - 1) / tile_x;
+        const int ntile_y = (box.length(1) + tile_y - 1) / tile_y;
+        constexpr int ll_guard = std::numeric_limits<int>::max();
+        amrex::Gpu::DeviceVector<int> ll_start(ntile_x * ntile_y, ll_guard);
+        amrex::Gpu::DeviceVector<int> ll_next(num_particles);
+        int * const p_ll_start = ll_start.dataPtr();
+        int * const p_ll_next = ll_next.dataPtr();
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel for
+#endif
+        for (int ip=0; ip<num_particles; ++ip) {
+            if (is_valid(ip, ptd)) {
+                auto [cell_x, cell_y] = get_start_cell(ip, ptd);
+
+                const int tile_id_x = (cell_x - lo_x) / tile_x;
+                const int tile_id_y = (cell_y - lo_y) / tile_y;
+                const int idx = (tile_id_x + tile_id_y * ntile_x);
+
+#ifdef AMREX_USE_OMP
+#pragma omp atomic capture
+#endif
+                {p_ll_next[ip] = p_ll_start[idx]; p_ll_start[idx] = ip;}
+
+            }
+        }
+
+        for (int tile_perm_x = 0; tile_perm_x < 2; ++tile_perm_x) {
+            for (int tile_perm_y = 0; tile_perm_y < 2; ++tile_perm_y) {
+#ifdef AMREX_USE_OMP
+#pragma omp parallel for collapse(2)
+#endif
+                for (int itile_x = tile_perm_x; itile_x < ntile_x; itile_x += 2) {
+                    for (int itile_y = tile_perm_y; itile_y < ntile_y; itile_y += 2) {
+
+                        const int tile_id = (itile_x + itile_y * ntile_x);
+
+                        int current_idx = p_ll_start[tile_id];
+
+                        while (current_idx != ll_guard) {
+
+                            do_deposit(current_idx, ptd, field, idx_cache, idx_depos);
+
+                            current_idx = p_ll_next[current_idx];
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
+    else {
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (is_valid(ip, ptd)) {
                     do_deposit(ip, ptd, field, idx_cache, idx_depos);
                 }
             });
-
     }
 }
 
