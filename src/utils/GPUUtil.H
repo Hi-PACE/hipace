@@ -205,22 +205,6 @@ amrex::Real abssq(amrex::Real r, amrex::Real i)
     return r*r + i*i;
 }
 
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void AtomicAdd(amrex::Real* ptr, amrex::Real val, [[maybe_unused]] bool do_omp_atomic=true) {
-#ifdef AMREX_USE_GPU
-    amrex::Gpu::Atomic::Add(ptr, val);
-#elif defined(AMREX_USE_OMP)
-    if (do_omp_atomic) {
-#pragma omp atomic
-        *ptr += val;
-    } else {
-        *ptr += val;
-    }
-#else
-    *ptr += val;
-#endif
-}
-
 AMREX_FORCE_INLINE
 amrex::BoxND<2> to2D (const amrex::BoxND<3>& box) {
     AMREX_ALWAYS_ASSERT(box.length(2) == 1);
