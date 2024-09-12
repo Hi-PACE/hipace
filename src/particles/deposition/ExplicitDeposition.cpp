@@ -92,15 +92,19 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 }
             },
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto depos_order, auto derivative_type,
-                                  auto can_ionize, auto use_laser)
+                                  [[maybe_unused]] auto depos_order,
+                                  [[maybe_unused]] auto derivative_type,
+                                  [[maybe_unused]] auto can_ionize,
+                                  [[maybe_unused]] auto use_laser)
             {
                 // only deposit plasma Sx and Sy on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
             },
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto depos_order, auto derivative_type,
-                                  auto can_ionize, auto use_laser) -> amrex::IntVectND<2>
+                                  [[maybe_unused]] auto depos_order,
+                                  [[maybe_unused]] auto derivative_type,
+                                  [[maybe_unused]] auto can_ionize,
+                                  [[maybe_unused]] auto use_laser) -> amrex::IntVectND<2>
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
@@ -113,7 +117,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 auto [shape_x, shape_dx, i] =
                     single_derivative_shape_factor<derivative_type, depos_order>(xmid, 0);
 
-                if  constexpr (use_laser && derivative_type != 2) {
+                if constexpr (use_laser && derivative_type != 2) {
                     return {i-1, j-1};
                 } else {
                     return {i, j};
@@ -122,8 +126,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx,
-                                  auto depos_order, auto derivative_type,
-                                  auto can_ionize, auto use_laser) noexcept
+                                  [[maybe_unused]] auto depos_order,
+                                  [[maybe_unused]] auto derivative_type,
+                                  [[maybe_unused]] auto can_ionize,
+                                  [[maybe_unused]] auto use_laser) noexcept
             {
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);
@@ -161,9 +167,13 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     + 1._rt
                 );
 
-                AMREX_UNROLL_LOOP()
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
                 for (int iy=0; iy <= depos_order+derivative_type; ++iy) {
-                    AMREX_UNROLL_LOOP()
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
                     for (int ix=0; ix <= depos_order+derivative_type; ++ix) {
 
                         if constexpr (derivative_type == 2) {

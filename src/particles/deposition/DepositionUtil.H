@@ -18,8 +18,9 @@ template<int stencil_x, int stencil_y,
          std::size_t max_depos, std::size_t max_cache,
          class PTD>
 void
-SharedMemoryDeposition (int num_particles, F1&& is_valid, F2&& get_start_cell, F3&& do_deposit,
-                        Array3<amrex::Real> field, amrex::Box box, const PTD& ptd,
+SharedMemoryDeposition (int num_particles,
+                        F1&& is_valid, [[maybe_unused]] F2&& get_start_cell, F3&& do_deposit,
+                        Array3<amrex::Real> field, [[maybe_unused]] amrex::Box box, const PTD& ptd,
                         std::array<int, max_cache> idx_cache,
                         std::array<int, max_depos> idx_depos) {
 

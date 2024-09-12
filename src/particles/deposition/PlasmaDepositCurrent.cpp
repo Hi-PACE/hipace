@@ -26,7 +26,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
                 amrex::Vector<amrex::Geometry> const& gm, int const lev,
-                const PlasmaBins& bins, int bin_size)
+                [[maybe_unused]] const PlasmaBins& bins, [[maybe_unused]] int bin_size)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -120,15 +120,17 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 }
             },
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto depos_order, auto can_ionize,
-                                  auto use_laser)
+                                  [[maybe_unused]] auto depos_order,
+                                  [[maybe_unused]] auto can_ionize,
+                                  [[maybe_unused]] auto use_laserr)
             {
                 // only deposit plasma currents on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
             },
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto depos_order, auto can_ionize,
-                                  auto use_laser) -> amrex::IntVectND<2>
+                                  [[maybe_unused]] auto depos_order,
+                                  [[maybe_unused]] auto can_ionize,
+                                  [[maybe_unused]] auto use_laser) -> amrex::IntVectND<2>
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
@@ -147,8 +149,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx,
-                                  auto depos_order, auto can_ionize,
-                                  auto use_laser) noexcept
+                                  [[maybe_unused]] auto depos_order,
+                                  [[maybe_unused]] auto can_ionize,
+                                  [[maybe_unused]] auto use_laser) noexcept
             {
                 // only deposit plasma currents on or below their according MR level
                 if (!ptd.id(ip).is_valid() || (lev != 0 && ptd.cpu(ip) < lev)) return;
