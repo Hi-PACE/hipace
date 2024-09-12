@@ -161,5 +161,7 @@ std::ostream& operator<<(std::ostream& os, utils::format_time ft) {
         << std::setfill('0') << std::setw(2) << minutes << ":"
         << std::setfill('0') << std::setw(2) << seconds;
 
+    os << std::setfill(' ');
+
     return os;
 }
