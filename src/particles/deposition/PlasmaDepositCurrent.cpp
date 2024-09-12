@@ -89,8 +89,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
             "jx, jy, jz, and rho must be cell centered in all directions.");
 
-        Array3<amrex::Real> const field_arr = isl_fab.array();
-
         // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
         amrex::AnyCTO(
             amrex::TypeList<
@@ -109,28 +107,28 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 constexpr int stencil_size = depos_order + 1;
                 if constexpr (use_laser) {
                     SharedMemoryDeposition<stencil_size, stencil_size>(
-                        int(pti.numParticles()), is_valid, get_cell, deposit, field_arr,
+                        int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         std::array{aabs}, std::array{jx, jy, jz, rho, chi, rhomjz});
                 } else {
                     SharedMemoryDeposition<stencil_size, stencil_size>(
-                        int(pti.numParticles()), is_valid, get_cell, deposit, field_arr,
+                        int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         std::array<int, 0>{}, std::array{jx, jy, jz, rho, chi, rhomjz});
                 }
             },
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  [[maybe_unused]] auto depos_order,
-                                  [[maybe_unused]] auto can_ionize,
-                                  [[maybe_unused]] auto use_laserr)
+                                  auto /*depos_order*/,
+                                  auto /*can_ionize*/,
+                                  auto /*use_laserr*/)
             {
                 // only deposit plasma currents on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
             },
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  [[maybe_unused]] auto depos_order,
-                                  [[maybe_unused]] auto can_ionize,
-                                  [[maybe_unused]] auto use_laser) -> amrex::IntVectND<2>
+                                  auto depos_order,
+                                  auto /*can_ionize*/,
+                                  auto /*use_laser*/) -> amrex::IntVectND<2>
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
@@ -149,9 +147,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx,
-                                  [[maybe_unused]] auto depos_order,
-                                  [[maybe_unused]] auto can_ionize,
-                                  [[maybe_unused]] auto use_laser) noexcept
+                                  auto depos_order,
+                                  auto can_ionize,
+                                  auto use_laser) noexcept
             {
                 // only deposit plasma currents on or below their according MR level
                 if (!ptd.id(ip).is_valid() || (lev != 0 && ptd.cpu(ip) < lev)) return;

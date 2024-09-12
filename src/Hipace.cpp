@@ -615,7 +615,6 @@ Hipace::SolveOneSlice (int islice, int step)
             // Deposit Sx and Sy for every plasma species
             m_multi_plasma.ExplicitDeposition(m_fields, m_3D_geom, lev);
 
-
             // Solves Bx, By using Sx, Sy and chi
             ExplicitMGSolveBxBy(lev, WhichSlice::This);
         }
