@@ -14,6 +14,7 @@
 #include "GetAndSetPosition.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/GPUUtil.H"
+#include "utils/OMPUtil.H"
 
 void
 AdvanceBeamParticlesSlice (
@@ -111,7 +112,8 @@ AdvanceBeamParticlesSlice (
     const amrex::Real E0 = Hipace::m_normalized_units ?
                            PhysConstSI::m_e * PhysConstSI::c / wp_inv / PhysConstSI::q_e : 1;
 
-    amrex::ParallelFor(
+    // Use OMP ParallelFor to use multiple threads when running on CPU
+    omp::ParallelFor(
         amrex::TypeList<
             amrex::CompileTimeOptions<0, 1, 2, 3>,
             amrex::CompileTimeOptions<false, true>
