@@ -172,7 +172,7 @@ Real residual3 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
     return rhs - lap;
 }
 
-#if !defined(AMREX_USE_CUDA) && !defined(AMREX_USE_HIP)
+#if !defined(AMREX_USE_CUDA) && !defined(AMREX_USE_HIP) && defined(AMREX_USE_GPU)
 // res = rhs - L(phi)
 void compute_residual (Box const& box, Array4<Real> const& res,
                        Array4<Real> const& phi, Array4<Real const> const& rhs,
@@ -536,6 +536,150 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
         });
 }
 
+#elif !defined(AMREX_USE_GPU)
+
+// do multiple gsrb iterations in GPU shared memory with many ghost cells
+template<int system_type, bool zero_init, bool do_compute_residual, bool is_cell_centered>
+void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
+                  Array4<Real const> const& acf, Array4<Real> const& res,
+                  Array4<Real const> const& phi_in, Real dx, Real dy)
+{
+    constexpr int num_comps = MultiGrid::get_num_comps(system_type);
+    constexpr int tilesize_x = 64;
+    constexpr int tilesize_y = 24;
+    constexpr int tilesize_array_x = tilesize_x + 2; // add one ghost cell in each direction
+    constexpr int tilesize_array_y = tilesize_y + 2;
+    constexpr int niter = 4;
+    constexpr int edge_offset = niter - !do_compute_residual;
+    constexpr int final_tilesize_x = tilesize_x - 2*edge_offset; // add more ghost cells
+    constexpr int final_tilesize_y = tilesize_y - 2*edge_offset;
+    static_assert(system_type == 1 || system_type == 2 || system_type == 3,
+        "gsrb_shared only supports system type 1, 2 or 3");
+
+    // box for the bounds of the arrays
+    int const ilo = box.smallEnd(0);
+    int const jlo = box.smallEnd(1);
+    int const ihi = box.bigEnd(0);
+    int const jhi = box.bigEnd(1);
+    const Real facx = Real(1.)/(dx*dx);
+    const Real facy = Real(1.)/(dy*dy);
+
+    // box for the bounds of the ParallelFor loop this kernel replaces
+    const Box loop_box = valid_domain_box(box);
+    int const ilo_loop = loop_box.smallEnd(0);
+    int const jlo_loop = loop_box.smallEnd(1);
+    int const ihi_loop = loop_box.bigEnd(0);
+    int const jhi_loop = loop_box.bigEnd(1);
+    const int num_blocks_x = (loop_box.length(0) + final_tilesize_x - 1)/final_tilesize_x;
+    const int num_blocks_y = (loop_box.length(1) + final_tilesize_y - 1)/final_tilesize_y;
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel for collapse(2)
+#endif
+    for (int iblock_y=0; iblock_y<num_blocks_y; ++iblock_y) {
+        for (int iblock_x=0; iblock_x<num_blocks_x; ++iblock_x) {
+
+            // allocate cached memory
+            Real phi_ptr[tilesize_array_x * tilesize_array_y * num_comps];
+
+            const int tile_begin_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop;
+            const int tile_begin_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop;
+
+            const int tile_end_x = tile_begin_x + tilesize_array_x;
+            const int tile_end_y = tile_begin_y + tilesize_array_y;
+
+            // make Array4 reference cached memory tile
+            Array4<Real> phi_cached(phi_ptr, {tile_begin_x, tile_begin_y, 0},
+                                             {tile_end_x, tile_end_y, 1}, num_comps);
+
+            if  (zero_init) {
+                for (int s = 0; s < tilesize_array_x * tilesize_array_y * num_comps; ++s) {
+                    phi_ptr[s] = Real(0.);
+                }
+            } else {
+                for (int j = tile_begin_y; j < tile_end_y; ++j) {
+                    for (int i = tile_begin_x; i < tile_end_x; ++i) {
+                        if (ilo_loop <= i && i <= ihi_loop &&
+                            jlo_loop <= j && j <= jhi_loop) {
+                            for (int n=0; n<num_comps; ++n) {
+                                phi_cached(i, j, 0, n) = phi_in(i, j, 0, n);
+                            }
+                        } else {
+                            for (int n=0; n<num_comps; ++n) {
+                                phi_cached(i, j, 0, n) = Real(0.);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (int icolor=0; icolor<niter; ++icolor) {
+                // Do 4 Gauss–Seidel iterations.
+                const int i_start = std::max(tile_begin_x + 1, ilo_loop);
+                const int i_end = std::min(tile_end_x - 1, ihi_loop + 1);
+                const int j_start = std::max(tile_begin_y + 1, jlo_loop);
+                const int j_end = std::min(tile_end_y - 1, jhi_loop + 1);
+                for (int j = j_start; j < j_end; ++j) {
+                    int shift = (i_start + j + icolor) & 1;
+                    for (int i = i_start + shift; i < i_end; i+=2) {
+                        if (system_type == 1) {
+                            gs1<is_cell_centered>(i, j, 0, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 0), acf(i, j, 0, 0), facx, facy);
+                            gs1<is_cell_centered>(i, j, 1, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 1), acf(i, j, 0, 0), facx, facy);
+                        } else if (system_type == 2) {
+                            gs2<is_cell_centered>(i, j, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 0), rhs(i, j, 0, 1),
+                                acf(i, j, 0, 0), acf(i, j, 0, 1), facx, facy);
+                        } else if (system_type == 3) {
+                            gs3<is_cell_centered>(i, j, 0, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 0), facx, facy);
+                        }
+                    }
+                }
+            }
+
+            const int i_start = std::max(tile_begin_x + 1 + edge_offset, ilo_loop);
+            const int i_end = std::min(tile_end_x - 1 - edge_offset, ihi_loop + 1);
+            const int j_start = std::max(tile_begin_y + 1 + edge_offset, jlo_loop);
+            const int j_end = std::min(tile_end_y - 1 - edge_offset, jhi_loop + 1);
+            for (int j = j_start; j < j_end; ++j) {
+                for (int i = i_start; i < i_end; ++i) {
+                    if (do_compute_residual) {
+                        // fuse with compute_residual loop and reuse phi_cached
+                        // at the cost of one extra ghost cell in each direction
+                        if (system_type == 1) {
+                            res(i, j, 0, 0) = residual1(
+                                i, j, 0, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 0), acf(i, j, 0, 0), facx, facy);
+                            res(i, j, 0, 1) = residual1(
+                                i, j, 1, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 1), acf(i, j, 0, 0), facx, facy);
+                        } else if (system_type == 2) {
+                            res(i, j, 0, 0) = residual2r(
+                                i, j, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 0), acf(i, j, 0, 0),
+                                acf(i, j, 0, 1), facx, facy);
+                            res(i, j, 0, 1) = residual2i(
+                                i, j, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 1), acf(i, j, 0, 0),
+                                acf(i, j, 0, 1), facx, facy);
+                        } else if (system_type == 3) {
+                            res(i, j, 0, 0) = residual3(
+                                i, j, 0, ilo, jlo, ihi, jhi, phi_cached,
+                                rhs(i, j, 0, 0), facx, facy);
+                        }
+                    }
+
+                    for (int n=0; n<num_comps; ++n) {
+                        phi_out(i, j, 0, n) = phi_cached(i, j, 0, n);
+                    }
+                }
+            }
+        }
+    }
+}
+
 #endif
 
 template<bool zero_init, bool do_compute_residual>
@@ -576,6 +720,33 @@ void gsrb_4_residual (int system_type, Box const& box,
                 box, phi_out, rhs, acf, res, phi_in, dx, dy);
         }
     }
+#elif !defined(AMREX_USE_GPU)
+    if (system_type == 1) {
+        if (box.cellCentered()) {
+            gsrb_cached<1, zero_init, do_compute_residual, true>(
+                box, phi_out, rhs, acf, res, phi_in, dx, dy);
+        } else {
+            gsrb_cached<1, zero_init, do_compute_residual, false>(
+                box, phi_out, rhs, acf, res, phi_in, dx, dy);
+        }
+    } else if (system_type == 2) {
+        if (box.cellCentered()) {
+            gsrb_cached<2, zero_init, do_compute_residual, true>(
+                box, phi_out, rhs, acf, res, phi_in, dx, dy);
+        } else {
+            gsrb_cached<2, zero_init, do_compute_residual, false>(
+                box, phi_out, rhs, acf, res, phi_in, dx, dy);
+        }
+    } else if (system_type == 3) {
+        if (box.cellCentered()) {
+            gsrb_cached<3, zero_init, do_compute_residual, true>(
+                box, phi_out, rhs, acf, res, phi_in, dx, dy);
+        } else {
+            gsrb_cached<3, zero_init, do_compute_residual, false>(
+                box, phi_out, rhs, acf, res, phi_in, dx, dy);
+        }
+    }
+
 #else
     if (zero_init) {
         Real * pcor_out = phi_out.dataPtr();
