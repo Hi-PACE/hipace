@@ -24,7 +24,6 @@ SharedMemoryDeposition (int num_particles,
                         Array3<amrex::Real> field, amrex::Box box, const PTD& ptd,
                         std::array<int, max_cache> idx_cache,
                         std::array<int, max_depos> idx_depos) {
-
 #ifdef AMREX_USE_GPU
     if (Hipace::m_do_shared_depos) {
         constexpr int threads_per_tile = 256;
@@ -32,6 +31,8 @@ SharedMemoryDeposition (int num_particles,
         constexpr int tile_y = 16;
         constexpr int tile_s_x = tile_x + stencil_x - 1;
         constexpr int tile_s_y = tile_y + stencil_y - 1;
+        constexpr int combine_threads = 4;
+        constexpr int combine_stride = threads_per_tile / combine_threads;
 
         const int lo_x = box.smallEnd(0);
         const int lo_y = box.smallEnd(1);
@@ -41,16 +42,14 @@ SharedMemoryDeposition (int num_particles,
         const int ntile_y = (box.length(1) + tile_y - 1) / tile_y;
         constexpr int ll_guard = std::numeric_limits<int>::max();
         amrex::Gpu::DeviceVector<int> ll_start(ntile_x * ntile_y * threads_per_tile, ll_guard);
-        amrex::Gpu::DeviceVector<int> ll_count(ntile_x * ntile_y * 64, 0);
+        amrex::Gpu::DeviceVector<int> ll_count(ntile_x * ntile_y * combine_stride, 0);
         amrex::Gpu::DeviceVector<int> ll_next(num_particles);
         int * const p_ll_start = ll_start.dataPtr();
         int * const p_ll_count = ll_count.dataPtr();
         int * const p_ll_next = ll_next.dataPtr();
 
-        {
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
-                //ip = num_particles - ip - 1;
 
                 if (is_valid(ip, ptd)) {
                     auto [cell_x, cell_y] = get_start_cell(ip, ptd);
@@ -59,188 +58,20 @@ SharedMemoryDeposition (int num_particles,
                     const int tile_id_y = (cell_y - lo_y) / tile_y;
                     const int idx = (tile_id_x + tile_id_y * ntile_x);
 
-                    //const int count = amrex::Gpu::Atomic::Add(p_ll_count + idx, 1);
-
-                    //p_ll_next[ip] = amrex::Gpu::Atomic::Exch(
-                    //    p_ll_start + idx*threads_per_tile + count % threads_per_tile, ip);
-
                     const int loc_id_x = (cell_x - lo_x - tile_id_x * tile_x);
                     const int loc_id_y = (cell_y - lo_y - tile_id_y * tile_y);
                     const int loc_id = loc_id_x + loc_id_y * tile_x;
 
                     const int count = amrex::Gpu::Atomic::Add(
-                        p_ll_count + idx*64 + (loc_id % 64), 1);
+                        p_ll_count + idx*combine_stride + (loc_id % combine_stride), 1);
 
                     p_ll_next[ip] = amrex::Gpu::Atomic::Exch(
-                        p_ll_start + idx*threads_per_tile + (loc_id % 64) + (count % 4) * 64 , ip);
-
-                    //p_ll_next[ip] = amrex::Gpu::Atomic::Exch(
-                    //    p_ll_start + idx*threads_per_tile + loc_id, ip);
+                        p_ll_start + idx*threads_per_tile + (loc_id % combine_stride)
+                                   + (count % combine_threads) * combine_stride , ip);
                 }
             });
 
-        }
-
-
-        /*{
-
-            amrex::launch<threads_per_tile>(ntile_x * ntile_y, amrex::Gpu::gpuStream(),
-                [=] AMREX_GPU_DEVICE () {
-                    const int tile_id = blockIdx.x;
-                    const int thread_id = threadIdx.x;
-
-                    __shared__ int counts[threads_per_tile];
-                    __shared__ int old_ll_start[threads_per_tile];
-                    __shared__ int new_ll_start[threads_per_tile];
-
-
-                    counts[thread_id] = 0;
-                    old_ll_start[thread_id] = p_ll_start[tile_id * threads_per_tile + thread_id];
-                    new_ll_start[thread_id] = ll_guard;
-
-                    int current_idx = old_ll_start[thread_id];
-
-                    while (current_idx != ll_guard) {
-
-                        counts[thread_id] += 1;
-
-                        current_idx = p_ll_next[current_idx];
-                    }
-
-                    __syncthreads();
-
-                    if (thread_id == 0) {
-
-                        int total_count = 0;
-
-                        for (int i=0; i<threads_per_tile; ++i) {
-                            total_count += counts[i];
-                        }
-
-                        int j = 0;
-
-                        while (total_count > 0) {
-
-                            for (int i=0; i<threads_per_tile; ++i) {
-
-                                if (old_ll_start[i] != ll_guard) {
-
-                                    int tmp = new_ll_start[j%threads_per_tile];
-                                    new_ll_start[j%threads_per_tile] = old_ll_start[i];
-                                    old_ll_start[i] = p_ll_next[new_ll_start[j%threads_per_tile]];
-                                    p_ll_next[new_ll_start[j%threads_per_tile]] = tmp;
-
-                                    --total_count;
-                                    ++j;
-                                }
-                            }
-                        }
-                    }
-
-                    __syncthreads();
-
-                    //const int mod = 16;
-
-                    //int perm = (thread_id + (thread_id%mod)*(threads_per_tile/mod)) % threads_per_tile;
-
-                    p_ll_start[tile_id * threads_per_tile + thread_id] = new_ll_start[thread_id];
-
-
-                });
-        }*/
-
-
-        /*{
-
-            amrex::launch<threads_per_tile>(ntile_x * ntile_y, amrex::Gpu::gpuStream(),
-                [=] AMREX_GPU_DEVICE () {
-                    const int tile_id = blockIdx.x;
-                    const int thread_id = threadIdx.x;
-
-                    __shared__ int counts[threads_per_tile];
-
-                    counts[thread_id] = 0;
-
-                    int current_idx = p_ll_start[tile_id * threads_per_tile + thread_id];
-
-                    while (current_idx != ll_guard) {
-
-                        counts[thread_id] += 1;
-
-                        current_idx = p_ll_next[current_idx];
-                    }
-
-                    __syncthreads();
-
-
-                    if (thread_id == 0) {
-
-                        int total = 0;
-
-                        for (int i=0; i<threads_per_tile; ++i) {
-                            total += counts[i];
-                        }
-
-                        int extra_list = ll_guard;
-
-                        for (int i=0; i<threads_per_tile; ++i) {
-                            int target = (total + i) / threads_per_tile;
-
-                            while (counts[i] > target) {
-                                int prev_extra_list = extra_list;
-                                extra_list = p_ll_start[tile_id * threads_per_tile + i];
-                                p_ll_start[tile_id * threads_per_tile + i] = p_ll_next[extra_list];
-                                p_ll_next[extra_list] = prev_extra_list;
-
-                                counts[i] -= 1;
-                            }
-                        }
-
-                        for (int i=0; i<threads_per_tile; ++i) {
-                            int target = (total + i) / threads_per_tile;
-
-                            while (counts[i] < target) {
-                                int prev_ll_start = p_ll_start[tile_id * threads_per_tile + i];
-                                p_ll_start[tile_id * threads_per_tile + i] = extra_list;
-                                extra_list = p_ll_next[p_ll_start[tile_id * threads_per_tile + i]];
-                                p_ll_next[p_ll_start[tile_id * threads_per_tile + i]] = prev_ll_start;
-
-                                counts[i] += 1;
-                            }
-                        }
-
-                    }
-
-                });
-        }*/
-
-        /*{
-            amrex::Gpu::DeviceVector<int> ll_start_2(ll_start.size());
-            int * const p_ll_start_2 = ll_start_2.dataPtr();
-            amrex::ParallelFor(ll_start.size(),
-                [=] AMREX_GPU_DEVICE (int ip) {
-                    p_ll_start_2[ip] = p_ll_start[ip];
-                });
-
-            std::cout << "depos";
-            int num_par = 0;
-            do {
-                num_par = amrex::Reduce::Sum(ll_start.size(), [=]AMREX_GPU_DEVICE(int ip){
-                    int idx = p_ll_start_2[ip];
-                    if (idx != ll_guard) {
-                        p_ll_start_2[ip] = p_ll_next[idx];
-                        return 1;
-                    } else {
-                        return 0;
-                    }
-                }, 0);
-                std::cout << " " << num_par;
-            } while (num_par > 0);
-            std::cout << std::endl;
-        }*/
-
         amrex::Math::FastDivmodU64 num_tiles_divmod {static_cast<std::uint64_t>(ntile_x)};
-
 
         amrex::launch<threads_per_tile>(ntile_x * ntile_y, amrex::Gpu::gpuStream(),
             [=] AMREX_GPU_DEVICE () {
