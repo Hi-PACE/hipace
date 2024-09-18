@@ -1,8 +1,8 @@
-/* Copyright 2022
+/* Copyright 2022-2024
  *
  * This file is part of HiPACE++.
  *
- * Authors: Weiqun Zhang
+ * Authors: Weiqun Zhang, AlexanderSinn
  * License: BSD-3-Clause-LBNL
  */
 #include "HpMultiGrid.H"
@@ -21,6 +21,10 @@ Box valid_domain_box (Box const& domain)
 {
     return domain.cellCentered() ? domain : amrex::grow(domain, IntVect(-1,-1,0));
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// interpolation: //////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename U>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
@@ -115,6 +119,45 @@ void interpcpy_nd (int i, int j, int n, Array4<T> const& fine_in, Array4<U> cons
         fine_out(i,j,0,n) = fine_in(i,j,0,n) +  crse(ic,jc,0,n);
     }
 }
+
+void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> const& fine,
+                  int num_comps)
+{
+    if (box.cellCentered()) {
+        hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
+        {
+            restrict_cc(i,j,n,crse,fine);
+        });
+    } else {
+        hpmg::ParallelFor(to2D(valid_domain_box(box)), num_comps,
+        [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
+        {
+            restrict_nd(i,j,n,crse,fine);
+        });
+    }
+}
+
+void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in,
+                               Array4<Real const> const& crse, Array4<Real> const& fine_out,
+                               int num_comps)
+{
+    if (box.cellCentered()) {
+        hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
+        {
+            interpcpy_cc(i,j,n,fine_in,crse,fine_out);
+        });
+    } else {
+        hpmg::ParallelFor(to2D(valid_domain_box(box)), num_comps,
+        [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
+        {
+            interpcpy_nd(i,j,n,fine_in,crse,fine_out);
+        });
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// compute residual: ///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
@@ -212,6 +255,10 @@ void compute_residual (Box const& box, Array4<Real> const& res,
     }
 }
 #endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Gauss-Seidel update: ////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // is_cell_centered = true: supports both cell centered and node centered solves
 // is_cell_centered = false: only supports node centered solves, with higher performance
@@ -356,6 +403,10 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Optimized Gauss-Seidel update combined with compute residual: ///////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
 
 // do multiple gsrb iterations in GPU shared memory with many ghost cells
@@ -418,10 +469,12 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
                                              {tile_end_x, tile_end_y, 1}, num_comps);
 
             if (zero_init) {
+                // initialize shared memory to zero
                 for (int s = threadIdx.x; s < num_cells_in_tile; s+=blockDim.x) {
                     phi_ptr[s] = Real(0.);
                 }
             } else {
+                // initialize shared memory to phi_in inside the domain, outside zero
                 for (int s = threadIdx.x; s < tilesize_array_x*tilesize_array_y; s+=blockDim.x) {
                     int sy = s / tilesize_array_x;
                     int sx = s - sy * tilesize_array_x;
@@ -554,7 +607,7 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
     constexpr int final_tilesize_x = tilesize_x - 2*edge_offset; // add more ghost cells
     constexpr int final_tilesize_y = tilesize_y - 2*edge_offset;
     static_assert(system_type == 1 || system_type == 2 || system_type == 3,
-        "gsrb_shared only supports system type 1, 2 or 3");
+        "gsrb_cached only supports system type 1, 2 or 3");
 
     // box for the bounds of the arrays
     int const ilo = box.smallEnd(0);
@@ -593,10 +646,12 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
                                              {tile_end_x, tile_end_y, 1}, num_comps);
 
             if  (zero_init) {
+                // initialize cached memory to zero
                 for (int s = 0; s < tilesize_array_x * tilesize_array_y * num_comps; ++s) {
                     phi_ptr[s] = Real(0.);
                 }
             } else {
+                // initialize cached memory to phi_in inside the domain, outside zero
                 for (int j = tile_begin_y; j < tile_end_y; ++j) {
                     for (int i = tile_begin_x; i < tile_end_x; ++i) {
                         if (ilo_loop <= i && i <= ihi_loop &&
@@ -614,7 +669,8 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
             }
 
             for (int icolor=0; icolor<niter; ++icolor) {
-                // Do 4 Gauss–Seidel iterations.
+                // Do 4 Gauss–Seidel iterations,
+                // only inside loop_box and inside the cached tile with one ghost cell.
                 const int i_start = std::max(tile_begin_x + 1, ilo_loop);
                 const int i_end = std::min(tile_end_x - 1, ihi_loop + 1);
                 const int j_start = std::max(tile_begin_y + 1, jlo_loop);
@@ -645,6 +701,9 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
             const int j_end = std::min(tile_end_y - 1 - edge_offset, jhi_loop + 1);
             for (int j = j_start; j < j_end; ++j) {
                 for (int i = i_start; i < i_end; ++i) {
+                    // store results in main memory but only in the shrunken box
+                    // where the result is correct
+
                     if (do_compute_residual) {
                         // fuse with compute_residual loop and reuse phi_cached
                         // at the cost of one extra ghost cell in each direction
@@ -691,8 +750,14 @@ void gsrb_4_residual (int system_type, Box const& box,
                       Array4<Real const> const& phi_in,
                       Real dx, Real dy)
 {
+    // This function performs the main computation for the multigrid solver.
+    // For CUDA / HIP it is implemented to use a single GPU kernel with shared memory
+    // in gsrb_shared(). For CPU a cache optimized tiling version is implemented in gsrb_cached().
+    // There is also a slower fallback option using multiple calls to gsrb() and compute_residual().
+
     // Start at either phi_in or zero depending on if zero_init is set.
-    // Compute 4 gsrb iterations using rhs and acf and store the result in phi_out.
+    // Compute 4 gsrb (Gauss-Seidel red-black) iterations using rhs and acf and
+    // store the result in phi_out.
     // If do_compute_residual is set, store the residual in res.
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
     if (system_type == 1) {
@@ -774,42 +839,9 @@ void gsrb_4_residual (int system_type, Box const& box,
 #endif
 }
 
-void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> const& fine,
-                  int num_comps)
-{
-    if (box.cellCentered()) {
-        hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
-        {
-            restrict_cc(i,j,n,crse,fine);
-        });
-    } else {
-        hpmg::ParallelFor(to2D(valid_domain_box(box)), num_comps,
-        [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
-        {
-            restrict_nd(i,j,n,crse,fine);
-        });
-    }
-}
-
-void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in,
-                               Array4<Real const> const& crse, Array4<Real> const& fine_out,
-                               int num_comps)
-{
-    if (box.cellCentered()) {
-        hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
-        {
-            interpcpy_cc(i,j,n,fine_in,crse,fine_out);
-        });
-    } else {
-        hpmg::ParallelFor(to2D(valid_domain_box(box)), num_comps,
-        [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
-        {
-            interpcpy_nd(i,j,n,fine_in,crse,fine_out);
-        });
-    }
-}
-
-
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Optimized GPU sigle-block bottomsolve: //////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if defined(AMREX_USE_GPU)
 
@@ -825,6 +857,12 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
                       Array4<Real> const* rescor, int nlevs, int corner_offset,
                       FGS&& fgs, FRES&& fres)
 {
+    // This function performs all the operations of a vcycle in a single GPU kernel by
+    // only using a single thread block. Only one thread block is used to allow for
+    // synchronization of all threads. This limits the total number of threads to 1024,
+    //so it's best to use this only for the last few levels where there are fewer than 1024 cells.
+    // Currently, this function does not use shared memory.
+
     static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
 #if defined(AMREX_USE_DPCPP)
     amrex::launch(1, 1024, Gpu::gpuStream(),
@@ -850,6 +888,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
         i += cor[0].begin.x + corner_offset;
 
         for (int ilev = 0; ilev < nlevs-1; ++ilev) {
+            // set phi to zero
             if (icell < ncells) {
                 if (system_type == 1 || system_type == 2) {
                     cor[ilev](i,j,0,0) = Real(0.);
@@ -860,6 +899,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             }
             HPMG_SYNCTHREADS;
 
+            // do 4 Gauß-Seidel red-black iterations
             for (int is = 0; is < 4; ++is) {
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
@@ -873,6 +913,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
                 HPMG_SYNCTHREADS;
             }
 
+            // calculate the residual
             if (icell < ncells) {
                 fres(i, j,
                      rescor[ilev],
@@ -884,6 +925,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             }
             HPMG_SYNCTHREADS;
 
+            // interpolate residual to next level
             lenx = cor[ilev+1].end.x - cor[ilev+1].begin.x - 2*corner_offset;
             leny = cor[ilev+1].end.y - cor[ilev+1].begin.y - 2*corner_offset;
             ncells = lenx*leny;
@@ -916,6 +958,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 
         // bottom
         {
+            // set phi to zero
             const int ilev = nlevs-1;
             if (icell < ncells) {
                 if (system_type == 1 || system_type == 2) {
@@ -927,6 +970,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             }
             HPMG_SYNCTHREADS;
 
+            // do NS Gauß-Seidel red-black iterations
             for (int is = 0; is < NS; ++is) {
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
@@ -941,6 +985,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             }
         }
 
+        // interpolate solution from previous level to phi
         for (int ilev = nlevs-2; ilev >=0; --ilev) {
             lenx = cor[ilev].end.x - cor[ilev].begin.x - 2*corner_offset;
             leny = cor[ilev].end.y - cor[ilev].begin.y - 2*corner_offset;
@@ -970,6 +1015,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
                 }
             }
 
+            // do 4 Gauß-Seidel red-black iterations
             for (int is = 0; is < 4; ++is) {
                 HPMG_SYNCTHREADS;
                 if (icell < ncells) {
@@ -989,6 +1035,10 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 #endif // AMREX_USE_GPU
 
 } // namespace {}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Initialization: /////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
     : m_system_type(a_system_type), m_dx(dx), m_dy(dy)
@@ -1049,6 +1099,8 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         m_h_array4.reserve(nfabvs*m_num_single_block_levels);
     }
 
+    // Allocate the proportional coefficient of the Helmholtz equation.
+    // For a Poisson equation, this is always zero
     m_acf.reserve(m_num_mg_levels);
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_acf.emplace_back(m_domain[ilev], m_num_comps_acf);
@@ -1057,6 +1109,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         }
     }
 
+    // Allocate the right-hand side for each level, except the first level
     m_res.reserve(m_num_mg_levels);
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         if (ilev == 0) {
@@ -1073,6 +1126,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         }
     }
 
+    // Allocate the solution array for each level
     m_cor.reserve(m_num_mg_levels);
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_cor.emplace_back(m_domain[ilev], m_num_comps);
@@ -1084,6 +1138,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         }
     }
 
+    // Allocate temporary array for the residual for each level
     m_rescor.reserve(m_num_mg_levels);
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_rescor.emplace_back(m_domain[ilev], m_num_comps);
@@ -1095,6 +1150,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         }
     }
 
+    // Copy Array4s to GPU for bottomsolve_gpu()
     if (!m_h_array4.empty()) {
         m_d_array4.resize(m_h_array4.size());
         Gpu::copyAsync(Gpu::hostToDevice, m_h_array4.begin(), m_h_array4.end(),
@@ -1105,6 +1161,10 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         m_rescor_a = m_cor_a + m_num_single_block_levels;
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// solve start functions: //////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
 MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_acf,
@@ -1240,6 +1300,9 @@ MultiGrid::solve3 (FArrayBox& a_sol, FArrayBox const& a_rhs,
     solve_doit(a_sol, a_rhs, tol_rel, tol_abs, nummaxiter, verbose);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// main solve functions: ///////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
 MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
@@ -1251,11 +1314,19 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
     m_sol = FArrayBox(center_box(a_sol.box(), m_domain.front()), m_num_comps, a_sol.dataPtr());
     m_rhs = FArrayBox(center_box(a_rhs.box(), m_domain.front()), m_num_comps, a_rhs.dataPtr());
 
+    // sol: initial solution guess
+    // rhs: right hand side of differential equation to solve
+
+    // Compute the residual of the initial guess. By using gsrb_4_residual() we get
+    // 4 Gauss-Seidel iterations for only a small performance cost.
+    // These can be omitted in the first level of the vcycle later.
+
     // cor = gsrb(gsrb(gsrb(gsrb(sol))))
     // rescor = rhs - L(cor)
     gsrb_4_residual<false, true>(m_system_type, m_domain[0], m_cor[0].array(), m_rhs.const_array(),
         m_acf[0].const_array(), m_rescor[0].array(), m_sol.array(), m_dx, m_dy);
 
+    // Reduction on the right-hand side and residual to get convergence criteria
     Real resnorm0, rhsnorm0;
     {
         ReduceOps<ReduceOpMax,ReduceOpMax> reduce_op;
@@ -1301,8 +1372,11 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
 
             converged = false;
 
+            // do one vcycle iteration with the fist 4 Gauss-Seidel iterations omitted
+            // from the beginning and instead done after the vcycle to also get the residual
             vcycle();
 
+            // check the residual for convergence
             Real const* pres0 = m_rescor[0].dataPtr();
             norminf = Reduce::Max<Real>(m_domain[0].numPts()*m_num_comps,
                                         [=] AMREX_GPU_DEVICE (Long i) -> Real
@@ -1342,6 +1416,7 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
         }
     }
 
+    // copy the cor array into the sol array used for the final output
     auto const& sol = m_sol.array();
     auto const& cor = m_cor[0].const_array();
     hpmg::ParallelFor(to2D(valid_domain_box(m_domain[0])), m_num_comps,
@@ -1368,12 +1443,18 @@ MultiGrid::vcycle ()
         if (ilev > 0) {
             // cor and residual on ilev 0 are already calculated before the vcycle is started
 
+            // set phi to zero and
+            // do 4 Gauß-Seidel red-black iterations and
+            // calculate the residual
+
             // cor = gsrb(gsrb(gsrb(gsrb(0))))
             // rescor = res - L(cor)
             gsrb_4_residual<true, true>(
                 m_system_type, m_domain[ilev], m_cor[ilev].array(), m_res[ilev].const_array(),
                 m_acf[ilev].const_array(), m_rescor[ilev].array(), {}, dx, dy);
         }
+
+        // interpolate residual to next level
 
         // res[ilev+1] = R(rescor[ilev])
         restriction(m_domain[ilev+1], m_res[ilev+1].array(), m_rescor[ilev].const_array(), m_num_comps);
@@ -1387,10 +1468,13 @@ MultiGrid::vcycle ()
         Real dx = m_dx * fac;
         Real dy = m_dy * fac;
 
+        // interpolate solution from previous level to phi
+
         // rescor[ilev] = I(cor[ilev+1]) + cor[ilev]
         interpolation_outofplace(m_domain[ilev], m_cor[ilev].const_array(),
                                  m_cor[ilev+1].const_array(), m_rescor[ilev].array(), m_num_comps);
 
+        // do 4 Gauß-Seidel red-black iterations
         if (ilev == 0) {
             // sol = gsrb(gsrb(gsrb(gsrb(rescor))))
             gsrb_4_residual<false, false>(
@@ -1403,6 +1487,9 @@ MultiGrid::vcycle ()
                     m_acf[ilev].const_array(), {}, m_rescor[ilev].array(), dx, dy);
         }
     }
+
+    // do 4 Gauß-Seidel red-black iterations and
+    // calculate the residual
 
     // cor = gsrb(gsrb(gsrb(gsrb(sol))))
     // rescor = rhs - L(cor)
@@ -1505,6 +1592,10 @@ MultiGrid::bottomsolve ()
         }
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// interpolate acf to all levels: //////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if defined(AMREX_USE_GPU)
 namespace {
