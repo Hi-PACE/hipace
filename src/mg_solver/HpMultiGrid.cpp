@@ -591,7 +591,7 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
 
 #elif !defined(AMREX_USE_GPU)
 
-// do multiple gsrb iterations in GPU shared memory with many ghost cells
+// do multiple gsrb iterations in CPU cached memory with many ghost cells
 template<int system_type, bool zero_init, bool do_compute_residual, bool is_cell_centered>
 void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
                   Array4<Real const> const& acf, Array4<Real> const& res,
