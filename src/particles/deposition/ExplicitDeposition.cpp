@@ -57,6 +57,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
         amrex::AnyCTO(
+            // use compile-time options
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
                 amrex::CompileTimeOptions<0, 1, 2>,     // derivative_type
@@ -68,12 +69,14 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 plasma.m_can_ionize,
                 Hipace::m_use_laser
             },
+            // call deposition function
             [&](auto is_valid, auto get_cell, auto deposit){
                 constexpr auto ctos = deposit.GetOptions();
                 constexpr int depos_order = ctos[0];
                 constexpr int derivative_type = ctos[1];
                 constexpr int use_laser = ctos[3];
                 if constexpr (use_laser) {
+                    // need extra cells for gathering the laser
                     constexpr int stencil_size = depos_order + 2 + 1;
                     SharedMemoryDeposition<stencil_size, stencil_size, false>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
@@ -87,6 +90,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                         std::array{Bz, Ez, ExmBy, EypBx}, std::array{Sy, Sx});
                 }
             },
+            // return if the particle is valid and should deposit
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto /*depos_order*/,
                                   auto /*derivative_type*/,
@@ -96,6 +100,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 // only deposit plasma Sx and Sy on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
             },
+            // return the lowest cell index that the particle deposits into
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto depos_order,
                                   auto derivative_type,
@@ -114,6 +119,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     single_derivative_shape_factor<derivative_type, depos_order>(xmid, 0);
 
                 if constexpr (use_laser) {
+                    // need extra cells for gathering the laser
                     if constexpr (derivative_type == 0) {
                         return {i-1, j-1};
                     } else if constexpr (derivative_type == 1) {
@@ -125,6 +131,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     return {i, j};
                 }
             },
+            // deposit the charge / current of one particle
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx,
@@ -203,6 +210,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                         if constexpr (use_laser) {
                             // avoid going outside of domain
                             if (shape_x * shape_y != 0._rt) {
+                                // need extra cells for gathering the laser
                                 const amrex::Real xp1y00 = arr(i+1, j  , cache_idx[4]);
                                 const amrex::Real xm1y00 = arr(i-1, j  , cache_idx[4]);
                                 const amrex::Real x00yp1 = arr(i  , j+1, cache_idx[4]);

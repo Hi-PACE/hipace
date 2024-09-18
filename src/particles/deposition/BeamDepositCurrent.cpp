@@ -86,8 +86,10 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     const amrex::Real q = beam.m_charge;
 
     amrex::AnyCTO(
+        // use compile-time options
         amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
         {Hipace::m_depos_order_xy},
+        // call deposition function
         [&](auto is_valid, auto get_cell, auto deposit){
             constexpr auto ctos = deposit.GetOptions();
             constexpr int depos_order = ctos[0];
@@ -98,6 +100,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                 beam.getBeamSlice(which_beam_slice).getParticleTileData(),
                 std::array<int, 0>{}, std::array{jxb_cmp, jyb_cmp, jzb_cmp, rhomjzb_cmp});
         },
+        // return if the particle is valid and should deposit
         [=] AMREX_GPU_DEVICE (int ip, auto ptd, auto /*depos_order*/)
         {
             // Skip invalid particles and ghost particles not in the last slice
@@ -107,6 +110,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                     (ptd.idata(BeamIdx::mr_level)[ip] == lev) :
                     (ptd.idata(BeamIdx::mr_level)[ip] >= lev));
         },
+        // return the lowest cell index that the particle deposits into
         [=] AMREX_GPU_DEVICE (int ip, auto ptd, auto depos_order) -> amrex::IntVectND<2>
         {
             // --- Compute shape factors
@@ -123,6 +127,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
             return {i, j};
         },
+        // deposit the charge / current of one particle
         [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                               Array3<amrex::Real> arr,
                               auto /*cache_idx*/, auto depos_idx,

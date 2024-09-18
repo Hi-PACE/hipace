@@ -200,11 +200,7 @@ PlasmaParticleContainer::ReorderParticles (const int islice)
         HIPACE_PROFILE("PlasmaParticleContainer::ReorderParticles()");
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
         // SortParticlesForDeposition only works for CUDA and HIP
-        if (m_reorder_idx_type == amrex::IntVect{-1, -1, 0}) {
-            SortParticlesByCell();
-        } else {
-            SortParticlesForDeposition(m_reorder_idx_type);
-        }
+        SortParticlesForDeposition(m_reorder_idx_type);
 #else
         SortParticlesByCell();
 #endif
