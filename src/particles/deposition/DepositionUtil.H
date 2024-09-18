@@ -18,9 +18,9 @@
  * CPU: 4 color tiling
  * All: simple loop over particles
  *
- * \tparam[in] stencil_x max size in x of the stencil that particles deposit
- * \tparam[in] stencil_y max size in y of the stencil that particles deposit
- * \tparam[in] dynamic_comps
+ * \tparam stencil_x max size in x of the stencil that particles deposit
+ * \tparam stencil_y max size in y of the stencil that particles deposit
+ * \tparam dynamic_comps
  *             if some components in idx_cache and idx_depos can be disabled by setting them to -1
  * \param[in] num_particles number of particles to deposit
  * \param[in] is_valid functor (int ip, PTD ptd) -> bool
