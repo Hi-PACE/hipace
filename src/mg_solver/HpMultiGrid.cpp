@@ -23,7 +23,7 @@ Box valid_domain_box (Box const& domain)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// interpolation: //////////////////////////////////////////////////////////////////////////////////
+// Interpolation: //////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T, typename U>
@@ -156,7 +156,7 @@ void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// compute residual: ///////////////////////////////////////////////////////////////////////////////
+// Compute residual: ///////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
@@ -860,7 +860,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
     // This function performs all the operations of a vcycle in a single GPU kernel by
     // only using a single thread block. Only one thread block is used to allow for
     // synchronization of all threads. This limits the total number of threads to 1024,
-    //so it's best to use this only for the last few levels where there are fewer than 1024 cells.
+    // so it's best to use this only for the last few levels where there are fewer than 1024 cells.
     // Currently, this function does not use shared memory.
 
     static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
@@ -899,7 +899,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             }
             HPMG_SYNCTHREADS;
 
-            // do 4 Gauß-Seidel red-black iterations
+            // do 4 Gauss-Seidel red-black iterations
             for (int is = 0; is < 4; ++is) {
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
@@ -970,7 +970,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             }
             HPMG_SYNCTHREADS;
 
-            // do NS Gauß-Seidel red-black iterations
+            // do NS Gauss-Seidel red-black iterations
             for (int is = 0; is < NS; ++is) {
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
@@ -1015,7 +1015,7 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
                 }
             }
 
-            // do 4 Gauß-Seidel red-black iterations
+            // do 4 Gauss-Seidel red-black iterations
             for (int is = 0; is < 4; ++is) {
                 HPMG_SYNCTHREADS;
                 if (icell < ncells) {
@@ -1163,7 +1163,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// solve start functions: //////////////////////////////////////////////////////////////////////////
+// Solve start functions: //////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
@@ -1301,7 +1301,7 @@ MultiGrid::solve3 (FArrayBox& a_sol, FArrayBox const& a_rhs,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// main solve functions: ///////////////////////////////////////////////////////////////////////////
+// Main solve functions: ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
@@ -1444,7 +1444,7 @@ MultiGrid::vcycle ()
             // cor and residual on ilev 0 are already calculated before the vcycle is started
 
             // set phi to zero and
-            // do 4 Gauß-Seidel red-black iterations and
+            // do 4 Gauss-Seidel red-black iterations and
             // calculate the residual
 
             // cor = gsrb(gsrb(gsrb(gsrb(0))))
@@ -1474,7 +1474,7 @@ MultiGrid::vcycle ()
         interpolation_outofplace(m_domain[ilev], m_cor[ilev].const_array(),
                                  m_cor[ilev+1].const_array(), m_rescor[ilev].array(), m_num_comps);
 
-        // do 4 Gauß-Seidel red-black iterations
+        // do 4 Gauss-Seidel red-black iterations
         if (ilev == 0) {
             // sol = gsrb(gsrb(gsrb(gsrb(rescor))))
             gsrb_4_residual<false, false>(
@@ -1488,7 +1488,7 @@ MultiGrid::vcycle ()
         }
     }
 
-    // do 4 Gauß-Seidel red-black iterations and
+    // do 4 Gauss-Seidel red-black iterations and
     // calculate the residual
 
     // cor = gsrb(gsrb(gsrb(gsrb(sol))))
@@ -1594,7 +1594,7 @@ MultiGrid::bottomsolve ()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// interpolate acf to all levels: //////////////////////////////////////////////////////////////////
+// Interpolate acf to all levels: //////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if defined(AMREX_USE_GPU)
