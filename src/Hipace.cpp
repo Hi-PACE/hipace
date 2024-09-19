@@ -508,7 +508,7 @@ Hipace::Evolve ()
 
     if (m_verbose >= 1) {
         // print total time, time per particle push and time per cell update
-        amrex::ParallelDescriptor::ReduceRealSum({
+        amrex::ParallelDescriptor::ReduceRealSum(amrex::Vector<std::reference_wrapper<double>>{
             m_num_plasma_particles_pushed,
             m_num_beam_particles_pushed,
             m_num_field_cells_updated,
