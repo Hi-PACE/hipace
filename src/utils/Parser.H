@@ -101,7 +101,7 @@ namespace Parser
         double v = parser.compileHost<0>()();
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             v <= std::numeric_limits<float>::max() &&
-            v >= std::numeric_limits<float>::min(),
+            v >= std::numeric_limits<float>::lowest(),
             "Error: Overflow detected when casting to float"
         );
         val = static_cast<float>(v);
@@ -113,7 +113,7 @@ namespace Parser
         amrex::Long v = parser.compileHost<0>()();
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             v <= std::numeric_limits<int>::max() &&
-            v >= std::numeric_limits<int>::min(),
+            v >= std::numeric_limits<int>::lowest(),
             "Error: Overflow detected when casting to int"
         );
         val = static_cast<int>(v);
