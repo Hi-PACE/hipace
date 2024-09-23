@@ -252,7 +252,7 @@ public:
      * or radiation reaction in normalized units */
     inline static amrex::Real m_background_density_SI = 0.;
     /** Time step for the beam evolution */
-    amrex::Real m_dt = 0.0;
+    amrex::Real m_dt = +0.0;
     /** Number of binary collisions */
     inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
