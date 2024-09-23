@@ -406,6 +406,8 @@ Hipace::Evolve ()
         }
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
+        //DEBUG check physical time
+
 
         if (m_physical_time == std::numeric_limits<amrex::Real>::infinity()) {
             if (step+1 <= m_max_step && !m_has_last_step) {
@@ -416,7 +418,11 @@ Hipace::Evolve ()
 
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
 
+        amrex::Print()<<'m_physical_time of step '<<step<<" is "<<m_physical_time;
+        amrex::Print()<<'Actual time step here in m_adaptive_time_step in '<<step<<" is "<<m_dt;
+
         amrex::Real next_time = 0.;
+        if (m_dt * m_max_time < 0){ m_max_time *= -1 ;}
 
         // adjust time step to reach max_time
         if (m_physical_time == m_max_time) {

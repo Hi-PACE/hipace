@@ -83,7 +83,7 @@ GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box)
  */
 class Fields
 {
-public:
+public:src/fields/Fields.H
     /** Constructor */
     explicit Fields (const int nlev);
 
