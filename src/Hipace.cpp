@@ -418,8 +418,8 @@ Hipace::Evolve ()
 
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
 
-        amrex::Print()<<"m_physical_time of step "<<step<<" is "<<m_physical_time;
-        amrex::Print()<<"Actual time step here in m_adaptive_time_step in "<<step<<" is "<<m_dt;
+        amrex::Print()<<"m_physical_time of step "<<step<<" is "<<m_physical_time <<"\n";
+        amrex::Print()<<"Actual time step here in m_adaptive_time_step in step"<<step<<" is "<<m_dt << "\n";
 
         amrex::Real next_time = 0.;
         if (m_dt * m_max_time < 0){ m_max_time *= -1 ;}
