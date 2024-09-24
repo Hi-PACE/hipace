@@ -21,6 +21,7 @@
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
+#include <AMReX_IOFormat.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
 #  include <AMReX_MLALaplacian.H>
 #  include <AMReX_MLMG.H>
@@ -504,6 +505,52 @@ Hipace::Evolve ()
 
         FlushDiagnostics();
     }
+
+    if (m_verbose >= 1) {
+        // print total time, time per particle push and time per cell update
+        amrex::ParallelDescriptor::ReduceRealSum(amrex::Vector<std::reference_wrapper<double>>{
+            m_num_plasma_particles_pushed,
+            m_num_beam_particles_pushed,
+            m_num_field_cells_updated,
+            m_num_laser_cells_updated
+        }, HeadRankID());
+
+        if (HeadRank()) {
+            const double total_time_s = (amrex::second() - start_time);
+
+            amrex::IOFormatSaver iofmtsaver(std::cout);
+            std::cout << std::setprecision(4);
+
+            std::cout << '\n' << "Finished Evolve after " << total_time_s << " seconds using "
+                      << m_numprocs << (m_numprocs > 1 ? " ranks" : " rank" ) << std::endl;
+
+            if (m_num_plasma_particles_pushed + m_num_beam_particles_pushed > 0.) {
+                std::cout << "Total time per particle push: "
+                          << 1e9 * total_time_s /
+                            (m_num_plasma_particles_pushed + m_num_beam_particles_pushed)
+                          << " nanoseconds";
+                if (m_num_plasma_particles_pushed > 0. && m_num_beam_particles_pushed > 0.) {
+                    std::cout << " ("
+                              << 1e9 * total_time_s / m_num_plasma_particles_pushed << " plasma, "
+                              << 1e9 * total_time_s / m_num_beam_particles_pushed << " beam)";
+                }
+                std::cout << std::endl;
+            }
+
+            if (m_num_field_cells_updated + m_num_laser_cells_updated > 0.) {
+                std::cout << "Total time per cell update: "
+                          << 1e9 * total_time_s /
+                            (m_num_field_cells_updated + m_num_laser_cells_updated)
+                          << " nanoseconds";
+                if (m_num_field_cells_updated > 0. && m_num_laser_cells_updated > 0.) {
+                    std::cout << " ("
+                              << 1e9 * total_time_s / m_num_field_cells_updated << " field, "
+                              << 1e9 * total_time_s / m_num_laser_cells_updated << " laser)";
+                }
+                std::cout << std::endl;
+            }
+        }
+    }
 }
 
 void
@@ -526,6 +573,10 @@ Hipace::SolveOneSlice (int islice, int step)
             m_3D_geom[lev].Domain().bigEnd(Direction::z) >= islice) {
             current_N_level = lev + 1;
         }
+    }
+
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_num_field_cells_updated += m_slice_geom[lev].Domain().d_numPts();
     }
 
     if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
