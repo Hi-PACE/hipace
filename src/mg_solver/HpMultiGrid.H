@@ -8,6 +8,7 @@
 #ifndef HIPACE_MULTIGRID_H_
 #define HIPACE_MULTIGRID_H_
 
+#include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include <AMReX_FArrayBox.H>
 #include <AMReX_Geometry.H>
@@ -295,61 +296,57 @@ void ParallelFor (T n, F&& f) noexcept
 }
 
 template <typename F>
-void ParallelFor (amrex::Box const& box, F&& f) noexcept
+void ParallelFor (amrex::BoxND<2> const& box, F&& f) noexcept
 {
     if (box.numPts() < 1000) {
         const auto lo = amrex::lbound(box);
         const auto hi = amrex::ubound(box);
-        for (int k = lo.z; k <= hi.z; ++k) {
         for (int j = lo.y; j <= hi.y; ++j) {
 #pragma omp simd
         for (int i = lo.x; i <= hi.x; ++i) {
-            f(i,j,k);
-        }}}
+            f(i,j);
+        }}
     } else {
         const auto lo = amrex::lbound(box);
         const auto hi = amrex::ubound(box);
 
         constexpr int tilesize = 8;
-#pragma omp parallel for collapse(3)
-        for (int k = lo.z; k <= hi.z; ++k) {
+#pragma omp parallel for collapse(2)
         for (int jt = lo.y; jt <= hi.y; jt+=tilesize) {
         for (int it = lo.x; it <= hi.x; it+=tilesize) {
         for (int j = jt; j < jt+tilesize && j<=hi.y; ++j) {
         for (int i = it; i < it+tilesize && i<=hi.x; ++i) {
-            f(i,j,k);
-        }}}}}
+            f(i,j);
+        }}}}
     }
 }
 
 template <typename F>
-void ParallelFor (amrex::Box const& box, int ncomp, F&& f) noexcept
+void ParallelFor (amrex::BoxND<2> const& box, int ncomp, F&& f) noexcept
 {
     if (box.numPts()*ncomp < 1000) {
         const auto lo = amrex::lbound(box);
         const auto hi = amrex::ubound(box);
         for (int n = 0; n < ncomp; ++n) {
-            for (int k = lo.z; k <= hi.z; ++k) {
             for (int j = lo.y; j <= hi.y; ++j) {
 #pragma omp simd
             for (int i = lo.x; i <= hi.x; ++i) {
-                f(i,j,k,n);
-            }}}
+                f(i,j,n);
+            }}
         }
     } else {
         const auto lo = amrex::lbound(box);
         const auto hi = amrex::ubound(box);
 
         constexpr int tilesize = 8;
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for collapse(3)
         for (int n = 0; n < ncomp; ++n) {
-            for (int k = lo.z; k <= hi.z; ++k) {
             for (int jt = lo.y; jt <= hi.y; jt+=tilesize) {
             for (int it = lo.x; it <= hi.x; it+=tilesize) {
             for (int j = jt; j < jt+tilesize && j<=hi.y; ++j) {
             for (int i = it; i < it+tilesize && i<=hi.x; ++i) {
-                f(i,j,k,n);
-            }}}}}
+                f(i,j,n);
+            }}}}
         }
     }
 }
