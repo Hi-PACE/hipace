@@ -27,7 +27,12 @@ InitParticles (const amrex::RealVect& a_u_std,
     const int lev = 0;
     const auto dx = ParticleGeom(lev).CellSizeArray();
     const auto plo = ParticleGeom(lev).ProbLoArray();
-    const amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
+    amrex::RealBox a_bounds = ParticleGeom(lev).ProbDomain();
+    a_bounds.setLo(0, Hipace::m_boundary_particle_lo[0]);
+    a_bounds.setLo(1, Hipace::m_boundary_particle_lo[1]);
+    a_bounds.setHi(0, Hipace::m_boundary_particle_hi[0]);
+    a_bounds.setHi(1, Hipace::m_boundary_particle_hi[1]);
+
     const bool use_fine_patch = m_use_fine_patch;
 
     const amrex::Array<int, 2> ppc_coarse = m_ppc;
@@ -44,16 +49,18 @@ InitParticles (const amrex::RealVect& a_u_std,
     amrex::Real x_offset = 0._rt;
     amrex::Real y_offset = 0._rt;
 
-    if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && ppc_coarse[0] % 2 == 1) {
-        box_nodal[0] = amrex::IndexType::NODE;
-        box_grow[0] = -1;
-        x_offset = -0.5_rt;
-    }
+    if (m_prevent_centered_particle) {
+        if (ParticleGeom(lev).Domain().length(0) % 2 == 1 && ppc_coarse[0] % 2 == 1) {
+            box_nodal[0] = amrex::IndexType::NODE;
+            box_grow[0] = -1;
+            x_offset = -0.5_rt;
+        }
 
-    if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && ppc_coarse[1] % 2 == 1) {
-        box_nodal[1] = amrex::IndexType::NODE;
-        box_grow[1] = -1;
-        y_offset = -0.5_rt;
+        if (ParticleGeom(lev).Domain().length(1) % 2 == 1 && ppc_coarse[1] % 2 == 1) {
+            box_nodal[1] = amrex::IndexType::NODE;
+            box_grow[1] = -1;
+            y_offset = -0.5_rt;
+        }
     }
 
     for(amrex::MFIter mfi = MakeMFIter(lev, DfltMfi); mfi.isValid(); ++mfi)
@@ -309,8 +316,8 @@ InitParticles (const amrex::RealVect& a_u_std,
         }
         if (m_do_symmetrize) {
 
-            const amrex::Real x_mid2 = (ParticleGeom(lev).ProbLo(0) + ParticleGeom(lev).ProbHi(0));
-            const amrex::Real y_mid2 = (ParticleGeom(lev).ProbLo(1) + ParticleGeom(lev).ProbHi(1));
+            const amrex::Real x_mid2 = (a_bounds.lo(0) + a_bounds.hi(0));
+            const amrex::Real y_mid2 = (a_bounds.lo(1) + a_bounds.hi(1));
             const amrex::Long mirror_offset = total_num_particles/4;
             amrex::ParallelFor(mirror_offset,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept

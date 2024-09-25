@@ -17,7 +17,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    export proj=<your project id>_g  # _g for GPU accounting
 
    # required dependencies
-   module load cmake/3.22.0
+   module load cmake/3.24.3
    module load cray-hdf5-parallel/1.12.2.3
 
    # necessary to use CUDA-Aware MPI and run a job

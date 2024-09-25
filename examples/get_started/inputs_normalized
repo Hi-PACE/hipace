@@ -12,7 +12,8 @@ hipace.dt = 4.4                         # Time step
 
 ### Simulation domain
 ################################
-geometry.is_periodic =  1     1     0   # Is periodic?
+boundary.field = Dirichlet             # boundary condition for fields
+boundary.particle = Periodic            # boundary condition for particles
 geometry.prob_lo     = -8.   -8.   -6   # physical domain: dimension must be provided
 geometry.prob_hi     =  8.    8.    6   # in the respective unit system
 
