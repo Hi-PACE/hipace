@@ -540,6 +540,9 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
         // we only need to do this if the previous slice (slice + 1) had a laser
         for (int lev=0; lev<current_N_level; ++lev) {
             fields.setVal(0, lev, WhichSlice::This, "aabs");
+            //Debug negative time step
+            fields.setVal(0, lev, WhichSlice::This, "rhs");
+            fields.setVal(0, lev, WhichSlice::This, "rhs_fourier");
         }
         return;
     }
@@ -549,6 +552,13 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
         const Array3<const amrex::Real> laser_arr = m_slices.const_array(mfi);
         const Array2<amrex::Real> field_arr =
             fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["aabs"]);
+        //negative timestep debug
+        const Array2<amrex::Real> rhs_arr =
+            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["rhs"]);
+
+        const Array2<amrex::Real> rhs_fourier_arr =
+            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["rhs_fourier"]);
+
 
         const amrex::Real poff_field_x = GetPosOffset(0, field_geom[0], field_geom[0].Domain());
         const amrex::Real poff_field_y = GetPosOffset(1, field_geom[0], field_geom[0].Domain());
@@ -580,6 +590,8 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 
                 amrex::Real aabs = 0;
 
+                amrex::Real rhs = 0;
+                amrex::Real rhs_fourier = 0;
                 // interpolate from laser grid to fields grid
                 for (int iy=0; iy<=interp_order; ++iy) {
                     for (int ix=0; ix<=interp_order; ++ix) {
@@ -590,6 +602,10 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 
                         if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
                             aabs += shape_x*shape_y*abssq(laser_arr(cell_x, cell_y, n00j00_r),
+                                                          laser_arr(cell_x, cell_y, n00j00_i));
+                            rhs += shape_x*shape_y*abssq(laser_arr(cell_x, cell_y, n00j00_r),
+                                                          laser_arr(cell_x, cell_y, n00j00_i));
+                            rhs_fourier += shape_x*shape_y*abssq(laser_arr(cell_x, cell_y, n00j00_r),
                                                           laser_arr(cell_x, cell_y, n00j00_i));
                         }
                     }
@@ -1064,14 +1080,13 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                         + 2._rt * arr(i, j, chi) * an00j00
                         - lapA
                         + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
+
                 }
                 rhs_arr(i,j,0) = rhs;
             });
 
         // Transform rhs to Fourier space
         m_forward_fft.Execute();
-        amrex::Print()<<"check the right hand side before transfer \n"<<m_rhs.array()<<"\n";
-        amrex::Print()<<"check the right hand side after transfer \n"<<m_rhs_fourier.array()<<"\n";
         // Multiply by appropriate factors in Fourier space
         amrex::Real dkx = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(0);
         amrex::Real dky = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(1);
@@ -1093,7 +1108,6 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
 
         // Transform rhs to Fourier space to get solution in sol
         m_backward_fft.Execute();
-        amrex::Print()<<"check the solutioan after transfer \n"<<m_sol.array()<<"\n";
         // Normalize and store solution in np1j00[0]. Guard cells are filled with 0s.
         amrex::Box grown_bx = bx;
         grown_bx.grow(m_slices_nguards);
