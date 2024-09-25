@@ -1070,8 +1070,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
 
         // Transform rhs to Fourier space
         m_forward_fft.Execute();
-        amrex::Print()<<"check the right hand side before transfer \n"<<*m_rhs.dataPtr()<<"\n";
-        amrex::Print()<<"check the right hand side after transfer \n"<<*m_rhs_fourier.dataPtr()<<"\n";
+        amrex::Print()<<"check the right hand side before transfer \n"<<m_rhs.array()<<"\n";
+        amrex::Print()<<"check the right hand side after transfer \n"<<m_rhs_fourier.array()<<"\n";
         // Multiply by appropriate factors in Fourier space
         amrex::Real dkx = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(0);
         amrex::Real dky = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(1);
@@ -1093,7 +1093,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
 
         // Transform rhs to Fourier space to get solution in sol
         m_backward_fft.Execute();
-        amrex::Print()<<"check the solutioan after transfer \n"<<*m_sol.dataPtr()<<"\n";
+        amrex::Print()<<"check the solutioan after transfer \n"<<m_sol.array()<<"\n";
         // Normalize and store solution in np1j00[0]. Guard cells are filled with 0s.
         amrex::Box grown_bx = bx;
         grown_bx.grow(m_slices_nguards);
