@@ -379,14 +379,11 @@ InitParticles (const amrex::RealVect& a_u_std,
 
 void
 PlasmaParticleContainer::
-InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
-                      const amrex::Real background_density_SI)
+InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_density_SI)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitIonizationModule()");
 
     using namespace amrex::literals;
-
-    if (!m_can_ionize) return;
 
     const bool normalized_units = Hipace::m_normalized_units;
     if (normalized_units) {
@@ -395,14 +392,13 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
             "be specified via 'hipace.background_density_SI'");
     }
 
-    m_product_pc = product_pc;
     amrex::ParmParse pp(m_name);
     std::string physical_element;
     getWithParser(pp, "element", physical_element);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0,
         "There are no ionization energies available for this element. "
         "Please update src/utils/IonizationEnergiesTable.H using write_atomic_data_cpp.py");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::abs(product_pc->m_charge / m_charge +1) < 1e-3),
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::abs(m_product_pc->m_charge / m_charge +1) < 1e-3),
         "Ion and Ionization product charges have to be opposite");
     // Get atomic number and ionization energies from file
     const int ion_element_id = ion_map_ids[physical_element];
@@ -435,10 +431,12 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
     m_adk_power.resize(ion_atomic_number);
     m_adk_prefactor.resize(ion_atomic_number);
     m_adk_exp_prefactor.resize(ion_atomic_number);
+    m_laser_adk_prefactor.resize(ion_atomic_number);
 
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_power(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_prefactor(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_exp_prefactor(ion_atomic_number);
+    amrex::Gpu::PinnedVector<amrex::Real> h_laser_adk_prefactor(ion_atomic_number);
 
     for (int i=0; i<ion_atomic_number; ++i)
     {
@@ -450,6 +448,7 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
         h_adk_prefactor[i] = dt * wa * C2 * ( Uion/(2*UH) )
             * std::pow(2*std::pow((Uion/UH),3./2)*Ea,2*n_eff - 1);
         h_adk_exp_prefactor[i] = -2./3 * std::pow( Uion/UH,3./2) * Ea;
+        h_laser_adk_prefactor[i] = (3 / MathConst::pi) * std::pow(Uion/UH, -3./2.);
     }
 
     amrex::Gpu::copy(amrex::Gpu::hostToDevice,
@@ -458,73 +457,6 @@ InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* prod
         h_adk_prefactor.begin(), h_adk_prefactor.end(), m_adk_prefactor.begin());
     amrex::Gpu::copy(amrex::Gpu::hostToDevice,
         h_adk_exp_prefactor.begin(), h_adk_exp_prefactor.end(), m_adk_exp_prefactor.begin());
-}
-
-void
-PlasmaParticleContainer::
-InitLaserIonization (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
-                     const amrex::Real background_density_SI)
-{
-    HIPACE_PROFILE("PlasmaParticleContainer::InitLaserIonization()");
-
-    using namespace amrex::literals;
-
-    if (!m_can_ionize) return;
-
-    const bool normalized_units = Hipace::m_normalized_units;
-    if (normalized_units) {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(background_density_SI!=0,
-            "For ionization with normalized units, a background plasma density != 0 must "
-            "be specified via 'hipace.background_density_SI'");
-    }
-
-    m_product_pc = product_pc;
-    amrex::ParmParse pp(m_name);
-    std::string physical_element;
-    getWithParser(pp, "element", physical_element);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0,
-        "There are no ionization energies available for this element. "
-        "Please update src/utils/IonizationEnergiesTable.H using write_atomic_data_cpp.py");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::abs(product_pc->m_charge / m_charge +1) < 1e-3),
-        "Ion and Ionization product charges have to be opposite");
-    // Get atomic number and ionization energies from file
-    const int ion_element_id = ion_map_ids[physical_element];
-    const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
-    amrex::Vector<amrex::Real> h_ionization_energies(ion_atomic_number);
-    const int offset = ion_energy_offsets[ion_element_id];
-    for(int i=0; i<ion_atomic_number; i++){
-        h_ionization_energies[i] = table_ionization_energies[i+offset];
-    }
-    // Compute ADK prefactors (See Chen, JCP 236 (2013), equation (2))
-    // For now, we assume l=0 and m=0.
-    // The approximate expressions are used,
-    // without Gamma function
-    const PhysConst phys_const = make_constants_SI();
-    const amrex::Real alpha = 0.0072973525693_rt;
-    const amrex::Real r_e = 2.8179403227e-15_rt;
-    const amrex::Real a3 = alpha * alpha * alpha;
-    const amrex::Real a4 = a3 * alpha;
-    const amrex::Real wa = a3 * phys_const.c / r_e;
-    const amrex::Real Ea = phys_const.m_e * phys_const.c * phys_const.c / phys_const.q_e * a4 / r_e;
-    const amrex::Real UH = table_ionization_energies[0];
-    const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
-
-    // plasma frequency in SI units to denormalize ionization
-    const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                     PhysConstSI::q_e*PhysConstSI::q_e /
-                                     (PhysConstSI::ep0 * PhysConstSI::m_e) );
-    const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/phys_const.c;
-
-    m_laser_adk_prefactor.resize(ion_atomic_number);
-
-    amrex::Gpu::PinnedVector<amrex::Real> h_laser_adk_prefactor(ion_atomic_number);
-
-    for (int i=0; i<ion_atomic_number; ++i)
-    {
-        const amrex::Real Uion = h_ionization_energies[i];
-        h_laser_adk_prefactor[i] = (3 / MathConst::pi) * std::pow(Uion/UH, -3./2.);
-    }
-
     amrex::Gpu::copy(amrex::Gpu::hostToDevice,
         h_laser_adk_prefactor.begin(), h_laser_adk_prefactor.end(), m_laser_adk_prefactor.begin());
 }

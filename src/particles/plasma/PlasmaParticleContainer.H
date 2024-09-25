@@ -84,10 +84,9 @@ public:
     /** Initialize ADK prefactors of ionizable plasmas
      *
      * \param[in] geom Geometry of the simulation, to get the cell size
-     * \param[in] product_pc The electron plasma PC that this Ion Plasma ionizes to
      * \param[in] background_density_SI background plasma density (only needed for normalized units)
      */
-    void InitIonizationModule (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
+    void InitIonizationModule (const amrex::Geometry& geom,
                                const amrex::Real background_density_SI);
 
     /** Calculates Ionization Probability and generates new Plasma Particles
@@ -102,25 +101,16 @@ public:
                            const Fields& fields,
                            const amrex::Real background_density_SI);
 
-    /** Initialize ADK prefactors of Laser ionizable plasmas
-     *
-     * \param[in] geom Geometry of the simulation, to get the cell size
-     * \param[in] product_pc The electron plasma PC that this Ion Plasma ionizes to
-     * \param[in] background_density_SI background plasma density (only needed for normalized units)
-     */
-    void InitLaserIonization (const amrex::Geometry& geom, PlasmaParticleContainer* product_pc,
-                              const amrex::Real background_density_SI);
-
     /** Calculates Ionization Probability from a Laser and generates new Plasma Particles
      *
-     * \param[in] lev MR level
-     * \param[in] geom Geometry of the simulation, to get the cell size
-     * \param[in] fields the general field class
+     * \param[in] islice zeta slice index
+     * \param[in] laser_geom Geometry of the laser
+     * \param[in] laser the laser class
      * \param[in] background_density_SI background plasma density (only needed for normalized units)
      */
-    void LaserIonization (const int lev,
-                          const amrex::Geometry& geom,
-                          const Fields& fields,
+    void LaserIonization (const int islice,
+                          const amrex::Geometry& laser_geom,
+                          const MultiLaser& laser,
                           const amrex::Real background_density_SI);
 
     /** Reorder particles to speed-up current deposition
@@ -208,8 +198,10 @@ public:
 
     // ionization:
 
+    bool m_can_ionize = false; /**< whether this plasma can ionize from anything */
+    bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
+    bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
-    bool m_can_ionize = false; /**< whether this plasma can ionize */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
     /** to calculate Ionization probability with ADK formula */
@@ -218,7 +210,6 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
     /** to calculate Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
-
     /** to calculate laser Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_adk_prefactor;
 
