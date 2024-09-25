@@ -1184,8 +1184,13 @@ void
 MultiGrid::vcycle ()
 {
 #if defined(AMREX_USE_CUDA)
-    if (!m_cuda_graph_vcycle_created) {
-    cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
+    std::pair<const amrex::Real*, const amrex::Real*> key {
+        m_sol.array().dataPtr(),
+        m_rhs.const_array().dataPtr()
+    };
+
+    if (m_cuda_graph_vcycle.count(key) == 0) {
+        cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 
     for (int ilev = 0; ilev < m_single_block_level_begin; ++ilev) {
@@ -1240,16 +1245,11 @@ MultiGrid::vcycle ()
         m_acf[0].const_array(), m_rescor[0].array(), m_sol.array(), m_dx, m_dy);
 
 #if defined(AMREX_USE_CUDA)
-    cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_vcycle);
-    cudaGraphInstantiate(&m_cuda_graph_exe_vcycle, m_cuda_graph_vcycle, NULL, NULL, 0);
-    m_cuda_graph_vcycle_created = true;
-    m_cuda_graph_sol = m_sol.array().dataPtr();
-    m_cuda_graph_rhs = m_rhs.const_array().dataPtr();
+        cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_vcycle[key].first);
+        cudaGraphInstantiate(&m_cuda_graph_vcycle[key].second,
+                            m_cuda_graph_vcycle[key].first, NULL, NULL, 0);
     }
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_sol.array().dataPtr() == m_cuda_graph_sol &&
-        m_rhs.const_array().dataPtr() == m_cuda_graph_rhs,
-        "HPMG sol and rhs arrays must be the same as when solve was called for the first time");
-    cudaGraphLaunch(m_cuda_graph_exe_vcycle, Gpu::gpuStream());
+    cudaGraphLaunch(m_cuda_graph_vcycle[key].second, Gpu::gpuStream());
 #endif
 }
 
@@ -1444,9 +1444,9 @@ MultiGrid::~MultiGrid ()
         cudaGraphDestroy(m_cuda_graph_acf);
         cudaGraphExecDestroy(m_cuda_graph_exe_acf);
     }
-    if (m_cuda_graph_vcycle_created) {
-        cudaGraphDestroy(m_cuda_graph_vcycle);
-        cudaGraphExecDestroy(m_cuda_graph_exe_vcycle);
+    for (auto& graph : m_cuda_graph_vcycle) {
+        cudaGraphDestroy(graph.second.first);
+        cudaGraphExecDestroy(graph.second.second);
     }
 #endif
 }
