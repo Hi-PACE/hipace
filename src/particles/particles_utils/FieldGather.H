@@ -275,9 +275,9 @@ void doLaserGatherShapeN (const amrex::Real xp,
  * \param[in] ADxp d/dx a field at particle position
  * \param[in] ADzetap d/dzeta a field at particle position
  * \param[in] laser_arr slice array for WhichSlice::This
- * \param[in] aabs_comp field component for field aabs
  * \param[in] dx_inv inverse cell spacing in x direction
  * \param[in] dy_inv inverse cell spacing in y direction
+ * \param[in] dzeta_inv inverse cell spacing in zeta direction
  * \param[in] x_pos_offset offset for converting positions to indexes
  * \param[in] y_pos_offset offset for converting positions to indexes
  */
