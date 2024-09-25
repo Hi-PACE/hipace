@@ -16,7 +16,6 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    # please set your project account
    export proj=<your project id>
    # required dependencies
-   module load buildtools/24.03
    module load LUMI/24.03
    module load partition/G
    module load PrgEnv-amd/8.3.3
