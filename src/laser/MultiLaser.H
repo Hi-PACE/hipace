@@ -45,8 +45,8 @@ namespace WhichLaserSlice {
         chi,
         chi_initial,
         rhs,
-        rhs_fourier
-        N
+        rhs_fourier,
+        N,
     };
 }
 
