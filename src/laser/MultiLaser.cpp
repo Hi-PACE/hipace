@@ -1079,7 +1079,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                         + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
                 }
                 rhs_arr(i,j,0) = rhs;
-                arr(i,j,rhs)= rhs;
+                arr(i,j, WhichLaserSlice::rhs)= rhs;
             });
 
         // Transform rhs to Fourier space
