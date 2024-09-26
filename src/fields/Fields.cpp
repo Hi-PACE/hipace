@@ -86,7 +86,7 @@ Fields::AllocData (
                 "Bx", "By", "Bz", "Psi",
                 "jx_beam", "jy_beam", "jz_beam", "jx", "jy", "rhomjz");
             if (Hipace::m_use_laser) {
-                Comps[isl].multi_emplace(N_Comps, "aabs");
+                Comps[isl].multi_emplace(N_Comps, "aabs","rhs","rhs_fourier");
             }
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");

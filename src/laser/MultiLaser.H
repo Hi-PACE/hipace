@@ -44,6 +44,8 @@ namespace WhichLaserSlice {
         np1jp2_i,
         chi,
         chi_initial,
+        rhs,
+        rhs_fourier
         N
     };
 }
