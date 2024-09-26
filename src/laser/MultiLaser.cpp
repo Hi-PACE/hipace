@@ -1102,7 +1102,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                 const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
                     1._rt/(kx*kx + ky*ky + acoeff) : 0.;
                 rhs_fourier_arr(i,j) *= -inv_k2a;
-                arr(i,j,rhs_fourier)= -inv_k2a;
+                arr(i,j,WhichLaserSlice::rhs_fourier)= -inv_k2a;
             });
 
         // Transform rhs to Fourier space to get solution in sol
