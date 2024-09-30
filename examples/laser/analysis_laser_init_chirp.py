@@ -52,7 +52,7 @@ def get_phi2 (Ar, m, tau):
         for j in range(len(m.x)-2):
             temp_chirp = temp_chirp + pphi_pz2[i,j] * laser_module1[i,j]
             sum = sum + laser_module1[i,j]
-    x = temp_chirp * cc.c**2 / sum
+    x = temp_chirp * scc.c**2 / sum
     a = 4 * x
     b = -4
     c = tau**4 * x
