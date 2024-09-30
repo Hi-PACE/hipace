@@ -19,7 +19,7 @@
 class Laser
 {
 public:
-/** \brief Read in a laser from an openPMD file */
+    /** \brief Read in a laser from an openPMD file */
     void GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D);
     template<typename input_type>
     void GetEnvelopeFromFile (amrex::Geometry laser_geom_3D);
