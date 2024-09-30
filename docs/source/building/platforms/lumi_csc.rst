@@ -16,11 +16,11 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    # please set your project account
    export proj=<your project id>
    # required dependencies
-   module load LUMI
+   module load LUMI/24.03
    module load partition/G
    module load PrgEnv-amd/8.3.3
-   module load rocm/5.2.3
-   module load buildtools/22.08
+   module load rocm/6.0.3
+   module load buildtools/24.03
    module load cray-hdf5/1.12.1.5
 
    export MPICH_GPU_SUPPORT_ENABLED=1
