@@ -889,19 +889,16 @@ Option: ``gaussian``
     Spatial chirp at focus defined by `S. Akturk et al., Optics Express 12, 4399 (2004) <https://doi.org/10.1364/OPEX.12.004399>`__.
 
 * ``<laser name>.phi2`` (`float`) optional (default `pi/2`)
-    The amount of temporal chirp :math:`\phi^{(2)}` at focus (in the lab frame). Namely, a wave packet
-    centered on the frequency :math:`(\omega_0 + \delta \omega)` will reach its peak intensity
-    at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`. Thus, a positive
-    :math:`\phi^{(2)}` corresponds to positive chirp, i.e. red part of the spectrum in the
-    front of the pulse and blue part of the spectrum in the back. More specifically, the electric
-    field in the focal plane is of the form:
+    The amount of temporal chirp :math:`\phi^{(2)}` at focus (in the lab frame).
+    Namely, a wave packetcentered on the frequency :math:`(\omega_0 + \delta \omega)` will reach its peak intensity at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`.
+    Thus, a positive :math:`\phi^{(2)}` corresponds to positive chirp, i.e. red part of the spectrum in the front of the pulse and blue part of the spectrum in the back.
+    More specifically, the electric field in the focal plane is of the form:
 
     .. math::
 
         E(\boldsymbol{x},t) \propto Re\left[ \exp\left(  -\frac{(t-t_{peak})^2}{\tau^2 + 2i\phi^{(2)}} + i\omega_0 (t-t_{peak}) + i\phi_0 \right) \right]
 
-    where :math:`\tau` is given by ``<laser_name>.tau`` and represents the
-    Fourier-limited duration of the laser pulse. Thus, the actual duration of the chirped laser pulse is:
+    where :math:`\tau` is given by ``<laser_name>.tau`` and represents the Fourier-limited duration of the laser pulse. Thus, the actual duration of the chirped laser pulse is:
 
     .. math::
 
