@@ -18,8 +18,8 @@ lasers.lambda0 = .8e-6
 laser.a0 = 1
 laser.position_mean = 0. 0. 0
 laser.focal_distance = 0.0
-laser.w0 = 30e-6 \
-laser.L0 = 5e-6 \
+laser.w0 = 30e-6
+laser.L0 = 5e-6
 amr.max_level = 0
 
 diagnostic.output_period = 1
