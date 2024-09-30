@@ -823,7 +823,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
         // Initialize a laser envelope on slice islice
-        for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
+        for (int ilaser = 0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             if (laser.m_laser_init_type == "from_file"){
                 amrex::Array4<amrex::Real> const& arr_ff = laser.m_F_input_file.array();
