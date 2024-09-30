@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-# Copyright 2022
+# Copyright 2024
 #
 # This file is part of HiPACE++.
 #
