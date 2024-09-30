@@ -55,7 +55,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         return;
     }
     else {
-        amrex::Abort("ilegal init type specified");
+        amrex::Abort("Illegal init type specified for laser. Must be one of: gaussian, from_file, parser.");
     }
 }
 
