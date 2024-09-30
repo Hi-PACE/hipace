@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-# Copyright 2022
+# Copyright 2024
 #
 # This file is part of HiPACE++.
 #
