@@ -38,24 +38,24 @@ def get_zeta(Ar, m, w0, L):
     zeta_solutions = np.roots([a, b, c])
     return np.min(zeta_solutions)
 
-def get_phi2(Ar, m, tau):
-    # get temporal chirp phi2
+def get_phi2 (Ar, m, tau):
+    #get temporal chirp phi2
     temp_chirp = 0
     sum = 0
     laser_module1 = np.abs(Ar)
     phi_envelop = np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0)
-    # calculate pphi_pz
+    #calculate pphi_pz
     z_diff = np.diff(m.z)
-    pphi_pz = (np.diff(phi_envelop, axis=0)).T / (z_diff / scc.c)
-    pphi_pz2 = (np.diff(pphi_pz, axis=1)) / (z_diff[:len(z_diff) - 1]) / scc.c
-    for i in range(len(m.z) - 2):
-        for j in range(len(m.x) - 2):
-            temp_chirp = temp_chirp + pphi_pz2[i, j] * laser_module1[i, j]
-            sum = sum + laser_module1[i, j]
-    x = temp_chirp * scc.c**2 / sum
-    a = 4 * x
+    pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
+    pphi_pz2 = ((np.diff(pphi_pz, axis=1)) / (z_diff[:len(z_diff)-1]) / scc.c).T
+    for i in range(len(m.z)-2):
+        for j in range(len(m.x)-2):
+            temp_chirp = temp_chirp + pphi_pz2[i,j] * laser_module1[i,j]
+            sum = sum + laser_module1[i,j]
+    x = temp_chirp*scc.c**2/sum
+    a = 4*x
     b = -4
-    c = tau**4 * x
+    c = tau**4*x
     zeta_solutions = np.roots([a, b, c])
     return np.max(zeta_solutions)
 
