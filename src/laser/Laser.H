@@ -19,8 +19,9 @@
 class Laser
 {
 public:
-    /** \brief Read in a laser from an openPMD file */
-    \param[in] laser_geom_3D 3D laser geometry for level 0
+    /** \brief Read in a laser from an openPMD file
+     *\param[in] laser_geom_3D 3D laser geometry for level 0
+     */
     void GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D);
     template<typename input_type>
     void GetEnvelopeFromFile (amrex::Geometry laser_geom_3D);
