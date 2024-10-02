@@ -1174,7 +1174,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real zeta = laser.m_zeta;
                 const amrex::Real beta = laser.m_beta;
                 const amrex::Real phi2 = laser.m_phi2;
-                const amrex::Real clight = PhysConstSI::c;
+                const amrex::Real clight = get_phys_const().c;
                 const amrex::Real theta_xy = laser.m_chirp_theta_xy;
                 amrex::ParallelFor(
                 bx,
