@@ -19,6 +19,7 @@ MultiPlasma::MultiPlasma ()
     amrex::ParmParse pp("plasmas");
     queryWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
+    DeprecatedInput("plasmas", "sort_bin_size", "hipace.tile_size", "", true);
 
     DeprecatedInput("plasmas", "collisions",
                     "hipace.collisions", "", true);

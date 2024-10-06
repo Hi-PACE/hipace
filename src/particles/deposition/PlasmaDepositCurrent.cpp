@@ -100,6 +100,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 Hipace::m_use_laser
             },
             // call deposition function
+            // The three functions passed as arguments to this lambda
+            // are defined below as the next arguments.
             [&](auto is_valid, auto get_cell, auto deposit){
                 constexpr auto ctos = deposit.GetOptions();
                 constexpr int depos_order = ctos[0];
@@ -117,7 +119,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                         std::array<int, 0>{}, std::array{jx, jy, jz, rho, chi, rhomjz});
                 }
             },
-            // return if the particle is valid and should deposit
+            // is_valid
+            // return whether the particle is valid and should deposit
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto /*depos_order*/,
                                   auto /*can_ionize*/,
@@ -126,6 +129,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 // only deposit plasma currents on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
             },
+            // get_cell
             // return the lowest cell index that the particle deposits into
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto depos_order,
@@ -146,6 +150,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
                 return {i, j};
             },
+            // deposit
             // deposit the charge / current of one particle
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
