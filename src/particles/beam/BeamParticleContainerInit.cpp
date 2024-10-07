@@ -46,8 +46,8 @@ namespace
         const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
         const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz,
         const amrex::Real& sx, const amrex::Real& sy, const amrex::Real& sz,
-        const amrex::Real& weight, const amrex::Long pid,
-        const amrex::Long ip, const amrex::Real& speed_of_light, const EnforceBC& enforceBC) noexcept
+        const amrex::Real& weight, const amrex::Long pid, const amrex::Long ip,
+        const amrex::Real& speed_of_light, const EnforceBC& enforceBC, bool do_spin) noexcept
     {
         amrex::Real xp = x;
         amrex::Real yp = y;
@@ -61,9 +61,11 @@ namespace
         ptd.rdata(BeamIdx::ux )[ip] = uxp;
         ptd.rdata(BeamIdx::uy )[ip] = uyp;
         ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
-        ptd.m_runtime_rdata[0][ip] = sx;
-        ptd.m_runtime_rdata[1][ip] = sy;
-        ptd.m_runtime_rdata[2][ip] = sz;
+        if (do_spin) {
+            ptd.m_runtime_rdata[0][ip] = sx;
+            ptd.m_runtime_rdata[1][ip] = sy;
+            ptd.m_runtime_rdata[2][ip] = sz;
+        }
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
         ptd.idcpu(ip) = pid + ip;
@@ -1027,9 +1029,11 @@ InitBeamFromFile (const std::string input_file,
     electrons[name_u][name_uy].loadChunk<input_type>(u_y_data, {0u}, {num_to_add});
     electrons[name_u][name_uz].loadChunk<input_type>(u_z_data, {0u}, {num_to_add});
     electrons[name_w][name_ww].loadChunk<input_type>(w_w_data, {0u}, {num_to_add});
-    electrons[name_s][name_sx].loadChunk<input_type>(s_x_data, {0u}, {num_to_add});
-    electrons[name_s][name_sy].loadChunk<input_type>(s_y_data, {0u}, {num_to_add});
-    electrons[name_s][name_sz].loadChunk<input_type>(s_z_data, {0u}, {num_to_add});
+    if (m_do_spin_tracking) {
+        electrons[name_s][name_sx].loadChunk<input_type>(s_x_data, {0u}, {num_to_add});
+        electrons[name_s][name_sy].loadChunk<input_type>(s_y_data, {0u}, {num_to_add});
+        electrons[name_s][name_sz].loadChunk<input_type>(s_z_data, {0u}, {num_to_add});
+    }
 
     series.flush();
 
@@ -1103,6 +1107,7 @@ InitBeamFromFile (const std::string input_file,
     const input_type * const s_y_ptr = s_y_data.get();
     const input_type * const s_z_ptr = s_z_data.get();
     const input_type * const w_w_ptr = w_w_data.get();
+    const bool do_spin_tracking = m_do_spin_tracking;
 
     amrex::ParallelFor(amrex::Long(num_to_add),
         [=] AMREX_GPU_DEVICE (const amrex::Long i) {
@@ -1117,7 +1122,7 @@ InitBeamFromFile (const std::string input_file,
                 static_cast<amrex::Real>(s_y_ptr[i]),
                 static_cast<amrex::Real>(s_z_ptr[i]),
                 static_cast<amrex::Real>(w_w_ptr[i] * unit_ww),
-                pid, i, phys_const.c, enforceBC);
+                pid, i, phys_const.c, enforceBC, do_spin_tracking);
         });
 
     amrex::Gpu::streamSynchronize();

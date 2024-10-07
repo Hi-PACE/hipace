@@ -370,6 +370,7 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
 
         const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
         const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
+        const bool do_spin_tracking = m_do_spin_tracking;
 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (const int ip) {
@@ -381,9 +382,11 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
-                ptd.m_runtime_rdata[0][ip] = ptd_init.m_runtime_rdata[0][ip];
-                ptd.m_runtime_rdata[1][ip] = ptd_init.m_runtime_rdata[1][ip];
-                ptd.m_runtime_rdata[2][ip] = ptd_init.m_runtime_rdata[2][ip];
+                if (do_spin_tracking) {
+                    ptd.m_runtime_rdata[0][ip] = ptd_init.m_runtime_rdata[0][ip];
+                    ptd.m_runtime_rdata[1][ip] = ptd_init.m_runtime_rdata[1][ip];
+                    ptd.m_runtime_rdata[2][ip] = ptd_init.m_runtime_rdata[2][ip];
+                }
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
                 ptd.idata(BeamIdx::mr_level)[ip] = 0;
