@@ -837,8 +837,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp ) = 0._rt;
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
-                    arr(i, j, k, comp ) += arr_ff(i, j, k, 0 );
-                    arr(i, j, k, comp + 1 ) += arr_ff(i, j, k, 1 );
+                    arr(i, j, k, comp ) += arr_ff(i, j, islice, 0 );
+                    arr(i, j, k, comp + 1 ) += arr_ff(i, j, islice, 1 );
                 }
                 );
                 AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0 && m_lambda0 != 0,
