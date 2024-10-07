@@ -186,7 +186,7 @@ public:
         return m_init_slice;
     }
 
-    void intializeSlice(int slice, int which_slice);
+    void initializeSlice(int slice, int which_slice);
 
     uint64_t getTotalNumParticles () const {
         return m_total_num_particles;

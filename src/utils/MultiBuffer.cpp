@@ -446,7 +446,7 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
     if (m_datanodes[slice].m_progress == comm_progress::ready_to_define) {
         // initialize MultiBeam and MultiLaser per slice on the first timestep
         for (int b = 0; b < m_nbeams; ++b) {
-            beams.getBeam(b).intializeSlice(slice, beam_slice);
+            beams.getBeam(b).initializeSlice(slice, beam_slice);
         }
         if (laser.UseLaser(slice)) {
             using namespace WhichLaserSlice;
