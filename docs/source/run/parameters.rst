@@ -123,10 +123,17 @@ General parameters
     can do this at once in initialization instead of one after another
     as part of the communication pipeline.
 
+* ``hipace.do_shared_depos`` (`bool`) optional (default `false`)
+    Whether to use shared memory current deposition on GPU.
+
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
-    The tile size can be set with ``plasmas.sort_bin_size``.
+    The tile size can be set with ``hipace.tile_size``.
+
+* ``hipace.tile_size`` (`int`) optional (default `32`)
+    Tile size for beam and plasma current deposition, when running on CPU
+    and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``hipace.depos_order_xy`` (`int`) optional (default `2`)
     Transverse particle shape order. Currently, `0,1,2,3` are implemented.
@@ -450,10 +457,6 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name> or plasmas.neutralize_background`` (`bool`) optional (default `1`)
     Whether to add a neutralizing background of immobile particles of opposite charge.
-
-* ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
-    Tile size for plasma current deposition, when running on CPU
-    and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
     | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.

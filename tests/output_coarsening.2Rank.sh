@@ -27,7 +27,7 @@ TEST_NAME="${FILE_NAME%.*}"
 # Run the fine simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         amr.n_cell = 60 60 100 \
-        plasmas.sort_bin_size = 4 \
+        hipace.tile_size = 16 \
         max_step = 1 \
         diagnostic.field_data = Ez ExmBy EypBx Bx By Bz \
         hipace.file_prefix=fine_io
@@ -35,7 +35,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
 # Run the coarse simulation
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         amr.n_cell = 60 60 100 \
-        plasmas.sort_bin_size = 4 \
+        hipace.tile_size = 16 \
         max_step = 1 \
         diagnostic.field_data = Ez ExmBy EypBx Bx By Bz \
         diagnostic.coarsening = 3 4 5 \
