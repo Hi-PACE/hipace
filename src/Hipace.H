@@ -252,7 +252,7 @@ public:
      * or radiation reaction in normalized units */
     inline static amrex::Real m_background_density_SI = 0.;
     /** Time step for the beam evolution */
-    amrex::Real m_dt = 0.0;
+    amrex::Real m_dt = +0.0;
     /** Number of binary collisions */
     inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
@@ -265,6 +265,17 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+
+    // Performance Counters
+
+    /** total number of plasma particle pushes for performance printout */
+    inline static double m_num_plasma_particles_pushed = 0;
+    /** total number of beam particle pushes for performance printout */
+    inline static double m_num_beam_particles_pushed = 0;
+    /** total number of field cell updates for performance printout */
+    inline static double m_num_field_cells_updated = 0;
+    /** total number of laser cell updates for performance printout */
+    inline static double m_num_laser_cells_updated = 0;
 
     // SALAME
 

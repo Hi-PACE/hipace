@@ -96,6 +96,9 @@ Fields::AllocData (
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
             }
+            if (Hipace::m_do_beam_jz_minus_rho) {
+                Comps[isl].multi_emplace(N_Comps, "rhomjz_beam");
+            }
 
             isl = WhichSlice::Previous;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
@@ -552,6 +555,9 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
         // with jx and jy initially set to jx_beam and jy_beam
         setVal(0., lev, WhichSlice::This, "chi", "Sy", "Sx", "ExmBy", "EypBx", "jz_beam", "rhomjz");
         setVal(0., lev, WhichSlice::Next, "jx_beam", "jy_beam");
+        if (Hipace::m_do_beam_jz_minus_rho) {
+            setVal(0., lev, WhichSlice::This, "rhomjz_beam");
+        }
     } else {
         if (lev != 0 && islice == geom[lev].Domain().bigEnd(Direction::z)) {
             // first slice of lev (islice goes backwards)
@@ -843,6 +849,12 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
     HIPACE_PROFILE("Fields::SolvePoissonPsiExmByEypBxEzBz()");
 
     PhysConst phys_const = get_phys_const();
+
+    if (m_explicit && Hipace::m_do_beam_jz_minus_rho) {
+        for (int lev=0; lev<current_N_level; ++lev) {
+            add(lev, WhichSlice::This, {"rhomjz"}, WhichSlice::This, {"rhomjz_beam"});
+        }
+    }
 
     EnforcePeriodic(true, {Comps[WhichSlice::This]["jx"],
                            Comps[WhichSlice::This]["jy"],

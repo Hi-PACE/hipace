@@ -8,6 +8,7 @@
 #include "IOUtil.H"
 
 #include <AMReX_IndexType.H>
+#include <AMReX_IOFormat.H>
 
 #include <algorithm>
 #include <cmath>
@@ -153,6 +154,8 @@ std::ostream& operator<<(std::ostream& os, utils::format_time ft) {
 
     long long days = hours / 24;
     hours %= 24;
+
+    amrex::IOFormatSaver iofmtsaver(os);
 
     if (days > 0) {
         os << days << "-";

@@ -67,6 +67,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const auto enforceBC = EnforceBC();
         const amrex::Real dz = gm[0].CellSize(2) / n_subcycles;
 
+        if (!temp_slice && lev == 0) {
+            // only count particles on non-temp slices and only once for all MR levels
+            Hipace::m_num_plasma_particles_pushed += double(pti.numParticles());
+        }
+
         const amrex::Real laser_norm = (plasma.m_charge/phys_const.q_e) * (phys_const.m_e/plasma.m_mass)
             * (plasma.m_charge/phys_const.q_e) * (phys_const.m_e/plasma.m_mass);
         const amrex::Real clight = phys_const.c;
