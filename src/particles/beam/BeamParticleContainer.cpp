@@ -104,8 +104,10 @@ BeamParticleContainer::ReadParameters ()
     }
     queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
     if (m_do_spin_tracking) {
-        getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
-        queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
+        if (m_injection_type != "from_file") {
+            getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
+            queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
+        }
         for (auto& beam_tile : m_slices) {
             // Use 3 real and 0 int runtime components
             beam_tile.define(3, 0);
@@ -379,7 +381,9 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
-
+                ptd.m_runtime_rdata[0][ip] = ptd_init.m_runtime_rdata[0][ip];
+                ptd.m_runtime_rdata[1][ip] = ptd_init.m_runtime_rdata[1][ip];
+                ptd.m_runtime_rdata[2][ip] = ptd_init.m_runtime_rdata[2][ip];
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
                 ptd.idata(BeamIdx::mr_level)[ip] = 0;
@@ -387,19 +391,20 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
         );
     }
 
-    if (m_do_spin_tracking) {
+    if (m_do_spin_tracking && m_injection_type != "from_file") {
         HIPACE_PROFILE("BeamParticleContainer::intializeSpin()");
+
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
         const amrex::RealVect initial_spin_norm = m_initial_spin / m_initial_spin.vectorLength();
-
+        amrex::Print()<<"yeah dude\n";
         amrex::ParallelFor(getNumParticles(which_slice),
-            [=] AMREX_GPU_DEVICE (const int ip) {
-                ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
-                ptd.m_runtime_rdata[1][ip] = initial_spin_norm[1];
-                ptd.m_runtime_rdata[2][ip] = initial_spin_norm[2];
-            }
-        );
+                           [=] AMREX_GPU_DEVICE (const int ip) {
+                               ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
+                               ptd.m_runtime_rdata[1][ip] = initial_spin_norm[1];
+                               ptd.m_runtime_rdata[2][ip] = initial_spin_norm[2];
+                           }
+            );
     }
 }
 
