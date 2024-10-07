@@ -873,8 +873,6 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``<laser name>.init_type`` (list of `string`) optional (default `gaussian`)
     The initializing method of laser. Possible options are:
 
-      *  ``parser``, the laser is initialized with the expression of the complex envelope function.
-
       Option: ``gaussian`` (default) the laser is iniliatized with an ideal gaussian pulse.
 
       * ``<laser name>.a0`` (`float`) optional (default `0`)
@@ -921,12 +919,12 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.iteration`` (`int`) optional (default `0`)
           Iteration of the openPMD file to be read in.
 
-      Option: ``parser``
+      Option: ``parser``, the laser is initialized with the expression of the complex envelope function.
 
-      * ``<laser name>.laser_real(x,y,z)`` (`string`)
+      * ``<laser name>.laser_real(x,y,z)`` optional (`string`) (default `""`)
           Expression for the real part of the laser evelope in `x, y, z`.
 
-      * ``<laser name>.laser_imag(x,y,z)`` (`string`)
+      * ``<laser name>.laser_imag(x,y,z)`` optional (`string`) (default `""`)
           Expression for the imaginary part of the laser evelope `x, y, z`.
 
       * ``lasers.lambda0`` (`float`)
