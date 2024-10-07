@@ -400,14 +400,13 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
         const amrex::RealVect initial_spin_norm = m_initial_spin / m_initial_spin.vectorLength();
-        amrex::Print()<<"yeah dude\n";
         amrex::ParallelFor(getNumParticles(which_slice),
-                           [=] AMREX_GPU_DEVICE (const int ip) {
-                               ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
-                               ptd.m_runtime_rdata[1][ip] = initial_spin_norm[1];
-                               ptd.m_runtime_rdata[2][ip] = initial_spin_norm[2];
-                           }
-            );
+            [=] AMREX_GPU_DEVICE (const int ip) {
+                ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
+                ptd.m_runtime_rdata[1][ip] = initial_spin_norm[1];
+                ptd.m_runtime_rdata[2][ip] = initial_spin_norm[2];
+            }
+        );
     }
 }
 

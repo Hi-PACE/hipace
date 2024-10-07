@@ -91,10 +91,9 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticleSlice (
-        const BeamTile::ParticleTileDataType& ptd,
-        const amrex::Real x, const amrex::Real y, const amrex::Real z,
-        const amrex::Real ux, const amrex::Real uy, const amrex::Real uz,
-        const amrex::Real weight, const amrex::Long pid,
+        const BeamTile::ParticleTileDataType& ptd, const amrex::Real x,
+        const amrex::Real y, const amrex::Real z, const amrex::Real ux, const amrex::Real uy,
+        const amrex::Real uz, const amrex::Real weight, const amrex::Long pid,
         const amrex::Long ip, const amrex::Real speed_of_light, const EnforceBC& enforceBC,
         const bool is_valid=true) noexcept
     {
@@ -465,13 +464,13 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
 
             } else {
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos+y,
-                                        z_central, u[0], u[1], u[2],weight,
+                                        z_central, u[0], u[1], u[2], weight,
                                         pid, 4*i, clight, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos+y,
                                         z_central, -u[0], u[1], u[2], weight,
                                         pid, 4*i+1, clight, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos-y,
-                                        z_central, u[0], -u[1], u[2],  weight,
+                                        z_central, u[0], -u[1], u[2], weight,
                                         pid, 4*i+2, clight, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos-y,
                                         z_central, -u[0], -u[1], u[2], weight,
@@ -1014,11 +1013,14 @@ InitBeamFromFile (const std::string input_file,
     std::shared_ptr<input_type> u_z_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
     std::shared_ptr<input_type> s_x_data{ reinterpret_cast<input_type*>(
-        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+        amrex::The_Pinned_Arena()->alloc(m_do_spin_tracking ?
+                                         sizeof(input_type)*num_to_add : 0) ), del};
     std::shared_ptr<input_type> s_y_data{ reinterpret_cast<input_type*>(
-        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+        amrex::The_Pinned_Arena()->alloc(m_do_spin_tracking ?
+                                         sizeof(input_type)*num_to_add : 0) ), del};
     std::shared_ptr<input_type> s_z_data{ reinterpret_cast<input_type*>(
-        amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
+        amrex::The_Pinned_Arena()->alloc(m_do_spin_tracking ?
+                                         sizeof(input_type)*num_to_add: 0 ) ), del};
     std::shared_ptr<input_type> w_w_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
 
@@ -1103,9 +1105,9 @@ InitBeamFromFile (const std::string input_file,
     const input_type * const u_x_ptr = u_x_data.get();
     const input_type * const u_y_ptr = u_y_data.get();
     const input_type * const u_z_ptr = u_z_data.get();
-    const input_type * const s_x_ptr = s_x_data.get();
-    const input_type * const s_y_ptr = s_y_data.get();
-    const input_type * const s_z_ptr = s_z_data.get();
+    const input_type * const s_x_ptr = m_do_spin_tracking ? s_x_data.get() : nullptr;
+    const input_type * const s_y_ptr = m_do_spin_tracking ? s_y_data.get() : nullptr;
+    const input_type * const s_z_ptr = m_do_spin_tracking ? s_z_data.get() : nullptr;
     const input_type * const w_w_ptr = w_w_data.get();
     const bool do_spin_tracking = m_do_spin_tracking;
 
@@ -1118,9 +1120,9 @@ InitBeamFromFile (const std::string input_file,
                 static_cast<amrex::Real>(u_x_ptr[i] * unit_ux), // = gamma * beta
                 static_cast<amrex::Real>(u_y_ptr[i] * unit_uy),
                 static_cast<amrex::Real>(u_z_ptr[i] * unit_uz),
-                static_cast<amrex::Real>(s_x_ptr[i]),
-                static_cast<amrex::Real>(s_y_ptr[i]),
-                static_cast<amrex::Real>(s_z_ptr[i]),
+                do_spin_tracking ? static_cast<amrex::Real>(s_x_ptr[i]) : 0.,
+                do_spin_tracking ? static_cast<amrex::Real>(s_y_ptr[i]) : 0.,
+                do_spin_tracking ? static_cast<amrex::Real>(s_z_ptr[i]) : 0.,
                 static_cast<amrex::Real>(w_w_ptr[i] * unit_ww),
                 pid, i, phys_const.c, enforceBC, do_spin_tracking);
         });
