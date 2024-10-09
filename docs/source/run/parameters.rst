@@ -871,9 +871,9 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     Whether to use the most stable discretization for the envelope solver.
 
 * ``<laser name>.init_type`` (list of `string`) optional (default `gaussian`)
-    The initializing method of laser. Possible options are:
+    The initialisation method of laser. Possible options are:
 
-      Option: ``gaussian`` (default) the laser is iniliatized with an ideal gaussian pulse.
+      Option: ``gaussian`` (default) the laser is initialised with an ideal gaussian pulse.
 
       * ``<laser name>.a0`` (`float`) optional (default `0`)
           Peak normalized vector potential of the laser pulse.
@@ -895,14 +895,10 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
           Use either the pulse length or the pulse duration.
 
       * ``<laser name>.focal_distance`` (`float`)
-          Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
+          Distance at which the laser pulse is focused (in the z direction, counted from laser initial position).
 
       * ``<laser name>.propagation_angle_yz`` (`float`) optional (default `0`)
-          Propagation angle of the pulse in the yz plane (0 is the along the z axis)
-
-      * ``<laser name>.PFT_yz`` (`float`) optional (default `pi/2`)
-          Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
-          direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
+          Propagation angle of the pulse in the yz plane (0 is along the z axis)
 
       Option: ``from_file`` the laser is loaded from an openPMD file.
 
@@ -922,10 +918,10 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       Option: ``parser``, the laser is initialized with the expression of the complex envelope function.
 
       * ``<laser name>.laser_real(x,y,z)`` optional (`string`) (default `""`)
-          Expression for the real part of the laser evelope in `x, y, z`.
+          Expression for the real part of the laser envelope in `x, y, z`.
 
       * ``<laser name>.laser_imag(x,y,z)`` optional (`string`) (default `""`)
-          Expression for the imaginary part of the laser evelope `x, y, z`.
+          Expression for the imaginary part of the laser envelope `x, y, z`.
 
       * ``lasers.lambda0`` (`float`)
           Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
