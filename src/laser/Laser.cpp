@@ -31,7 +31,7 @@ Laser::Laser (std::string name)
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
         "Please specify exlusively either the pulse length L0 or the duration tau of the laser");
         if (duration_is_specified) m_L0 = m_tau * get_phys_const().c;
-        if (length_is_specified) m_tau = m_L0 / (get_phys_const().c);
+        if (length_is_specified) m_tau = m_L0 / get_phys_const().c;
         queryWithParser(pp, "focal_distance", m_focal_distance);
         queryWithParser(pp, "position_mean",  m_position_mean);
         queryWithParser(pp, "zeta",  m_zeta);
