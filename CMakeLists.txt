@@ -349,7 +349,7 @@ if(BUILD_TESTING)
                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-        add_test(NAME laser_init_check_chirp.1Rank
+        add_test(NAME laser_STC.SI.1Rank
                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_STC.SI.1Rank.sh
                         $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
