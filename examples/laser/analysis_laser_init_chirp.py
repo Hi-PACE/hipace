@@ -39,7 +39,7 @@ def get_zeta(Ar, m, w0, L):
     return np.min(zeta_solutions)
 
 def get_phi2 (Ar, m, tau):
-    #get temporal chirp phi2
+    # get temporal chirp phi2
     temp_chirp = 0
     sum = 0
     laser_module1 = np.abs(Ar)
