@@ -44,7 +44,7 @@ def get_phi2 (Ar, m, tau):
     sum = 0
     laser_module1 = np.abs(Ar)
     phi_envelop = np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0)
-    #calculate pphi_pz
+    # calculate pphi_pz
     z_diff = np.diff(m.z)
     pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
     pphi_pz2 = ((np.diff(pphi_pz, axis=1)) / (z_diff[:len(z_diff)-1]) / scc.c).T
