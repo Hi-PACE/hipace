@@ -890,8 +890,8 @@ Option: ``gaussian``
 
 * ``<laser name>.phi2`` (`float`) optional (default `pi/2`)
     The amount of temporal chirp :math:`\phi^{(2)}` at focus (in the lab frame).
-    Namely, a wave packetcentered on the frequency :math:`(\omega_0 + \delta \omega)` will reach its peak intensity at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`.
-    Thus, a positive :math:`\phi^{(2)}` corresponds to positive chirp, i.e. red part of the spectrum in the front of the pulse and blue part of the spectrum in the back.
+    Namely, a wave packet centered on the frequency :math:`(\omega_0 + \delta \omega)` will reach its peak intensity at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`.
+    Thus, a positive :math:`\phi^{(2)}` corresponds to positive chirp, i.e., red part of the spectrum in the front of the pulse and blue part of the spectrum in the back.
     More specifically, the electric field in the focal plane is of the form:
 
     .. math::
