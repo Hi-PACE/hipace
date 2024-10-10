@@ -22,7 +22,7 @@ def get_zeta(Ar, m, w0, L):
     phi_envelop = np.array(np.arctan2(Ar.imag, Ar.real))
     # unwrap phi_envelop
     phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0), axis=1)
-    # calculate pphi_pz/
+    # calculate pphi_pz
     z_diff = np.diff(m.z)
     x_diff = np.diff(m.x)
     pphi_pz = (np.diff(phi_envelop, axis=0)).T / (z_diff / scc.c)
