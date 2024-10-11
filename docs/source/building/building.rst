@@ -31,7 +31,7 @@ HiPACE++ depends on the following popular third party software.
 Please see installation instructions below in the Developers section.
 
 - a mature `C++17 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 7, Clang 7, NVCC 11.0, MSVC 19.15 or newer
-- `CMake 3.18.0+ <https://cmake.org/>`__
+- `CMake 3.24.0+ <https://cmake.org/>`__
 - `AMReX development <https://amrex-codes.github.io>`__: we automatically download and compile a copy of AMReX
 - `openPMD-api 0.15.1+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
 
@@ -123,7 +123,7 @@ The dependencies can be installed via the package manager
    brew install pkg-config  # for fftw
    brew install open-mpi
 
-Now, ``cmake --version`` should be at version 3.15.0 or newer.
+Now, ``cmake --version`` should be at version 3.24.0 or newer.
 
 Configure your compiler
 -----------------------

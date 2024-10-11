@@ -319,7 +319,14 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         amrex::Box domain = geom.Domain();
 
         if (fd.m_include_ghost_cells) {
-            domain.grow(Fields::m_slices_nguards);
+            switch (fd.m_base_geom_type) {
+                case FieldDiagnosticData::geom_type::field:
+                    domain.grow(Hipace::GetInstance().m_fields.getSlices(fd.m_level).nGrowVect());
+                    break;
+                case FieldDiagnosticData::geom_type::laser:
+                    domain.grow(Hipace::GetInstance().m_multi_laser.getSlices().nGrowVect());
+                    break;
+            }
         }
 
         {

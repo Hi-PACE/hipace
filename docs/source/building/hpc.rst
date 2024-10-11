@@ -36,7 +36,6 @@ This section documents quick-start guides for a selection of supercomputers that
    platforms/lumi_csc
    platforms/maxwell_desy
    platforms/perlmutter_nersc
-   platforms/spock_olcf
 
 .. tip::
 

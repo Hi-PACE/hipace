@@ -40,7 +40,6 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
         // each direction and have the same number of points as the
         // (cell-centered) real space box
         amrex::Box realspace_bx = realspace_ba[i];
-        realspace_bx.grow(Fields::m_poisson_nguards);
         amrex::IntVect fft_size = realspace_bx.length();
         // Because the spectral solver uses real-to-complex FFTs, we only
         // need the positive k values along the fastest axis
@@ -59,7 +58,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
 
     // Allocate temporary arrays - in real space and spectral space
     // These arrays will store the data just before/after the FFT
-    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, Fields::m_poisson_nguards);
+    m_stagingArea = amrex::MultiFab(realspace_ba, dm, 1, 0);
     m_tmpSpectralField = SpectralField(spectralspace_ba, dm, 1, 0);
 
     // This must be true even for parallel FFT.

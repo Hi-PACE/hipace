@@ -12,7 +12,8 @@ diagnostic.output_period = 1
 
 hipace.depos_order_xy = 2
 
-geometry.is_periodic = true  true  false  # Is periodic?
+boundary.field = Dirichlet
+boundary.particle = Periodic
 geometry.prob_lo     = -8.*kp_inv -8.*kp_inv -6.*kp_inv  # physical domain
 geometry.prob_hi     =  8.*kp_inv  8.*kp_inv  6.*kp_inv
 

@@ -80,22 +80,13 @@ AdvanceBeamParticlesSlice (
     const amrex::Real y_pos_offset_lev1 = GetPosOffset(1, gm[lev1_idx], slice_fab_lev1.box());
     const amrex::Real y_pos_offset_lev2 = GetPosOffset(1, gm[lev2_idx], slice_fab_lev2.box());
 
-    const amrex::Real lo_x_lev1 = gm[lev1_idx].ProbLo(0);
-    const amrex::Real lo_x_lev2 = gm[lev2_idx].ProbLo(0);
-
-    const amrex::Real hi_x_lev1 = gm[lev1_idx].ProbHi(0);
-    const amrex::Real hi_x_lev2 = gm[lev2_idx].ProbHi(0);
-
-    const amrex::Real lo_y_lev1 = gm[lev1_idx].ProbLo(1);
-    const amrex::Real lo_y_lev2 = gm[lev2_idx].ProbLo(1);
-
-    const amrex::Real hi_y_lev1 = gm[lev1_idx].ProbHi(1);
-    const amrex::Real hi_y_lev2 = gm[lev2_idx].ProbHi(1);
+    const CheckDomainBounds lev1_bounds {gm[lev1_idx]};
+    const CheckDomainBounds lev2_bounds {gm[lev2_idx]};
 
     // Extract particle properties
     const auto ptd = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-    const auto setPositionEnforceBC = EnforceBCandSetPos<BeamTile>(gm[0]);
+    const auto enforceBC = EnforceBC();
 
     const amrex::Real clight = phys_const.c;
     const amrex::Real inv_clight = 1.0_rt/phys_const.c;
@@ -119,6 +110,9 @@ AdvanceBeamParticlesSlice (
                                      PhysConstSI::q_e*PhysConstSI::q_e )  ) : 1;
     const amrex::Real E0 = Hipace::m_normalized_units ?
                            PhysConstSI::m_e * PhysConstSI::c / wp_inv / PhysConstSI::q_e : 1;
+
+    // don't include slipped particles in count as they were already pushed
+    Hipace::m_num_beam_particles_pushed += double(beam.getNumParticles(WhichBeamSlice::This));
 
     amrex::ParallelFor(
         amrex::TypeList<
@@ -164,7 +158,7 @@ AdvanceBeamParticlesSlice (
                 xp += dt * 0.5_rt * ux * gammap_inv;
                 yp += dt * 0.5_rt * uy * gammap_inv;
 
-                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
+                if (enforceBC(ptd, ip, xp, yp, ux, uy, BeamIdx::w)) return;
 
                 Array3<const amrex::Real> slice_arr = slice_arr_lev0;
                 amrex::Real dx_inv = dx_inv_lev0;
@@ -172,18 +166,14 @@ AdvanceBeamParticlesSlice (
                 amrex::Real x_pos_offset = x_pos_offset_lev0;
                 amrex::Real y_pos_offset = y_pos_offset_lev0;
 
-                if (current_N_level > 2 &&
-                    lo_x_lev2 < xp && xp < hi_x_lev2 &&
-                    lo_y_lev2 < yp && yp < hi_y_lev2) {
+                if (current_N_level > 2 && lev2_bounds.contains(xp, yp)) {
                     // level 2
                     slice_arr = slice_arr_lev2;
                     dx_inv = dx_inv_lev2;
                     dy_inv = dy_inv_lev2;
                     x_pos_offset = x_pos_offset_lev2;
                     y_pos_offset = y_pos_offset_lev2;
-                } else if (current_N_level > 1 &&
-                    lo_x_lev1 < xp && xp < hi_x_lev1 &&
-                    lo_y_lev1 < yp && yp < hi_y_lev1) {
+                } else if (current_N_level > 1 && lev1_bounds.contains(xp, yp)) {
                     // level 1
                     slice_arr = slice_arr_lev1;
                     dx_inv = dx_inv_lev1;
@@ -322,11 +312,14 @@ AdvanceBeamParticlesSlice (
                 xp += dt * 0.5_rt * ux_next * gamma_next_inv;
                 yp += dt * 0.5_rt * uy_next * gamma_next_inv;
                 if (do_z_push) zp += dt * ( uz_next * gamma_next_inv - clight );
-                if (setPositionEnforceBC(ptd, ip, xp, yp, zp)) return;
                 ux = ux_next;
                 uy = uy_next;
                 uz = uz_next;
             } // end for loop over n_subcycles
+            if (enforceBC(ptd, ip, xp, yp, ux, uy, BeamIdx::w)) return;
+            ptd.pos(0, ip) = xp;
+            ptd.pos(1, ip) = yp;
+            ptd.pos(2, ip) = zp;
             ptd.idata(BeamIdx::nsubcycles)[ip] = i;
             ptd.rdata(BeamIdx::ux)[ip] = ux;
             ptd.rdata(BeamIdx::uy)[ip] = uy;

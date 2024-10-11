@@ -15,7 +15,7 @@
 #ifndef HIPACE_GETANDSETPOSITION_H_
 #define HIPACE_GETANDSETPOSITION_H_
 
-#include "particles/plasma/PlasmaParticleContainer.H"
+#include "Hipace.H"
 
 #include <AMReX.H>
 #include <AMReX_REAL.H>
@@ -26,88 +26,74 @@
 /** \brief Functor that can be used to apply the boundary conditions to the macroparticles
  *         inside a ParallelFor kernel
  */
-template <class T_ParTile>
-struct EnforceBCandSetPos
+struct EnforceBC
 {
-    using RType = amrex::ParticleReal;
-    using PTDType = typename T_ParTile::ParticleTileDataType;
-
-    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_plo;
-    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> m_phi;
-    int m_is_per;
+    ParticleBoundary::type m_particle_boundary;
+    amrex::GpuArray<amrex::Real, 2> m_plo;
+    amrex::GpuArray<amrex::Real, 2> m_phi;
 
     /** Constructor.
-     * \param geom geometry used for domain size and periodicity
      */
-    EnforceBCandSetPos (const amrex::Geometry& geom) noexcept
+    EnforceBC () noexcept
     {
-
-        m_plo    = geom.ProbLoArray();
-        m_phi    = geom.ProbHiArray();
-        auto is_per = geom.isPeriodicArray();
-        m_is_per = is_per[0];
-        AMREX_ALWAYS_ASSERT(is_per[0] == is_per[1]);
+        m_particle_boundary = Hipace::m_boundary_particles;
+        m_plo[0] = Hipace::m_boundary_particle_lo[0];
+        m_plo[1] = Hipace::m_boundary_particle_lo[1];
+        m_phi[0] = Hipace::m_boundary_particle_hi[0];
+        m_phi[1] = Hipace::m_boundary_particle_hi[1];
     }
 
-    /** \brief set position and enforces the boundary condition to the plasma particle
+    /** \brief enforces the boundary condition to the particle
      * at index `ip` and returns if the particle is invalid
      * \param[in] ptd ParticleTileData
      * \param[in] ip index of the particle
-     * \param[in] x new x position of particle
-     * \param[in] y new x position of particle
+     * \param[in] x x position of particle
+     * \param[in] y y position of particle
+     * \param[in] ux x momentum of particle
+     * \param[in] uy y momentum of particle
+     * \param[in] w_index index to the weight component
      */
+    template<class PTD>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const PTDType& ptd, const int ip, RType& x, RType& y) const noexcept
+    bool operator() (const PTD& ptd,
+        const int ip, amrex::Real& x, amrex::Real& y,
+        amrex::Real& ux, amrex::Real& uy, const int w_index) const noexcept
     {
-        using namespace amrex::literals;
-
-        auto p = ptd[ip];
-
-        p.pos(0) = x;
-        p.pos(1) = y;
-
-        // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
-        // however there is no Geometry object to get this.
-        const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
-        const bool invalid = (shifted && !m_is_per);
-        if (invalid) {
-            ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
-            p.id().make_invalid();
+        bool invalid = false;
+        if (x < m_plo[0] || y < m_plo[1] || x > m_phi[0] || y > m_phi[1]) {
+            const amrex::Real len_x = m_phi[0] - m_plo[0];
+            const amrex::Real len_y = m_phi[1] - m_plo[1];
+            if (m_particle_boundary == ParticleBoundary::Reflecting) {
+                x = std::fmod(x - m_plo[0], 2*len_x);
+                if (x < 0) x += 2*len_x;
+                x += m_plo[0];
+                if (x > m_phi[0]) {
+                    x = 2*m_phi[0] - x;
+                    ux = -ux;
+                }
+                y = std::fmod(y - m_plo[1], 2*len_y);
+                if (y < 0) y += 2*len_y;
+                y += m_plo[1];
+                if (y > m_phi[1]) {
+                    y = 2*m_phi[1] - y;
+                    uy = -uy;
+                }
+                invalid = false;
+            } else if (m_particle_boundary == ParticleBoundary::Periodic) {
+                x = std::fmod(x - m_plo[0], len_x);
+                if (x < 0) x += len_x;
+                x += m_plo[0];
+                y = std::fmod(y - m_plo[1], len_y);
+                if (y < 0) y += len_y;
+                y += m_plo[1];
+                invalid = false;
+            } else {
+                ptd.rdata(w_index)[ip] = amrex::Real(0);
+                ptd.id(ip).make_invalid();
+                invalid = true;
+            }
         }
-        x = p.pos(0);
-        y = p.pos(1);
-        return invalid;
-    }
 
-    /** \brief set position and enforces the boundary condition to the beam particle
-     * \param[in] ptd ParticleTileData
-     * \param[in] ip index of the particle
-     * \param[in] x new x position of particle
-     * \param[in] y new x position of particle
-     * \param[in] z new x position of particle
-     */
-    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    bool operator() (const PTDType& ptd, const int ip, RType& x, RType& y, RType& z) const noexcept
-    {
-        using namespace amrex::literals;
-
-        auto p = ptd[ip];
-
-        p.pos(0) = x;
-        p.pos(1) = y;
-        p.pos(2) = z;
-
-        // TODO: The second m_phi should be amrex::Geometry RoundoffHiArray(),
-        // however there is no Geometry object to get this.
-        const bool shifted = enforcePeriodic(p, m_plo, m_phi, m_plo, m_phi, {true, true, false});
-        const bool invalid = (shifted && !m_is_per);
-        if (invalid) {
-            ptd.rdata(BeamIdx::w)[ip] = 0.0_rt;
-            p.id().make_invalid();
-        }
-        x = p.pos(0);
-        y = p.pos(1);
-        z = p.pos(2);
         return invalid;
     }
 };

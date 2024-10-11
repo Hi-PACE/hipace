@@ -24,7 +24,8 @@ max_step = 5
 diagnostic.output_period = 5
 diagnostic.diag_type = xz
 
-geometry.is_periodic = 1     1     1      # Is periodic?
+boundary.field = Dirichlet
+boundary.particle = Periodic
 geometry.prob_lo     = -30.e-6   -30.e-6   -10.e-6    # physical domain
 geometry.prob_hi     =  30.e-6    30.e-6    10.e-6
 

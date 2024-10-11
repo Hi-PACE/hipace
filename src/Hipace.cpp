@@ -21,6 +21,7 @@
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
+#include <AMReX_IOFormat.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
 #  include <AMReX_MLALaplacian.H>
 #  include <AMReX_MLMG.H>
@@ -97,7 +98,10 @@ Hipace::Hipace () :
 
     std::string str_dt {""};
     queryWithParser(pph, "dt", str_dt);
-    if (str_dt != "adaptive") queryWithParser(pph, "dt", m_dt);
+    if (str_dt != "adaptive") {
+        queryWithParser(pph, "dt", m_dt);
+        m_max_time = std::copysign(m_max_time, m_dt);
+    }
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
     m_numprocs = amrex::ParallelDescriptor::NProcs();
@@ -163,7 +167,61 @@ Hipace::Hipace () :
     DeprecatedInput("hipace", "comms_buffer_max_trailing_slices",
         "comms_buffer.max_trailing_slices)", "", true);
 
+    DeprecatedInput("geometry", "is_periodic", "boundary.field and boundary.particle",
+        "\n\n"
+        "To directly replace geometry.is_periodic = 1 1 1 use:\n"
+        "boundary.field = Periodic\n"
+        "boundary.particle = Periodic\n"
+        "However it's usually better to instead use:\n"
+        "boundary.field = Dirichlet\n"
+        "boundary.particle = Periodic\n"
+        "or:\n"
+        "boundary.field = Dirichlet\n"
+        "boundary.particle = Reflecting\n"
+        "\n"
+        "To replace geometry.is_periodic = 0 0 0 use:\n"
+        "boundary.field = Dirichlet\n"
+        "boundary.particle = Absorbing\n", true);
+
+    amrex::ParmParse ppb("boundary");
+    std::string field_boundary = "";
+    getWithParser(ppb, "field", field_boundary);
+    if (field_boundary == "Dirichlet") {
+        m_boundary_field = FieldBoundary::Dirichlet;
+    } else if (field_boundary == "Periodic") {
+        m_boundary_field = FieldBoundary::Periodic;
+    } else if (field_boundary == "Open") {
+        m_boundary_field = FieldBoundary::Open;
+    } else {
+        amrex::Abort("Unknown field boundary '" + field_boundary +
+            "', must be 'Dirichlet', 'Periodic' or 'Open'");
+    }
+
+    std::string particle_boundary = "";
+    getWithParser(ppb, "particle", particle_boundary);
+    if (particle_boundary == "Reflecting") {
+        m_boundary_particles = ParticleBoundary::Reflecting;
+    } else if (particle_boundary == "Periodic") {
+        m_boundary_particles = ParticleBoundary::Periodic;
+    } else if (particle_boundary == "Absorbing") {
+        m_boundary_particles = ParticleBoundary::Absorbing;
+    } else {
+        amrex::Abort("Unknown particle boundary '" + particle_boundary +
+            "', must be 'Reflecting', 'Periodic' or 'Absorbing'");
+    }
+
     MakeGeometry();
+
+    m_boundary_particle_lo = {m_3D_geom[0].ProbLo(0), m_3D_geom[0].ProbLo(1)};
+    m_boundary_particle_hi = {m_3D_geom[0].ProbHi(0), m_3D_geom[0].ProbHi(1)};
+    queryWithParser(ppb, "particle_lo", m_boundary_particle_lo);
+    queryWithParser(ppb, "particle_hi", m_boundary_particle_hi);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        m_boundary_particle_lo[0] >= m_3D_geom[0].ProbLo(0) &&
+        m_boundary_particle_lo[1] >= m_3D_geom[0].ProbLo(1) &&
+        m_boundary_particle_hi[0] <= m_3D_geom[0].ProbHi(0) &&
+        m_boundary_particle_hi[1] <= m_3D_geom[0].ProbHi(1),
+        "Particle boundary must be contained within the simulation domain");
 
     // use level 0 as default for laser geometry
     m_multi_laser.MakeLaserGeometry(m_3D_geom[0]);
@@ -220,8 +278,6 @@ Hipace::InitData ()
 
     m_adaptive_time_step.BroadcastTimeStep(m_dt);
 
-    m_fields.checkInit();
-
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2), m_multi_beam, m_multi_laser);
 
     amrex::ParmParse pph("hipace");
@@ -251,9 +307,14 @@ Hipace::MakeGeometry ()
     std::array<int, 3> n_cells {0, 0, 0};
     getWithParser(pp_amr, "n_cell", n_cells);
     const amrex::Box domain_3D{amrex::IntVect(0,0,0), n_cells.data()};
+    const int is_periodic[3] {
+        int(m_boundary_field == FieldBoundary::Periodic),
+        int(m_boundary_field == FieldBoundary::Periodic),
+        int(false)
+    };
 
-    // this will get prob_lo, prob_hi and is_periodic from the input file
-    m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, nullptr);
+    // this will get prob_lo and prob_hi from the input file
+    m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, is_periodic);
 
     amrex::BoxList bl{domain_3D};
     amrex::Vector<int> procmap{amrex::ParallelDescriptor::MyProc()};
@@ -347,7 +408,7 @@ Hipace::Evolve ()
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
 
-        if (m_physical_time > m_max_time) {
+        if (m_physical_time == std::numeric_limits<amrex::Real>::infinity()) {
             if (step+1 <= m_max_step && !m_has_last_step) {
                 m_multi_buffer.put_time(m_physical_time);
             }
@@ -362,8 +423,9 @@ Hipace::Evolve ()
         if (m_physical_time == m_max_time) {
             m_has_last_step = true;
             m_dt = 0.;
-            next_time = 2. * m_max_time + 1.;
-        } else if (m_physical_time + m_dt >= m_max_time) {
+            next_time = std::numeric_limits<amrex::Real>::infinity();
+        } else if ((m_physical_time + m_dt >= m_max_time && m_physical_time < m_max_time) ||
+                   (m_physical_time + m_dt <= m_max_time && m_physical_time > m_max_time)) {
             m_dt = m_max_time - m_physical_time;
             next_time = m_max_time;
         } else {
@@ -447,6 +509,52 @@ Hipace::Evolve ()
 
         FlushDiagnostics();
     }
+
+    if (m_verbose >= 1) {
+        // print total time, time per particle push and time per cell update
+        amrex::ParallelDescriptor::ReduceRealSum(amrex::Vector<std::reference_wrapper<double>>{
+            m_num_plasma_particles_pushed,
+            m_num_beam_particles_pushed,
+            m_num_field_cells_updated,
+            m_num_laser_cells_updated
+        }, HeadRankID());
+
+        if (HeadRank()) {
+            const double total_time_s = (amrex::second() - start_time);
+
+            amrex::IOFormatSaver iofmtsaver(std::cout);
+            std::cout << std::setprecision(4);
+
+            std::cout << '\n' << "Finished Evolve after " << total_time_s << " seconds using "
+                      << m_numprocs << (m_numprocs > 1 ? " ranks" : " rank" ) << std::endl;
+
+            if (m_num_plasma_particles_pushed + m_num_beam_particles_pushed > 0.) {
+                std::cout << "Total time per particle push: "
+                          << 1e9 * total_time_s /
+                            (m_num_plasma_particles_pushed + m_num_beam_particles_pushed)
+                          << " nanoseconds";
+                if (m_num_plasma_particles_pushed > 0. && m_num_beam_particles_pushed > 0.) {
+                    std::cout << " ("
+                              << 1e9 * total_time_s / m_num_plasma_particles_pushed << " plasma, "
+                              << 1e9 * total_time_s / m_num_beam_particles_pushed << " beam)";
+                }
+                std::cout << std::endl;
+            }
+
+            if (m_num_field_cells_updated + m_num_laser_cells_updated > 0.) {
+                std::cout << "Total time per cell update: "
+                          << 1e9 * total_time_s /
+                            (m_num_field_cells_updated + m_num_laser_cells_updated)
+                          << " nanoseconds";
+                if (m_num_field_cells_updated > 0. && m_num_laser_cells_updated > 0.) {
+                    std::cout << " ("
+                              << 1e9 * total_time_s / m_num_field_cells_updated << " field, "
+                              << 1e9 * total_time_s / m_num_laser_cells_updated << " laser)";
+                }
+                std::cout << std::endl;
+            }
+        }
+    }
 }
 
 void
@@ -469,6 +577,10 @@ Hipace::SolveOneSlice (int islice, int step)
             m_3D_geom[lev].Domain().bigEnd(Direction::z) >= islice) {
             current_N_level = lev + 1;
         }
+    }
+
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_num_field_cells_updated += m_slice_geom[lev].Domain().d_numPts();
     }
 
     if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
@@ -609,7 +721,7 @@ Hipace::SolveOneSlice (int islice, int step)
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
-    bool is_last_step = (step == m_max_step) || (m_physical_time >= m_max_time);
+    bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This, is_last_step);
 
     // shift all levels
@@ -631,7 +743,7 @@ Hipace::ResetAllQuantities ()
 
     for (int lev=0; lev<m_N_level; ++lev) {
         if (m_fields.getSlices(lev).nComp() != 0) {
-            m_fields.getSlices(lev).setVal(0., m_fields.m_slices_nguards);
+            m_fields.getSlices(lev).setVal(0.);
         }
     }
 }
@@ -641,15 +753,6 @@ Hipace::InitializeSxSyWithBeam (const int lev)
 {
     HIPACE_PROFILE("Hipace::InitializeSxSyWithBeam()");
     using namespace amrex::literals;
-
-    if (!m_fields.m_extended_solve && lev==0) {
-        if (m_explicit) {
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::Next,
-                "jx_beam", "jy_beam");
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "jz_beam");
-        }
-    }
 
     amrex::MultiFab& slicemf = m_fields.getSlices(lev);
 
@@ -718,39 +821,41 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
+    if (lev==0) {
+        m_fields.EnforcePeriodic(true, {Comps[which_slice]["Sy"],
+                                        Comps[which_slice]["Sx"],
+                                        Comps[which_slice_chi]["chi"]});
+    }
+
     // interpolate Sx, Sy and chi to lev from lev-1 in the domain edges.
     // This also accounts for jx_beam, jy_beam
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Sy",
-        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+        amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards);
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Sx",
-        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
+        amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards);
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice_chi, "chi",
-        m_fields.m_poisson_nguards, -m_fields.m_slices_nguards);
-
-    if (lev!=0) {
-        if (slicemf.box(0).length(0) % 2 == 0) {
-            // cell centered MG solve:
-            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                          m_fields.getField(lev, which_slice, "Sy"),
-                                          amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
-            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                          m_fields.getField(lev, which_slice, "Sx"),
-                                          amrex::IntVect{0, 0, 0}, 0.5, 8./3.);
-        } else {
-            // node centered MG solve:
-            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
-                                          m_fields.getField(lev, which_slice, "Sy"),
-                                          amrex::IntVect{0, 0, 0}, 1., 1.);
-            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
-                                          m_fields.getField(lev, which_slice, "Sx"),
-                                          amrex::IntVect{0, 0, 0}, 1., 1.);
-        }
-    }
+        amrex::IntVect{0, 0, 0}, -m_fields.m_slices_nguards + amrex::IntVect{1, 1, 0});
 
     if (m_fields.m_do_symmetrize) {
         m_fields.SymmetrizeFields(Comps[which_slice_chi]["chi"], lev, 1, 1);
         m_fields.SymmetrizeFields(Comps[which_slice]["Sx"], lev, -1, 1);
         m_fields.SymmetrizeFields(Comps[which_slice]["Sy"], lev, 1, -1);
+    }
+
+    if (lev!=0) {
+        if (slicemf.box(0).length(0) % 2 == 0) {
+            // cell centered MG solve:
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
+                                          m_fields.getField(lev, which_slice, "Sy"), 0.5, 8./3.);
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
+                                          m_fields.getField(lev, which_slice, "Sx"), 0.5, 8./3.);
+        } else {
+            // node centered MG solve:
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "Bx",
+                                          m_fields.getField(lev, which_slice, "Sy"), 1., 1.);
+            m_fields.SetBoundaryCondition(m_3D_geom, lev, which_slice, "By",
+                                          m_fields.getField(lev, which_slice, "Sx"), 1., 1.);
+        }
     }
 
 #ifdef AMREX_USE_LINEAR_SOLVERS
@@ -823,11 +928,15 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
                             max_iters, m_MG_verbose);
     }
 
+    if (lev==0) {
+        m_fields.EnforcePeriodic(false, {Comps[which_slice]["Bx"],
+                                         Comps[which_slice]["By"]});
+    }
     // interpolate Bx and By to lev from lev-1 in the ghost cells
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "Bx",
-        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+        m_fields.m_slices_nguards, amrex::IntVect{0, 0, 0});
     m_fields.LevelUpBoundary(m_3D_geom, lev, which_slice, "By",
-        m_fields.m_slices_nguards, m_fields.m_poisson_nguards);
+        m_fields.m_slices_nguards, amrex::IntVect{0, 0, 0});
 }
 
 void
@@ -846,11 +955,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
-        if (!m_fields.m_extended_solve && lev==0) {
-            // exchange ExmBy EypBx Ez Bz
-            m_fields.FillBoundary(m_3D_geom[lev].periodicity(), lev, WhichSlice::This,
-                "ExmBy", "EypBx", "Ez", "Bz");
-        }
         m_fields.setVal(0., lev, WhichSlice::PCIter, "Bx", "By");
         m_fields.duplicate(lev, WhichSlice::PCPrevIter, {"Bx", "By"},
                                 WhichSlice::This,       {"Bx", "By"});

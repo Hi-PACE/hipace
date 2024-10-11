@@ -9,6 +9,7 @@
 #include "BeamParticleContainer.H"
 #include "utils/Constants.H"
 #include "particles/particles_utils/ParticleUtil.H"
+#include "particles/pusher/GetAndSetPosition.H"
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include <AMReX_REAL.H>
@@ -37,19 +38,26 @@ namespace
      * \param[in] pid particle ID to be assigned to the particle
      * \param[in] ip index of the particle
      * \param[in] speed_of_light speed of light in the current units
+     * \param[in] enforceBC functor to enforce the boundary condition
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
         const BeamTileInit::ParticleTileDataType& ptd, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
         const amrex::Real& uz, const amrex::Real& weight, const amrex::Long pid,
-        const amrex::Long ip, const amrex::Real& speed_of_light) noexcept
+        const amrex::Long ip, const amrex::Real& speed_of_light, const EnforceBC& enforceBC) noexcept
     {
-        ptd.rdata(BeamIdx::x  )[ip] = x;
-        ptd.rdata(BeamIdx::y  )[ip] = y;
+        amrex::Real xp = x;
+        amrex::Real yp = y;
+        amrex::Real uxp = ux * speed_of_light;
+        amrex::Real uyp = uy * speed_of_light;
+        if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
+
+        ptd.rdata(BeamIdx::x  )[ip] = xp;
+        ptd.rdata(BeamIdx::y  )[ip] = yp;
         ptd.rdata(BeamIdx::z  )[ip] = z;
-        ptd.rdata(BeamIdx::ux )[ip] = ux * speed_of_light;
-        ptd.rdata(BeamIdx::uy )[ip] = uy * speed_of_light;
+        ptd.rdata(BeamIdx::ux )[ip] = uxp;
+        ptd.rdata(BeamIdx::uy )[ip] = uyp;
         ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
@@ -71,6 +79,7 @@ namespace
      * \param[in] pid particle ID to be assigned to the particle at index 0
      * \param[in] ip index of the particle
      * \param[in] speed_of_light speed of light in the current units
+     * \param[in] enforceBC functor to enforce the boundary condition
      * \param[in] is_valid if the particle is valid
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -78,15 +87,25 @@ namespace
         const BeamTile::ParticleTileDataType& ptd, const amrex::Real x,
         const amrex::Real y, const amrex::Real z, const amrex::Real ux, const amrex::Real uy,
         const amrex::Real uz, const amrex::Real weight, const amrex::Long pid,
-        const amrex::Long ip, const amrex::Real speed_of_light, const bool is_valid=true) noexcept
+        const amrex::Long ip, const amrex::Real speed_of_light, const EnforceBC& enforceBC,
+        const bool is_valid=true) noexcept
     {
-        ptd.rdata(BeamIdx::x  )[ip] = x;
-        ptd.rdata(BeamIdx::y  )[ip] = y;
+        amrex::Real xp = x;
+        amrex::Real yp = y;
+        amrex::Real uxp = ux * speed_of_light;
+        amrex::Real uyp = uy * speed_of_light;
+        if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
+
+        ptd.rdata(BeamIdx::x  )[ip] = xp;
+        ptd.rdata(BeamIdx::y  )[ip] = yp;
         ptd.rdata(BeamIdx::z  )[ip] = z;
-        ptd.rdata(BeamIdx::ux )[ip] = ux * speed_of_light;
-        ptd.rdata(BeamIdx::uy )[ip] = uy * speed_of_light;
+        ptd.rdata(BeamIdx::ux )[ip] = uxp;
+        ptd.rdata(BeamIdx::uy )[ip] = uyp;
         ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
+
+        ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+        ptd.idata(BeamIdx::mr_level)[ip] = 0;
 
         ptd.idcpu(ip) = pid + ip;
         if (is_valid) {
@@ -94,9 +113,6 @@ namespace
         } else {
             ptd.id(ip).make_invalid();
         }
-
-        ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
-        ptd.idata(BeamIdx::mr_level)[ip] = 0;
     }
 }
 
@@ -277,6 +293,8 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
 
     const amrex::Real speed_of_light = get_phys_const().c;
 
+    const auto enforceBC = EnforceBC();
+
     amrex::ParallelForRNG(to2D(slice_box),
         [=] AMREX_GPU_DEVICE (int i, int j, const amrex::RandomEngine& engine) noexcept
         {
@@ -320,7 +338,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                 const amrex::Real weight = density * scale_fac;
 
                 AddOneBeamParticleSlice(ptd, x, y, z, u[0], u[1], u[2], weight,
-                                        pid, pidx, speed_of_light, true);
+                                        pid, pidx, speed_of_light, enforceBC, true);
 
                 ++pidx;
             }
@@ -406,6 +424,7 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     auto pos_mean_y = m_pos_mean_y_func;
     const amrex::Real weight = m_total_charge / (m_num_particles * m_charge);
     const GetInitialMomentum get_momentum = m_get_momentum;
+    const auto enforceBC = EnforceBC();
 
     amrex::ParallelForRNG(
         num_to_add,
@@ -434,21 +453,21 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
             {
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos+y,
                                         z_central, u[0], u[1], u[2], weight,
-                                        pid, i, clight, is_valid);
+                                        pid, i, clight, enforceBC, is_valid);
 
             } else {
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos+y,
                                         z_central, u[0], u[1], u[2], weight,
-                                        pid, 4*i, clight, is_valid);
+                                        pid, 4*i, clight, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos+y,
                                         z_central, -u[0], u[1], u[2], weight,
-                                        pid, 4*i+1, clight, is_valid);
+                                        pid, 4*i+1, clight, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos-y,
                                         z_central, u[0], -u[1], u[2], weight,
-                                        pid, 4*i+2, clight, is_valid);
+                                        pid, 4*i+2, clight, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos-y,
                                         z_central, -u[0], -u[1], u[2], weight,
-                                        pid, 4*i+3, clight, is_valid);
+                                        pid, 4*i+3, clight, enforceBC, is_valid);
             }
         });
 
@@ -612,6 +631,7 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         const bool use_taylor = std::min(lo_weight, hi_weight)*1.1 > std::max(lo_weight, hi_weight);
         const amrex::Real lo_hi_weight_inv = use_taylor ?
             1._rt/(hi_weight+lo_weight) : 1._rt/(hi_weight-lo_weight);
+        const auto enforceBC = EnforceBC();
 
         amrex::ParallelForRNG(
             num_to_add,
@@ -656,17 +676,17 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
                 if (!do_symmetrize)
                 {
                     AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
-                                            z, ux, uy, uz, weight, pid, i, clight, is_valid);
+                                            z, ux, uy, uz, weight, pid, i, clight, enforceBC, is_valid);
 
                 } else {
                     AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
-                                            z, ux, uy, uz, weight, pid, 4*i, clight, is_valid);
+                                            z, ux, uy, uz, weight, pid, 4*i, clight, enforceBC, is_valid);
                     AddOneBeamParticleSlice(ptd, x_mean-x, y_mean+y,
-                                            z, -ux, uy, uz, weight, pid, 4*i+1, clight, is_valid);
+                                            z, -ux, uy, uz, weight, pid, 4*i+1, clight, enforceBC, is_valid);
                     AddOneBeamParticleSlice(ptd, x_mean+x, y_mean-y,
-                                            z, ux, -uy, uz, weight, pid, 4*i+2, clight, is_valid);
+                                            z, ux, -uy, uz, weight, pid, 4*i+2, clight, enforceBC, is_valid);
                     AddOneBeamParticleSlice(ptd, x_mean-x, y_mean-y,
-                                            z, -ux, -uy, uz, weight, pid, 4*i+3, clight, is_valid);
+                                            z, -ux, -uy, uz, weight, pid, 4*i+3, clight, enforceBC, is_valid);
                 }
             });
 
@@ -1033,6 +1053,7 @@ InitBeamFromFile (const std::string input_file,
     auto new_size = old_size + num_to_add;
     particle_tile.resize(new_size);
     const auto ptd = particle_tile.getParticleTileData();
+    const auto enforceBC = EnforceBC();
 
     const uint64_t pid = m_id64;
     m_id64 += num_to_add;
@@ -1055,7 +1076,7 @@ InitBeamFromFile (const std::string input_file,
                 static_cast<amrex::Real>(u_y_ptr[i] * unit_uy),
                 static_cast<amrex::Real>(u_z_ptr[i] * unit_uz),
                 static_cast<amrex::Real>(w_w_ptr[i] * unit_ww),
-                pid, i, phys_const.c);
+                pid, i, phys_const.c, enforceBC);
         });
 
     amrex::Gpu::streamSynchronize();

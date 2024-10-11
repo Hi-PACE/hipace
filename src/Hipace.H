@@ -37,6 +37,22 @@
 
 namespace hpmg { class MultiGrid; }
 
+namespace FieldBoundary {
+    enum type {
+        Dirichlet,
+        Periodic,
+        Open
+    };
+}
+
+namespace ParticleBoundary {
+    enum type {
+        Reflecting,
+        Periodic,
+        Absorbing
+    };
+}
+
 /** \brief Helper struct to initialize m_phys_const and Parser before amrex::AmrCore */
 struct Hipace_early_init
 {
@@ -236,7 +252,7 @@ public:
      * or radiation reaction in normalized units */
     inline static amrex::Real m_background_density_SI = 0.;
     /** Time step for the beam evolution */
-    amrex::Real m_dt = 0.0;
+    amrex::Real m_dt = +0.0;
     /** Number of binary collisions */
     inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
@@ -249,6 +265,20 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+
+    // Performance Counters
+
+    /** total number of plasma particle pushes for performance printout */
+    inline static double m_num_plasma_particles_pushed = 0;
+    /** total number of beam particle pushes for performance printout */
+    inline static double m_num_beam_particles_pushed = 0;
+    /** total number of field cell updates for performance printout */
+    inline static double m_num_field_cells_updated = 0;
+    /** total number of laser cell updates for performance printout */
+    inline static double m_num_laser_cells_updated = 0;
+
+    // SALAME
+
     /** the number of SALAME iterations to be done */
     int m_salame_n_iter = 5;
     /** if the SALAME-only field should be computed exactly with plasma particles */
@@ -265,6 +295,17 @@ public:
     amrex::ParserExecutor<3> m_salame_target_func;
     /** relative error tolerance to finish SALAME iterations early */
     amrex::Real m_salame_relative_tolerance = 1e-4;
+
+    // Boundary
+
+    /** type of boundary used for fields */
+    inline static FieldBoundary::type m_boundary_field = FieldBoundary::Dirichlet;
+    /** type of boundary used for particles */
+    inline static ParticleBoundary::type m_boundary_particles = ParticleBoundary::Absorbing;
+    /** lower bound of bounding box for the particles */
+    inline static std::array<amrex::Real, 2> m_boundary_particle_lo;
+    /** upper bound of bounding box for the particles */
+    inline static std::array<amrex::Real, 2> m_boundary_particle_hi;
 
 private:
 

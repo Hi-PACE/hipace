@@ -15,7 +15,8 @@ diagnostic.output_period = 0
 hipace.dt = 50000/8191
 hipace.depos_order_xy = 2
 
-geometry.is_periodic = 1     1     0
+boundary.field = Dirichlet
+boundary.particle = Periodic
 geometry.prob_lo     = -20   -20    "-4*sigma_z*kp"
 geometry.prob_hi     =  20    20    "4*sigma_z*kp"
 

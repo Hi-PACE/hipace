@@ -22,11 +22,6 @@ HiPACE++ is built on the [AMReX](https://amrex-codes.github.io) library, which p
 
 Please have a look at our [documentation](https://hipace.readthedocs.io) and join the [chat](https://hipace.readthedocs.io/en/latest/run/chat.html)!
 
-# Announcement
-
-On the 11th of July 2023, there will be a virtual HiPACE++ workshop from 4pm to 7pm CET.
-Feel free to sign up on the [indico webpage](https://indico.desy.de/event/40158/)
-
 ## Copyright Notice
 
 HiPACE++ Copyright (c) 2021, The Regents of the University of California,

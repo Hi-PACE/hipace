@@ -14,7 +14,8 @@ diagnostic.output_period = 10
 
 amr.max_level = 0
 
-geometry.is_periodic = true  true  false  # Is periodic?
+boundary.field = Dirichlet
+boundary.particle = Periodic
 geometry.prob_lo     = -18*kp_inv   -18*kp_inv   -7.5*kp_inv
 geometry.prob_hi     =  18*kp_inv    18*kp_inv    1.5*kp_inv
 
