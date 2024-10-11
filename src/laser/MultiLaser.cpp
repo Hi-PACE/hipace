@@ -32,17 +32,7 @@ MultiLaser::ReadParameters ()
     m_use_laser = m_names[0] != "no_laser";
 
     if (!m_use_laser) return;
-
-    m_laser_from_file = queryWithParser(pp, "input_file", m_input_file_path);
-
-    m_nlasers = m_names.size();
-    for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i]));
-    }
-
-    if (!m_laser_from_file) {
-        getWithParser(pp, "lambda0", m_lambda0);
-    }
+    queryWithParser(pp, "lambda0", m_lambda0);
     DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
@@ -58,11 +48,6 @@ MultiLaser::ReadParameters ()
     // Raise warning if user specifies MG parameters without using the MG solver
     if (mg_param_given && (m_solver_type != "multigrid")) {
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
-    }
-
-    if (m_laser_from_file) {
-        queryWithParser(pp, "openPMD_laser_name", m_file_envelope_name);
-        queryWithParser(pp, "iteration", m_file_num_iteration);
     }
 
     queryWithParser(pp, "insitu_period", m_insitu_period);
@@ -117,6 +102,12 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     // make the geometry, slice box and ba and dm
     m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
+    m_nlasers = m_names.size();
+
+    for (int i = 0; i < m_nlasers; ++i) {
+        m_all_lasers.emplace_back(Laser(m_names[i], m_laser_geom_3D));
+        amrex::Print()<<"Laser "+ m_names[i] + " loaded" << "\n";
+    }
 
     m_slice_box = domain_3D_laser;
     m_slice_box.setSmall(2, 0);
@@ -164,21 +155,6 @@ MultiLaser::InitData ()
         m_rhs_mg.resize(amrex::grow(m_slice_box, amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
     }
 
-    if (m_laser_from_file) {
-        if (Hipace::HeadRank()) {
-            m_F_input_file.resize(m_laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
-            GetEnvelopeFromFileHelper();
-        }
-#ifdef AMREX_USE_MPI
-        // need to communicate m_lambda0 as it is read in from the input file only by the head rank
-        MPI_Bcast(&m_lambda0,
-            1,
-            amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
-            Hipace::HeadRankID(),
-            amrex::ParallelDescriptor::Communicator());
-#endif
-    }
-
     if (m_insitu_period > 0) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
@@ -198,298 +174,7 @@ MultiLaser::InitSliceEnvelope (const int islice, const int comp)
     if (!UseLaser(islice)) return;
 
     HIPACE_PROFILE("MultiLaser::InitSliceEnvelope()");
-
-    if (m_laser_from_file) {
-        amrex::Box src_box = m_slice_box;
-        src_box.setSmall(2, islice);
-        src_box.setBig(2, islice);
-        m_slices[0].copy<amrex::RunOn::Device>(m_F_input_file, src_box, 0, m_slice_box, comp, 2);
-    } else {
-        // Compute initial field on the current (device) slice comp and comp + 1
-        InitLaserSlice(islice, comp);
-    }
-
-}
-
-void
-MultiLaser::GetEnvelopeFromFileHelper () {
-
-    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
-#ifdef HIPACE_USE_OPENPMD
-    openPMD::Datatype input_type = openPMD::Datatype::INT;
-    {
-        // Check what kind of Datatype is used in the Laser file
-        auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
-
-        if(!series.iterations.contains(m_file_num_iteration)) {
-            amrex::Abort("Could not find iteration " + std::to_string(m_file_num_iteration) +
-                         " in file " + m_input_file_path + "\n");
-        }
-
-        auto iteration = series.iterations[m_file_num_iteration];
-
-        if(!iteration.meshes.contains(m_file_envelope_name)) {
-            amrex::Abort("Could not find mesh '" + m_file_envelope_name + "' in file "
-                + m_input_file_path + "\n");
-        }
-
-        auto mesh = iteration.meshes[m_file_envelope_name];
-
-        if (!mesh.containsAttribute("angularFrequency")) {
-            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
-                + std::to_string(m_file_num_iteration) + " in file "
-                + m_input_file_path + "\n");
-        }
-
-        m_lambda0 = 2.*MathConst::pi*PhysConstSI::c
-            / mesh.getAttribute("angularFrequency").get<double>();
-
-        if(!mesh.contains(openPMD::RecordComponent::SCALAR)) {
-            amrex::Abort("Could not find component '" +
-                std::string(openPMD::RecordComponent::SCALAR) +
-                "' in file " + m_input_file_path + "\n");
-        }
-
-        input_type = mesh[openPMD::RecordComponent::SCALAR].getDatatype();
-    }
-
-    if (input_type == openPMD::Datatype::CFLOAT) {
-        GetEnvelopeFromFile<std::complex<float>>();
-    } else if (input_type == openPMD::Datatype::CDOUBLE) {
-        GetEnvelopeFromFile<std::complex<double>>();
-    } else {
-        amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
-    }
-#else
-    amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
-                 "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
-#endif // HIPACE_USE_OPENPMD
-}
-
-template<typename input_type>
-void
-MultiLaser::GetEnvelopeFromFile () {
-
-    using namespace amrex::literals;
-
-    HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFile()");
-#ifdef HIPACE_USE_OPENPMD
-    const PhysConst phc = get_phys_const();
-    const amrex::Real clight = phc.c;
-
-    const amrex::Box& domain = m_laser_geom_3D.Domain();
-
-    auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
-    auto laser = series.iterations[m_file_num_iteration].meshes[m_file_envelope_name];
-    auto laser_comp = laser[openPMD::RecordComponent::SCALAR];
-
-    const std::vector<std::string> axis_labels = laser.axisLabels();
-    if (axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x") {
-        m_file_geometry = "xyt";
-    } else if (axis_labels[0] == "z" && axis_labels[1] == "y" && axis_labels[2] == "x") {
-        m_file_geometry = "xyz";
-    } else if (axis_labels[0] == "t" && axis_labels[1] == "r") {
-        m_file_geometry = "rt";
-    } else {
-        amrex::Abort("Incorrect axis labels in laser file, must be either tyx, zyx or tr");
-    }
-
-    const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
-    auto extent = laser_comp.getExtent();
-    double unitSI = laser_comp.unitSI();
-
-    // Extract grid offset and grid spacing from laser file
-    std::vector<double> offset = laser.gridGlobalOffset();
-    std::vector<double> position = laser_comp.position<double>();
-    std::vector<double> spacing = laser.gridSpacing<double>();
-
-    //lasy: tyx in C order, tr in C order
-    amrex::Dim3 arr_begin = {0, 0, 0};
-    amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
-                            static_cast<int>(extent[0])};
-    amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
-
-    //hipace: xyt in Fortran order
-    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
-
-    series.flush();
-
-    constexpr int interp_order_xy = 1;
-    const amrex::Real dx = m_laser_geom_3D.CellSize(Direction::x);
-    const amrex::Real dy = m_laser_geom_3D.CellSize(Direction::y);
-    const amrex::Real dz = m_laser_geom_3D.CellSize(Direction::z);
-    const amrex::Real xmin = m_laser_geom_3D.ProbLo(Direction::x)+dx/2;
-    const amrex::Real ymin = m_laser_geom_3D.ProbLo(Direction::y)+dy/2;
-    const amrex::Real zmin = m_laser_geom_3D.ProbLo(Direction::z)+dz/2;
-    const amrex::Real zmax = m_laser_geom_3D.ProbHi(Direction::z)-dz/2;
-    const int imin = domain.smallEnd(0);
-    const int jmin = domain.smallEnd(1);
-    const int kmin = domain.smallEnd(2);
-
-    if (m_file_geometry == "xyt") {
-        // Calculate the min and max of the grid from laser file
-        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
-        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
-        AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
-
-
-        for (int k = kmin; k <= domain.bigEnd(2); ++k) {
-            for (int j = jmin; j <= domain.bigEnd(1); ++j) {
-                for (int i = imin; i <= domain.bigEnd(0); ++i) {
-
-                    const amrex::Real x = (i-imin)*dx + xmin;
-                    const amrex::Real xmid = (x - xmin_laser)/spacing[2];
-                    amrex::Real sx_cell[interp_order_xy+1];
-                    const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
-
-                    const amrex::Real y = (j-jmin)*dy + ymin;
-                    const amrex::Real ymid = (y - ymin_laser)/spacing[1];
-                    amrex::Real sy_cell[interp_order_xy+1];
-                    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
-
-                    const amrex::Real z = (k-kmin)*dz + zmin;
-                    const amrex::Real tmid = (zmax-z)/clight/spacing[0];
-                    amrex::Real st_cell[interp_order_xy+1];
-                    const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
-
-                    laser_arr(i, j, k, 0) = 0._rt;
-                    laser_arr(i, j, k, 1) = 0._rt;
-                    for (int it=0; it<=interp_order_xy; it++){
-                        for (int iy=0; iy<=interp_order_xy; iy++){
-                            for (int ix=0; ix<=interp_order_xy; ix++){
-                                if (i_cell+ix >= 0 && i_cell+ix < static_cast<int>(extent[2]) &&
-                                    j_cell+iy >= 0 && j_cell+iy < static_cast<int>(extent[1]) &&
-                                    k_cell+it >= 0 && k_cell+it < static_cast<int>(extent[0])) {
-                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
-                                        static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).real() * unitSI
-                                        );
-                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
-                                        static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() * unitSI
-                                        );
-                                }
-                            }
-                        }
-                    } // End of 3 loops (1 per dimension) over laser array from file
-                }
-            }
-        } // End of 3 loops (1 per dimension) over laser array from simulation
-    } else if (m_file_geometry == "xyz") {
-        // Calculate the min and max of the grid from laser file
-        amrex::Real zmin_laser = offset[0] + position[0]*spacing[0];
-        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
-        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
-
-        for (int k = kmin; k <= domain.bigEnd(2); ++k) {
-            for (int j = jmin; j <= domain.bigEnd(1); ++j) {
-                for (int i = imin; i <= domain.bigEnd(0); ++i) {
-
-                    const amrex::Real x = (i-imin)*dx + xmin;
-                    const amrex::Real xmid = (x - xmin_laser)/spacing[2];
-                    amrex::Real sx_cell[interp_order_xy+1];
-                    const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
-
-                    const amrex::Real y = (j-jmin)*dy + ymin;
-                    const amrex::Real ymid = (y - ymin_laser)/spacing[1];
-                    amrex::Real sy_cell[interp_order_xy+1];
-                    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
-
-                    const amrex::Real z = (k-kmin)*dz + zmin;
-                    const amrex::Real zmid = (z - zmin_laser)/spacing[0];
-                    amrex::Real sz_cell[interp_order_xy+1];
-                    const int k_cell = compute_shape_factor<interp_order_xy>(sz_cell, zmid);
-
-                    laser_arr(i, j, k, 0) = 0._rt;
-                    laser_arr(i, j, k, 1) = 0._rt;
-                    for (int iz=0; iz<=interp_order_xy; iz++){
-                        for (int iy=0; iy<=interp_order_xy; iy++){
-                            for (int ix=0; ix<=interp_order_xy; ix++){
-                                if (i_cell+ix >= 0 && i_cell+ix < static_cast<int>(extent[2]) &&
-                                    j_cell+iy >= 0 && j_cell+iy < static_cast<int>(extent[1]) &&
-                                    k_cell+iz >= 0 && k_cell+iz < static_cast<int>(extent[0])) {
-                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
-                                        static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).real() * unitSI
-                                        );
-                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
-                                        static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).imag() * unitSI
-                                        );
-                                }
-                            }
-                        }
-                    } // End of 3 loops (1 per dimension) over laser array from file
-                }
-            }
-        } // End of 3 loops (1 per dimension) over laser array from simulation
-    } else if (m_file_geometry == "rt") {
-
-        // extent = {nmodes, nt, nr}
-
-        // Calculate the min and max of the grid from laser file
-        amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
-        AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
-
-        for (int k = kmin; k <= domain.bigEnd(2); ++k) {
-            for (int j = jmin; j <= domain.bigEnd(1); ++j) {
-                for (int i = imin; i <= domain.bigEnd(0); ++i) {
-
-                    const amrex::Real x = (i-imin)*dx + xmin;
-                    const amrex::Real y = (j-jmin)*dy + ymin;
-                    const amrex::Real r = std::sqrt(x*x + y*y);
-                    const amrex::Real theta = std::atan2(y, x);
-                    const amrex::Real rmid = (r - rmin_laser)/spacing[1];
-                    amrex::Real sr_cell[interp_order_xy+1];
-                    const int i_cell = compute_shape_factor<interp_order_xy>(sr_cell, rmid);
-
-                    const amrex::Real z = (k-kmin)*dz + zmin;
-                    const amrex::Real tmid = (zmax-z)/clight/spacing[0];
-                    amrex::Real st_cell[interp_order_xy+1];
-                    const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
-
-                    laser_arr(i, j, k, 0) = 0._rt;
-                    laser_arr(i, j, k, 1) = 0._rt;
-                    for (int it=0; it<=interp_order_xy; it++){
-                        for (int ir=0; ir<=interp_order_xy; ir++){
-                            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(i_cell+ir >= 0,
-                                "Touching a r<0 cell in laser file reader. Is staggering correct?");
-                            if (i_cell+ir < static_cast<int>(extent[2]) &&
-                                k_cell+it >= 0 && k_cell+it < static_cast<int>(extent[1])) {
-                                // mode 0
-                                laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
-                                    static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ir, k_cell+it, 0).real() * unitSI);
-                                laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
-                                    static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
-                                for (int im=1; im<=static_cast<int>(extent[0])/2; im++) {
-                                    // cos(m*theta) part of the mode
-                                    laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
-                                        std::cos(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im-1).real() * unitSI);
-                                    laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
-                                        std::cos(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im-1).imag() * unitSI);
-                                    // sin(m*theta) part of the mode
-                                    laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
-                                        std::sin(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im).real() * unitSI);
-                                    laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
-                                        std::sin(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im).imag() * unitSI);
-                                } // End of loop over modes of laser array from file
-                            }
-                        }
-                    } // End of 2 loops (1 per RT dimension) over laser array from file
-                }
-            }
-        } // End of 3 loops (1 per dimension) over laser array from simulation
-    } // End if statement over file laser geometry (rt or xyt)
-#else
-    amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
-                 "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
-#endif // HIPACE_USE_OPENPMD
+    InitLaserSlice(islice, comp);
 }
 
 void
@@ -1139,10 +824,35 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     for ( amrex::MFIter mfi(m_slices, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
         amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
-        // Initialize a Gaussian laser envelope on slice islice
-        //check point
-        for (int ilaser=0; ilaser < m_nlasers; ilaser++) {
+        // Initialize a laser envelope on slice islice
+        for (int ilaser = 0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
+            if (laser.m_laser_init_type == "from_file"){
+                amrex::Array4<amrex::Real> const& arr_ff = laser.m_F_input_file.array();
+                amrex::ParallelFor(
+                bx,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                {
+                    if (ilaser == 0) {
+                        arr(i, j, k, comp ) = 0._rt;
+                        arr(i, j, k, comp + 1 ) = 0._rt;
+                    }
+                    arr(i, j, k, comp ) += arr_ff(i, j, islice, 0 );
+                    arr(i, j, k, comp + 1 ) += arr_ff(i, j, islice, 1 );
+                }
+                );
+                AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0 && m_lambda0 != 0,
+                "The central wavelength of laser from openPMD file and other lasers must be identical");
+                m_lambda0 = laser.m_lambda0_from_file;
+                 #ifdef AMREX_USE_MPI
+                // need to communicate m_lambda0 as it is read in from the input file only by the head rank
+                MPI_Bcast(&m_lambda0,
+                1,
+                amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
+                Hipace::HeadRankID(),
+                amrex::ParallelDescriptor::Communicator());
+                #endif
+            }
             if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;
                 auto profile_imag = laser.m_profile_imag;

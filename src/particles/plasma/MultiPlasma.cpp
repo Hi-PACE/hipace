@@ -9,7 +9,6 @@
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "particles/deposition/ExplicitDeposition.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
-#include "particles/sorting/TileSort.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/IOUtil.H"
@@ -20,7 +19,7 @@ MultiPlasma::MultiPlasma ()
     amrex::ParmParse pp("plasmas");
     queryWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
-    queryWithParser(pp, "sort_bin_size", m_sort_bin_size);
+    DeprecatedInput("plasmas", "sort_bin_size", "hipace.tile_size", "", true);
 
     DeprecatedInput("plasmas", "collisions",
                     "hipace.collisions", "", true);
@@ -59,7 +58,6 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
             Hipace::m_background_density_SI); // geometry only for dz
         }
     }
-    if (m_nplasmas > 0) m_all_bins.resize(m_nplasmas);
 }
 
 amrex::Real
@@ -83,7 +81,7 @@ MultiPlasma::DepositCurrent (
     for (int i=0; i<m_nplasmas; i++) {
         ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
-                         gm, lev, m_all_bins[i], m_sort_bin_size);
+                         gm, lev);
     }
 }
 
@@ -114,7 +112,7 @@ MultiPlasma::DepositNeutralizingBackground (
         if (m_all_plasmas[i].m_neutralize_background) {
             // current of ions is zero, so they are not deposited.
             ::DepositCurrent(m_all_plasmas[i], fields, which_slice, false,
-                             false, false, false, true, gm, lev, m_all_bins[i], m_sort_bin_size);
+                             false, false, false, true, gm, lev);
         }
     }
 }
@@ -146,16 +144,6 @@ MultiPlasma::AnySpeciesNeutralizeBackground () const
         if (plasma.m_neutralize_background) any_species_neutralize = true;
     }
     return any_species_neutralize;
-}
-
-void
-MultiPlasma::TileSort (amrex::Box bx, amrex::Geometry geom)
-{
-    m_all_bins.clear();
-    for (auto& plasma : m_all_plasmas) {
-        m_all_bins.emplace_back(
-            findParticlesInEachTile(bx, m_sort_bin_size, plasma, geom));
-    }
 }
 
 void

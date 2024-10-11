@@ -155,7 +155,9 @@ Hipace::Hipace () :
     queryWithParser(pph, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pph, "MG_verbose", m_MG_verbose);
     queryWithParser(pph, "use_amrex_mlmg", m_use_amrex_mlmg);
+    queryWithParser(pph, "do_shared_depos", m_do_shared_depos);
     queryWithParser(pph, "do_tiling", m_do_tiling);
+    queryWithParser(pph, "tile_size", m_tile_size);
 #ifdef AMREX_USE_GPU
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_do_tiling==0, "Tiling must be turned off to run on GPU.");
 #endif
@@ -451,9 +453,6 @@ Hipace::Evolve ()
 
         // deposit neutralizing background
         if (m_interpolate_neutralizing_background) {
-            if (m_do_tiling) {
-                m_multi_plasma.TileSort(m_slice_geom[0].Domain(), m_slice_geom[0]);
-            }
             // Store charge density of (immobile) ions into WhichSlice::RhomJzIons of level 0
             m_multi_plasma.DepositNeutralizingBackground(
                 m_fields, WhichSlice::RhomJzIons, m_3D_geom, 0);
@@ -466,9 +465,6 @@ Hipace::Evolve ()
                 m_multi_plasma.TagByLevel(m_N_level, m_3D_geom);
             }
             for (int lev=0; lev<m_N_level; ++lev) {
-                if (m_do_tiling) {
-                    m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
-                }
                 // Store charge density of (immobile) ions into WhichSlice::RhomJzIons
                 m_multi_plasma.DepositNeutralizingBackground(
                     m_fields, WhichSlice::RhomJzIons, m_3D_geom, lev);
@@ -595,7 +591,7 @@ Hipace::SolveOneSlice (int islice, int step)
         m_multi_plasma.TagByLevel(current_N_level, m_3D_geom);
     }
 
-    // reorder plasma before TileSort
+    // reorder plasma
     m_multi_plasma.ReorderParticles(islice);
 
     // prepare/initialize fields
@@ -608,9 +604,6 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // deposit current
     for (int lev=0; lev<current_N_level; ++lev) {
-        // tiling used by plasma current deposition
-        if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
-
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
@@ -981,7 +974,6 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
         }
 
         for (int lev=0; lev<current_N_level; ++lev) {
-            if (m_do_tiling) m_multi_plasma.TileSort(m_slice_geom[lev].Domain(), m_slice_geom[lev]);
             // plasmas deposit jx jy to next temp slice
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::Next,
                 true, false, false, false, false, m_3D_geom, lev);
