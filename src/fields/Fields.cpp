@@ -523,9 +523,17 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
                 {
                     const amrex::Real x = i * dx + poff_diag_x;
                     const amrex::Real y = j * dy + poff_diag_y;
-                    diag_array_laser(i,j,k) += amrex::GpuComplex<amrex::Real> {
+                    diag_array_laser(i,j,k,0) += amrex::GpuComplex<amrex::Real> {
                         rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_r),
                         rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_i)
+                    };
+                    diag_array_laser(i,j,k,1) += amrex::GpuComplex<amrex::Real> {
+                        rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::comp_rhs_r),
+                        rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::comp_rhs_i)
+                    };
+                    diag_array_laser(i,j,k,2) += amrex::GpuComplex<amrex::Real> {
+                        rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::comp_rhs_fourier_r),
+                        rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::comp_rhs_fourier_i)
                     };
                 });
         }

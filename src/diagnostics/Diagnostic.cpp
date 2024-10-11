@@ -157,6 +157,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         geometry_name_to_level.emplace(geom_name, 0);
         all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
         geometry_name_to_output_comps[geom_name].insert(laser_io_name);
+        geometry_name_to_output_comps[geom_name].insert("rhs");
+        geometry_name_to_output_comps[geom_name].insert("rhs_fourier");
         all_comps_error_str << laser_io_name << "\n";
     }
     all_comps_error_str << "Additionally, 'all' and 'none' are supported as field_data\n"

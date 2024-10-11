@@ -589,6 +589,8 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
                         rhs += arr(i, j, chi) * an00j00 * 2._rt;
                     }
                 }
+                arr(i, j, comp_rhs_r) = rhs.real();
+                arr(i, j, comp_rhs_i) = rhs.imag();
                 rhs_mg_arr(i,j,0) = rhs.real();
                 rhs_mg_arr(i,j,1) = rhs.imag();
             });
@@ -753,6 +755,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                         - lapA
                         + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
                 }
+                arr(i, j, comp_rhs_r) = rhs.real();
+                arr(i, j, comp_rhs_i) = rhs.imag();
                 rhs_arr(i,j,0) = rhs;
             });
 
@@ -770,11 +774,14 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         amrex::ParallelFor(
             to2D(bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
+                using namespace WhichLaserSlice;
                 // divide rhs_fourier by -(k^2+a)
                 amrex::Real kx = (i<imid) ? dkx*i : dkx*(i-Nx);
                 amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
                 const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
                     1._rt/(kx*kx + ky*ky + acoeff) : 0.;
+                arr(i, j, comp_rhs_fourier_r) = -inv_k2a.real();
+                arr(i, j, comp_rhs_fourier_i) = -inv_k2a.imag();
                 rhs_fourier_arr(i,j) *= -inv_k2a;
             });
 

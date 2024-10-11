@@ -148,7 +148,7 @@ OpenPMDWriter::WriteFieldData (
             std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
             field.setAttribute("polarization", polarization);
             field_comp.storeChunkRaw(
-                reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr()),
+                reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr(icomp)),
                 chunk_offset, chunk_size);
         } else {
             field_comp.storeChunkRaw(fd.m_F.dataPtr(icomp), chunk_offset, chunk_size);
