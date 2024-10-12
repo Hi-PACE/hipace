@@ -914,7 +914,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.propagation_angle_yz`` (`float`) optinal (default `0`)
           Propagation angle of the pulse in the yz plane (0 is the along the z axis)
 
-      * ``<laser name>.chirp_theta_xy`` (`float`) optional (default `pi/2`)
+      * ``<laser name>.STC_theta_xy`` (`float`) optional (default `pi/2`)
           Direction of the linear spatial and angular chirp on x-y plane.
 
       * ``<laser name>.beta`` (`float`) optional (default `0.`)

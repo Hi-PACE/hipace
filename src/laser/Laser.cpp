@@ -35,7 +35,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         queryWithParser(pp, "w0", m_w0);
         queryWithParser(pp, "CEP", m_CEP);
         queryWithParser(pp, "propagation_angle_yz", m_propagation_angle_yz);
-        queryWithParser(pp, "chirp_theta_xy", m_chirp_theta_xy);
+        queryWithParser(pp, "STC_theta_xy", m_STC_theta_xy);
         bool length_is_specified = queryWithParser(pp, "L0", m_L0);
         bool duration_is_specified = queryWithParser(pp, "tau", m_tau);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
