@@ -9,8 +9,8 @@
 
 
 # This file is part of the HiPACE++ test suite.
-# It runs a Hipace simulation of a laser propagating in vacuum
-# and compares width and a0 with theory
+# It initializes a Hipace simulation of a gaussian laser with initial STC parameters
+# and test the correctness of the STC factors
 
 # abort on first encounted error
 set -eu -o pipefail
