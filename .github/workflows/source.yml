@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Non-ASCII characters
       run: .github/workflows/source/hasNonASCII
     - name: TABs
@@ -30,7 +30,7 @@ jobs:
   documentation:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
