@@ -1104,9 +1104,6 @@ InitBeamFromFile (const std::string input_file,
     auto& particle_tile = getBeamInitSlice();
     auto old_size = particle_tile.size();
     auto new_size = old_size + num_to_add;
-    if (m_do_spin_tracking) {
-        particle_tile.define(3, 0);
-    }
     particle_tile.resize(new_size);
 
     const auto ptd = particle_tile.getParticleTileData();
