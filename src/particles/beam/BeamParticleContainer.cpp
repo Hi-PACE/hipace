@@ -92,6 +92,16 @@ BeamParticleContainer::ReadParameters ()
     }
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
     queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
+    if (m_do_spin_tracking) {
+        if (m_injection_type != "from_file") {
+            getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
+            queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
+        }
+        for (auto& beam_tile : m_slices) {
+            // Use 3 real and 0 int runtime components
+            beam_tile.define(3, 0);
+        }
+    }
     auto& soa = getBeamInitSlice().GetStructOfArrays();
     soa.GetIdCPUData().setArena(
         m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
@@ -102,16 +112,6 @@ BeamParticleContainer::ReadParameters ()
     for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
         soa.GetIntData()[icomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    }
-    if (m_do_spin_tracking) {
-        if (m_injection_type != "from_file") {
-            getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
-            queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
-        }
-        for (auto& beam_tile : m_slices) {
-            // Use 3 real and 0 int runtime components
-            beam_tile.define(3, 0);
-        }
     }
 }
 
