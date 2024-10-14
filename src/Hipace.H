@@ -81,7 +81,7 @@ struct Hipace_early_init
     int m_N_level = 1;
 };
 
-/** \brief Singleton class, that intialize, runs and finalizes the simulation */
+/** \brief Singleton class that initializes, runs and finalizes the simulation */
 class Hipace final : public Hipace_early_init
 {
 public:
@@ -236,6 +236,10 @@ public:
 #else
     inline static bool m_do_tiling = false;
 #endif
+    /** Tile size for particle operations when using tiling */
+    inline static int m_tile_size = 32;
+    /** Whether to use shared memory for current deposition */
+    inline static bool m_do_shared_depos = false;
     /** Whether the explicit field solver is used */
     inline static bool m_explicit = true;
     /** Relative tolerance for the multigrid solver, when using the explicit solver */

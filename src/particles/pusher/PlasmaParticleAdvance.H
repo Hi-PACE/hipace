@@ -9,7 +9,6 @@
 #define PLASMAPARTICLEADVANCE_H_
 
 #include "particles/plasma/PlasmaParticleContainer.H"
-#include "particles/sorting/TileSort.H"
 #include "fields/Fields.H"
 #include "Hipace.H"
 #include "laser/MultiLaser.H"

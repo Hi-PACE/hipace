@@ -123,10 +123,17 @@ General parameters
     can do this at once in initialization instead of one after another
     as part of the communication pipeline.
 
+* ``hipace.do_shared_depos`` (`bool`) optional (default `false`)
+    Whether to use shared memory current deposition on GPU.
+
 * ``hipace.do_tiling`` (`bool`) optional (default `true`)
     Whether to use tiling, when running on CPU.
     Currently, this option only affects plasma operations (gather, push and deposition).
-    The tile size can be set with ``plasmas.sort_bin_size``.
+    The tile size can be set with ``hipace.tile_size``.
+
+* ``hipace.tile_size`` (`int`) optional (default `32`)
+    Tile size for beam and plasma current deposition, when running on CPU
+    and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``hipace.depos_order_xy`` (`int`) optional (default `2`)
     Transverse particle shape order. Currently, `0,1,2,3` are implemented.
@@ -450,10 +457,6 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name> or plasmas.neutralize_background`` (`bool`) optional (default `1`)
     Whether to add a neutralizing background of immobile particles of opposite charge.
-
-* ``plasmas.sort_bin_size`` (`int`) optional (default `32`)
-    Tile size for plasma current deposition, when running on CPU
-    and tiling is activated (``hipace.do_tiling = 1``).
 
 * ``<plasma name>.temperature_in_ev`` (`float`) optional (default `0`)
     | Initializes the plasma particles with a given temperature :math:`k_B T` in eV. Using a temperature, the plasma particle momentum is normally distributed with a variance of :math:`k_B T /(M c^2)` in each dimension, with :math:`M` the particle mass, :math:`k_B` the Boltzmann constant, and :math:`T` the isotropic temperature in Kelvin.
@@ -871,70 +874,60 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     Whether to use the most stable discretization for the envelope solver.
 
 * ``<laser name>.init_type`` (list of `string`) optional (default `gaussian`)
-    The initializing method of laser. Possible options are:
+    The initialisation method of laser. Possible options are:
 
-      * ``gaussian``(default) the laser is iniliatized with an ideal gaussian pulse.
+      Option: ``gaussian`` (default) the laser is initialised with an ideal gaussian pulse.
 
-      * ``from_file``, the laser is loaded from an openPMD file.
+      * ``<laser name>.a0`` (`float`) optional (default `0`)
+          Peak normalized vector potential of the laser pulse.
 
-      *  ``parser``, the laser is initialized with the expression of the complex envelope function.
+      * ``lasers.lambda0`` (`float`)
+          Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
 
-Option: ``gaussian``
+      * ``<laser name>.position_mean`` (3 `float`) optional (default `0 0 0`)
+          The mean position of the laser in `x, y, z`.
 
-* ``<laser name>.a0`` (`float`) optional (default `0`)
-    Peak normalized vector potential of the laser pulse.
+      * ``<laser name>.w0`` (2 `float`) optional (default `0 0`)
+          The laser waist in `x, y`.
 
-* ``lasers.lambda0`` (`float`)
-    Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
+      * ``<laser name>.L0`` (`float`) optional (default `0`)
+          The laser pulse length in `z`. Use either the pulse length or the pulse duration ``<laser name>.tau``.
 
-* ``<laser name>.position_mean`` (3 `float`) optional (default `0 0 0`)
-    The mean position of the laser in `x, y, z`.
+      * ``<laser name>.tau`` (`float`) optional (default `0`)
+          The laser pulse duration. The pulse length is set to `laser.tau`:math:`*c_0`.
+          Use either the pulse length or the pulse duration.
 
-* ``<laser name>.w0`` (2 `float`) optional (default `0 0`)
-    The laser waist in `x, y`.
+      * ``<laser name>.focal_distance`` (`float`)
+          Distance at which the laser pulse is focused (in the z direction, counted from laser initial position).
 
-* ``<laser name>.L0`` (`float`) optional (default `0`)
-    The laser pulse length in `z`. Use either the pulse length or the pulse duration ``<laser name>.tau``.
+      * ``<laser name>.propagation_angle_yz`` (`float`) optional (default `0`)
+          Propagation angle of the pulse in the yz plane (0 is along the z axis)
 
-* ``<laser name>.tau`` (`float`) optional (default `0`)
-    The laser pulse duration. The pulse length is set to `laser.tau`:math:`*c_0`.
-    Use either the pulse length or the pulse duration.
+      Option: ``from_file`` the laser is loaded from an openPMD file.
 
-* ``<laser name>.focal_distance`` (`float`)
-    Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
+      * ``<laser name>.input_file`` (`string`) optional (default `""`)
+          Path to an openPMD file containing a laser envelope.
+          The file should comply with the `LaserEnvelope extension of the openPMD-standard <https://github.com/openPMD/openPMD-standard/blob/upcoming-2.0.0/EXT_LaserEnvelope.md>`__, as generated by `LASY <https://github.com/LASY-org/LASY>`__.
+          Currently supported geometries: 3D or cylindrical profiles with azimuthal decomposition.
+          The laser pulse is injected in the HiPACE++ simulation so that the beginning of the temporal profile from the file corresponds to the head of the simulation box, and time (in the file) is converted to space (HiPACE++ longitudinal coordinate) with ``z = -c*t + const``.
+          If this parameter is set, then the file is used to initialize all lasers instead of using a gaussian profile.
 
-* ``<laser name>.propagation_angle_yz`` (`float`) optinal (default `0`)
-    Propagation angle of the pulse in the yz plane (0 is the along the z axis)
+      * ``<laser name>.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
+          Name of the laser envelope field inside the openPMD file to be read in.
 
-* ``<laser name>.PFT_yz`` (`float`) optinal (default `pi/2`)
-    Pulse front tilt angle on yz plane - the angle between the pulse front (maximum intensity contour)and the propagation
-    direction defined by [Selcuk Akturk Opt. Express 12 (2004)](pi/2 is no PFT)
+      * ``<laser name>.iteration`` (`int`) optional (default `0`)
+          Iteration of the openPMD file to be read in.
 
-Option: ``from_file``
+      Option: ``parser``, the laser is initialized with the expression of the complex envelope function.
 
-* ``lasers.input_file`` (`string`) optional (default `""`)
-    Path to an openPMD file containing a laser envelope.
-    The file should comply with the `LaserEnvelope extension of the openPMD-standard <https://github.com/openPMD/openPMD-standard/blob/upcoming-2.0.0/EXT_LaserEnvelope.md>`__, as generated by `LASY <https://github.com/LASY-org/LASY>`__.
-    Currently supported geometries: 3D or cylindrical profiles with azimuthal decomposition.
-    The laser pulse is injected in the HiPACE++ simulation so that the beginning of the temporal profile from the file corresponds to the head of the simulation box, and time (in the file) is converted to space (HiPACE++ longitudinal coordinate) with ``z = -c*t + const``.
-    If this parameter is set, then the file is used to initialize all lasers instead of using a gaussian profile.
+      * ``<laser name>.laser_real(x,y,z)`` optional (`string`) (default `""`)
+          Expression for the real part of the laser envelope in `x, y, z`.
 
-* ``lasers.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
-    Name of the laser envelope field inside the openPMD file to be read in.
+      * ``<laser name>.laser_imag(x,y,z)`` optional (`string`) (default `""`)
+          Expression for the imaginary part of the laser envelope `x, y, z`.
 
-* ``lasers.iteration`` (`int`) optional (default `0`)
-    Iteration of the openPMD file to be read in.
-
-Option: ``parser``
-
-* ``<laser name>.laser_real(x,y,z)`` (`string`)
-    Expression for the real part of the laser evelope in `x, y, z`.
-
-* ``<laser name>.laser_imag(x,y,z)`` (`string`)
-    Expression for the imaginary part of the laser evelope `x, y, z`.
-
-* ``lasers.lambda0`` (`float`)
-    Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
+      * ``lasers.lambda0`` (`float`)
+          Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
 
 Diagnostic parameters
 ---------------------
