@@ -100,6 +100,7 @@ BeamParticleContainer::ReadParameters ()
         for (auto& beam_tile : m_slices) {
             // Use 3 real and 0 int runtime components
             beam_tile.define(3, 0);
+            getBeamInitSlice().define(3, 0);
         }
     }
     auto& soa = getBeamInitSlice().GetStructOfArrays();
