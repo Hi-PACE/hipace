@@ -881,7 +881,8 @@ InitBeamFromFile (const std::string input_file,
                         }
                     }
                 }
-                else if(units == std::array<double,7> {2., 1., -1., 0., 0., 0., 0.}) {
+                else if(units == std::array<double,7> {2., 1., -1., 0., 0., 0., 0.} &&
+                        m_do_spin_tracking) {
                     // spin
                     if(physical_quantity.first == "spin") {
                         name_s = physical_quantity.first;
@@ -978,6 +979,15 @@ InitBeamFromFile (const std::string input_file,
         }
     }
 
+    if (m_do_spin_tracking) {
+        for(std::string name_s_c : {name_sx, name_sy, name_sz}) {
+            if(!series.iterations[num_iteration].particles[name_particle][name_s].contains(name_s_c)) {
+                amrex::Abort("Beam input file does not contain " + name_s_c + " coordinate in " +
+                             name_s + " (spin). An attempt to read these was done because " +
+                             "do_spin_tracking is on for at least one beam.\n");
+            }
+        }
+    }
     // print the names of the arrays in the file that are used for the simulation
     if(Hipace::m_verbose >= 3){
        amrex::Print() << "Beam Input File '" << input_file << "' in Iteration '" << num_iteration
@@ -987,6 +997,10 @@ InitBeamFromFile (const std::string input_file,
           << momentum_type << " '" << name_u << "' (coordinates '" << name_ux
           << "', '" << name_uy << "', '" << name_uz << "')\n"
           << weighting_type << " '" << name_w << "' (in '" << name_ww << "')\n";
+       if (m_do_spin_tracking) {
+           amrex::Print() << name_u << "' (coordinates '" << name_ux
+                          << "', '" << name_uy << "', '" << name_uz << "')\n";
+       }
     }
 
     auto electrons = series.iterations[num_iteration].particles[name_particle];
@@ -1090,7 +1104,9 @@ InitBeamFromFile (const std::string input_file,
     auto& particle_tile = getBeamInitSlice();
     auto old_size = particle_tile.size();
     auto new_size = old_size + num_to_add;
-    particle_tile.define(3, 0);
+    if (m_do_spin_tracking) {
+        particle_tile.define(3, 0);
+    }
     particle_tile.resize(new_size);
 
     const auto ptd = particle_tile.getParticleTileData();

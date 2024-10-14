@@ -91,6 +91,7 @@ BeamParticleContainer::ReadParameters ()
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
+    queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
     auto& soa = getBeamInitSlice().GetStructOfArrays();
     soa.GetIdCPUData().setArena(
         m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
@@ -102,7 +103,6 @@ BeamParticleContainer::ReadParameters ()
         soa.GetIntData()[icomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
-    queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
     if (m_do_spin_tracking) {
         if (m_injection_type != "from_file") {
             getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
