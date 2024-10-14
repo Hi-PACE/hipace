@@ -81,7 +81,7 @@ struct Hipace_early_init
     int m_N_level = 1;
 };
 
-/** \brief Singleton class, that intialize, runs and finalizes the simulation */
+/** \brief Singleton class that initializes, runs and finalizes the simulation */
 class Hipace final : public Hipace_early_init
 {
 public:

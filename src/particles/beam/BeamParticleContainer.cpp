@@ -350,7 +350,7 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
 }
 
 void
-BeamParticleContainer::intializeSlice (int slice, int which_slice) {
+BeamParticleContainer::initializeSlice (int slice, int which_slice) {
     if (m_injection_type == "fixed_ppc") {
         InitBeamFixedPPCSlice(slice, which_slice);
     } else if (m_injection_type == "fixed_weight") {
@@ -358,7 +358,7 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
     } else if (m_injection_type == "fixed_weight_pdf") {
         InitBeamFixedWeightPDFSlice(slice, which_slice);
     } else {
-        HIPACE_PROFILE("BeamParticleContainer::intializeSlice()");
+        HIPACE_PROFILE("BeamParticleContainer::initializeSlice()");
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
         resize(which_slice, num_particles, 0);
@@ -388,7 +388,7 @@ BeamParticleContainer::intializeSlice (int slice, int which_slice) {
     }
 
     if (m_do_spin_tracking) {
-        HIPACE_PROFILE("BeamParticleContainer::intializeSpin()");
+        HIPACE_PROFILE("BeamParticleContainer::initializeSpin()");
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
         const amrex::RealVect initial_spin_norm = m_initial_spin / m_initial_spin.vectorLength();
