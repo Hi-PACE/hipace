@@ -91,6 +91,18 @@ BeamParticleContainer::ReadParameters ()
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
+    queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
+    if (m_do_spin_tracking) {
+        if (m_injection_type != "from_file") {
+            getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
+            queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
+        }
+        for (auto& beam_tile : m_slices) {
+            // Use 3 real and 0 int runtime components
+            beam_tile.define(3, 0);
+        }
+        getBeamInitSlice().define(3, 0);
+    }
     auto& soa = getBeamInitSlice().GetStructOfArrays();
     soa.GetIdCPUData().setArena(
         m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
@@ -101,15 +113,6 @@ BeamParticleContainer::ReadParameters ()
     for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
         soa.GetIntData()[icomp].setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    }
-    queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
-    if (m_do_spin_tracking) {
-        getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
-        queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
-        for (auto& beam_tile : m_slices) {
-            // Use 3 real and 0 int runtime components
-            beam_tile.define(3, 0);
-        }
     }
 }
 
@@ -368,6 +371,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
 
         const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
         const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
+        const bool do_spin_tracking = m_do_spin_tracking;
 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (const int ip) {
@@ -379,7 +383,11 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
-
+                if (do_spin_tracking) {
+                    ptd.m_runtime_rdata[0][ip] = ptd_init.m_runtime_rdata[0][ip];
+                    ptd.m_runtime_rdata[1][ip] = ptd_init.m_runtime_rdata[1][ip];
+                    ptd.m_runtime_rdata[2][ip] = ptd_init.m_runtime_rdata[2][ip];
+                }
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
                 ptd.idata(BeamIdx::mr_level)[ip] = 0;
@@ -387,12 +395,11 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         );
     }
 
-    if (m_do_spin_tracking) {
+    if (m_do_spin_tracking && m_injection_type != "from_file") {
         HIPACE_PROFILE("BeamParticleContainer::initializeSpin()");
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
         const amrex::RealVect initial_spin_norm = m_initial_spin / m_initial_spin.vectorLength();
-
         amrex::ParallelFor(getNumParticles(which_slice),
             [=] AMREX_GPU_DEVICE (const int ip) {
                 ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
