@@ -903,16 +903,6 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.propagation_angle_yz`` (`float`) optional (default `0`)
           Propagation angle of the pulse in the yz plane (0 is along z axis)
 
-      * ``<laser name>.tau`` (`float`) optional (default `0`)
-          The laser pulse duration. The pulse length is set to `laser.tau`:math:`*c_0`.
-          Use either the pulse length or the pulse duration.
-
-      * ``<laser name>.focal_distance`` (`float`)
-          Distance at which the laser pulse is focused (in the z direction, counted from laser initial position).
-
-      * ``<laser name>.propagation_angle_yz`` (`float`) optional (default `0`)
-          Propagation angle of the pulse in the yz plane (0 is the along the z axis)
-
       * ``<laser name>.STC_theta_xy`` (`float`) optional (default `pi/2`)
           Direction of the linear spatial and angular chirp on x-y plane.
 
