@@ -12,7 +12,7 @@
 # It initializes a Hipace simulation of a gaussian laser with initial STC parameters
 # and test the correctness of the STC factors
 
-# abort on first encounted error
+# Abort on first encountered error
 set -eu -o pipefail
 
 # Read input parameters
@@ -29,7 +29,7 @@ TEST_NAME="${FILE_NAME%.*}"
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_chirp \
         laser.phi2 = 2.4e-26 \
         laser.STC_theta_xy = 0 \
-        hipace.file_prefix = $TEST_NAME \
+        hipace.file_prefix = $TEST_NAME
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_init_chirp.py --output-dir=$TEST_NAME \
         --chirp_type="phi2"
@@ -40,7 +40,7 @@ rm -rf $TEST_NAME
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_chirp \
         laser.zeta = 2.4e-19 \
         laser.STC_theta_xy = 0 \
-        hipace.file_prefix = $TEST_NAME \
+        hipace.file_prefix = $TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_init_chirp.py --output-dir=$TEST_NAME \
@@ -49,9 +49,9 @@ $HIPACE_EXAMPLE_DIR/analysis_laser_init_chirp.py --output-dir=$TEST_NAME \
 rm -rf $TEST_NAME
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_chirp \
-        laser.beta= 2e-17 \
+        laser.beta = 2e-17 \
         laser.STC_theta_xy = 0 \
-        hipace.file_prefix = $TEST_NAME \
+        hipace.file_prefix = $TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_init_chirp.py --output-dir=$TEST_NAME \
