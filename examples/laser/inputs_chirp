@@ -1,6 +1,6 @@
 max_step = 1
 hipace.dt = 70.e-6/clight
-hipace.verbose=3
+hipace.verbose = 3
 
 amr.n_cell = 255 127 200
 
@@ -9,8 +9,8 @@ my_constants.kp_inv = 10.e-6
 hipace.file_prefix = new
 hipace.do_tiling = 0
 
-geometry.prob_lo     = -15.*kp_inv   -15.*kp_inv   -2.*kp_inv
-geometry.prob_hi     =  15.*kp_inv    15.*kp_inv    2.*kp_inv
+geometry.prob_lo = -15.*kp_inv   -15.*kp_inv   -2.*kp_inv
+geometry.prob_hi =  15.*kp_inv    15.*kp_inv    2.*kp_inv
 
 lasers.names = laser
 lasers.lambda0 = .8e-6
