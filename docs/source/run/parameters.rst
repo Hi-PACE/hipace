@@ -909,7 +909,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
           Use either the pulse length or the pulse duration.
 
       * ``<laser name>.focal_distance`` (`float`)
-          Distance at which the laser pulse if focused (in the z direction, counted from laser initial position).
+          Distance at which the laser pulse is focused (in the z direction, counted from laser initial position).
 
       * ``<laser name>.propagation_angle_yz`` (`float`) optinal (default `0`)
           Propagation angle of the pulse in the yz plane (0 is the along the z axis)
