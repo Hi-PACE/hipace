@@ -7,17 +7,14 @@
 # Authors: Xingjian Hui
 # License: BSD-3-Clause-LBNL
 
-import matplotlib.pyplot as plt
-import matplotlib
 import argparse
 import numpy as np
 import scipy.constants as scc
-import scipy
 from openpmd_viewer.addons import LpaDiagnostics
 
 def get_zeta(Ar, m, w0, L):
     nu = 0
-    sum = 0
+    summ = 0
     laser_module = np.abs(Ar)
     phi_envelop = np.array(np.arctan2(Ar.imag, Ar.real))
     # unwrap phi_envelop
@@ -30,18 +27,18 @@ def get_zeta(Ar, m, w0, L):
     for i in range(len(m.z) - 2):
         for j in range(len(m.x) - 2):
             nu = nu + pphi_pzpy[i, j] * laser_module[i, j]
-            sum = sum + laser_module[i, j]
-    nu = nu / scc.c / sum
+            summ = summ + laser_module[i, j]
+    nu = nu / scc.c / summ
     a = 4 * nu * w0**2 * L**4
     b = -4 * scc.c
     c = nu * w0**2 * L**2
-    zeta_solutions = np.roots([a, b, c])
-    return np.min(zeta_solutions)
+    zeta_roots = np.roots([a, b, c])
+    return np.min(zeta_roots)
 
 def get_phi2 (Ar, m, tau):
     # get temporal chirp phi2
     temp_chirp = 0
-    sum = 0
+    summ = 0
     laser_module1 = np.abs(Ar)
     phi_envelop = np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0)
     # calculate pphi_pz
@@ -51,13 +48,13 @@ def get_phi2 (Ar, m, tau):
     for i in range(len(m.z)-2):
         for j in range(len(m.x)-2):
             temp_chirp = temp_chirp + pphi_pz2[i,j] * laser_module1[i,j]
-            sum = sum + laser_module1[i,j]
-    x = temp_chirp * scc.c**2 / sum
+            summ = summ + laser_module1[i,j]
+    x = temp_chirp * scc.c**2 / summ
     a = 4 * x
     b = -4
     c = tau**4 * x
-    zeta_solutions = np.roots([a, b, c])
-    return np.max(zeta_solutions)
+    zeta_roots = np.roots([a, b, c])
+    return np.max(zeta_roots)
 
 def get_centroids(F, x, z):
     index_array = np.mgrid[0:F.shape[0], 0:F.shape[1]][1]
@@ -66,11 +63,11 @@ def get_centroids(F, x, z):
 
 def get_beta(F, m, k0):
     z_centroids = get_centroids(F.T, m.x, m.z)
-    weight = np.mean(np.abs(F.T)**2, axis=np.ndim(F) - 1)
+    weight = np.mean(np.abs(F.T)**2, axis = np.ndim(F) - 1)
     derivative = np.gradient(z_centroids) / (m.x[1] - m.x[0])
     return (np.sum(derivative * weight) / np.sum(weight)) / k0 / scc.c
 
-parser = argparse.ArgumentParser(description='Verify the chirp initialization')
+parser = argparse.ArgumentParser(description = 'Verify the chirp initialization')
 parser.add_argument('--output-dir',
                     dest='output_dir',
                     default='diags/hdf5',
