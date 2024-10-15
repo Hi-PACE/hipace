@@ -903,7 +903,6 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.propagation_angle_yz`` (`float`) optional (default `0`)
           Propagation angle of the pulse in the yz plane (0 is along the z axis)
 
-
       * ``<laser name>.tau`` (`float`) optional (default `0`)
           The laser pulse duration. The pulse length is set to `laser.tau`:math:`*c_0`.
           Use either the pulse length or the pulse duration.
