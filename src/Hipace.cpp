@@ -690,10 +690,13 @@ Hipace::SolveOneSlice (int islice, int step)
     // copy fields (and laser) to diagnostic array
     FillFieldDiagnostics(current_N_level, islice);
 
-    // plasma ionization
+    // plasma field ionization
     for (int lev=0; lev<current_N_level; ++lev) {
         m_multi_plasma.DoFieldIonization(lev, m_3D_geom[lev], m_fields);
     }
+
+    // plasma laser ionization
+    m_multi_plasma.DoLaserIonization(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
 
     // Push plasma particles
     for (int lev=0; lev<current_N_level; ++lev) {

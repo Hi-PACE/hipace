@@ -98,7 +98,15 @@ public:
      */
     void DoFieldIonization (const int lev, const amrex::Geometry& geom, const Fields& fields);
 
-    bool IonizationOn () const;
+    /** Calculates Ionization Probability from laser and makes new Plasma Particles
+     *
+     * \param[in] islice zeta slice index
+     * \param[in] laser_geom Geometry of the laser
+     * \param[in] laser the laser class
+     */
+    void DoLaserIonization (const int islice, const amrex::Geometry& laser_geom,
+                            const MultiLaser& laser);
+
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     bool AnySpeciesNeutralizeBackground () const;
 

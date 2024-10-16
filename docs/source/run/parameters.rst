@@ -446,6 +446,9 @@ When both are specified, the per-species value is used.
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
+* ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `<plasma name>.can_ionize`)
+    Whether this plasma can be ionized by a laser.
+
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial ionization state of the plasma. `0` for neutral gasses.
     If set, the plasma charge gets multiplied by this number. If the plasma species is not ionizable,

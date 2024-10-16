@@ -46,16 +46,16 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
         plasma.InitData(gm[0]);
 
         if(plasma.m_can_ionize) {
-            PlasmaParticleContainer* plasma_product = nullptr;
             for (int i=0; i<m_names.size(); ++i) {
                 if(m_names[i] == plasma.m_product_name) {
-                    plasma_product = &m_all_plasmas[i];
+                    plasma.m_product_pc = &m_all_plasmas[i];
                 }
             }
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma_product != nullptr,
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_pc != nullptr,
                 "Must specify a valid product plasma for ionization using ionization_product");
-            plasma.InitIonizationModule(gm[0], plasma_product,
-            Hipace::m_background_density_SI); // geometry only for dz
+
+            plasma.InitIonizationModule(gm[0],
+                Hipace::m_background_density_SI); // geometry only for dz
         }
     }
 }
@@ -126,14 +126,13 @@ MultiPlasma::DoFieldIonization (
     }
 }
 
-bool
-MultiPlasma::IonizationOn () const
+void
+MultiPlasma::DoLaserIonization (
+    const int islice, const amrex::Geometry& laser_geom, const MultiLaser& laser)
 {
-    bool ionization_on = false;
     for (auto& plasma : m_all_plasmas) {
-        if (plasma.m_can_ionize) ionization_on = true;
+        plasma.LaserIonization(islice, laser_geom, laser, Hipace::m_background_density_SI);
     }
-    return ionization_on;
 }
 
 bool
