@@ -1,26 +1,25 @@
-max_step = 30
+max_step = 1
 hipace.dt = 70.e-6/clight
-hipace.verbose=3
+hipace.verbose = 3
 
-amr.n_cell = 128 128 50
+amr.n_cell = 255 127 200
 
 my_constants.kp_inv = 10.e-6
 
 hipace.file_prefix = new
 hipace.do_tiling = 0
 
-geometry.prob_lo     = -6.*kp_inv   -6.*kp_inv   -8.*kp_inv
-geometry.prob_hi     =  6.*kp_inv    6.*kp_inv    6.*kp_inv
+geometry.prob_lo = -15.*kp_inv   -15.*kp_inv   -2.*kp_inv
+geometry.prob_hi =  15.*kp_inv    15.*kp_inv    2.*kp_inv
 
 lasers.names = laser
 lasers.lambda0 = .8e-6
 
 laser.a0 = 1
 laser.position_mean = 0. 0. 0
-laser.w0 = 2.*kp_inv
-laser.L0 = 2.*kp_inv
-laser.focal_distance = 0.001
-
+laser.focal_distance = 0.0
+laser.w0 = 30e-6
+laser.L0 = 5e-6
 amr.max_level = 0
 
 diagnostic.output_period = 1
@@ -28,6 +27,6 @@ diagnostic.output_period = 1
 hipace.depos_order_xy = 0
 
 boundary.field = Dirichlet
-boundary.particle = Periodic
+boundary.particle = Absorbing
 
 diagnostic.diag_type = xz

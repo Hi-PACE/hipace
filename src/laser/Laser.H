@@ -2,8 +2,8 @@
  *
  * This file is part of HiPACE++.
  *
- * Authors: MaxThevenet, AlexanderSinn
- * Severin Diederichs, atmyers, Angel Ferran Pousa
+ * Authors: MaxThevenet, AlexanderSinn, Severin Diederichs,
+ *          atmyers, Angel Ferran Pousa, Xingjian Hui
  * License: BSD-3-Clause-LBNL
  */
 
@@ -23,6 +23,7 @@ public:
      *\param[in] laser_geom_3D 3D laser geometry for level 0
      */
     void GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D);
+
     template<typename input_type>
     void GetEnvelopeFromFile (amrex::Geometry laser_geom_3D);
     Laser (std::string name, amrex::Geometry laser_geom_3D);
@@ -33,12 +34,15 @@ public:
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
     amrex::Real m_w0 {0.}; /**< Laser waist */
     amrex::Real m_CEP {0.}; /**< Laser carrier-envelope phase (CEP) */
-    /** Propagation angle of the pulse in the yz plane (0 is the along the z axis) */
+    /** Propagation angle of the pulse in the yz plane (0 is along z axis) */
     amrex::Real m_propagation_angle_yz {0.};
-    /**Pulse front tilt angle of the pulse in yz plane (pi/2 is no PFT)*/
-    amrex::Real m_PFT_yz {MathConst::pi/2.0};
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
+    /** Time stretching factors */
+    amrex::Real m_STC_theta_xy {MathConst::pi/2.0};
+    amrex::Real m_zeta {0.};
+    amrex::Real m_beta {0.};
+    amrex::Real m_phi2 {0.};
     /** Focal distance of the laser pulse */
     amrex::Real m_focal_distance {0.};
     /** Average position of the Gaussian laser pulse */

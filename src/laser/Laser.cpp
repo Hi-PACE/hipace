@@ -35,14 +35,18 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
         queryWithParser(pp, "w0", m_w0);
         queryWithParser(pp, "CEP", m_CEP);
         queryWithParser(pp, "propagation_angle_yz", m_propagation_angle_yz);
-        queryWithParser(pp, "PFT_yz", m_PFT_yz);
+        queryWithParser(pp, "STC_theta_xy", m_STC_theta_xy);
         bool length_is_specified = queryWithParser(pp, "L0", m_L0);
         bool duration_is_specified = queryWithParser(pp, "tau", m_tau);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
-        "Please specify exlusively either the pulse length L0 or the duration tau of gaussian lasers");
-        if (duration_is_specified) m_L0 = m_tau*get_phys_const().c;
+        "Please specify exlusively either the pulse length L0 or the duration tau of the laser");
+        if (duration_is_specified) m_L0 = m_tau * get_phys_const().c;
+        if (length_is_specified) m_tau = m_L0 / get_phys_const().c;
         queryWithParser(pp, "focal_distance", m_focal_distance);
         queryWithParser(pp, "position_mean",  m_position_mean);
+        queryWithParser(pp, "zeta",  m_zeta);
+        queryWithParser(pp, "beta",  m_beta);
+        queryWithParser(pp, "phi2",  m_phi2);
         return;
     }
     else if (m_laser_init_type == "parser") {
