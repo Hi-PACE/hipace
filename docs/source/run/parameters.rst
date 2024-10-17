@@ -904,7 +904,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
           Propagation angle of the pulse in the yz plane (0 is along z axis)
 
       * ``<laser name>.STC_theta_xy`` (`float`) optional (default `pi/2`)
-          Direction of the linear spatial and angular chirp on xoy plane.
+          Direction of the linear spatial and angular chirp on xoy plane (0 is along x axis).
 
       * ``<laser name>.beta`` (`float`) optional (default `0.`)
           Angular dispersion (or angular chirp) at focus defined by `S. Akturk et al., Optics Express 12, 4399 (2004) <https://doi.org/10.1364/OPEX.12.004399>`__.
