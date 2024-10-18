@@ -155,8 +155,8 @@ SharedMemoryDeposition (int num_particles,
                 }
 
                 // calculate the local field components of the shared memory
-                std::array<int, max_cache> loc_idx_cache;
-                std::array<int, max_depos> loc_idx_depos;
+                amrex::GpuArray<int, max_cache> loc_idx_cache;
+                amrex::GpuArray<int, max_depos> loc_idx_depos;
 
                 for (int n=0; n != max_cache; ++n) {
                     loc_idx_cache[n] = (dynamic_comps && idx_cache[n]==-1) ? -1 : n;
