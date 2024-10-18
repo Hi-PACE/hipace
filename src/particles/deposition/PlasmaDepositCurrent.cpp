@@ -111,12 +111,12 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                     SharedMemoryDeposition<stencil_size, stencil_size, true>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-                        std::array{aabs}, std::array{jx, jy, jz, rho, chi, rhomjz});
+                        amrex::GpuArray{aabs}, amrex::GpuArray{jx, jy, jz, rho, chi, rhomjz});
                 } else {
                     SharedMemoryDeposition<stencil_size, stencil_size, true>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-                        std::array<int, 0>{}, std::array{jx, jy, jz, rho, chi, rhomjz});
+                        amrex::GpuArray<int, 0>{}, amrex::GpuArray{jx, jy, jz, rho, chi, rhomjz});
                 }
             },
             // is_valid
