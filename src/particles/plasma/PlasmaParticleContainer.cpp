@@ -292,8 +292,6 @@ IonizationModule (const int lev,
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
-        const int depos_order_xy = Hipace::m_depos_order_xy;
-
         auto& plevel_ion = GetParticles(0);
         auto index = std::make_pair(mfi_ion.index(), mfi_ion.LocalTileIndex());
         if(plevel_ion.find(index) == plevel_ion.end()) continue;
