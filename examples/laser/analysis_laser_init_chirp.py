@@ -20,10 +20,8 @@ def get_zeta(Ar, m, w0, L):
     # unwrap phi_envelop
     phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0), axis=1)
     # calculate pphi_pz
-    z_diff = np.diff(m.z)
-    x_diff = np.diff(m.x)
-    pphi_pz = (np.diff(phi_envelop, axis=0)).T / (z_diff / scc.c)
-    pphi_pzpy = (np.diff(pphi_pz, axis=0)).T / x_diff
+    pphi_pz = (np.diff(phi_envelop, axis=0)).T / (np.diff(m.z) / scc.c)
+    pphi_pzpy = (np.diff(pphi_pz, axis=0)).T / np.diff(m.x)
     for i in range(len(m.z) - 2):
         for j in range(len(m.x) - 2):
             nu = nu + pphi_pzpy[i, j] * laser_module[i, j]
