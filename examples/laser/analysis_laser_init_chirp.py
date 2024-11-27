@@ -22,11 +22,7 @@ def get_zeta(Ar, m, w0, L):
     # calculate pphi_pz
     pphi_pz = (np.diff(phi_envelop, axis=0)).T / (np.diff(m.z) / scc.c)
     pphi_pzpy = (np.diff(pphi_pz, axis=0)).T / np.diff(m.x)
-    for i in range(len(m.z) - 2):
-        for j in range(len(m.x) - 2):
-            nu = nu + pphi_pzpy[i, j] * laser_module[i, j]
-            summ = summ + laser_module[i, j]
-    nu = nu / scc.c / summ
+    nu = np.sum(pphi_pzpy * laser_module) / scc.c / np.sum(laser_module)
     a = 4 * nu * w0**2 * L**4
     b = -4 * scc.c
     c = nu * w0**2 * L**2
