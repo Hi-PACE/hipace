@@ -13,8 +13,6 @@ import scipy.constants as scc
 from openpmd_viewer.addons import LpaDiagnostics
 
 def get_zeta(Ar, m, w0, L):
-    nu = 0
-    summ = 0
     laser_module = np.abs(Ar)
     phi_envelop = np.array(np.arctan2(Ar.imag, Ar.real))
     # unwrap phi_envelop
