@@ -19,7 +19,7 @@ def get_zeta(Ar, m, w0, L):
     phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0), axis=1)
     # calculate pphi_pz
     pphi_pz = (np.gradient(phi_envelop,m.z / scc.c, axis=0)).T
-    pphi_pzpy = (np.gradient(pphi_pz,m.x axis=0)).T
+    pphi_pzpy = (np.gradient(pphi_pz,m.x, axis=0)).T
     nu = np.sum(pphi_pzpy * laser_module) / scc.c / np.sum(laser_module)
     a = 4 * nu * w0**2 * L**4
     b = -4 * scc.c
