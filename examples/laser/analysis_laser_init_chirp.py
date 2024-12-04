@@ -78,7 +78,7 @@ w0 = 30.e-6              # Laser waist
 L0 = 5e-6
 tau = L0 / scc.c         # Laser duration
 k0 = 2 * scc.pi / lambda0
-print(zeta)
+print(get_zeta(Ar, m, w0, L0))
 if args.chirp_type == 'phi2':
     phi2 = get_phi2(Ar, m, tau)
     assert(np.abs(phi2 - 2.4e-26) / 2.4e-26 < 1e-2)
