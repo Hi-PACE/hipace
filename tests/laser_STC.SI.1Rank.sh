@@ -38,7 +38,7 @@ rm -rf $TEST_NAME
 
 # Run the simulation with initial zeta
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_chirp \
-        laser.zeta = 2.4e-19 \
+        laser.zeta = 2.4e-23 \
         laser.STC_theta_xy = 0 \
         hipace.file_prefix = $TEST_NAME
 
