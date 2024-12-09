@@ -27,10 +27,6 @@ TEST_NAME="${FILE_NAME%.*}"
 
 # Run the simulation with initial phi2
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_chirp \
-        laser.phi2 = 2.4e-26 \
-        laser.zeta = 2.4e-21 \
-        laser.beta = 2e-16 \
-        laser.STC_theta_xy = 0 \
         hipace.file_prefix = $TEST_NAME
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_init_chirp.py --output-dir=$TEST_NAME
