@@ -54,8 +54,6 @@ def get_zeta(Ar,m):
     yda = np.sum(m.x * env_spec_abs, axis=1) / np.sum(env_spec_abs, axis=1)
     derivative_y_zeta = np.gradient(yda, omega)
     weight_y_2d = np.mean(env_spec_abs, axis=1)
-    print(derivative_y_zeta.shape)
-    print(weight_y_2d.shape)
     zeta_y = np.average(derivative_y_zeta.T, weights=weight_y_2d)
     return zeta_y
     
