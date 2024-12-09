@@ -81,12 +81,11 @@ args = parser.parse_args()
 ts = LpaDiagnostics(args.output_dir)
 
 Ar, m = ts.get_field(field='laserEnvelope', iteration=0)
-lambda0 = .8e-6          # Laser wavelength
-w0 = 30.e-6              # Laser waist
-L0 = 5e-6
-tau = L0 / scc.c         # Laser duration
+lambda0 = .6e-6          # Laser wavelength
+w0 = 5e-6              # Laser waist
+tau = 5e-14        # Laser duration
 k0 = 2 * scc.pi / lambda0
 print(get_zeta(Ar, m,k0))
-assert(np.abs(get_phi2(Ar, m) - 2.4e-26) / 2.4e-26 < 1e-2)
-assert(np.abs(get_beta(Ar, m, k0) - 2e-16) / 2e-16 < 1e-2)
-assert(np.abs( get_zeta(Ar, m,k0) - 2.4e-21) / 2.4e-21 < 1e-2)
+assert(np.abs(get_phi2(Ar, m) - 2.4e-19) / 2.4e-19 < 1e-2)
+assert(np.abs(get_beta(Ar, m, k0) - 3e-18) / 3e-18 < 1e-2)
+assert(np.abs( get_zeta(Ar, m,k0) - 2.4e-24) / 2.4e-24 < 1e-2)
