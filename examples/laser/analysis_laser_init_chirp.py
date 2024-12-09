@@ -85,7 +85,10 @@ lambda0 = .6e-6          # Laser wavelength
 w0 = 5e-6              # Laser waist
 tau = 5e-14        # Laser duration
 k0 = 2 * scc.pi / lambda0
-print(get_zeta(Ar, m,k0))
+print('zeta is ')
+print(get_zeta(Ar, m, k0))
+print('beta is ')
+print(get_beta(Ar, m, k0))
 assert(np.abs(get_phi2(Ar, m) - 2.4e-19) / 2.4e-19 < 1e-2)
 assert(np.abs(get_beta(Ar, m, k0) - 3e-18) / 3e-18 < 1e-2)
 assert(np.abs( get_zeta(Ar, m,k0) - 2.4e-24) / 2.4e-24 < 1e-2)
