@@ -87,12 +87,6 @@ L0 = 5e-6
 tau = L0 / scc.c         # Laser duration
 k0 = 2 * scc.pi / lambda0
 print(get_zeta(Ar, m,k0))
-if args.chirp_type == 'phi2':
-    phi2 = get_phi2(Ar, m)
-    assert(np.abs(phi2 - 2.4e-26) / 2.4e-26 < 1e-2)
-elif args.chirp_type == 'beta':
-    beta = get_beta(Ar, m, k0)
-    assert(np.abs(beta - 2e-17) / 2e-17 < 1e-2)
-elif args.chirp_type == 'zeta':
-    zeta = get_zeta(Ar, m,k0)
-    assert(np.abs(zeta - 2.4e-22) / 2.4e-22 < 1e-2)
+assert(np.abs(get_phi2(Ar, m) - 2.4e-26) / 2.4e-26 < 1e-2)
+assert(np.abs(get_beta(Ar, m, k0) - 2e-17) / 2e-17 < 1e-2)
+assert(np.abs( get_zeta(Ar, m,k0) - 2.4e-22) / 2.4e-22 < 1e-2)
