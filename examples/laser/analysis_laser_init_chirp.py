@@ -24,8 +24,8 @@ def get_phi2 (Ar, m):
     laser_module1 = np.abs(Ar**2)
     phi_envelop = np.unwrap( np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0), axis=1)
     # calculate pphi_pz
-    pphi_pz = np.gradient(phi_envelop, (m.z[1]-m.z[0]), axis=1)
-    pphi_pz2 = np.gradient(pphi_pz, (m.z[1]-m.z[0]), axis=1)
+    pphi_pz = np.gradient(phi_envelop, (m.z[1]-m.z[0])/scc.c, axis=0)
+    pphi_pz2 = np.gradient(pphi_pz, (m.z[1]-m.z[0])/scc.c, axis=0)
     temp_chirp = np.average(pphi_pz2, weights=laser_module1)       
     x = temp_chirp
     a = 4 * x
