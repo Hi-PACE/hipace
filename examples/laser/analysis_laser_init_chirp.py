@@ -90,9 +90,9 @@ print(get_zeta(Ar, m))
 if args.chirp_type == 'phi2':
     phi2 = get_phi2(Ar, m, tau)
     assert(np.abs(phi2 - 2.4e-26) / 2.4e-26 < 1e-2)
-elif args.chirp_type == 'zeta':
-    zeta = get_zeta(Ar, m)
-    assert(np.abs(zeta - 2.4e-19) / 2.4e-19 < 1e-2)
 elif args.chirp_type == 'beta':
     beta = get_beta(Ar, m, k0)
     assert(np.abs(beta - 2e-17) / 2e-17 < 1e-2)
+elif args.chirp_type == 'zeta':
+    zeta = get_zeta(Ar, m)
+    assert(np.abs(zeta - 2.4e-19) / 2.4e-19 < 1e-2)
