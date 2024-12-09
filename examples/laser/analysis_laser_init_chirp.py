@@ -20,10 +20,10 @@ def get_zeta(Ar, m, w0, L):
     # calculate pphi_pz
     pphi_pz = (np.gradient(phi_envelop,m.z / scc.c, axis=0)).T
     pphi_pzpy = (np.gradient(pphi_pz,m.x, axis=0)).T
-    nu = np.sum(pphi_pzpy * laser_module) / scc.c / np.sum(laser_module)
-    a = 4 * nu * w0**2 * L**4
-    b = -4 * scc.c
-    c = nu * w0**2 * L**2
+    nu = np.sum(pphi_pzpy * laser_module) / np.sum(laser_module)
+    a = nu * scc.c**2 
+    b = -scc.c**2
+    c = w0**2 * L**2 / 4
     zeta_roots = np.roots([a, b, c])
     return np.min(zeta_roots)
 
