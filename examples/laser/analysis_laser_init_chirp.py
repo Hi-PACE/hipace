@@ -50,7 +50,6 @@ def temporal2spectral_fft(Ar,m):
 def get_zeta(Ar,m):
     omega,env_spec=temporal2spectral_fft(Ar,m)
     env_spec_abs = np.abs(env_spec**2)
-    
     yda = np.sum(m.x * env_spec_abs, axis=1) / np.sum(env_spec_abs, axis=1)
     derivative_y_zeta = np.gradient(yda, omega)
     weight_y_2d = np.mean(env_spec_abs, axis=1)
@@ -66,7 +65,7 @@ def get_beta(Ar,m,k0):
     angle_y = np.gradient(phi_envelop_abs, m.x[1]-m.x[0], axis=0) / k0
     derivative_y_beta = np.gradient(angle_y, omega, axis=0)
     beta_y = np.average(derivative_y_beta, weights=env_spec_abs)
-    return beta_y 
+    return beta_y
 
 parser = argparse.ArgumentParser(description = 'Verify the chirp initialization')
 parser.add_argument('--output-dir',
@@ -92,7 +91,7 @@ if args.chirp_type == 'phi2':
     phi2 = get_phi2(Ar, m, tau)
     assert(np.abs(phi2 - 2.4e-26) / 2.4e-26 < 1e-2)
 elif args.chirp_type == 'zeta':
-    zeta = get_zeta(Ar, m, w0, L0)
+    zeta = get_zeta(Ar, m)
     assert(np.abs(zeta - 2.4e-19) / 2.4e-19 < 1e-2)
 elif args.chirp_type == 'beta':
     beta = get_beta(Ar, m, k0)
