@@ -13,7 +13,7 @@ import scipy.constants as scc
 from openpmd_viewer.addons import LpaDiagnostics
 
 def get_zeta(Ar, m, w0, L):
-    laser_module = np.abs(Ar)
+    laser_module = np.abs(Ar**2)
     phi_envelop = np.array(np.arctan2(Ar.imag, Ar.real))
     # unwrap phi_envelop
     phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0), axis=1)
@@ -31,7 +31,7 @@ def get_phi2 (Ar, m, tau):
     # get temporal chirp phi2
     temp_chirp = 0
     summ = 0
-    laser_module1 = np.abs(Ar)
+    laser_module1 = np.abs(Ar**2)
     phi_envelop = np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0)
     # calculate pphi_pz
     z_diff = np.diff(m.z)
