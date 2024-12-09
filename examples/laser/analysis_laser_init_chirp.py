@@ -23,7 +23,7 @@ def get_zeta(Ar, m, w0, L):
     nu = np.sum(pphi_pzpy * laser_module) / np.sum(laser_module)
     a = nu * scc.c**2
     b = -scc.c**2
-    c = w0**2 * L**2 / 4
+    c = w0**2 * L**2 * nu / 4
     zeta_roots = np.roots([a, b, c])
     return np.max(zeta_roots)
 
