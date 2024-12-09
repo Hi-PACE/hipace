@@ -12,21 +12,22 @@ import numpy as np
 import scipy.constants as scc
 from openpmd_viewer.addons import LpaDiagnostics
 
-def get_phi2 (Ar, m, tau):
+def get_duration(Ar,m):
+    weights=np.abs(Ar**2)
+    mean_val = np.average(m.z, weights=np.sum(weights,axis=1))
+    std = np.sqrt(np.average((m.z - mean_val) ** 2, weights=np.sum(weights,axis=1)))
+    return 2*std/scc.c
+
+def get_phi2 (Ar, m):
     # get temporal chirp phi2
-    temp_chirp = 0
-    summ = 0
+    tau = get_duration(Ar,m)
     laser_module1 = np.abs(Ar**2)
-    phi_envelop = np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0)
+    phi_envelop = np.unwrap( np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0), axis=1)
     # calculate pphi_pz
-    z_diff = np.diff(m.z)
-    pphi_pz = (np.diff(phi_envelop, axis=0)).T/ (z_diff/scc.c)
-    pphi_pz2 = ((np.diff(pphi_pz, axis=1)) / (z_diff[:len(z_diff)-1]) / scc.c).T
-    for i in range(len(m.z)-2):
-        for j in range(len(m.x)-2):
-            temp_chirp = temp_chirp + pphi_pz2[i,j] * laser_module1[i,j]
-            summ = summ + laser_module1[i,j]
-    x = temp_chirp * scc.c**2 / summ
+    pphi_pz = np.gradient(phi_envelop, (m.z[1]-m.z[0]), axis=1)
+    pphi_pz2 = np.gradient(pphi_pz, (m.z[1]-m.z[0]), axis=1)
+    temp_chirp = np.average(pphi_pz2, weights=laser_module1)       
+    x = temp_chirp
     a = 4 * x
     b = -4
     c = tau**4 * x
