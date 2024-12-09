@@ -31,15 +31,14 @@ def get_phi2 (Ar, m):
     a = 4 * x
     b = -4
     c = tau**4 * x
-    zeta_roots = np.roots([a, b, c])
-    return np.max(zeta_roots)
+    return np.max(np.roots([a, b, c]))
 
 def get_centroids(F, x, z):
     index_array = np.mgrid[0:F.shape[0], 0:F.shape[1]][1]
     centroids = np.sum(index_array * np.abs(F**2), axis=1) / np.sum(np.abs(F**2), axis=1)
     return z[centroids.astype(int)]
 
-def temporal2spectral_fft(Ar,m):
+def temporal2spectral_fft(Ar,m,k0):
     spect=np.fft.ifft(
             Ar, axis=1, norm="backward"
         )
@@ -48,8 +47,8 @@ def temporal2spectral_fft(Ar,m):
     omega = 2 * np.pi * np.fft.fftfreq(Nt, dt) + k0 *scc.c
     return omega,spect
 
-def get_zeta(Ar,m):
-    omega,env_spec=temporal2spectral_fft(Ar,m)
+def get_zeta(Ar,m,k0):
+    omega,env_spec=temporal2spectral_fft(Ar,m,k0)
     env_spec_abs = np.abs(env_spec**2)
     yda = np.sum(m.x * env_spec_abs, axis=1) / np.sum(env_spec_abs, axis=1)
     derivative_y_zeta = np.gradient(yda, omega)
@@ -58,7 +57,7 @@ def get_zeta(Ar,m):
     return zeta_y
     
 def get_beta(Ar,m,k0):
-    omega,env_spec=temporal2spectral_fft(Ar,m)
+    omega,env_spec=temporal2spectral_fft(Ar,m,k0)
     env_spec_abs = np.abs(env_spec**2)
     phi_envelop_abs = np.unwrap(
             np.arctan2(env_spec.imag, env_spec.real), axis=0
@@ -95,5 +94,5 @@ elif args.chirp_type == 'beta':
     beta = get_beta(Ar, m, k0)
     assert(np.abs(beta - 2e-17) / 2e-17 < 1e-2)
 elif args.chirp_type == 'zeta':
-    zeta = get_zeta(Ar, m)
+    zeta = get_zeta(Ar, m,k0)
     assert(np.abs(zeta - 2.4e-22) / 2.4e-22 < 1e-2)
