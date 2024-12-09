@@ -9,20 +9,20 @@ my_constants.kp_inv = 10.e-6
 hipace.file_prefix = new
 hipace.do_tiling = 0
 
-geometry.prob_lo = -15.*kp_inv   -15.*kp_inv   -2.*kp_inv
-geometry.prob_hi =  15.*kp_inv    15.*kp_inv    2.*kp_inv
+geometry.prob_lo = -15e-6   -15e-6   -8e-6
+geometry.prob_hi =  15e-6    15e-6    8e-6
 
 lasers.names = laser
-lasers.lambda0 = .8e-6
+lasers.lambda0 = .6e-6
 
 laser.a0 = 1
 laser.position_mean = 0. 0. 0
 laser.focal_distance = 0.0
-laser.w0 = 30e-6
-laser.L0 = 5e-6
-laser.phi2 = 2.4e-26 
-laser.zeta = 2.4e-21
-laser.beta = 2e-16
+laser.w0 = 5e-6
+laser.tau = 5e-14
+laser.phi2 = 2.4e-19
+laser.zeta = 2.4e-24
+laser.beta = 3e-18
 laser.STC_theta_xy = 0
 amr.max_level = 0
 
