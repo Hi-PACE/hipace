@@ -12,21 +12,6 @@ import numpy as np
 import scipy.constants as scc
 from openpmd_viewer.addons import LpaDiagnostics
 
-def get_zeta(Ar, m, w0, L):
-    laser_module = np.abs(Ar**2)
-    phi_envelop = np.array(np.arctan2(Ar.imag, Ar.real))
-    # unwrap phi_envelop
-    phi_envelop = np.unwrap(np.unwrap(phi_envelop, axis=0), axis=1)
-    # calculate pphi_pz
-    pphi_pz = (np.gradient(phi_envelop,m.z, axis=0)).T * scc.c
-    pphi_pzpy = (np.gradient(pphi_pz,m.x, axis=0)).T
-    nu = np.sum(pphi_pzpy * laser_module) / np.sum(laser_module)
-    a = nu * scc.c**2
-    b = -scc.c**2
-    c = w0**2 * L**2 * nu / 4
-    zeta_roots = np.roots([a, b, c])
-    return np.max(np.abs(zeta_roots))
-
 def get_phi2 (Ar, m, tau):
     # get temporal chirp phi2
     temp_chirp = 0
@@ -53,11 +38,37 @@ def get_centroids(F, x, z):
     centroids = np.sum(index_array * np.abs(F**2), axis=1) / np.sum(np.abs(F**2), axis=1)
     return z[centroids.astype(int)]
 
-def get_beta(F, m, k0):
-    z_centroids = get_centroids(F.T, m.x, m.z)
-    weight = np.mean(np.abs(F.T)**2, axis = np.ndim(F) - 1)
-    derivative = np.gradient(z_centroids) / (m.x[1] - m.x[0])
-    return (np.sum(derivative * weight) / np.sum(weight)) / k0 / scc.c
+def temporal2spectral_fft(Ar,m):
+    spect=np.fft.ifft(
+            Ar, axis=1, norm="backward"
+        )
+    Nt = len(m.z)
+    dt= (m.z[1]-m.z[0])/scc.c
+    omega = 2 * np.pi * np.fft.fftfreq(Nt, dt) + k0 *scc.c
+    return omega,spect
+
+def get_zeta(Ar,m):
+    omega,env_spec=temporal2spectral_fft(Ar,m)
+    env_spec_abs = np.abs(env_spec**2)
+    
+    yda = np.sum(m.x * env_spec_abs, axis=1) / np.sum(env_spec_abs, axis=1)
+    derivative_y_zeta = np.gradient(yda, omega)
+    weight_y_2d = np.mean(env_spec_abs, axis=1)
+    print(derivative_y_zeta.shape)
+    print(weight_y_2d.shape)
+    zeta_y = np.average(derivative_y_zeta.T, weights=weight_y_2d)
+    return zeta_y
+    
+def get_beta(Ar,m,k0):
+    omega,env_spec=temporal2spectral_fft(Ar,m)
+    env_spec_abs = np.abs(env_spec**2)
+    phi_envelop_abs = np.unwrap(
+            np.arctan2(env_spec.imag, env_spec.real), axis=0
+        )
+    angle_y = np.gradient(phi_envelop_abs, m.x[1]-m.x[0], axis=0) / k0
+    derivative_y_beta = np.gradient(angle_y, omega, axis=0)
+    beta_y = np.average(derivative_y_beta, weights=env_spec_abs)
+    return beta_y 
 
 parser = argparse.ArgumentParser(description = 'Verify the chirp initialization')
 parser.add_argument('--output-dir',
