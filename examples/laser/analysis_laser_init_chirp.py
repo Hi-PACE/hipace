@@ -25,7 +25,7 @@ def get_zeta(Ar, m, w0, L):
     b = -scc.c**2
     c = w0**2 * L**2 * nu / 4
     zeta_roots = np.roots([a, b, c])
-    return np.max(zeta_roots)
+    return np.max(np.abs(zeta_roots))
 
 def get_phi2 (Ar, m, tau):
     # get temporal chirp phi2
