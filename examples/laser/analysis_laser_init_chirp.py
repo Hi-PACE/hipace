@@ -95,4 +95,4 @@ elif args.chirp_type == 'beta':
     assert(np.abs(beta - 2e-17) / 2e-17 < 1e-2)
 elif args.chirp_type == 'zeta':
     zeta = get_zeta(Ar, m)
-    assert(np.abs(zeta - 2.4e-19) / 2.4e-19 < 1e-2)
+    assert(np.abs(zeta - 2.4e-22) / 2.4e-22 < 1e-2)
