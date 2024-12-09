@@ -20,6 +20,10 @@ laser.position_mean = 0. 0. 0
 laser.focal_distance = 0.0
 laser.w0 = 30e-6
 laser.L0 = 5e-6
+laser.phi2 = 2.4e-26 
+laser.zeta = 2.4e-21
+laser.beta = 2e-16
+laser.STC_theta_xy = 0
 amr.max_level = 0
 
 diagnostic.output_period = 1
