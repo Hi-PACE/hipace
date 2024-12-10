@@ -23,7 +23,7 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/laser
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 FILE_NAME=`basename "$0"`
-TEST_NAME="${FILE_NAME%.*}"
+TEST_NAME="${FILE_NAME%.*}_0"
 
 # Run the simulation with initial phi2
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_chirp \
