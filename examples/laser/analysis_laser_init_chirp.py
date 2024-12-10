@@ -14,15 +14,6 @@ from openpmd_viewer.addons import LpaDiagnostics
 from lasy.utils.laser_utils import get_STC
 from lasy.profiles import FromOpenPMDProfile
 
-profile = FromOpenPMDProfile(path=args.output_dir,iteration=0,pol=[1,0],field='laserEnvelope',coord=, is_envelope=True)
-laser = Laser(
-        dim="xyt",
-        lo=(-15e-6, -15e-6, -30e-15),
-        hi=(15e-6,15e-6, +30e-15),
-        npoints=(50, 400),
-        profile=profile,
-     )
-
 parser = argparse.ArgumentParser(description = 'Verify the chirp initialization')
 parser.add_argument('--output-dir',
                     dest='output_dir',
@@ -34,6 +25,14 @@ parser.add_argument('--chirp_type',
                     help='Type of the initialized chirp')
 args = parser.parse_args()
 
+profile = FromOpenPMDProfile(path=args.output_dir,iteration=0,pol=[1,0],field='laserEnvelope',coord=, is_envelope=True)
+laser = Laser(
+        dim="xyt",
+        lo=(-15e-6, -15e-6, -30e-15),
+        hi=(15e-6,15e-6, +30e-15),
+        npoints=(50, 400),
+        profile=profile,
+     )
 
 k0 = 2 * scc.pi / lambda0
 stc=get_STC(laser.grid,laser.dim,k0)
