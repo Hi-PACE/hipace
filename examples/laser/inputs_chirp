@@ -33,4 +33,5 @@ hipace.depos_order_xy = 0
 boundary.field = Dirichlet
 boundary.particle = Absorbing
 
+diagnostic.field_data = laserEnvelope
 diagnostic.diag_type = xyz
