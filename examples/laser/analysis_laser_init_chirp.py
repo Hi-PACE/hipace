@@ -11,61 +11,17 @@ import argparse
 import numpy as np
 import scipy.constants as scc
 from openpmd_viewer.addons import LpaDiagnostics
+from lasy.utils.laser_utils import get_STC
+from lasy.profiles import FromOpenPMDProfile
 
-def get_duration(Ar,m):
-    weights=np.abs(Ar**2)
-    mean_val = np.average(m.z, weights=np.sum(weights,axis=1))
-    std = np.sqrt(np.average((m.z - mean_val) ** 2, weights=np.sum(weights,axis=1)))
-    return 2*std/scc.c
-
-def get_phi2 (Ar, m):
-    # get temporal chirp phi2
-    tau = get_duration(Ar,m)
-    laser_module1 = np.abs(Ar**2)
-    phi_envelop = np.unwrap( np.unwrap(np.array(np.arctan2(Ar.imag, Ar.real)), axis=0), axis=1)
-    # calculate pphi_pz
-    pphi_pz = np.gradient(phi_envelop, (m.z[1]-m.z[0])/scc.c, axis=0)
-    pphi_pz2 = np.gradient(pphi_pz, (m.z[1]-m.z[0])/scc.c, axis=0)
-    temp_chirp = np.average(pphi_pz2, weights=laser_module1)       
-    x = temp_chirp
-    a = 4 * x
-    b = -4
-    c = tau**4 * x
-    return np.max(np.roots([a, b, c]))
-
-def get_centroids(F, x, z):
-    index_array = np.mgrid[0:F.shape[0], 0:F.shape[1]][1]
-    centroids = np.sum(index_array * np.abs(F**2), axis=1) / np.sum(np.abs(F**2), axis=1)
-    return z[centroids.astype(int)]
-
-def temporal2spectral_fft(Ar,m,k0):
-    spect=np.fft.ifft(
-            Ar, axis=1, norm="backward"
-        )
-    Nt = len(m.z)
-    dt= (m.z[1]-m.z[0])/scc.c
-    omega = 2 * np.pi * np.fft.fftfreq(Nt, dt) + k0 *scc.c
-    return omega,spect
-
-def get_zeta(Ar,m,k0):
-    omega,env_spec=temporal2spectral_fft(Ar,m,k0)
-    env_spec_abs = np.abs(env_spec**2)
-    yda = np.sum(m.x * env_spec_abs, axis=1) / np.sum(env_spec_abs, axis=1)
-    derivative_y_zeta = np.gradient(yda, omega)
-    weight_y_2d = np.mean(env_spec_abs, axis=1)
-    zeta_y = np.average(derivative_y_zeta.T, weights=weight_y_2d)
-    return zeta_y
-    
-def get_beta(Ar,m,k0):
-    omega,env_spec=temporal2spectral_fft(Ar,m,k0)
-    env_spec_abs = np.abs(env_spec**2)
-    phi_envelop_abs = np.unwrap(
-            np.arctan2(env_spec.imag, env_spec.real), axis=0
-        )
-    angle_y = np.gradient(phi_envelop_abs, m.x[1]-m.x[0], axis=0) / k0
-    derivative_y_beta = np.gradient(angle_y, omega, axis=0)
-    beta_y = np.average(derivative_y_beta, weights=env_spec_abs)
-    return beta_y
+profile = FromOpenPMDProfile(path=args.output_dir,iteration=0,pol=[1,0],field='laserEnvelope',coord=, is_envelope=True)
+laser = Laser(
+        dim="xyt",
+        lo=(-15e-6, -15e-6, -30e-15),
+        hi=(15e-6,15e-6, +30e-15),
+        npoints=(50, 400),
+        profile=profile,
+     )
 
 parser = argparse.ArgumentParser(description = 'Verify the chirp initialization')
 parser.add_argument('--output-dir',
@@ -78,17 +34,13 @@ parser.add_argument('--chirp_type',
                     help='Type of the initialized chirp')
 args = parser.parse_args()
 
-ts = LpaDiagnostics(args.output_dir)
 
-Ar, m = ts.get_field(field='laserEnvelope', iteration=0)
-lambda0 = .6e-6          # Laser wavelength
-w0 = 5e-6              # Laser waist
-tau = 5e-14        # Laser duration
 k0 = 2 * scc.pi / lambda0
+stc=get_STC(laser.grid,laser.dim,k0)
 print('zeta is ')
-print(get_zeta(Ar, m, k0))
+print(stc['zeta_x'])
 print('beta is ')
-print(get_beta(Ar, m, k0))
-assert(np.abs(get_phi2(Ar, m) - 2.4e-19) / 2.4e-19 < 1e-2)
-assert(np.abs(get_beta(Ar, m, k0) - 3e-18) / 3e-18 < 1e-2)
-assert(np.abs( get_zeta(Ar, m,k0) - 2.4e-24) / 2.4e-24 < 1e-2)
+print(stc['beta_x'])
+assert(np.abs(stc['phi2'] - 2.4e-19) / 2.4e-19 < 1e-2)
+assert(np.abs(stc['beta_x'] - 3e-18) / 3e-18 < 1e-2)
+assert(np.abs(stc['zeta_x'] - 2.4e-24) / 2.4e-24 < 1e-2)
