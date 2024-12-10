@@ -23,6 +23,7 @@
 #include <cmath>
 #include <fstream>
 #include <sstream>
+#include "laser/MultiLaser.H"
 
 void
 PlasmaParticleContainer::ReadParameters ()
@@ -501,6 +502,8 @@ LaserIonization (const int islice,
                                          (PhysConstSI::ep0 * PhysConstSI::m_e) );
         const amrex::Real E0 = Hipace::m_normalized_units ?
                                wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
+        const amrex::Real lambda0 = laser.GetLambda0();
+        const amrex::Real omega0 = 2.0 * MathConst::pi * phys_const.c / lambda0;
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
         const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
@@ -523,6 +526,11 @@ LaserIonization (const int islice,
 
         long num_ions = ptile_ion.numParticles();
 
+        //const bool is_laser_comp = fd.m_base_geom_type == FieldDiagnosticData::geom_type::laser;
+        //openPMD::Datatype datatype = is_laser_comp ?
+        //    openPMD::determineDatatype< std::complex<amrex::Real> >() :
+        //    openPMD::determineDatatype< amrex::Real >();
+        //if (is_laser_comp){
         amrex::AnyCTO(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>
@@ -550,11 +558,14 @@ LaserIonization (const int islice,
             // this is likely incorrect
             doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
                 dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+    
+            
+            const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; //transverse component
+            //const Complex Et = I * A - A_dzeta;
+            const Complex El = - A_dx * phys_const.c; //longitudinal component
 
-            const Complex E1 = I * A - A_dzeta;
-            const Complex E2 = - A_dx;
-
-            const amrex::Real Ep = std::sqrt( amrex::abs(E1*E1) + amrex::abs(E2*E2) )*E0;
+            amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
+            Ep = Ep * phys_const.m_e * phys_const.c / phys_const.q_e;
 
             // Compute probability of ionization p
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
@@ -569,7 +580,13 @@ LaserIonization (const int islice,
             amrex::Real w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
 
             amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
-
+            
+            //if (amrex::abs(A)>0.001){
+            //    amrex::Real p = 1._rt;
+            //} else {
+            //    amrex::Real p = 0._rt;
+            //}
+            
             amrex::Real random_draw = amrex::Random(engine);
             if (random_draw < p)
             {
@@ -577,7 +594,9 @@ LaserIonization (const int islice,
                 p_ion_mask[ip] = 1;
                 amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u );
             }
+            
         });
+        //}
         amrex::Gpu::streamSynchronize();
 
         if (num_new_electrons.dataValue() == 0) continue;
@@ -586,7 +605,7 @@ LaserIonization (const int islice,
             amrex::Print() << "Number of ionized Plasma Particles (laser): "
             << num_new_electrons.dataValue() << "\n";
         }
-
+    
 
         // resize electron particle tile
         const auto old_size = ptile_elec.numParticles();
