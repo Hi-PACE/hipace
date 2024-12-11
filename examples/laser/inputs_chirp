@@ -5,8 +5,8 @@ hipace.verbose = 3
 amr.n_cell = 255 255 200
 hipace.do_tiling = 0
 
-geometry.prob_lo = -15e-6   -15e-6   -8e-6
-geometry.prob_hi =  15e-6    15e-6    8e-6
+geometry.prob_lo = -30e-6   -30e-6   -8e-6
+geometry.prob_hi =  30e-6    30e-6    8e-6
 
 lasers.names = laser
 lasers.lambda0 = .6e-6
