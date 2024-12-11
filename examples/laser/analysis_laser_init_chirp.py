@@ -29,9 +29,9 @@ print(args.output_dir)
 profile = FromOpenPMDProfile(path=args.output_dir,iteration=0,pol=[1,0],field='laserEnvelope', is_envelope=True, prefix='openpmd')
 laser = Laser(
         dim="xyt",
-        lo=(-15e-6, -15e-6, -30e-15),
-        hi=(15e-6, 15e-6, +30e-15),
-        npoints=(255, 255, 50),
+        lo=(np.min(profile.axes['x']), np.min(profile.axes['y']), np.min(profile.axes['t'])),
+        hi=(np.max(profile.axes['x']), np.max(profile.axes['y']), np.max(profile.axes['t'])),
+        npoints=(255, 255, 200),
         profile=profile,
      )
 
