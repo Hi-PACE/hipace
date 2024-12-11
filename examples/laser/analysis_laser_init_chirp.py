@@ -25,7 +25,7 @@ parser.add_argument('--chirp_type',
                     help='Type of the initialized chirp')
 args = parser.parse_args()
 print(args.output_dir)
-profile = FromOpenPMDProfile(path=' ',iteration=0,pol=[1,0],field='laserEnvelope', is_envelope=True, prefix=args.output_dir)
+profile = FromOpenPMDProfile(path=args.output_dir,iteration=0,pol=[1,0],field='laserEnvelope', is_envelope=True, prefix='openpmd')
 laser = Laser(
         dim="xyt",
         lo=(-15e-6, -15e-6, -30e-15),
