@@ -36,7 +36,7 @@ laser = Laser(
      )
 
 k0 = 2 * scc.pi / 0.6e-6
-stc=get_STC(laser.dim,laser.grid,k0)
+stc=get_STC(laser.dim,laser.grid,k0=k0)
 print('phi2 is ')
 print(stc['phi2'])
 print('zeta is ')
