@@ -13,6 +13,7 @@ import scipy.constants as scc
 from openpmd_viewer.addons import LpaDiagnostics
 from lasy.utils.laser_utils import get_STC
 from lasy.profiles import FromOpenPMDProfile
+from lasy.laser import Laser
 
 parser = argparse.ArgumentParser(description = 'Verify the chirp initialization')
 parser.add_argument('--output-dir',
