@@ -31,7 +31,7 @@ laser = Laser(
         dim="xyt",
         lo=(np.min(profile.axes['x']), np.min(profile.axes['y']), np.min(profile.axes['t'])),
         hi=(np.max(profile.axes['x']), np.max(profile.axes['y']), np.max(profile.axes['t'])),
-        npoints=(255, 255, 200),
+        npoints=(511, 255, 200),
         profile=profile,
      )
 
