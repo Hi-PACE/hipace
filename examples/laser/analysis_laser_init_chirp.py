@@ -36,9 +36,9 @@ laser = Laser(
      )
 
 k0 = 2 * scc.pi / 0.6e-6
-Phi2, phi2 = get_Phi2(Laser.dim, Laser.grid)
-[zeta_x, zeta_y]  = get_Zeta(Laser.dim, Laser.grid, k0)
-[beta_x, beta_y] = get_Beta( Laser.dim, Laser.grid, k0)
+Phi2, phi2 = get_Phi2(Laser.grid.dim, Laser.grid)
+[zeta_x, zeta_y]  = get_Zeta(Laser.grid.dim, Laser.grid, k0)
+[beta_x, beta_y] = get_Beta( Laser.grid.dim, Laser.grid, k0)
 
 print('phi2 is ')
 print(phi2)
@@ -46,4 +46,6 @@ print('zeta is ')
 print([zeta_x, zeta_y])
 print('beta is ')
 print([beta_x, beta_y])
-
+np.testing.assert_approx_equal(phi2, 2.4e-24, significant=2)
+np.testing.assert_approx_equal(zeta_y, 2.4e-22, significant=2)
+np.testing.assert_approx_equal(beta_y, 3e-18, significant=2)
