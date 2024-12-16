@@ -18,7 +18,7 @@ laser.w0 = 5e-6
 laser.tau = 2e-14
 laser.phi2 = 2.4e-24
 laser.zeta = 2.4e-22
-laser.beta = 3e-18
+laser.beta = 0
 laser.STC_theta_xy = 0
 amr.max_level = 0
 
