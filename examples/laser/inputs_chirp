@@ -2,11 +2,11 @@ max_step = 1
 hipace.dt = 70.e-6/clight
 hipace.verbose = 3
 
-amr.n_cell = 511 255 500
+amr.n_cell = 1023 255 1000
 hipace.do_tiling = 0
 
-geometry.prob_lo = -3e-6   -3e-6   -2e-6
-geometry.prob_hi =  3e-6    3e-6    2e-6
+geometry.prob_lo = -5e-6   -5e-6   -2e-6
+geometry.prob_hi =  5e-6    5e-6    2e-6
 
 lasers.names = laser
 lasers.lambda0 = .6e-6
@@ -18,7 +18,7 @@ laser.w0 = 2e-6
 laser.tau = 1e-14
 laser.phi2 = 0
 laser.zeta = 0
-laser.beta = 2e-15
+laser.beta = 1e-14
 laser.STC_theta_xy = 0
 amr.max_level = 0
 
