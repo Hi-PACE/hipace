@@ -11,7 +11,7 @@ import argparse
 import numpy as np
 import scipy.constants as scc
 from openpmd_viewer.addons import LpaDiagnostics
-from lasy.utils.laser_utils import get_Beta, get_Phi2, get_Zeta
+from lasy.utils.laser_utils import get_beta, get_phi2, get_zeta
 from lasy.profiles import FromOpenPMDProfile
 from lasy.laser import Laser
 
@@ -36,9 +36,9 @@ laser = Laser(
      )
 
 k0 = 2 * scc.pi / 0.6e-6
-Phi2, phi2 = get_Phi2(laser.dim, laser.grid)
-[zeta_x, zeta_y]  = get_Zeta(laser.dim, laser.grid, k0)
-[beta_x, beta_y] = get_Beta(laser.dim, laser.grid, k0)
+Phi2, phi2 = get_phi2(laser.dim, laser.grid)
+[zeta_x, zeta_y]  = get_zeta(laser.dim, laser.grid, k0)
+[beta_x, beta_y] = get_beta(laser.dim, laser.grid, k0)
 
 print('phi2 is ')
 print(phi2)
