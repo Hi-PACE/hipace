@@ -5,8 +5,8 @@ hipace.verbose = 3
 amr.n_cell = 511 255 500
 hipace.do_tiling = 0
 
-geometry.prob_lo = -4e-6   -4e-6   -6e-6
-geometry.prob_hi =  4e-6    4e-6    6e-6
+geometry.prob_lo = -4e-6   -4e-6   -4e-6
+geometry.prob_hi =  4e-6    4e-6    4e-6
 
 lasers.names = laser
 lasers.lambda0 = .6e-6
@@ -18,7 +18,7 @@ laser.w0 = 2e-6
 laser.tau = 1e-14
 laser.phi2 = 0
 laser.zeta = 0
-laser.beta = 3e-14
+laser.beta = 3e-15
 laser.STC_theta_xy = 0
 amr.max_level = 0
 
