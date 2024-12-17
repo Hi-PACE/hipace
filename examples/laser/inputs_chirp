@@ -2,7 +2,7 @@ max_step = 1
 hipace.dt = 70.e-6/clight
 hipace.verbose = 3
 
-amr.n_cell = 1023 255 1000
+amr.n_cell = 255 255 200
 hipace.do_tiling = 0
 
 geometry.prob_lo = -5e-6   -5e-6   -2e-6
