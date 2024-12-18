@@ -37,7 +37,7 @@ MultiLaser::ReadParameters ()
     std::string polarization = "linear";
     queryWithParser(pp, "polarization", polarization);
     AMREX_ALWAYS_ASSERT(polarization == "linear" || polarization == "circular");
-    m_linear_polarization = polarization == "linear" ? true : false;
+    m_linear_polarization = polarization == "linear";
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
