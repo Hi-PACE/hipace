@@ -848,6 +848,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     The names of the laser pulses, separated by a space.
     To run without a laser, choose the name ``no_laser``.
 
+* ``lasers.polarization`` (`linear` or `circular`) optional (default `linear`)
+    Polarization of the laser pulse.
+    The ponderomotive force is 2x larger in circular polarization than in linear polarization.
+    Note that the envelope of the vector potential stored in arrays is independent on the polarization, such that the energy is actually 2x higher in circular polarization than in linear polarization.
+
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
 
