@@ -16,6 +16,12 @@ from openpmd_viewer import OpenPMDTimeSeries
 #from lasy.profiles import FromOpenPMDProfile
 #from lasy.laser import Laser
 
+def get_duration(Ar,m):
+    weights=np.abs(Ar**2)
+    mean_val = np.average(m.z, weights=np.sum(weights,axis=1))
+    std = np.sqrt(np.average((m.z - mean_val) ** 2, weights=np.sum(weights,axis=1)))
+    return 2*std/scc.c
+
 def get_phi2 (Ar, m):
     # get temporal chirp phi2
     tau = get_duration(Ar,m)
