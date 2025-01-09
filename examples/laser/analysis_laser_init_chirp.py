@@ -24,13 +24,14 @@ def get_phi2 (Ar, m):
     # calculate pphi_pz
     pphi_pz = np.gradient(phi_envelop, (m.z[1]-m.z[0])/scc.c, axis=0)
     pphi_pz2 = np.gradient(pphi_pz, (m.z[1]-m.z[0])/scc.c, axis=0)
-    temp_chirp = np.average(pphi_pz2, weights=laser_module1)       
+    temp_chirp = np.average(pphi_pz2, weights=laser_module1)
     x = temp_chirp
     a = 4 * x
     b = -4
     c = tau**4 * x
     zeta_roots = np.roots([a, b, c])
     return np.max(zeta_roots)
+    
 def temporal2spectral_fft(Ar, m, k0):
     spect=np.fft.ifft(
             Ar, axis=1, norm="backward"
@@ -39,7 +40,6 @@ def temporal2spectral_fft(Ar, m, k0):
     dt= (m.z[1]-m.z[0])/scc.c
     omega = 2 * np.pi * np.fft.fftfreq(Nt, dt) + k0 *scc.c
     return omega,spect
-
 
 def get_zeta(Ar,m,k0):
     omega,env_spec=temporal2spectral_fft(Ar,m,k0)
@@ -59,7 +59,7 @@ def get_beta(F, m, k0):
     angle_y = np.gradient(phi_envelop_abs, m.y, axis=1) / k0
     dtdb= np.gradient(angle_y, omega, axis=0)
     weight = np.abs(env_spec)**2
-    return (np.sum(dtdb * weight) / np.sum(weight)) 
+    return (np.sum(dtdb * weight) / np.sum(weight))
     
 parser = argparse.ArgumentParser(description = 'Verify the chirp initialization')
 parser.add_argument('--output-dir',
