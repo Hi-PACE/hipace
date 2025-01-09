@@ -292,8 +292,6 @@ IonizationModule (const int lev,
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
-        const int depos_order_xy = Hipace::m_depos_order_xy;
-
         auto& plevel_ion = GetParticles(0);
         auto index = std::make_pair(mfi_ion.index(), mfi_ion.LocalTileIndex());
         if(plevel_ion.find(index) == plevel_ion.end()) continue;
@@ -331,8 +329,17 @@ IonizationModule (const int lev,
 
         long num_ions = ptile_ion.numParticles();
 
-        amrex::ParallelForRNG(num_ions,
-            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine) {
+        amrex::AnyCTO(
+            amrex::TypeList<
+                amrex::CompileTimeOptions<0, 1, 2, 3>
+            >{}, {
+                Hipace::m_depos_order_xy
+            },
+            [&] (auto cto_func) {
+                amrex::ParallelForRNG(num_ions, cto_func);
+            },
+            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
+                                  auto depos_order_xy) {
 
             if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
                 amrex::ConstParticleCPUWrapper(idcpup[ip]) != lev) return;
@@ -345,10 +352,10 @@ IonizationModule (const int lev,
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
             amrex::ParticleReal Bxp = 0., Byp = 0., Bzp = 0.;
 
-            doGatherShapeN(xp, yp,
+            doGatherShapeN<depos_order_xy>(xp, yp,
                            ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
                            psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
-                           dx_inv, dy_inv, x_pos_offset, y_pos_offset, depos_order_xy);
+                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
             const amrex::ParticleReal Exp = ExmByp + Byp * phys_const.c;
             const amrex::ParticleReal Eyp = EypBxp - Bxp * phys_const.c;

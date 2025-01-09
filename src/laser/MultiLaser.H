@@ -194,6 +194,7 @@ private:
      * the central wavelength influences the solver. As long as all the lasers are on the same grid
      * (part of MultiLaser), this must be a property of MultiLaser. */
     amrex::Real m_lambda0 {0.};
+    bool m_linear_polarization {true}; /**< Whether polarization is linear. Otherwise, circular */
     amrex::Vector<std::string> m_names {"no_laser"}; /**< name of the laser */
     int m_nlasers; /**< Number of laser pulses */
     amrex::Vector<Laser> m_all_lasers; /**< Each is a laser pulse */

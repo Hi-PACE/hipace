@@ -34,6 +34,10 @@ MultiLaser::ReadParameters ()
     if (!m_use_laser) return;
     queryWithParser(pp, "lambda0", m_lambda0);
     DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
+    std::string polarization = "linear";
+    queryWithParser(pp, "polarization", polarization);
+    AMREX_ALWAYS_ASSERT(polarization == "linear" || polarization == "circular");
+    m_linear_polarization = polarization == "linear";
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
@@ -250,6 +254,7 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
         const int y_lo = m_slice_box.smallEnd(1);
         const int y_hi = m_slice_box.bigEnd(1);
 
+        const bool linear_polarization = m_linear_polarization;
         amrex::ParallelFor(
             amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
             {m_interp_order},
@@ -279,7 +284,10 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
                         }
                     }
                 }
-
+                // The ponderomotive force is 2x larger in circular polarization:
+                // - circular: <|a|^2> = <|a_env|^2>
+                // - linear  : <|a|^2> = <|a_env|^2 * cos^2(k*z)> = <|a_env|^2> * 1/2
+                if (!linear_polarization) aabs *= 2;
                 field_arr(i,j) = aabs;
             });
     }
