@@ -524,7 +524,7 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
-	amrex::Real* AMREX_RESTRICT laser_width_p_prefactor = m_laser_width_p_prefactor.data();
+	amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
         amrex::Gpu::DeviceVector<amrex::Real> u(3, 0._rt);
 	amrex::Real* AMREX_RESTRICT p_u = u.dataPtr();
 	
@@ -576,7 +576,7 @@ LaserIonization (const int islice,
 	    amrex::Real w_dtau_ac;
 	    if (linear_polarization) {
 	      w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
-	      amrex::Real width_p = std::sqrt(laser_width_p_prefactor * Ep) * std::sqrt(amrex::abs(A*A)); //equation (4) art. Massimo                                                                              
+	      amrex::Real width_p = std::sqrt(laser_dp_prefactor * Ep) * std::sqrt(amrex::abs(A*A)); //equation (4) art. Massimo                                                                              
               amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
               p_u[0] = p_pol;
 	      p_u[2] = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.); 
