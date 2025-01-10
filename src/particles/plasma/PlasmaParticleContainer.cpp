@@ -3,7 +3,7 @@
  * This file is part of HiPACE++.
  *
  * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Severin Diederichs
- * Weiqun Zhang, Angel Ferran Pousa
+ * Weiqun Zhang, Angel Ferran Pousa, EyaDammak
  * License: BSD-3-Clause-LBNL
  */
 #include "Hipace.H"
@@ -589,7 +589,7 @@ LaserIonization (const int islice,
 	      u[2] = amrex::abs(A*A) / 2.;
 	    }
 	    
-	    u = u * clightsq;
+	    u = u * phys_const.c;
 
             amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
 
