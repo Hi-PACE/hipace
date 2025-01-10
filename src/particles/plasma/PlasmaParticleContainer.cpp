@@ -576,7 +576,7 @@ LaserIonization (const int islice,
 	    amrex::Real w_dtau_ac;
 	    if (linear_polarization) {
 	      w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
-	      amrex::Real width_p = std::sqrt(laser_dp_prefactor * Ep) * std::sqrt(amrex::abs(A*A)); //equation (4) art. Massimo                                                                              
+	      amrex::Real width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc] * Ep) * std::sqrt(amrex::abs(A*A)); //equation (4) art. Massimo                                                                              
               amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
               p_u[0] = p_pol;
 	      p_u[2] = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.); 
