@@ -40,7 +40,7 @@ def get_phi2 (Ar, m):
     
 def temporal2spectral_fft(Ar, m, k0):
     spect=np.fft.ifft(
-            Ar, axis=1, norm="backward"
+            Ar, axis=0, norm="backward"
         )
     Nt = len(m.z)
     dt= (m.z[1]-m.z[0])/scc.c
