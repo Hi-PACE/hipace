@@ -431,7 +431,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_adk_prefactor.resize(ion_atomic_number);
     m_adk_exp_prefactor.resize(ion_atomic_number);
     m_laser_adk_prefactor.resize(ion_atomic_number);
-    m_laser_width_p_prefactor.resize(ion_atomic_number);
+    m_laser_dp_prefactor.resize(ion_atomic_number);
     
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_power(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_prefactor(ion_atomic_number);
