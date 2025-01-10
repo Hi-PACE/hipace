@@ -638,7 +638,7 @@ LaserIonization (const int islice,
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
                 const long pidx = pid + old_size;
 		amrex::Gpu::DeviceVector<amrex::Real> h_u(num_ions * 3, 0._rt);
-		amrex::Gpu::copy(amrex::Gpu::deviceToHost, u.data(), h_u.data(), num_ions * 3);
+		amrex::Gpu::copy(amrex::Gpu::deviceToHost, u.dataPtr(), h_u.dataPtr(), num_ions * 3);
                 // Copy ion data to new electron
                 amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // only for valid/invalid
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} =
