@@ -212,6 +212,8 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
     /** to calculate laser Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_adk_prefactor;
+    /** to calculate laser ionization momentum width for linear polarization */
+    amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
 
     // plasma sorting/reordering:
 
