@@ -431,12 +431,14 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_adk_prefactor.resize(ion_atomic_number);
     m_adk_exp_prefactor.resize(ion_atomic_number);
     m_laser_adk_prefactor.resize(ion_atomic_number);
-
+    m_laser_width_p_prefactor.resize(ion_atomic_number);
+    
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_power(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_prefactor(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_adk_exp_prefactor(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_laser_adk_prefactor(ion_atomic_number);
-
+    amrex::Gpu::PinnedVector<amrex::Real> h_laser_width_p_prefactor(ion_atomic_number);
+    
     for (int i=0; i<ion_atomic_number; ++i)
     {
         const amrex::Real n_eff = (i+1) * std::sqrt(UH/h_ionization_energies[i]);
@@ -448,6 +450,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
             * std::pow(2*std::pow((Uion/UH),3./2)*Ea,2*n_eff - 1);
         h_adk_exp_prefactor[i] = -2./3 * std::pow( Uion/UH,3./2) * Ea;
         h_laser_adk_prefactor[i] = (3 / MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
+	h_laser_width_p_prefactor[i] = 3./2. * std::pow(Uion/UH, -3./2.) / Ea;
     }
 
     amrex::Gpu::copy(amrex::Gpu::hostToDevice,
