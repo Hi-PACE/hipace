@@ -525,7 +525,8 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
 	amrex::Real* AMREX_RESTRICT laser_width_p_prefactor = m_laser_width_p_prefactor.data();
-        amrex::Real AMREX_RESTRICT u[3] = {0._rt, 0._rt, 0._rt};
+        amrex::Gpu::DeviceVector<amrex::Real> u(3, 0._rt);
+	amrex::Real* AMREX_RESTRICT p_u = u.dataPtr();
 	
         long num_ions = ptile_ion.numParticles();
 
@@ -551,9 +552,7 @@ LaserIonization (const int islice,
             Complex A = 0;
             Complex A_dx = 0;
             Complex A_dzeta = 0;
-
-            // TODO convert units of A
-            // this is likely incorrect
+	    
             doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
                 dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
 
@@ -579,17 +578,17 @@ LaserIonization (const int islice,
 	      w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
 	      amrex::Real width_p = std::sqrt(laser_width_p_prefactor * Ep) * std::sqrt(amrex::abs(A*A)); //equation (4) art. Massimo                                                                              
               amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
-              u[0] = p_pol;
-	      u[2] = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.); 
+              p_u[0] = p_pol;
+	      p_u[2] = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.); 
 	    } else {
 	      w_dtau_ac = w_dtau_dc;
 	      amrex::Real angle = amrex::Random(engine) * 2 * MathConst::pi;
-	      u[0] = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
-	      u[1] = std::sqrt(amrex::abs(A*A)) /	std::sqrt(2) * std::sin(angle);
-	      u[2] = amrex::abs(A*A) / 2.;
+	      p_u[0] = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
+	      p_u[1] = std::sqrt(amrex::abs(A*A)) /	std::sqrt(2) * std::sin(angle);
+	      p_u[2] = amrex::abs(A*A) / 2.;
 	    }
 	    
-	    u = u * phys_const.c;
+	    p_u *= phys_const.c;
 
             amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
 
@@ -635,18 +634,18 @@ LaserIonization (const int islice,
             if(p_ion_mask[ip] != 0) {
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
                 const long pidx = pid + old_size;
-
+		auto h_u = u.copyToHost();
+		
                 // Copy ion data to new electron
                 amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // only for valid/invalid
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} =
                     amrex::ParticleCPUWrapper{idcpu_ion[pidx]}; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
-
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
-                arrdata_elec[PlasmaIdx::ux     ][pidx] = u[0];
-                arrdata_elec[PlasmaIdx::uy     ][pidx] = u[1];
-                arrdata_elec[PlasmaIdx::psi    ][pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2]; //psi = gamma - uz
+                arrdata_elec[PlasmaIdx::ux     ][pidx] = h_u[0];
+                arrdata_elec[PlasmaIdx::uy     ][pidx] = h_u[1];
+                arrdata_elec[PlasmaIdx::psi    ][pidx] = std::sqrt(1._rt+h_u[0]*h_u[0]+h_u[1]*h_u[1]+h_u[2]*h_u[2])-h_u[2]; //psi = gamma - uz
                 arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
