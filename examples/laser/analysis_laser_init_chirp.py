@@ -60,7 +60,7 @@ def get_zeta(Ar,m,k0):
 def get_beta(F, m, k0):
     omega,env_spec=temporal2spectral_fft(F,m,k0)
     phi_envelop_abs = np.unwrap(
-        np.array(np.arctan2(env_spec.imag, env_spec.real)), axis=1
+        np.array(np.arctan2(env_spec.imag, env_spec.real)), axis=0
     )
     angle_y = np.gradient(phi_envelop_abs, m.y, axis=1) / k0
     dtdb= np.gradient(angle_y, omega, axis=0)
