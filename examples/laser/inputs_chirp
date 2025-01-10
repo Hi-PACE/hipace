@@ -19,7 +19,7 @@ laser.tau = 1e-14
 laser.phi2 = 0
 laser.zeta = 3e-22
 laser.beta = 0
-laser.STC_theta_xy = 3.14159265358/2
+laser.STC_theta_xy = 0
 amr.max_level = 0
 
 diagnostic.output_period = 1
@@ -30,4 +30,4 @@ boundary.field = Dirichlet
 boundary.particle = Absorbing
 
 diagnostic.field_data = laserEnvelope
-diagnostic.diag_type = yz
+diagnostic.diag_type = xz
