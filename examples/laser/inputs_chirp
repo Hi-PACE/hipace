@@ -30,4 +30,4 @@ boundary.field = Dirichlet
 boundary.particle = Absorbing
 
 diagnostic.field_data = laserEnvelope
-diagnostic.diag_type = xz
+diagnostic.diag_type = yz
