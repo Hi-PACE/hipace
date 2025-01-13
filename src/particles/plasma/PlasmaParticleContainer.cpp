@@ -501,9 +501,9 @@ LaserIonization (const int islice,
                                          (PhysConstSI::ep0 * PhysConstSI::m_e) );
         const amrex::Real E0 = Hipace::m_normalized_units ?
                                wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
-    const amrex::Real lambda0 = laser.GetLambda0();
+        const amrex::Real lambda0 = laser.GetLambda0();
         const amrex::Real omega0 = 2.0 * MathConst::pi * phys_const.c / lambda0;
-    const bool linear_polarization = laser.LinearPolarization();
+        const bool linear_polarization = laser.LinearPolarization();
 
         int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
         const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
@@ -559,7 +559,7 @@ LaserIonization (const int islice,
 
             amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
             Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
-        Ep *= E0;
+            Ep *= E0;
 
             // Compute probability of ionization p
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
@@ -571,12 +571,12 @@ LaserIonization (const int islice,
                 std::pow(Ep, adk_power[ion_lev_loc]) *
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
 
-        amrex::Real w_dtau_ac;
-        if (linear_polarization) {
-          w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
-        } else {
-          w_dtau_ac = w_dtau_dc;
-        }
+            amrex::Real w_dtau_ac;
+            if (linear_polarization) {
+              w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
+            } else {
+              w_dtau_ac = w_dtau_dc;
+            }
 
             amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
 
