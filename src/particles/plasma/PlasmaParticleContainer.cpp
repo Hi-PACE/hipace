@@ -651,7 +651,8 @@ LaserIonization (const int islice,
 	        Ep *= E0;
 
             amrex::Real ux, uy, uz;
-
+            const int ion_lev_loc = ion_lev[ip];
+            
             if (linear_polarization) {
                 amrex::Real width_p;
                 amrex::Real p_pol;
