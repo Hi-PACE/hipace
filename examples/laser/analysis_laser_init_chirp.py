@@ -50,7 +50,7 @@ def temporal2spectral_fft(Ar, m, k0):
 def get_zeta(Ar,m,k0):
     omega,env_spec=temporal2spectral_fft(Ar,m,k0)
     env_spec_abs = np.abs(env_spec**2)
-    yda = np.sum(m.x * env_spec_abs, axis=1) / np.sum(env_spec_abs, axis=1)
+    yda = np.sum(m.y * env_spec_abs, axis=1) / np.sum(env_spec_abs, axis=1)
     derivative_y_zeta = np.gradient(yda, omega)
     weight_y_2d = np.mean(env_spec_abs, axis=1)
     #print(len(derivative_y_zeta))
@@ -62,7 +62,7 @@ def get_beta(F, m, k0):
     phi_envelop_abs = np.unwrap(
         np.array(np.arctan2(env_spec.imag, env_spec.real)), axis=0
     )
-    angle_y = np.gradient(phi_envelop_abs, m.x, axis=1) / k0
+    angle_y = np.gradient(phi_envelop_abs, m.y, axis=1) / k0
     dtdb= np.gradient(angle_y, omega, axis=0)
     weight = np.abs(env_spec)**2
     return (np.sum(dtdb * weight) / np.sum(weight))
