@@ -1,4 +1,4 @@
-max_step = 1
+max_step = 2
 amr.n_cell = 256 256 1024
 
 my_constants.kp_inv = clight/wp
@@ -37,4 +37,3 @@ plasma.element = electron
 plasma.radius = 23.*kp_inv
 diagnostic.field_data = laserEnvelope
 diagnostic.diag_type = yz
-
