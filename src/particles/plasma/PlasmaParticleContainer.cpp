@@ -573,23 +573,11 @@ LaserIonization (const int islice,
 
             amrex::Real w_dtau_ac;
             if (linear_polarization) {
-            w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
-            amrex::Real width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc] * Ep) * std::sqrt(amrex::abs(A*A)); //equation (4) art. Massimo                                                                              
-                amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
-                p_u[ip * 3] = p_pol;
-            p_u[ip * 3 + 2] = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.); 
+                w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
             } else {
-            w_dtau_ac = w_dtau_dc;
-            amrex::Real angle = amrex::Random(engine) * 2 * MathConst::pi;
-            p_u[ip * 3] = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
-            p_u[ip * 3 + 1] = std::sqrt(amrex::abs(A*A)) /	std::sqrt(2) * std::sin(angle);
-            p_u[ip * 3 + 2] = amrex::abs(A*A) / 2.;
+                w_dtau_ac = w_dtau_dc;
             }
             
-            p_u[ip * 3]     *= phys_const.c;
-            p_u[ip * 3 + 1] *= phys_const.c;
-            p_u[ip * 3 + 2] *= phys_const.c;
-
             amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
 
             amrex::Real random_draw = amrex::Random(engine);
