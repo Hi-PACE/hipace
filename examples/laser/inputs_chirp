@@ -26,6 +26,7 @@ laser.a0 = 1.9
 laser.position_mean = 0. 0. 0
 laser.w0 = 3*kp_inv
 laser.L0 = 5e-6
+laser.phi2 = 2.4e-20
 laser.zeta = 2.4e-24
 laser.STC_theta_xy = 3.14159265358 / 2
 plasmas.names = plasma
