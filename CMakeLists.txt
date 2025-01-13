@@ -342,6 +342,12 @@ if(BUILD_TESTING)
                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME laser_ionization.1Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_ionization.1Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR} ${HiPACE_COMPUTE}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
         if (NOT HiPACE_COMPUTE STREQUAL CUDA)
 
             # These tests only run on CPU
@@ -426,12 +432,6 @@ if(BUILD_TESTING)
 
             add_test(NAME production.SI.2Rank
                     COMMAND bash ${HiPACE_SOURCE_DIR}/tests/production.SI.2Rank.sh
-                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
-                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-            )
-
-            add_test(NAME laser_ionization.1Rank
-                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/laser_ionization.1Rank.sh
                             $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
                     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             )
