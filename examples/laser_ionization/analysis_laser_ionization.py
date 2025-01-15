@@ -53,7 +53,9 @@ relative_diff_linear = np.abs( ( fraction_linear - fraction_warpx_linear ) / fra
 relative_diff_circular = np.abs( ( fraction_circular - fraction_warpx_circular ) / fraction_warpx_circular )
 
 tolerance = 0.25
-print("percentage error for the fraction of ionization in linear polarization = "+ str(relative_diff_linear *100) + '%')
-print("percentage error for the fraction of ionization in circular polarization = "+ str(relative_diff_circular *100) + '%')
+print(f"fraction_warpx_linear = {fraction_warpx_linear}")
+print(f"fraction_hipace_linear = {fraction_linear}")
+print(f"fraction_warpx_circular = {fraction_warpx_circular}")
+print(f"fraction_hipace_circular = {fraction_circular}")
 
 assert ( (relative_diff_linear < tolerance) and (relative_diff_circular < tolerance) ), 'Test laser_ionization did not pass'
