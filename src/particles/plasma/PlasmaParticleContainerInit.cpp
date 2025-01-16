@@ -444,9 +444,9 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
                          * std::tgamma(n_eff-l_eff));
         h_adk_power[i] = -(2 * n_eff - 1.);
         const amrex::Real Uion = h_ionization_energies[i];
-        h_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2. * UH) )
+        h_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2.*UH) )
             * std::pow(2*std::pow((Uion/UH),3./2.)*Ea,2*n_eff - 1);
-        h_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2) * Ea;
+        h_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
         h_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
     }
 
