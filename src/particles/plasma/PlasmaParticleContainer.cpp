@@ -483,7 +483,7 @@ LaserIonization (const int islice,
 
         // Offset for converting positions to indexes
         amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
-        const amrex::Real y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
+        amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
 
         auto& plevel_ion = GetParticles(0);
         auto index = std::make_pair(mfi_ion.index(), mfi_ion.LocalTileIndex());
