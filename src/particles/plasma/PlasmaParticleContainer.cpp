@@ -308,7 +308,7 @@ IonizationModule (const int lev,
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
 
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
-        // Calcuation of E0 in SI units for denormalization
+        // Calculation of E0 in SI units for denormalization
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
                                          (PhysConstSI::ep0 * PhysConstSI::m_e) );
