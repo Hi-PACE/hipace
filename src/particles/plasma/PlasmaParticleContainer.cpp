@@ -68,8 +68,7 @@ PlasmaParticleContainer::ReadParameters ()
     m_can_field_ionize = pp.contains("ionization_product");
 
     queryWithParser(pp, "can_ionize", m_can_field_ionize);
-    bool use_laser = true;
-    m_can_laser_ionize = m_can_field_ionize && use_laser;
+    m_can_laser_ionize = false;
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
 
     m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
