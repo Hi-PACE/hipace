@@ -3,7 +3,7 @@
  * This file is part of HiPACE++.
  *
  * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Severin Diederichs
- * Weiqun Zhang, Angel Ferran Pousa
+ * Weiqun Zhang, Angel Ferran Pousa, EyaDammak
  * License: BSD-3-Clause-LBNL
  */
 #include "Hipace.H"
@@ -14,7 +14,7 @@
 #include "utils/GPUUtil.H"
 #include "utils/InsituUtil.H"
 #ifdef HIPACE_USE_OPENPMD
-#   include <openPMD/auxiliary/Filesystem.hpp>
+#include <openPMD/auxiliary/Filesystem.hpp>
 #endif
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "particles/pusher/BeamParticleAdvance.H"
