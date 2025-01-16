@@ -68,7 +68,7 @@ PlasmaParticleContainer::ReadParameters ()
     m_can_field_ionize = pp.contains("ionization_product");
 
     queryWithParser(pp, "can_ionize", m_can_field_ionize);
-    bool use_laser = true; // TODO: use actual value (laser not yet initialized at this time)
+    bool use_laser = true; 
     m_can_laser_ionize = m_can_field_ionize && use_laser;
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
 
@@ -466,6 +466,8 @@ LaserIonization (const int islice,
                  const amrex::Real background_density_SI)
 {
     if (!m_can_laser_ionize || !laser.UseLaser(islice)) return;
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(laser.UseLaser(islice) != true, 
+    "Error: LaserIonization requires the laser to be enabled in the current slice.");
     HIPACE_PROFILE("PlasmaParticleContainer::LaserIonization()");
 
     using namespace amrex::literals;
