@@ -336,8 +336,8 @@ IonizationModule (const int lev,
         long num_ions = ptile_ion.numParticles();
 
 
-        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time 
-        // and calculates ionization probability. If ionization occurs, it increments 
+        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
+        // and calculates ionization probability. If ionization occurs, it increments
         // `p_num_new_electrons` to calculate the number of ionized electrons.
         amrex::AnyCTO(
             amrex::TypeList<
@@ -347,7 +347,7 @@ IonizationModule (const int lev,
             },
             [&] (auto cto_func) {
                 amrex::ParallelForRNG(num_ions, cto_func); // enables the use of `amrex::Random` within the loop
-                
+
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
@@ -400,7 +400,7 @@ IonizationModule (const int lev,
             << num_new_electrons.dataValue() << "\n";
         }
 
-        
+
         // Resize electron particle tile
         const auto old_size = ptile_elec.numParticles();
         const auto new_size = old_size + num_new_electrons.dataValue();
@@ -417,7 +417,7 @@ IonizationModule (const int lev,
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
 
-        // This kernel adds the new ionized electrons to the Plasma Particle Container 
+        // This kernel adds the new ionized electrons to the Plasma Particle Container
         amrex::ParallelFor(num_ions,
             [=] AMREX_GPU_DEVICE (long ip) {
 
@@ -531,9 +531,9 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
 
         long num_ions = ptile_ion.numParticles();
-        
-        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time 
-        // and calculates ionization probability. If ionization occurs, it increments 
+
+        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
+        // and calculates ionization probability. If ionization occurs, it increments
         // `p_num_new_electrons` to calculate the number of ionized electrons.
         amrex::AnyCTO(
             amrex::TypeList<
@@ -543,7 +543,7 @@ LaserIonization (const int islice,
             },
             [&] (auto cto_func) {
                 amrex::ParallelForRNG(num_ions, cto_func); // enables the use of `amrex::Random` within the loop
-                
+
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
@@ -602,7 +602,7 @@ LaserIonization (const int islice,
             << num_new_electrons.dataValue() << "\n";
         }
 
-        
+
         // Resize electron particle tile
         const auto old_size = ptile_elec.numParticles();
         const auto new_size = old_size + num_new_electrons.dataValue();
