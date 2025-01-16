@@ -549,17 +549,16 @@ LaserIonization (const int islice,
             Complex A_dx = 0;
             Complex A_dzeta = 0;
 
-            // TODO convert units of A
-            // this is likely incorrect
             doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
                 dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
 
+            // Convert from vector potential to electric field. Units are fixed later.
             const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; //transverse component
             const Complex El = - A_dx * phys_const.c; //longitudinal component
 
+            // Get amplitude of the electric field envelope and normalize to correct SI unit.
             amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
-            Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
-            Ep *= E0;
+            Ep *= phys_const.m_e * phys_const.c / phys_const.q_e * E0;
 
             // Compute probability of ionization p
             const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
