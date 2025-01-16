@@ -228,7 +228,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
                 unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
 
-                // ordering of axes from fastest to slowest:
+                // Ordering of axes from fastest to slowest:
                 // x
                 // y
                 // z (not used)
@@ -421,7 +421,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     const amrex::Real UH = table_ionization_energies[0];
     const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
 
-    // plasma frequency in SI units to denormalize ionization
+    // Plasma frequency in SI units to denormalize ionization
     const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                      PhysConstSI::q_e*PhysConstSI::q_e /
                                      (PhysConstSI::ep0 * PhysConstSI::m_e) );
