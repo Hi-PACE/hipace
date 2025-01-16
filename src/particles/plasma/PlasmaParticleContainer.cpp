@@ -335,6 +335,9 @@ IonizationModule (const int lev,
 
         long num_ions = ptile_ion.numParticles();
 
+// This kernel extends AMReX's parallel kernels to support multiple deposition orders 
+// (0, 1, 2, 3) at compile time, as it relies on `doLaserGatherShapeN` for computations 
+// specific to the selected deposition order.
         amrex::AnyCTO(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>
@@ -342,7 +345,9 @@ IonizationModule (const int lev,
                 Hipace::m_depos_order_xy
             },
             [&] (auto cto_func) {
+                // This choice of AMReX's parallel kernel enables the use of `amrex::Random` within the loop.
                 amrex::ParallelForRNG(num_ions, cto_func);
+                
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
@@ -383,7 +388,7 @@ IonizationModule (const int lev,
             {
                 ion_lev[ip] += 1;
                 p_ion_mask[ip] = 1;
-                amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u );
+                amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u ); // Ensures thread-safe access when incrementing `p_ip_elec`
             }
         });
         amrex::Gpu::streamSynchronize();
@@ -416,7 +421,7 @@ IonizationModule (const int lev,
             [=] AMREX_GPU_DEVICE (long ip) {
 
             if(p_ion_mask[ip] != 0) {
-                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
+                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // Ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
@@ -525,7 +530,10 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
 
         long num_ions = ptile_ion.numParticles();
-
+        
+// This kernel extends AMReX's parallel kernels to support multiple deposition orders 
+// (0, 1, 2, 3) at compile time, as it relies on `doLaserGatherShapeN` for computations 
+// specific to the selected deposition order.
         amrex::AnyCTO(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>
@@ -533,7 +541,9 @@ LaserIonization (const int islice,
                 Hipace::m_depos_order_xy
             },
             [&] (auto cto_func) {
+                // This choice of AMReX's parallel kernel enables the use of `amrex::Random` within the loop.
                 amrex::ParallelForRNG(num_ions, cto_func);
+                
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
@@ -580,7 +590,7 @@ LaserIonization (const int islice,
             {
                 ion_lev[ip] += 1;
                 p_ion_mask[ip] = 1;
-                amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u );
+                amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u ); // Ensures thread-safe access when incrementing `p_ip_elec`
             }
         });
         amrex::Gpu::streamSynchronize();
@@ -614,7 +624,7 @@ LaserIonization (const int islice,
             [=] AMREX_GPU_DEVICE (long ip) {
 
             if(p_ion_mask[ip] != 0) {
-                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
+                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // Ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
