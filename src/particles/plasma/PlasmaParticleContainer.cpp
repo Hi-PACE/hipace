@@ -627,7 +627,6 @@ LaserIonization (const int islice,
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
                 arrdata_elec[PlasmaIdx::ux     ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy     ][pidx] = 0._rt;
-                // later we could consider adding a finite temperature to the ionized electrons
                 arrdata_elec[PlasmaIdx::psi    ][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
