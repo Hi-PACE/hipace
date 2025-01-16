@@ -466,7 +466,7 @@ LaserIonization (const int islice,
                  const amrex::Real background_density_SI)
 {
     if (!m_can_laser_ionize || !laser.UseLaser(islice)) return;
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(laser.UseLaser(islice) != true,
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_ionize || laser.UseLaser(),
     "Error: LaserIonization requires the laser to be enabled in the current slice.");
     HIPACE_PROFILE("PlasmaParticleContainer::LaserIonization()");
 
