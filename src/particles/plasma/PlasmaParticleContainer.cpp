@@ -570,12 +570,8 @@ LaserIonization (const int islice,
                 std::pow(Ep, adk_power[ion_lev_loc]) *
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
 
-            amrex::Real w_dtau_ac;
-            if (linear_polarization) {
-              w_dtau_ac = w_dtau_dc * std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]);
-            } else {
-              w_dtau_ac = w_dtau_dc;
-            }
+            amrex::Real const w_dtau_ac = w_dtau_dc *
+                (linear_polarization ? std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]) : 1._rt);
 
             amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
 
