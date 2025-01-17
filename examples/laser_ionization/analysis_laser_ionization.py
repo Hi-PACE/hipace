@@ -39,7 +39,7 @@ rho_elec_mean_linear = np.mean(rho_elec_linear, axis=(1, 2))
 rho_average_linear = statistics.mean(rho_elec_mean_linear[0:10])
 fraction_linear = -rho_average_linear / qe / n0
 
-rho_elec_circular, _ = ts_circular.get_field(field='rho_elec', coord='z', iteration=iteration, plot=False)
+rho_elec_circular, _ = ts_circular.get_field(field='rho_elec', coord='z', iteration=iteration)
 rho_elec_mean_circular = np.mean(rho_elec_circular, axis=(1, 2))
 rho_average_circular = statistics.mean(rho_elec_mean_circular[0:10]) #average over a thickness in the ionized region
 fraction_circular = -rho_average_circular / qe / n0
