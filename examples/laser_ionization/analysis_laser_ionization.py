@@ -34,7 +34,7 @@ n0 = nc / 10000
 
 iteration = 0
 
-rho_elec_linear, _ = ts_linear.get_field(field='rho_elec', coord='z', iteration=iteration, plot=False)
+rho_elec_linear, _ = ts_linear.get_field(field='rho_elec', coord='z', iteration=iteration)
 rho_elec_mean_linear = np.mean(rho_elec_linear, axis=(1, 2))
 rho_average_linear = statistics.mean(rho_elec_mean_linear[0:10])
 fraction_linear = rho_average_linear / (-qe) / (n0)
