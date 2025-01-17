@@ -32,8 +32,6 @@ a0_circular = 0.00787934
 nc = 1.75e27
 n0 = nc / 10000
 
-qe = 1.602176634e-19
-
 iteration = 0
 
 rho_elec_linear, _ = ts_linear.get_field(field='rho_elec', coord='z', iteration=iteration, plot=False)
