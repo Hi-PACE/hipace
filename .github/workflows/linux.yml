@@ -45,7 +45,7 @@ jobs:
             -DCMAKE_VERBOSE_MAKEFILE=ON
         cmake --build build -j 2
     - name: Run Tests
-      run: ctest --test-dir build --verbose
+      run: ctest --test-dir build --output-on-failure
 
   linux_gcc_cxx17:
     name: GNU@7.5 C++17 Serial
@@ -75,7 +75,7 @@ jobs:
             -DHiPACE_PUSHER=AB5
         cmake --build build -j 2
     - name: Run Tests
-      run: ctest --test-dir build --verbose
+      run: ctest --test-dir build --output-on-failure
 
 # enable again when we open-source (free core-hours for GH Actions)
 #
