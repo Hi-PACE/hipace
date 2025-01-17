@@ -345,7 +345,7 @@ IonizationModule (const int lev,
                 Hipace::m_depos_order_xy
             },
             [&] (auto cto_func) {
-                amrex::ParallelForRNG(num_ions, cto_func); // enables the use of `amrex::Random` within the loop
+                amrex::ParallelForRNG(num_ions, cto_func); // enables the use of amrex::Random within the loop
 
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
