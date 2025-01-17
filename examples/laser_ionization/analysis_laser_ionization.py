@@ -44,8 +44,8 @@ rho_elec_mean_circular = np.mean(rho_elec_circular, axis=(1, 2))
 rho_average_circular = statistics.mean(rho_elec_mean_circular[0:10]) #average over a thickness in the ionized region
 fraction_circular = -rho_average_circular / qe / n0
 
-fraction_warpx_linear = 0.41014984 #result from WarpX simulation
-fraction_warpx_circular = 0.502250841 #result from WarpX simulation
+fraction_warpx_linear = 0.41014984 # result from WarpX simulation
+fraction_warpx_circular = 0.502250841 # result from WarpX simulation
 
 relative_diff_linear = np.abs( ( fraction_linear - fraction_warpx_linear ) / fraction_warpx_linear )
 relative_diff_circular = np.abs( ( fraction_circular - fraction_warpx_circular ) / fraction_warpx_circular )
