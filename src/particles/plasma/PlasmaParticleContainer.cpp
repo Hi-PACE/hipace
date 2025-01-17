@@ -537,6 +537,7 @@ LaserIonization (const int islice,
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
         // and calculates ionization probability. If ionization occurs, it increments
         // `p_num_new_electrons` to calculate the number of ionized electrons.
+        // It also constructs a mask with 1 boolean per macro-ion: 1 if ionized, 0 otherwise.
         amrex::AnyCTO(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>
