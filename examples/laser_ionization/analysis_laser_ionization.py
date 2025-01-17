@@ -10,7 +10,7 @@ import numpy as np
 import math
 from openpmd_viewer import OpenPMDTimeSeries
 import statistics
-
+from scipy.constants import e as qe
 parser = argparse.ArgumentParser(
     description='Script to analyze the equality of two simulations')
 parser.add_argument('--first',
