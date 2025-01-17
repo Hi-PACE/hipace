@@ -650,7 +650,7 @@ LaserIonization (const int islice,
             Complex A = 0;
             Complex A_dx = 0;
             Complex A_dzeta = 0;
-	    
+        
             doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
                 dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
 
@@ -659,7 +659,7 @@ LaserIonization (const int islice,
 
             amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
             Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
-	        Ep *= E0;
+            Ep *= E0;
 
             amrex::Real ux, uy, uz;
             const int ion_lev_loc = ion_lev[ip];
@@ -676,7 +676,7 @@ LaserIonization (const int islice,
                 amrex::Real angle;
                 angle = amrex::Random(engine) * 2 * MathConst::pi;
                 ux = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
-                uy = std::sqrt(amrex::abs(A*A)) /	std::sqrt(2) * std::sin(angle);
+                uy = std::sqrt(amrex::abs(A*A)) /    std::sqrt(2) * std::sin(angle);
                 uz = amrex::abs(A*A) / 2.;
             }
             
