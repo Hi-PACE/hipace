@@ -1,6 +1,6 @@
 max_step = 0
 hipace.dt = 0
-hipace.verbose=3
+hipace.verbose = 3
 
 amr.n_cell = 32 32 50
 
