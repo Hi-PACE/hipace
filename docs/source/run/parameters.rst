@@ -911,6 +911,29 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.propagation_angle_yz`` (`float`) optional (default `0`)
           Propagation angle of the pulse in the yz plane (0 is along the z axis)
 
+      * ``<laser name>.STC_theta_xy`` (`float`) optional (default `0`)
+          Direction of the linear spatial and angular chirps in the xy plane (`0` is along x, `pi/2` along y).
+          In what follows, all chirps are given as defined in `S. Akturk et al., Optics Express 12, 4399 (2004) <https://doi.org/10.1364/OPEX.12.004399>`__.
+
+      * ``<laser name>.beta`` (`float`) optional (default `0.`)
+          Angular dispersion (or angular chirp) at focus in :math:`second`.
+
+      * ``<laser name>.zeta`` (`float`) optional (default `0.`)
+          Spatial chirp at focus in :math:`second \cdot meter`.
+
+      * ``<laser name>.phi2`` (`float`) optional (default `pi/2`)
+          Temporal chirp :math:`\phi^{(2)}` at focus in :math:`second^2`.
+          Namely, a wave packet centered on frequency :math:`(\omega_0 + \delta \omega)` reaches its peak intensity at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`.
+          Thus, a positive :math:`\phi^{(2)}` corresponds to positive chirp, i.e., red part of the spectrum in the front of the pulse and blue part in the back.
+          More specifically, the electric field in the focal plane is of the form:
+
+          .. math::
+              E(\boldsymbol{x},t) \propto Re\left[ \exp\left(  -\frac{(t-t_{peak})^2}{\tau^2 + 2i\phi^{(2)}} + i\omega_0 (t-t_{peak}) + i\phi_0 \right) \right]
+          where :math:`\tau` is given by ``<laser_name>.tau`` and represents the Fourier-limited duration of the laser pulse. Thus, the actual duration of the chirped laser pulse is:
+
+          .. math::
+               \tau' = \sqrt{ \tau^2 + 4 (\phi^{(2)})^2/\tau^2 }
+
       Option: ``from_file`` the laser is loaded from an openPMD file.
 
       * ``<laser name>.input_file`` (`string`) optional (default `""`)
