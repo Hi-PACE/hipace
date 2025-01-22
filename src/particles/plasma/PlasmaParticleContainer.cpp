@@ -717,6 +717,21 @@ LaserIonization (const int islice,
 }
 
 void
+PlasmaParticleContainer::
+PlasmaToBeam (const int islice,
+                 const amrex::Geometry& laser_geom,
+                 const MultiLaser& laser,
+                 const amrex::Real background_density_SI)
+{
+    //extract the soa plasma container (see insitu function)
+    // same for the beam container (BeamParticleContainer.cpp see InSituComputeDiags)
+    // 1st kernel whcih calculate the number of plasma particles to transfer
+    // resize the beam container
+    // new kernel make_invalid() the plasma particles transferred
+    //new kernel to add partciles in the beam container
+}
+
+void
 PlasmaParticleContainer::InSituComputeDiags (int islice)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InSituComputeDiags()");
