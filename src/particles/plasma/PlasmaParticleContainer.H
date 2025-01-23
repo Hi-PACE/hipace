@@ -113,6 +113,18 @@ public:
                           const MultiLaser& laser,
                           const amrex::Real background_density_SI);
 
+    /** Do the transfer of particles from the plasma container to the beam container
+     *
+     * \param[in] islice zeta slice index
+     * \param[in] laser_geom Geometry of the laser
+     * \param[in] laser the laser class
+     * \param[in] background_density_SI background plasma density (only needed for normalized units)
+     */
+    void PlasmaToBeam (const int islice,
+                          const amrex::Geometry& laser_geom,
+                          const MultiLaser& laser,
+                          const amrex::Real background_density_SI);
+
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
      */
