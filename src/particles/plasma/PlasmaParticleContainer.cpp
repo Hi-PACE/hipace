@@ -723,6 +723,7 @@ PlasmaToBeam (const int islice,
                  const MultiLaser& laser,
                  const amrex::Real background_density_SI)
 {
+    HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
     //extract the soa plasma container (see insitu function)
     // same for the beam container (BeamParticleContainer.cpp see InSituComputeDiags)
     // 1st kernel whcih calculate the number of plasma particles to transfer
