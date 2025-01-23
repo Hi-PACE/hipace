@@ -730,6 +730,32 @@ PlasmaToBeam (const int islice,
     // resize the beam container
     // new kernel make_invalid() the plasma particles transferred
     //new kernel to add partciles in the beam container
+
+    // Loop over plasma particle boxes
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        // Loading the data
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
+        uint32_t* AMREX_RESTRICT p_num_new_electrons = num_new_electrons.dataPtr();
+
+        amrex::Long const num_particles = pti.numParticles();
+
+        amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
+        amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+        
+        // This kernel calculate the number of ionized electrons in the plasma container and make them invalid
+        reduce_op.eval(
+            num_particles, reduce_data,
+            [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
+            {   
+                if (ptd.id(ip)!=2) // whether the plasma particle is from ionization
+                {
+                    amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
+                    ptd.id(ip).make_invalid(); //make the particle invalid in the plasma container
+                }
+        });
+    }
 }
 
 void

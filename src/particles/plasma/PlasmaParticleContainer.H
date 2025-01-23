@@ -213,6 +213,7 @@ public:
     bool m_can_ionize = false; /**< whether this plasma can ionize from anything */
     bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
     bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
+    bool m_can_laser_injection = false; /**< whether this plasma allows particle injection via laser ionization */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
