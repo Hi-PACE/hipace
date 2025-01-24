@@ -7,7 +7,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "Hipace.H"
-#include "PlasmaParticleContainer.H"
+
 #include "BeamParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/AtomicWeightTable.H"
@@ -21,6 +21,7 @@
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "particles/pusher/GetAndSetPosition.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include <cmath>
 #include <fstream>
 #include <sstream>
