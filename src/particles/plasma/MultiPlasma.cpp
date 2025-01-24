@@ -136,10 +136,11 @@ MultiPlasma::DoLaserIonization (
 }
 
 void
-MultiPlasma::DoLaserInjection ()
+MultiPlasma::DoLaserInjection (
+    MultiBeam& beams)
 {
     for (auto& plasma : m_all_plasmas) {
-        plasma.PlasmaToBeam();
+        plasma.PlasmaToBeam(MultiBeam& beams);
     }
 }
 

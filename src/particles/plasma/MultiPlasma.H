@@ -109,8 +109,9 @@ public:
 
     /** Do the transfer of ionized plasma particles to beam particles
      *
+     * \param[in] beams multibeam containing all beams
      */
-    void DoLaserInjection ();
+    void DoLaserInjection (MultiBeam& beams);
 
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     bool AnySpeciesNeutralizeBackground () const;

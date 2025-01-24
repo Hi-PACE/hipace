@@ -115,8 +115,9 @@ public:
 
     /** Do the transfer of particles from the plasma container to the beam container
      *
+     * \param[in] beams multibeam containing all beams
      */
-    void PlasmaToBeam ();
+    void PlasmaToBeam (MultiBeam& beams);
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
