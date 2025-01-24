@@ -753,6 +753,7 @@ PlasmaToBeam ()
                     amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                     ptd.id(ip).make_invalid(); //make the particle invalid in the plasma container
                 }
+            return {};
         });
     }
 }
