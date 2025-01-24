@@ -11,6 +11,7 @@
 #include "PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 #include "particles/collisions/CoulombCollision.H"
+#include "particles/beam/MultiBeam.H"
 
 class MultiPlasma
 {

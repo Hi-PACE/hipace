@@ -15,6 +15,7 @@
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
+#include "particles/beam/MultiBeam.H"
 #include <map>
 
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
