@@ -8,6 +8,7 @@
  */
 #include "Hipace.H"
 #include "PlasmaParticleContainer.H"
+#include "BeamParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
@@ -759,15 +760,12 @@ PlasmaToBeam ()
         });
     }
     
-    // Loop over beam particle boxes
-    for (BeamParticleIterator pti(*this); pti.isValid(); ++pti)
-    {   
-        // Resizing beam particle containers
-        auto& particle_tile = getBeamInitSlice();
-        auto old_size = particle_tile.size();
-        auto new_size = old_size + p_num_new_beam_part;
-        particle_tile.resize(new_size);
-    }
+    // Resizing beam particle containers
+    auto& beam_particle_tile = getBeamInitSlice();
+    auto old_size = beam_particle_tile.size();
+    auto new_size = old_size + p_num_new_beam_part;
+    beam_particle_tile.resize(new_size);
+    
 
        
 }
