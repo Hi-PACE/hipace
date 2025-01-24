@@ -7,8 +7,8 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "Hipace.H"
+#include "PlasmaParticleContainer.H"
 
-#include "BeamParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
@@ -767,7 +767,7 @@ PlasmaToBeam ()
     auto new_size = old_size + p_num_new_beam_part;
     beam_particle_tile.resize(new_size);
     
-
+    
        
 }
 
