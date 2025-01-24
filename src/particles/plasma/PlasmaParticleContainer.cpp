@@ -728,14 +728,16 @@ PlasmaToBeam ()
     // new kernel make_invalid() the plasma particles transferred
     //new kernel to add partciles in the beam container
 
+    uint32_t* AMREX_RESTRICT p_num_new_beam_part;
+
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
         // Loading the data
         const auto ptd = pti.GetParticleTile().getParticleTileData();
 
-        amrex::Gpu::DeviceScalar<uint32_t> num_new_electrons(0);
-        uint32_t* AMREX_RESTRICT p_num_new_electrons = num_new_electrons.dataPtr();
+        amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
+        p_num_new_beam_part = num_new_beam_part.dataPtr();
 
         amrex::Long const num_particles = pti.numParticles();
 
@@ -750,12 +752,24 @@ PlasmaToBeam ()
             {   
                 if (ptd.id(ip)!=2) // whether the plasma particle is from ionization
                 {
-                    amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
+                    amrex::Gpu::Atomic::Add( p_num_new__beam_part, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                     ptd.id(ip).make_invalid(); //make the particle invalid in the plasma container
                 }
             return {};
         });
     }
+    
+    // Loop over beam particle boxes
+    for (BeamParticleIterator pti(*this); pti.isValid(); ++pti)
+    {   
+        // Resizing beam particle containers
+        auto& particle_tile = getBeamInitSlice();
+        auto old_size = particle_tile.size();
+        auto new_size = old_size + p_num_new_beam_part;
+        particle_tile.resize(new_size);
+    }
+
+       
 }
 
 void
