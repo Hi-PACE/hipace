@@ -722,7 +722,7 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
-PlasmaToBeam (MultiBeam& beams)
+PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
     //extract the soa plasma container (see insitu function)
@@ -776,10 +776,14 @@ PlasmaToBeam (MultiBeam& beams)
 
         if (np != 0) {
             // copy data from GPU to IO buffer
-            auto& beam_particle_tile = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-            auto old_size = beam_particle_tile.size();
+            auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+            auto old_size = beam_soa.size();
             auto new_size = old_size + p_num_new_beam_part;
-            beam_particle_tile.resize(new_size);
+            beam_soa.resize(new_size);
+
+//            beam_soa.GetRealData(BeamIdx::x).data()=;
+//            beam_soa.GetRealData(BeamIdx::y).data()=;
+        
         }
     }   
 }
