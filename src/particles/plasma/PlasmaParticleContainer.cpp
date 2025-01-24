@@ -733,6 +733,8 @@ PlasmaToBeam ()
     {
         // Loading the data
         const auto ptd = pti.GetParticleTile().getParticleTileData();
+
+        amrex::Gpu::DeviceScalar<uint32_t> num_new_electrons(0);
         uint32_t* AMREX_RESTRICT p_num_new_electrons = num_new_electrons.dataPtr();
 
         amrex::Long const num_particles = pti.numParticles();
