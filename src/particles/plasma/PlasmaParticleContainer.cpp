@@ -732,7 +732,8 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
     // new kernel make_invalid() the plasma particles transferred
     //new kernel to add partciles in the beam container
 
-    uint32_t* AMREX_RESTRICT p_num_new_beam_part;
+    uint32_t AMREX_RESTRICT num_new_beam_part = 0;
+    uint32_t* p_num_new_beam_part = &num_new_beam_part;
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
