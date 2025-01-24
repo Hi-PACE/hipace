@@ -699,7 +699,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_multi_plasma.DoLaserIonization(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
 
     // injection
-    m_multi_plasma.DoLaserInjection(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
+    m_multi_plasma.DoLaserInjection();
 
     // Push plasma particles
     for (int lev=0; lev<current_N_level; ++lev) {
