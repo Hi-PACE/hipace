@@ -112,7 +112,7 @@ public:
      *
      * \param[in] beams multibeam containing all beams
      */
-    void DoLaserInjection (MultiBeam& beams);
+    void DoLaserInjection (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
 
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     bool AnySpeciesNeutralizeBackground () const;
