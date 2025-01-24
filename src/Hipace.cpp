@@ -18,6 +18,7 @@
 #include "particles/pusher/GetAndSetPosition.H"
 #include "mg_solver/HpMultiGrid.H"
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
+#include "particles/beam/MultiBeam.H"
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
