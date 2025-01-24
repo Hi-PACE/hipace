@@ -135,6 +135,14 @@ MultiPlasma::DoLaserIonization (
     }
 }
 
+void
+MultiPlasma::DoLaserInjection ()
+{
+    for (auto& plasma : m_all_plasmas) {
+        plasma.PlasmaToBeam();
+    }
+}
+
 bool
 MultiPlasma::AnySpeciesNeutralizeBackground () const
 {

@@ -718,10 +718,7 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
-PlasmaToBeam (const int islice,
-                 const amrex::Geometry& laser_geom,
-                 const MultiLaser& laser,
-                 const amrex::Real background_density_SI)
+PlasmaToBeam ()
 {
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
     //extract the soa plasma container (see insitu function)

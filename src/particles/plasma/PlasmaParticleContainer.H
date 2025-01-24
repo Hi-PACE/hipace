@@ -115,15 +115,8 @@ public:
 
     /** Do the transfer of particles from the plasma container to the beam container
      *
-     * \param[in] islice zeta slice index
-     * \param[in] laser_geom Geometry of the laser
-     * \param[in] laser the laser class
-     * \param[in] background_density_SI background plasma density (only needed for normalized units)
      */
-    void PlasmaToBeam (const int islice,
-                          const amrex::Geometry& laser_geom,
-                          const MultiLaser& laser,
-                          const amrex::Real background_density_SI);
+    void PlasmaToBeam ();
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
@@ -213,7 +206,7 @@ public:
     bool m_can_ionize = false; /**< whether this plasma can ionize from anything */
     bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
     bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
-    bool m_can_laser_injection = false; /**< whether this plasma allows particle injection via laser ionization */
+    //bool m_can_laser_injection = false; /**< whether this plasma allows particle injection via laser ionization */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
