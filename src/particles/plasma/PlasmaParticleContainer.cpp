@@ -22,6 +22,8 @@
 #include "particles/particles_utils/FieldGather.H"
 #include "particles/pusher/GetAndSetPosition.H"
 #include "particles/beam/BeamParticleContainer.H"
+#include "particles/beam/MultiBeam.H"
+
 #include <cmath>
 #include <fstream>
 #include <sstream>
@@ -766,9 +768,6 @@ PlasmaToBeam ()
     auto old_size = beam_particle_tile.size();
     auto new_size = old_size + p_num_new_beam_part;
     beam_particle_tile.resize(new_size);
-    
-    
-       
 }
 
 void
