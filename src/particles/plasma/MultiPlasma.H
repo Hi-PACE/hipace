@@ -107,6 +107,11 @@ public:
     void DoLaserIonization (const int islice, const amrex::Geometry& laser_geom,
                             const MultiLaser& laser);
 
+    /** Do the transfer of ionized plasma particles to beam particles
+     *
+     */
+    void DoLaserInjection ();
+
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     bool AnySpeciesNeutralizeBackground () const;
 
