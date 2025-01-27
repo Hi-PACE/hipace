@@ -664,7 +664,9 @@ LaserIonization (const int islice,
                 Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
                 Ep *= E0;
 
-                amrex::Real ux, uy, uz;
+                amrex::Real ux;
+                amrex::Real uy;
+                amrex::Real uz;
                 const int ion_lev_loc = ion_lev[ip];
 
                 if (linear_polarization) {
@@ -679,7 +681,7 @@ LaserIonization (const int islice,
                     amrex::Real angle;
                     angle = amrex::Random(engine) * 2 * MathConst::pi;
                     ux = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
-                    uy = std::sqrt(amrex::abs(A*A)) /    std::sqrt(2) * std::sin(angle);
+                    uy = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::sin(angle);
                     uz = amrex::abs(A*A) / 2.;
                 }
 
