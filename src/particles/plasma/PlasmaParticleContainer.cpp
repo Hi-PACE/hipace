@@ -682,7 +682,7 @@ LaserIonization (const int islice,
                     uy = std::sqrt(amrex::abs(A*A)) /    std::sqrt(2) * std::sin(angle);
                     uz = amrex::abs(A*A) / 2.;
                 }
-                
+
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
                 // Copy ion data to new electron
