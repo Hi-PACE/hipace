@@ -641,47 +641,48 @@ LaserIonization (const int islice,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
 
-            // Avoid temp slice
-            const amrex::Real xp = x_prev[ip];
-            const amrex::Real yp = y_prev[ip];
-
-            if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
-                !laser_bounds.contains(xp, yp)) return;
-
-            Complex A = 0;
-            Complex A_dx = 0;
-            Complex A_dzeta = 0;
-
-            doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
-                dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
-
-            const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
-            const Complex El = - A_dx * phys_const.c; // longitudinal component
-
-            amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
-            Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
-            Ep *= E0;
-
-            amrex::Real ux, uy, uz;
-            const int ion_lev_loc = ion_lev[ip];
-
-            if (linear_polarization) {
-                amrex::Real width_p;
-                amrex::Real p_pol;
-                width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc] * Ep) * std::sqrt(amrex::abs(A*A)); // equation (4) art. Massimo
-                p_pol = amrex::RandomNormal(0.0, width_p, engine);
-                ux = p_pol;
-                uy = 0._rt;
-                uz = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.);
-            } else {
-                amrex::Real angle;
-                angle = amrex::Random(engine) * 2 * MathConst::pi;
-                ux = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
-                uy = std::sqrt(amrex::abs(A*A)) /    std::sqrt(2) * std::sin(angle);
-                uz = amrex::abs(A*A) / 2.;
-            }
-
             if(p_ion_mask[ip] != 0) {
+
+                // Avoid temp slice
+                const amrex::Real xp = x_prev[ip];
+                const amrex::Real yp = y_prev[ip];
+
+                if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
+                    !laser_bounds.contains(xp, yp)) return;
+
+                Complex A = 0;
+                Complex A_dx = 0;
+                Complex A_dzeta = 0;
+
+                doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
+                    dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+
+                const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
+                const Complex El = - A_dx * phys_const.c; // longitudinal component
+
+                amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
+                Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
+                Ep *= E0;
+
+                amrex::Real ux, uy, uz;
+                const int ion_lev_loc = ion_lev[ip];
+
+                if (linear_polarization) {
+                    amrex::Real width_p;
+                    amrex::Real p_pol;
+                    width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc] * Ep) * std::sqrt(amrex::abs(A*A)); // equation (4) art. Massimo
+                    p_pol = amrex::RandomNormal(0.0, width_p, engine);
+                    ux = p_pol;
+                    uy = 0._rt;
+                    uz = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.);
+                } else {
+                    amrex::Real angle;
+                    angle = amrex::Random(engine) * 2 * MathConst::pi;
+                    ux = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
+                    uy = std::sqrt(amrex::abs(A*A)) /    std::sqrt(2) * std::sin(angle);
+                    uz = amrex::abs(A*A) / 2.;
+                }
+                
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
                 // Copy ion data to new electron
