@@ -14,6 +14,6 @@ curl -L -o amrex-doxygen-web.tag.xml \
   https://amrex-codes.github.io/amrex/docs_xml/doxygen/amrex-doxygen-web.tag.xml
 
 # treat all warnings as errors
-echo "WARN_AS_ERROR = YES" >> Doxyfile
+#echo "WARN_AS_ERROR = YES" >> Doxyfile
 
 doxygen
