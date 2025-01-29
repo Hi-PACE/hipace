@@ -734,7 +734,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
 
     // counts the number of particles to transfer from the plasma container to the beam container
     amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
-    uint32_t* AMREX_RESTRICT p_num_new_electrons = num_new_beam_part.dataPtr();
+    uint32_t* AMREX_RESTRICT p_num_new_beam_part = num_new_beam_part.dataPtr();
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
