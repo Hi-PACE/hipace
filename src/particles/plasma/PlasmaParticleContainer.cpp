@@ -738,8 +738,6 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         // Loading the data
         const auto ptd = pti.GetParticleTile().getParticleTileData();
 
-        amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
-
         amrex::Long const num_particles = pti.numParticles();
 
         amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
