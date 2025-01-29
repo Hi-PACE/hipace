@@ -775,6 +775,8 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
 
         const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
 
+        p_num_new_beam_part = num_new_beam_part.dataPtr();
+
         if (np != 0) {
             // copy data from GPU to IO buffer
             auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
