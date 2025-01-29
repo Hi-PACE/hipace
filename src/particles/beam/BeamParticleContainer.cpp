@@ -401,6 +401,10 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
             }
         );
     }
+
+    // remove invalid particles so they don't show up in the beam diagnostic of the first time step
+    amrex::removeInvalidParticles(getBeamSlice(which_slice));
+    resize(which_slice, getBeamSlice(which_slice).size(), 0);
 }
 
 void
