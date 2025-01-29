@@ -746,22 +746,25 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
 
         amrex::Long const num_particles = pti.numParticles();
 
-        amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
-        amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
+        amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<int> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
-        
+
         // This kernel calculate the number of ionized electrons in the plasma container and make them invalid
         reduce_op.eval(
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
-            {   
-                if (ptd.id(ip)!=2) // whether the plasma particle is from ionization
+            {
+                if (ptd.id(ip) != 2) // whether the plasma particle is from ionization
                 {
-                    amrex::Gpu::Atomic::Add( p_num_new_beam_part, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
-                    ptd.id(ip).make_invalid(); //make the particle invalid in the plasma container
+                    ptd.id(ip).make_invalid(); // make the particle invalid in the plasma container
+                    return {1};
+                } else {
+                    return {0};
                 }
-            return {};
         });
+
+        auto [num_new_beam_particles] = reduce_data.value();
     }
     
     // extract the beam data for resizing
