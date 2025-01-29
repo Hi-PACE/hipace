@@ -732,8 +732,9 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
     // new kernel make_invalid() the plasma particles transferred
     //new kernel to add partciles in the beam container
 
-    uint32_t num_new_beam_part = 0;
-    uint32_t* p_num_new_beam_part = &num_new_beam_part;
+    // counts the number of particles to transfer from the plasma container to the beam container
+    amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
+    uint32_t* AMREX_RESTRICT p_num_new_electrons = num_new_beam_part.dataPtr();
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -742,7 +743,6 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         const auto ptd = pti.GetParticleTile().getParticleTileData();
 
         amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
-        p_num_new_beam_part = num_new_beam_part.dataPtr();
 
         amrex::Long const num_particles = pti.numParticles();
 
@@ -774,8 +774,6 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         auto& beam = beams.getBeam(ibeam);
 
         const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
-
-        p_num_new_beam_part = num_new_beam_part.dataPtr();
 
         if (np != 0) {
             // copy data from GPU to IO buffer
