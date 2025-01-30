@@ -762,7 +762,9 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         });
 
         auto [sum_new_beam_part] = reduce_data.value();
-        num_new_beam_part.dataValue() += sum_new_beam_part;
+        unint32_t h_num_new_beam_part = num_new_beam_part.dataValue(); // take the value
+        h_num_new_beam_part += sum_new_beam_part; 
+        num_new_beam_part.setValue(h_num_new_beam_part); // update the value in the device
     }
     
 
