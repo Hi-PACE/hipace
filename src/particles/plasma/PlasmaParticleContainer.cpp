@@ -732,7 +732,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
     // new kernel make_invalid() the plasma particles transferred
     //new kernel to add partciles in the beam container
 
-    amrex::Gpu::DeviceScalar<uint32_t> num_new_electrons(0);
+    amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
     uint32_t* AMREX_RESTRICT p_num_new_beam_part = num_new_beam_part.dataPtr();
 
     // Loop over plasma particle boxes
@@ -762,7 +762,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         });
 
         auto [sum_new_beam_part] = reduce_data.value();
-        num_new_beam_part.dataValue() = sum_new_beam_part;
+        num_new_beam_part += sum_new_beam_part;
     }
     
 
@@ -781,7 +781,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
             // copy data from GPU to IO buffer
             auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
             auto old_size = beam_soa.size();
-            auto new_size = old_size + num_new_beam_part.dataValue();
+            auto new_size = old_size + num_new_beam_part;
             beam_soa.resize(new_size);
 
 //            beam_soa.GetRealData(BeamIdx::x).data()=;
