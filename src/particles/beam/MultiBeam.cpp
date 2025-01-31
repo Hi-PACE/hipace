@@ -36,7 +36,7 @@ MultiBeam::InitData (const amrex::Geometry& geom)
         ptime = beam.InitData(geom);
         if(beam.m_can_laser_injection) {
             for (int i=0; i<m_names.size(); ++i) {
-                if(m_names[i] == beam.m_product_name) {
+                if(m_names[i] == beam.m_product_beam_name) {
                     beam.m_product_beam_pc = &m_all_beams[i];
                 }
             }
