@@ -34,15 +34,6 @@ MultiBeam::InitData (const amrex::Geometry& geom)
     amrex::Real ptime {0.};
     for (auto& beam : m_all_beams) {
         ptime = beam.InitData(geom);
-        if(beam.m_can_laser_injection) {
-            for (int i=0; i<m_names.size(); ++i) {
-                if(m_names[i] == beam.m_product_name) {
-                    beam.m_product_beam_pc = &m_all_beams[i];
-                }
-            }
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(beam.m_product_beam_pc != nullptr,
-                "Must specify a valid product beam for laser injection using ionization_product");
-        }
     }
     return ptime;
 }

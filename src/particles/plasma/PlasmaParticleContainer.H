@@ -224,6 +224,11 @@ public:
     /** to calculate laser ionization momentum width for linear polarization */
      amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
 
+    // laser injection:
+    bool m_can_laser_injection = false; /**< whether laser injection is unabled */
+    std::string m_product_beam_name = ""; /**< name of Injection product beam */
+    PlasmaParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
+
     // plasma sorting/reordering:
 
     /** After how many slices the particles are reordered. 0: off */

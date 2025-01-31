@@ -57,6 +57,16 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
             plasma.InitIonizationModule(gm[0],
                 Hipace::m_background_density_SI); // geometry only for dz
         }
+        if(beam.m_can_laser_injection) {
+            for (int i=0; i<m_names.size(); ++i) {
+                if(m_names[i] == beam.m_product_name) {
+                    beam.m_product_beam_pc = &m_all_beams[i];
+                }
+            }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(beam.m_product_beam_pc != nullptr,
+                "Must specify a valid product beam for laser injection using ionization_product");
+        }
+        
     }
 }
 
