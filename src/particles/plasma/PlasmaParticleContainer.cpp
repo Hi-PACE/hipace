@@ -723,7 +723,7 @@ LaserIonization (const int islice,
 void
 PlasmaParticleContainer::
 PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
-                 const MultiLaser& laser, const int islice,)
+                 const MultiLaser& laser, const int islice)
 {
     if (!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
