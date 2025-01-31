@@ -768,6 +768,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         //num_new_beam_part.dataValue() = h_num_new_beam_part;
     }
     
+    if (num_new_beam_part.dataValue() == 0) continue;
 
     // extract the beam data for resizing
     const int nbeams = beams.get_nbeams();
@@ -779,20 +780,18 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         auto& beam = beams.getBeam(ibeam);
 
         const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
+    
 
-        if (np != 0) {
-            // copy data from GPU to IO buffer
-            auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-            auto old_size = beam_soa.size();
-            auto new_size = old_size + num_new_beam_part.dataValue();
-            beam_soa.resize(new_size);
+        auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        auto old_size = beam_soa.size();
+        auto new_size = old_size + num_new_beam_part.dataValue();
+        beam_soa.resize(new_size);
 
 //            beam_soa.GetRealData(BeamIdx::x).data()=;
 //            beam_soa.GetRealData(BeamIdx::y).data()=;
         
         }
-    }   
-}
+} 
 
 void
 PlasmaParticleContainer::InSituComputeDiags (int islice)
