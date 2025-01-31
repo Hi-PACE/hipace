@@ -40,7 +40,7 @@ MultiBeam::InitData (const amrex::Geometry& geom)
                     beam.m_product_beam_pc = &m_all_beams[i];
                 }
             }
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(beam.m_product_pc != nullptr,
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(beam.m_product_beam_pc != nullptr,
                 "Must specify a valid product beam for laser injection using ionization_product");
         }
     }
