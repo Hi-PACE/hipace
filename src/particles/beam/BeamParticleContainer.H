@@ -258,12 +258,13 @@ private:
     amrex::IntVect m_reorder_idx_type = {0, 0, 0};
 
     // laser injection:
+public:
     bool m_can_laser_injection = false; /**< whether laser injection is unabled */
     std::string m_product_name = ""; /**< name of Injection product beam */
     BeamParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
 
     // fixed_ppc:
-
+private:
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_position_mean {0., 0., 0.}; /**< mean position of the beam */
     amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */
