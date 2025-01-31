@@ -724,6 +724,7 @@ void
 PlasmaParticleContainer::
 PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
 {
+    if (!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
     //extract the soa plasma container (see insitu function)
     // same for the beam container (BeamParticleContainer.cpp see InSituComputeDiags)
@@ -768,11 +769,12 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
         //num_new_beam_part.dataValue() = h_num_new_beam_part;
     }
     
-    if (num_new_beam_part.dataValue() == 0) continue;
 
     // extract the beam data for resizing
     const int nbeams = beams.get_nbeams();
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+
+        if (num_new_beam_part.dataValue() == 0) continue;
 
         std::string name = beams.get_name(ibeam);
         if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;

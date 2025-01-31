@@ -257,6 +257,11 @@ private:
     /** 2D reordering index type. 0: cell, 1: node, 2: both */
     amrex::IntVect m_reorder_idx_type = {0, 0, 0};
 
+    // laser injection:
+    bool m_can_laser_injection = false; /**< whether laser injection is unabled */
+    std::string m_product_name = ""; /**< name of Injection product beam */
+    BeamParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
+
     // fixed_ppc:
 
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
