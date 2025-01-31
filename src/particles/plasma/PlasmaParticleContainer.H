@@ -119,7 +119,8 @@ public:
      * \param[in] beams multibeam containing all beams
      */
     void PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
-                 const MultiLaser& laser);
+                 const MultiLaser& laser, const int islice
+                 );
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index

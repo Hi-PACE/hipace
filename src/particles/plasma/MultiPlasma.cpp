@@ -138,11 +138,11 @@ MultiPlasma::DoLaserIonization (
 void
 MultiPlasma::DoLaserInjection (
     MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
-                 const MultiLaser& laser)
+                 const MultiLaser& laser, const int islice)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.PlasmaToBeam(beams, beamnames, laser_geom,
-                 MultiLaser& laser);
+                 MultiLaser& laser, slice);
     }
 }
 
