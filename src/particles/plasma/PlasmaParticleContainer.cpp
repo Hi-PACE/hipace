@@ -768,10 +768,10 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         auto [sum_new_beam_part] = reduce_data.value();
         amrex::Gpu::Atomic::Add(p_num_new_beam_part, static_cast<uint32_t>(sum_new_beam_part));
         //uint32_t h_num_new_beam_part = num_new_beam_part.dataValue(); // take the value
-        //h_num_new_beam_part += sum_new_beam_part; 
+        //h_num_new_beam_part += sum_new_beam_part;
         //num_new_beam_part.dataValue() = h_num_new_beam_part;
     }
-    
+
 
     // extract the beam data for resizing
     const int nbeams = beams.get_nbeams();
@@ -785,7 +785,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         auto& beam = beams.getBeam(ibeam);
 
         const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
-    
+
 
         auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         auto old_size = beam_soa.size();
@@ -794,9 +794,9 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
 //            beam_soa.GetRealData(BeamIdx::x).data()=;
 //            beam_soa.GetRealData(BeamIdx::y).data()=;
-        
+
         }
-} 
+}
 
 void
 PlasmaParticleContainer::InSituComputeDiags (int islice)

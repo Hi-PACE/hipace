@@ -66,7 +66,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_beam_pc != nullptr,
                 "Must specify a valid product beam for laser injection using ionization_product");
         }
-        
+
     }
 }
 
