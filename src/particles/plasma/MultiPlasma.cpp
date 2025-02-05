@@ -99,7 +99,9 @@ MultiPlasma::AdvanceParticles (
     const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice, lev);
+        if (m_all_plasmas[i].do_push){
+            AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice, lev);
+        }
     }
 }
 
