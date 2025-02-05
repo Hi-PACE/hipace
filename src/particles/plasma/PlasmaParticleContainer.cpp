@@ -672,7 +672,7 @@ LaserIonization (const int islice,
                 if (linear_polarization) {
                     amrex::Real width_p;
                     amrex::Real p_pol;
-                    width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc-1] * Ep) * std::sqrt(amrex::abs(A*A)); // equation (4) art. Massimo
+                    width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc-1] * Ep) * std::sqrt(amrex::abs(A*A)); // equation (4) art. Massimo (2020)
                     p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol;
                     uy = 0._rt;
@@ -680,8 +680,9 @@ LaserIonization (const int islice,
                 } else {
                     amrex::Real angle;
                     angle = amrex::Random(engine) * 2 * MathConst::pi;
-                    ux = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
-                    uy = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::sin(angle);
+                    // A_t = A (e_x +/- i e_y) in hipace in circular polarization 
+                    ux = std::sqrt(amrex::abs(A*A)) * std::cos(angle);
+                    uy = std::sqrt(amrex::abs(A*A)) * std::sin(angle);
                     uz = amrex::abs(A*A) / 2.;
                 }
 
