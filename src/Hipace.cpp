@@ -700,7 +700,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // Push plasma particles
     for (int lev=0; lev<current_N_level; ++lev) {
-        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
     }
 
     // get minimum beam acceleration on level 0
@@ -968,7 +968,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // Push particles to the next temp slice
-            m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, true, lev);
+            m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, true, lev, current_N_level);
         }
 
         if (m_N_level > 1) {

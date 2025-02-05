@@ -29,7 +29,7 @@ template struct PlasmaMomentumDerivative<DualNumber>;
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice,
-                        int const lev)
+                        int const lev, int const current_N_level)
 {
     HIPACE_PROFILE("AdvancePlasmaParticles()");
     using namespace amrex::literals;
@@ -272,7 +272,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
             });
 
 #ifdef HIPACE_USE_AB5_PUSH
-        if (!temp_slice) {
+        if (!temp_slice && lev == current_N_level - 1) {
             auto& rd = pti.GetStructOfArrays().GetRealData();
 
             // shift force terms
