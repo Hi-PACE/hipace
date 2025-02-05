@@ -519,6 +519,9 @@ When both are specified, the per-species value is used.
     the domain. However, this will also result in a gap at the domain boundary,
     which can lead to noise.
 
+* ``<plasma name> or plasmas.do_push`` (`bool`) optional (default `1`)
+    When set to `0`, disables the particle pusher.
+
 Beam parameters
 ---------------
 
