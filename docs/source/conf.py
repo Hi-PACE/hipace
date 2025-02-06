@@ -37,7 +37,12 @@ release = u'24.08'
 extensions = [
     "breathe",
     "sphinx_copybutton",
+    "sphinxcontrib.googleanalytics",
 ]
+
+# Google Analytics
+googleanalytics_id = "G-Z1D5ZZDNC6"
+googleanalytics_enabled = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
