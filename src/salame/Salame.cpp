@@ -44,7 +44,8 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // advance plasma to the temp slice
-            hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_3D_geom, true, lev);
+            hipace->m_multi_plasma.AdvanceParticles(hipace->m_fields, hipace->m_3D_geom, true, lev,
+                                                    current_N_level);
 
             hipace->m_fields.duplicate(lev, WhichSlice::Salame, {"jx", "jy"},
                                             WhichSlice::Next, {"jx_beam", "jy_beam"});
