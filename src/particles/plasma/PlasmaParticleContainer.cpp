@@ -673,8 +673,8 @@ LaserIonization (const int islice,
                     amrex::Real width_p;
                     amrex::Real p_pol;
                     //width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc-1] * Ep) * std::sqrt(amrex::abs(A*A)); // equation (4) art. Massimo (2020)
-		    width_p = std::pow(amrex::abs(A), 3./2.)*laser_dp_prefactor[ion_lev_loc-1];
-		    p_pol = amrex::RandomNormal(0.0, width_p, engine);
+		            width_p = std::pow(amrex::abs(A), 3./2.)*laser_dp_prefactor[ion_lev_loc-1]/std::sqrt(lambda0); // equation from Tassimo art., ref [34] in Massimo's art
+		            p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol;
                     uy = 0._rt;
                     uz = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.);
