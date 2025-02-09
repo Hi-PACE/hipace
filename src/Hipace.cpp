@@ -699,8 +699,10 @@ Hipace::SolveOneSlice (int islice, int step)
     m_multi_plasma.DoLaserIonization(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
 
     // Push plasma particle
-    for (int lev=0; lev<current_N_level; ++lev) {
-        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev);
+    if (false){ // TEMPORARY
+        for (int lev=0; lev<current_N_level; ++lev) {
+            m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
+        }
     }
 
     // get minimum beam acceleration on level 0
