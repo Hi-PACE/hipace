@@ -75,9 +75,11 @@ public:
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
      * \param[in] lev MR level
+     * \param[in] current_N_level number of MR levels
      */
     void AdvanceParticles (
-        const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev);
+        const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev,
+        int const current_N_level);
 
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *

@@ -96,7 +96,8 @@ MultiPlasma::ExplicitDeposition (Fields& fields, amrex::Vector<amrex::Geometry> 
 
 void
 MultiPlasma::AdvanceParticles (
-    const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev)
+    const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev,
+    int const current_N_level)
 {
     for (int i=0; i<m_nplasmas; i++) {
         if (m_all_plasmas[i].m_do_push){
