@@ -97,6 +97,7 @@ PlasmaParticleContainer::ReadParameters ()
         m_charge *= m_init_ion_lev;
     }
     queryWithParser(pp, "ionization_product", m_product_name);
+    queryWithParser(pp, "injection_product", m_product_beam_name")
 
     std::string density_func_str = "0.";
     DeprecatedInput(m_name, "density", "density(x,y,z)");
@@ -748,8 +749,6 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         amrex::Long const num_particles = pti.numParticles();
 
         amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
-        amrex::ReduceData<int> reduce_data(reduce_op);
-        using ReduceTuple = typename decltype(reduce_data)::Type;
 
         // This kernel calculate the number of ionized electrons in the plasma container and make them invalid
         reduce_op.eval(
@@ -767,30 +766,54 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
         auto [sum_new_beam_part] = reduce_data.value();
         amrex::Gpu::Atomic::Add(p_num_new_beam_part, static_cast<uint32_t>(sum_new_beam_part));
-        //uint32_t h_num_new_beam_part = num_new_beam_part.dataValue(); // take the value
-        //h_num_new_beam_part += sum_new_beam_part;
-        //num_new_beam_part.dataValue() = h_num_new_beam_part;
-    }
 
+        auto& beam_elec = m_product_beam_pc;
 
-    // extract the beam data for resizing
-    const int nbeams = beams.get_nbeams();
-    for (int ibeam = 0; ibeam < nbeams; ibeam++) {
-
-        if (num_new_beam_part.dataValue() == 0) continue;
-
-        std::string name = beams.get_name(ibeam);
-        if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
-
-        auto& beam = beams.getBeam(ibeam);
-
-        const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
-
-
-        auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        auto& beam_soa = beam_elec.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         auto old_size = beam_soa.size();
         auto new_size = old_size + num_new_beam_part.dataValue();
         beam_soa.resize(new_size);
+
+        amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0); 
+        amrex::ParallelFor(num_particles,
+            [=] AMREX_GPU_DEVICE (int ip) {
+                if (ptd.id(ip) != 2){
+                    const long pidx = pid + old_size;
+                    beam_soa.GetRealData(BeamIdx::x).data() = ptd.pos(0, ip);
+                    beam_soa.GetRealData(BeamIdx::y).data() = ptd.pos(1, ip);
+                    beam_soa.GetRealData(BeamIdx::ux).data() = ptd.rdata(PlasmaIdx::ux)[ip];
+                    beam_soa.GetRealData(BeamIdx::uy).data() = ptd.rdata(PlasmaIdx::uy)[ip];
+                    beam_soa.GetRealData(BeamIdx::psi).data() = ptd.rdata(PlasmaIdx::psi)[ip];
+                    beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
+                    beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
+                    // weird, how do we do a loop over ip for plasma particles and not for the beam
+                }
+            }
+
+        
+    }
+
+        
+
+    // extract the beam data for resizing
+    //const int nbeams = beams.get_nbeams();
+    //for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+
+      //  if (num_new_beam_part.dataValue() == 0) continue;
+
+        //std::string name = beams.get_name(ibeam);
+        //if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
+
+        //auto& beam = beams.getBeam(ibeam);
+
+        //const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
+
+
+        //auto& beam_soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        //auto old_size = beam_soa.size();
+        //auto new_size = old_size + num_new_beam_part.dataValue();
+        //beam_soa.resize(new_size);
+        
 
 //            beam_soa.GetRealData(BeamIdx::x).data()=;
 //            beam_soa.GetRealData(BeamIdx::y).data()=;
