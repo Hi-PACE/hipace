@@ -16,6 +16,7 @@
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
 #include "particles/beam/MultiBeam.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include <map>
 
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
@@ -227,7 +228,7 @@ public:
     // laser injection:
     bool m_can_laser_injection = false; /**< whether laser injection is unabled */
     std::string m_product_beam_name = ""; /**< name of Injection product beam */
-    PlasmaParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
+    BeamParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
 
     // plasma sorting/reordering:
 
