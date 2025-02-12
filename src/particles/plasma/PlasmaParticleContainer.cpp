@@ -673,7 +673,6 @@ LaserIonization (const int islice,
                 if (linear_polarization) {
 		    amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc-1];
 		    amrex::Real delta2 = delta * delta;
-		    std::cout << "delta: " << delta << "\n";
 		    amrex::Real width_p = amrex::abs(A) * delta * (1 - (3./4.) * delta2 - (3./2.) * delta2 + laser_dp_second_prefactor[ion_lev_loc-1] * delta2); // equation from C. Schroeder art.
 		    amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol;
