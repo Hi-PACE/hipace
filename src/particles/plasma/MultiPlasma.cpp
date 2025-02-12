@@ -100,7 +100,9 @@ MultiPlasma::AdvanceParticles (
     int const current_N_level)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice, lev, current_N_level);
+        if (m_all_plasmas[i].m_do_push){
+            AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice, lev, current_N_level);
+        }
     }
 }
 

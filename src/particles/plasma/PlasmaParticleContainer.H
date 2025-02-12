@@ -195,6 +195,7 @@ public:
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
     amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
     int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
+    bool m_do_push = true; /**< whether the plasma pusher is enabled */
 
     // ionization:
 

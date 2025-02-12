@@ -102,7 +102,7 @@ namespace
         ptd.rdata(BeamIdx::ux )[ip] = uxp;
         ptd.rdata(BeamIdx::uy )[ip] = uyp;
         ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
-        ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
+        ptd.rdata(BeamIdx::w  )[ip] = is_valid ? std::abs(weight) : amrex::Real{0};
 
         ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
         ptd.idata(BeamIdx::mr_level)[ip] = 0;

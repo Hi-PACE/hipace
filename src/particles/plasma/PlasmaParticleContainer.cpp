@@ -173,6 +173,7 @@ PlasmaParticleContainer::ReadParameters ()
         "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
         "to use the fine plasma patch feature");
     queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
+    queryWithParser(pp, "do_push", m_do_push);
 }
 
 void
