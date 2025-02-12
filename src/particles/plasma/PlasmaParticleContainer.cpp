@@ -532,6 +532,7 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
+	amrex::Real* AMREX_RESTRICT laser_dp_second_prefactor = m_laser_dp_second_prefactor.data();
 
         long num_ions = ptile_ion.numParticles();
 
@@ -670,13 +671,11 @@ LaserIonization (const int islice,
                 const int ion_lev_loc = ion_lev[ip];
 
                 if (linear_polarization) {
-                    amrex::Real width_p;
-                    amrex::Real p_pol;
-                    amrex::Real delta;
-                    //width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc-1] * Ep) * std::sqrt(amrex::abs(A*A)); // equation (4) art. Massimo (2020)
-		            delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc-1];
-                    width_p = amrex::abs(A) * delta; // equation from C. Shroder art.
-		            p_pol = amrex::RandomNormal(0.0, width_p, engine);
+		    amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc-1];
+		    amrex::Real delta2 = delta * delta;
+		    std::cout << "delta: " << delta << "\n";
+		    amrex::Real width_p = amrex::abs(A) * delta * (1 - (3./4.) * delta2 - (3./2.) * delta2 + laser_dp_second_prefactor[ion_lev_loc-1] * delta2); // equation from C. Schroeder art.
+		    amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol;
                     uy = 0._rt;
                     uz = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.);
