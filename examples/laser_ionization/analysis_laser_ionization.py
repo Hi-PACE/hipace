@@ -74,16 +74,16 @@ print(f"fraction_hipace_circular = {fraction_circular}")
 # in-situ diagnostics for calculation of the temperature in all directions in circular polarization
 insitu_path_linear = f'./{args.third}/reduced_elec.0000.txt'
 all_data_linear = diag.read_file(insitu_path_linear)
-Tx2_l = all_data_linear['[ux^2]'][0,:]*scc.m_e*scc.c**2/scc.e
-Ty2_l = all_data_linear['[uy^2]'][0,:]*scc.m_e*scc.c**2/scc.e
-Tz2_l = all_data_linear['[uz^2]'][0,:]*scc.m_e*scc.c**2/scc.e
+Tx2_l = all_data_linear['[ux^2]'][0,0]*scc.m_e*scc.c**2/scc.e
+Ty2_l = all_data_linear['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
+Tz2_l = all_data_linear['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_linear = 1./3*(Tx2_l+Ty2_l+Tz2_l)
 
 insitu_path_circular = f'./{args.fourth}/reduced_elec.0000.txt'
 all_data_circular = diag.read_file(insitu_path_circular)
-Tx2_c = all_data_circular['[ux^2]'][0,:]*scc.m_e*scc.c**2/scc.e
-Ty2_c = all_data_circular['[uy^2]'][0,:]*scc.m_e*scc.c**2/scc.e
-Tz2_c = all_data_circular['[uz^2]'][0,:]*scc.m_e*scc.c**2/scc.e
+Tx2_c = all_data_circular['[ux^2]'][0,0]*scc.m_e*scc.c**2/scc.e
+Ty2_c = all_data_circular['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
+Tz2_c = all_data_circular['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_circular = 1./3*(Tx2_c+Ty2_c+Tz2_c)
 
 temp_eV_warpx_linear = 1.00286009
