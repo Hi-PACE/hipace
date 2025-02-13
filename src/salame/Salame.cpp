@@ -428,7 +428,6 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
                 // invalidate particles with a weight of zero
                 if (W == 0) {
                     id.make_invalid();
-                    return;
                 }
 
                 // Multiply SALAME beam particles on this slice with W
