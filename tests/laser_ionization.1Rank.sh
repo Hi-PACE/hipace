@@ -38,7 +38,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
     plasmas.insitu_file_prefix = $TEST_NAME/insitu_circular
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_laser_ionization.py --first=$TEST_NAME/linear  --second=$TEST_NAME/circular --third=$TEST_NAME/insitu_linear --fourth=$TEST_NAME/insitu_linear
+$HIPACE_EXAMPLE_DIR/analysis_laser_ionization.py --first=$TEST_NAME/linear  --second=$TEST_NAME/circular --third=$TEST_NAME/insitu_linear --fourth=$TEST_NAME/insitu_circular
 
 
 # Compare the results with checksum benchmark if it runs on CPU only
