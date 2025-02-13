@@ -31,8 +31,6 @@ parser.add_argument('--third',
                     dest='third',
                     required=True,
                     help='Path to the directory containing output files')
-args = parser.parse_args()
-
 parser.add_argument('--fourth',
                     dest='fourth',
                     required=True,
