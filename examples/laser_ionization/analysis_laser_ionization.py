@@ -12,7 +12,7 @@ from openpmd_viewer import OpenPMDTimeSeries
 import statistics
 import scipy.constants as scc
 
-import read_insitu_diagnostics as diag
+import ./../tools/read_insitu_diagnostics as diag
 from read_insitu_diagnostics import temperature_in_eV
 
 parser = argparse.ArgumentParser(
