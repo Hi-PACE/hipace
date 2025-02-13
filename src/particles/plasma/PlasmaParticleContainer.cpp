@@ -672,10 +672,10 @@ LaserIonization (const int islice,
                 const int ion_lev_loc = ion_lev[ip];
 
                 if (linear_polarization) {
-            amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc-1];
-            amrex::Real delta2 = delta * delta;
-            amrex::Real width_p = amrex::abs(A) * delta * (1 - (3./4.) * delta2 - (3./2.) * delta2 + laser_dp_second_prefactor[ion_lev_loc-1] * delta2); // equation from C. Schroeder art.
-            amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
+                    amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc-1];
+                    amrex::Real delta2 = delta * delta;
+                    amrex::Real width_p = amrex::abs(A) * delta * (1 - (3./4.) * delta2 - (3./2.) * delta2 + laser_dp_second_prefactor[ion_lev_loc-1] * delta2); // equation (14) from C. Schroeder art.
+                    amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol;
                     uy = 0._rt;
                     uz = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.);
