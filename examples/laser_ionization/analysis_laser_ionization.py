@@ -12,7 +12,9 @@ from openpmd_viewer import OpenPMDTimeSeries
 import statistics
 import scipy.constants as scc
 
-import ./tools/read_insitu_diagnostics as diag
+import sys
+sys.path.append("../../tools/")
+import read_insitu_diagnostics as diag
 
 
 parser = argparse.ArgumentParser(
