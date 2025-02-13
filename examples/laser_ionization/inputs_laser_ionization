@@ -35,6 +35,7 @@ laser.focal_distance = 50.e-6
 
 plasmas.names = elec ion
 plasmas.do_push = false
+plasmas.insitu_period = 1
 
 elec.density(x,y,z) = n0
 elec.ppc = 0 0
