@@ -452,8 +452,8 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
             * std::pow(2*std::pow((Uion/UH),3./2.)*Ea,2*n_eff - 1);
         h_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
         h_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
-	h_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
-	h_laser_dp_second_prefactor[i] = 2 * ion_atomic_number * std::sqrt(UH/Uion) - 1./2.;
+    h_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
+    h_laser_dp_second_prefactor[i] = 2 * ion_atomic_number * std::sqrt(UH/Uion) - 1./2.;
     }
 
     amrex::Gpu::copy(amrex::Gpu::hostToDevice,
