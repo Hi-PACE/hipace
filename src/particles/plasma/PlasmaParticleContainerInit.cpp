@@ -440,7 +440,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     amrex::Gpu::PinnedVector<amrex::Real> h_laser_adk_prefactor(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_laser_dp_prefactor(ion_atomic_number);
     amrex::Gpu::PinnedVector<amrex::Real> h_laser_dp_second_prefactor(ion_atomic_number);
-    
+
     for (int i=0; i<ion_atomic_number; ++i)
     {
         const amrex::Real n_eff = (i+1) * std::sqrt(UH/h_ionization_energies[i]);
