@@ -34,7 +34,7 @@ laser.tau = tau_fs*1.e-15
 laser.focal_distance = 50.e-6
 
 plasmas.names = elec ion
-plasmas.do_push = false
+plasmas.do_push = 0
 plasmas.insitu_period = 1
 
 elec.density(x,y,z) = n0
