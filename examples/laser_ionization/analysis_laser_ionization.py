@@ -10,7 +10,7 @@ import numpy as np
 import math
 from openpmd_viewer import OpenPMDTimeSeries
 import statistics
-from scipy.constants import e scc
+from scipy.constants import scc
 
 import read_insitu_diagnostics as diag
 from read_insitu_diagnostics import temperature_in_eV
