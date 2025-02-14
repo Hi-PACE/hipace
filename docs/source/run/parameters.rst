@@ -592,10 +592,10 @@ which are valid only for certain beam types, are introduced further below under
     The ideal index type is different for beam push and beam deposition so some experimentation
     may be required to find the overall fastest setting for a specific simulation.
 
-* ``<beam name>.can_laser_injection`` (`bool`) optional (default `0`)
-    Whether the laser injection is unabled. Can also be set to 1 by specifying ``<beam name>.ionization_product``.
+* ``<plasma name>.can_laser_injection`` (`bool`) optional (default `0`)
+    Whether the laser injection is unabled. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
-* ``<beam name>.injection_product`` (`string`) optional (default "")
+* ``<plasma name>.injection_product`` (`string`) optional (default "")
     Name of the beam species that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable and the laser injection is unabled.
 
