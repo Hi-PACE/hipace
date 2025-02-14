@@ -97,7 +97,7 @@ PlasmaParticleContainer::ReadParameters ()
         m_charge *= m_init_ion_lev;
     }
     queryWithParser(pp, "ionization_product", m_product_name);
-    queryWithParser(pp, "injection_product", m_product_beam_name)
+    queryWithParser(pp, "injection_product", m_product_beam_name);
 
     std::string density_func_str = "0.";
     DeprecatedInput(m_name, "density", "density(x,y,z)");
