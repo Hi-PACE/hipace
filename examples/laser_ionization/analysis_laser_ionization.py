@@ -101,5 +101,5 @@ relative_diff_temp_circular = np.abs( ( temp_eV_circular - temp_eV_warpx_circula
 assert ( (relative_diff_linear < tolerance) and \
          (relative_diff_circular < tolerance) and \
          (relative_diff_temp_linear < tolerance) and \
-         (relative_diff_temp_circular < tolerance)),
+         (relative_diff_temp_circular < tolerance)), \
          'Test laser_ionization did not pass'
