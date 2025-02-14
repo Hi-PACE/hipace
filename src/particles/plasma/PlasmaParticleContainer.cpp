@@ -678,7 +678,9 @@ LaserIonization (const int islice,
                     uz = (amrex::abs(A * A) / 4._rt + p_pol * p_pol / 2._rt);
                 } else {
                     amrex::Real const angle = amrex::Random(engine) * 2._rt * MathConst::pi;
-                    // A_t = A (e_x +/- i e_y) in circular polarization
+                    // A_t = A (e_x +/- i e_y) in circular polarization.
+                    // ux and uy differ from Massimo PRE 2020 by a factor of sqrt(2) due to different
+                    // convention for linear vs. circular polarization.
                     ux = std::sqrt(amrex::abs(A*A)) * std::cos(angle);
                     uy = std::sqrt(amrex::abs(A*A)) * std::sin(angle);
                     // uz differs from Massimo PRE 2020 by a factor of 2 due to different
