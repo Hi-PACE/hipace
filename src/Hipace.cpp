@@ -690,14 +690,17 @@ Hipace::SolveOneSlice (int islice, int step)
     // copy fields (and laser) to diagnostic array
     FillFieldDiagnostics(current_N_level, islice);
 
-    // plasma ionization
+    // plasma field ionization
     for (int lev=0; lev<current_N_level; ++lev) {
         m_multi_plasma.DoFieldIonization(lev, m_3D_geom[lev], m_fields);
     }
 
+    // plasma laser ionization
+    m_multi_plasma.DoLaserIonization(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
+
     // Push plasma particles
     for (int lev=0; lev<current_N_level; ++lev) {
-        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev);
+        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
     }
 
     // get minimum beam acceleration on level 0
@@ -965,7 +968,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // Push particles to the next temp slice
-            m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, true, lev);
+            m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, true, lev, current_N_level);
         }
 
         if (m_N_level > 1) {

@@ -98,71 +98,6 @@ void doGatherShapeN (const amrex::Real xp,
 
 
 /**
- * \brief Field gather for a single particle
- *
- * \param[in] xp Particle position x
- * \param[in] yp Particle position y
- * \param[in,out] ExmByp Field on particle: Ex - c*By
- * \param[in,out] EypBxp Field on particle: Ey + c*Bx
- * \param[in,out] Ezp Field on particle: Ez
- * \param[in,out] Bxp Magnetic field on particles: Bx
- * \param[in,out] Byp Magnetic field on particles: By
- * \param[in,out] Bzp Magnetic field on particles: Bz
- * \param[in] slice_arr slice array for WhichSlice::This
- * \param[in] psi_comp field component for field Psi
- * \param[in] ez_comp field array for field  Ez
- * \param[in] bx_comp field array for field  Bx
- * \param[in] by_comp field array for field  By
- * \param[in] bz_comp field array for field  Bz
- * \param[in] dx_inv inverse cell spacing in x direction
- * \param[in] dy_inv inverse cell spacing in y direction
- * \param[in] x_pos_offset offset for converting positions to indexes
- * \param[in] y_pos_offset offset for converting positions to indexes
- * \param[in] depos_order_xy Order of the transverse shape factor for the field gather
- */
-AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void doGatherShapeN (const amrex::ParticleReal xp,
-                     const amrex::ParticleReal yp,
-                     amrex::ParticleReal& ExmByp,
-                     amrex::ParticleReal& EypBxp,
-                     amrex::ParticleReal& Ezp,
-                     amrex::ParticleReal& Bxp,
-                     amrex::ParticleReal& Byp,
-                     amrex::ParticleReal& Bzp,
-                     Array3<amrex::Real const> const& slice_arr,
-                     const int psi_comp,
-                     const int ez_comp,
-                     const int bx_comp,
-                     const int by_comp,
-                     const int bz_comp,
-                     const amrex::Real dx_inv,
-                     const amrex::Real dy_inv,
-                     const amrex::Real x_pos_offset,
-                     const amrex::Real y_pos_offset,
-                     const int depos_order_xy)
-{
-    if (depos_order_xy == 0) {
-        doGatherShapeN<0>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
-                          dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-    } else if (depos_order_xy == 1)  {
-        doGatherShapeN<1>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
-                          dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-    } else if (depos_order_xy == 2)  {
-        doGatherShapeN<2>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
-                          dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-    } else if (depos_order_xy == 3)  {
-        doGatherShapeN<3>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp, slice_arr,
-                          psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
-                          dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-    }
-}
-
-
-
-/**
  * \brief Field gather for a single particle of just Bx and By
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the field gather
@@ -326,6 +261,80 @@ void doLaserGatherShapeN (const amrex::Real xp,
         for (int ix=0; ix<=depos_order_xy; ix++){
             const amrex::Real x00y00 = slice_arr(i_cell+ix, j_cell+iy, aabs_comp);
             Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
+        }
+    }
+}
+
+/**
+ * \brief Laser field gather for a single particle
+ *
+ * \tparam depos_order_xy Order of the transverse shape factor for the field gather
+ * \param[in] xp Particle position x
+ * \param[in] yp Particle position y
+ * \param[in] Ap a field at particle position
+ * \param[in] ADxp d/dx a field at particle position
+ * \param[in] ADzetap d/dzeta a field at particle position
+ * \param[in] laser_arr slice array for WhichSlice::This
+ * \param[in] dx_inv inverse cell spacing in x direction
+ * \param[in] dy_inv inverse cell spacing in y direction
+ * \param[in] dzeta_inv inverse cell spacing in zeta direction
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ */
+template <int depos_order_xy>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void doLaserGatherShapeN (const amrex::Real xp,
+                          const amrex::Real yp,
+                          amrex::GpuComplex<amrex::Real>& Ap,
+                          amrex::GpuComplex<amrex::Real>& ADxp,
+                          amrex::GpuComplex<amrex::Real>& ADzetap,
+                          Array3<amrex::Real const> const& laser_arr,
+                          const amrex::Real dx_inv,
+                          const amrex::Real dy_inv,
+                          const amrex::Real dzeta_inv,
+                          const amrex::Real x_pos_offset,
+                          const amrex::Real y_pos_offset)
+{
+    using namespace amrex::literals;
+
+    // x,y direction
+    const amrex::Real x = (xp-x_pos_offset)*dx_inv;
+    const amrex::Real y = (yp-y_pos_offset)*dy_inv;
+
+    // --- Compute shape factors
+    // x direction
+    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
+    amrex::Real sx_cell[depos_order_xy + 1];
+    const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
+
+    // y direction
+    amrex::Real sy_cell[depos_order_xy + 1];
+    const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
+
+    // Gather field Aabssq, AabssqDxp, and AabssqDxp on particle from field on grid slice_arr
+    // the derivative is calculated on the fly
+    for (int iy=0; iy<=depos_order_xy; iy++){
+        for (int ix=0; ix<=depos_order_xy; ix++){
+            using namespace WhichLaserSlice;
+            const amrex::Real s_cell = sx_cell[ix]*sy_cell[iy];
+            const int i = i_cell+ix;
+            const int j = j_cell+iy;
+            Ap += amrex::GpuComplex<amrex::Real> {
+                s_cell * laser_arr(i, j, n00j00_r),
+                s_cell * laser_arr(i, j, n00j00_i)
+            };
+            ADxp += amrex::GpuComplex<amrex::Real> {
+                s_cell * 0.5_rt * dx_inv *
+                    (laser_arr(i + 1, j, n00j00_r) - laser_arr(i - 1, j, n00j00_r)),
+                s_cell * 0.5_rt * dx_inv *
+                    (laser_arr(i + 1, j, n00j00_i) - laser_arr(i - 1, j, n00j00_i))
+            };
+            ADzetap += amrex::GpuComplex<amrex::Real> {
+                s_cell * dzeta_inv *
+                    (laser_arr(i, j, n00jp1_r) - laser_arr(i, j, n00j00_r)),
+                s_cell * dzeta_inv *
+                    (laser_arr(i, j, n00jp1_i) - laser_arr(i, j, n00j00_i))
+            };
         }
     }
 }

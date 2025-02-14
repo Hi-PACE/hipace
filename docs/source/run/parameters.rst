@@ -446,6 +446,9 @@ When both are specified, the per-species value is used.
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
+* ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `<plasma name>.can_ionize`)
+    Whether this plasma can be ionized by a laser.
+
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial ionization state of the plasma. `0` for neutral gasses.
     If set, the plasma charge gets multiplied by this number. If the plasma species is not ionizable,
@@ -515,6 +518,9 @@ When both are specified, the per-species value is used.
     initialized half a cell to the side so that no plasma particle will be at the exact center of
     the domain. However, this will also result in a gap at the domain boundary,
     which can lead to noise.
+
+* ``<plasma name> or plasmas.do_push`` (`bool`) optional (default `1`)
+    When set to `0`, disables the particle pusher.
 
 Beam parameters
 ---------------
@@ -847,6 +853,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.names`` (list of `string`) optional (default `no_laser`)
     The names of the laser pulses, separated by a space.
     To run without a laser, choose the name ``no_laser``.
+
+* ``lasers.polarization`` (`linear` or `circular`) optional (default `linear`)
+    Polarization of the laser pulse.
+    The ponderomotive force is 2x larger in circular polarization than in linear polarization.
+    Note that the envelope of the vector potential stored in arrays is independent on the polarization, such that the energy is actually 2x higher in circular polarization than in linear polarization.
 
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.

@@ -38,15 +38,15 @@
  */
 template<int stencil_x, int stencil_y, bool dynamic_comps,
          class F1, class F2, class F3,
-         std::size_t max_depos, std::size_t max_cache,
+         unsigned int max_depos, unsigned int max_cache,
          class PTD>
 AMREX_FLATTEN
 void
 SharedMemoryDeposition (int num_particles,
                         F1&& is_valid, F2&& get_start_cell, F3&& do_deposit,
                         Array3<amrex::Real> field, amrex::Box box, const PTD& ptd,
-                        std::array<int, max_cache> idx_cache,
-                        std::array<int, max_depos> idx_depos) {
+                        amrex::GpuArray<int, max_cache> idx_cache,
+                        amrex::GpuArray<int, max_depos> idx_depos) {
 #ifdef AMREX_USE_GPU
     if (Hipace::m_do_shared_depos) {
         constexpr int threads_per_tile = 256;
@@ -155,8 +155,8 @@ SharedMemoryDeposition (int num_particles,
                 }
 
                 // calculate the local field components of the shared memory
-                std::array<int, max_cache> loc_idx_cache;
-                std::array<int, max_depos> loc_idx_depos;
+                amrex::GpuArray<int, max_cache> loc_idx_cache;
+                amrex::GpuArray<int, max_depos> loc_idx_depos;
 
                 for (int n=0; n != max_cache; ++n) {
                     loc_idx_cache[n] = (dynamic_comps && idx_cache[n]==-1) ? -1 : n;
