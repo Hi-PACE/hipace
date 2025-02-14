@@ -19,27 +19,27 @@ import read_insitu_diagnostics as diag
 
 parser = argparse.ArgumentParser(
     description='Script to analyze the equality of two simulations')
-parser.add_argument('--first',
-                    dest='first',
+parser.add_argument('--diags_linear',
+                    dest='diags_linear',
                     required=True,
                     help='Path to the directory containing output files')
-parser.add_argument('--second',
-                    dest='second',
+parser.add_argument('--diags_circular',
+                    dest='diags_circular',
                     required=True,
                     help='Path to the directory containing output files')
-parser.add_argument('--third',
-                    dest='third',
+parser.add_argument('--insitu_linear',
+                    dest='insitu_linear',
                     required=True,
                     help='Path to the directory containing output files')
-parser.add_argument('--fourth',
-                    dest='fourth',
+parser.add_argument('--insitu_circular',
+                    dest='insitu_circular',
                     required=True,
                     help='Path to the directory containing output files')
 args = parser.parse_args()
 
 # diagnostics for calculation of the fraction of ionization in linear and circular polarization
-ts_linear = OpenPMDTimeSeries(args.first)
-ts_circular = OpenPMDTimeSeries(args.second)
+ts_linear = OpenPMDTimeSeries(args.diags_linear)
+ts_circular = OpenPMDTimeSeries(args.diags_circular)
 
 a0_linear = 0.00885126
 a0_circular = 0.00787934
@@ -72,14 +72,14 @@ print(f"fraction_warpx_circular = {fraction_warpx_circular}")
 print(f"fraction_hipace_circular = {fraction_circular}")
 
 # in-situ diagnostics for calculation of the temperature in all directions in circular polarization
-insitu_path_linear = f'./{args.third}/reduced_elec.0000.txt'
+insitu_path_linear = f'./{args.insitu_linear}/reduced_elec.0000.txt'
 all_data_linear = diag.read_file(insitu_path_linear)
 Tx2_l = all_data_linear['[ux^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 Ty2_l = all_data_linear['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 Tz2_l = all_data_linear['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_linear = 1./3*(Tx2_l+Ty2_l+Tz2_l)
 
-insitu_path_circular = f'./{args.fourth}/reduced_elec.0000.txt'
+insitu_path_circular = f'./{args.insitu_circular}/reduced_elec.0000.txt'
 all_data_circular = diag.read_file(insitu_path_circular)
 Tx2_c = all_data_circular['[ux^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 Ty2_c = all_data_circular['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
