@@ -111,7 +111,7 @@ BeamParticleContainer::ReadParameters ()
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
     for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
-        soa.GetIntData()[icomp].setArena(
+        soa.GetIntData(icomp).setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
 }
