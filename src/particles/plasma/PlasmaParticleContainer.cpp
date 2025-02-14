@@ -626,11 +626,11 @@ LaserIonization (const int islice,
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
 
-        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
-        // and calculates the momentum of the ionized electron based on equations (B8) and (B9)
-        // from the Massimo, 2020 article. It computes the energy of the emitted electron
-        // and assigns the resulting properties (momentum, position, etc.) to the new electrons
-        // created in the plasma container.
+        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time.
+        // It calculates the momentum of ionized electrons based on equations (B8) and (B9)
+        // from the Massimo (2020) article and equation (14) from the C. Schroeder (2014) article.
+        // Additionally, it computes the energy of emitted electrons and assigns their properties 
+        // (momentum, position, etc.) to newly created electrons in the plasma container.
         amrex::AnyCTO(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>
@@ -659,22 +659,20 @@ LaserIonization (const int islice,
                 doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
                     dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
 
-                const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
-                const Complex El = - A_dx * phys_const.c; // longitudinal component
-
-                amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
-                Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
-                Ep *= E0;
-
                 amrex::Real ux = 0._rt;
                 amrex::Real uy = 0._rt;
                 amrex::Real uz = 0._rt;
-                const int ion_lev_loc = ion_lev[ip];
+                const int ion_lev_loc = ion_lev[ip]-1;
 
                 if (linear_polarization) {
-                    amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc-1];
+                    const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
+                    const Complex El = - A_dx * phys_const.c; // longitudinal component
+                    amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
+                    Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
+                    Ep *= E0;
+                    amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc];
                     amrex::Real delta2 = delta * delta;
-                    amrex::Real width_p = amrex::abs(A) * delta * (1 - (3./4.) * delta2 - (3./2.) * delta2 + laser_dp_second_prefactor[ion_lev_loc-1] * delta2); // equation (14) from C. Schroeder art.
+                    amrex::Real width_p = amrex::abs(A) * delta * (1 - (3./4.) * delta2 - (3./2.) * delta2 + laser_dp_second_prefactor[ion_lev_loc] * delta2); 
                     amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol;
                     uy = 0._rt;
