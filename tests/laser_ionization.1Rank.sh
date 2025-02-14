@@ -27,14 +27,14 @@ rm -rf $TEST_NAME
 
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
-    plasmas.do_push = 0 \ # disable field forces on particles
     my_constants.a0 = 0.00885126 \
+    plasmas.do_push = 0 \ # disable field forces on particles
     hipace.file_prefix=$TEST_NAME/linear \
     plasmas.insitu_file_prefix = $TEST_NAME/insitu_linear
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
-    plasmas.do_push = 0 \ # disable field forces on particles
     my_constants.a0 = 0.00787934 \
+    plasmas.do_push = 0 \
     lasers.polarization = circular \
     hipace.file_prefix=$TEST_NAME/circular \
     plasmas.insitu_file_prefix = $TEST_NAME/insitu_circular
