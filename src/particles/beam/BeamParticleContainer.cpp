@@ -90,7 +90,6 @@ BeamParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
-
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
     auto& soa = getBeamInitSlice().GetStructOfArrays();
     soa.GetIdCPUData().setArena(
