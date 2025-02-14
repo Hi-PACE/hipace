@@ -8,6 +8,7 @@
 sphinx>=5.3
 sphinx-copybutton
 sphinx_rtd_theme>=1.1.1
+sphinxcontrib-googleanalytics
 recommonmark
 # docutils 0.17 breaks HTML tags & RTD theme
 # https://github.com/sphinx-doc/sphinx/issues/9001

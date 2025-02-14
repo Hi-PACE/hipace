@@ -205,6 +205,7 @@ public:
     amrex::Real m_mass = 0; /**< mass of each particle of this species */
     amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
     int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
+    bool m_do_push = true; /**< whether the plasma pusher is enabled */
 
     // ionization:
 
@@ -223,8 +224,8 @@ public:
     /** to calculate laser Ionization probability with ADK formula */
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_adk_prefactor;
     /** to calculate laser ionization momentum width for linear polarization */
-     amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
-
+    amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
+    amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_second_prefactor;
     // laser injection:
     bool m_can_laser_injection = false; /**< whether laser injection is unabled */
     std::string m_product_beam_name = ""; /**< name of Injection product beam */

@@ -28,15 +28,20 @@ rm -rf $TEST_NAME
 # Run the simulation
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
     my_constants.a0 = 0.00885126 \
-    hipace.file_prefix=$TEST_NAME/linear
+    plasmas.do_push = 0 \
+    hipace.file_prefix=$TEST_NAME/linear \
+    plasmas.insitu_file_prefix = $TEST_NAME/insitu_linear
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
     my_constants.a0 = 0.00787934 \
     lasers.polarization = circular \
-    hipace.file_prefix=$TEST_NAME/circular
+    plasmas.do_push = 0 \
+    hipace.file_prefix=$TEST_NAME/circular \
+    plasmas.insitu_file_prefix = $TEST_NAME/insitu_circular
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_laser_ionization.py --first=$TEST_NAME/linear  --second=$TEST_NAME/circular
+$HIPACE_EXAMPLE_DIR/analysis_laser_ionization.py --diags_linear=$TEST_NAME/linear  --diags_circular=$TEST_NAME/circular \
+    --insitu_linear=$TEST_NAME/insitu_linear --insitu_circular=$TEST_NAME/insitu_circular
 
 
 # Compare the results with checksum benchmark if it runs on CPU only

@@ -2,7 +2,7 @@ max_step = 0
 hipace.dt = 0
 hipace.verbose = 3
 
-amr.n_cell = 32 32 50
+amr.n_cell = 50 50 50
 
 
 my_constants.kp_inv = 10.e-6
@@ -34,6 +34,7 @@ laser.tau = tau_fs*1.e-15
 laser.focal_distance = 50.e-6
 
 plasmas.names = elec ion
+plasmas.insitu_period = 1
 
 elec.density(x,y,z) = n0
 elec.ppc = 0 0

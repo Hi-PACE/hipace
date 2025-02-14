@@ -180,6 +180,7 @@ PlasmaParticleContainer::ReadParameters ()
         "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
         "to use the fine plasma patch feature");
     queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
+    queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
 }
 
 void
@@ -431,9 +432,9 @@ IonizationModule (const int lev,
             if(p_ion_mask[ip] != 0) {
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
-
-                // Copy ion data to new electron
-                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // sets the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+              
+                // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
@@ -539,6 +540,7 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
+        amrex::Real* AMREX_RESTRICT laser_dp_second_prefactor = m_laser_dp_second_prefactor.data();
 
         long num_ions = ptile_ion.numParticles();
 
@@ -631,11 +633,11 @@ LaserIonization (const int islice,
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
 
-        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
-        // and calculates the momentum of the ionized electron based on equations (B8) and (B9)
-        // from the Massimo, 2020 article. It computes the energy of the emitted electron
-        // and assigns the resulting properties (momentum, position, etc.) to the new electrons
-        // created in the plasma container.
+        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time.
+        // It calculates the momentum of ionized electrons based on equations (B8) and (B9)
+        // from the Massimo (2020) article and equation (14) from the C. Schroeder (2014) article.
+        // Additionally, it computes the energy of emitted electrons and assigns their properties
+        // (momentum, position, etc.) to newly created electrons in the plasma container.
         amrex::AnyCTO(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>
@@ -648,51 +650,59 @@ LaserIonization (const int islice,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
 
-            // Avoid temp slice
-            const amrex::Real xp = x_prev[ip];
-            const amrex::Real yp = y_prev[ip];
-
-            if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
-                !laser_bounds.contains(xp, yp)) return;
-
-            Complex A = 0;
-            Complex A_dx = 0;
-            Complex A_dzeta = 0;
-
-            doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
-                dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
-
-            const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
-            const Complex El = - A_dx * phys_const.c; // longitudinal component
-
-            amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
-            Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
-            Ep *= E0;
-
-            amrex::Real ux, uy, uz;
-            const int ion_lev_loc = ion_lev[ip];
-
-            if (linear_polarization) {
-                amrex::Real width_p;
-                amrex::Real p_pol;
-                width_p = std::sqrt(laser_dp_prefactor[ion_lev_loc] * Ep) * std::sqrt(amrex::abs(A*A)); // equation (4) art. Massimo
-                p_pol = amrex::RandomNormal(0.0, width_p, engine);
-                ux = p_pol;
-                uy = 0._rt;
-                uz = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.);
-            } else {
-                amrex::Real angle;
-                angle = amrex::Random(engine) * 2 * MathConst::pi;
-                ux = std::sqrt(amrex::abs(A*A)) / std::sqrt(2) * std::cos(angle);
-                uy = std::sqrt(amrex::abs(A*A)) /    std::sqrt(2) * std::sin(angle);
-                uz = amrex::abs(A*A) / 2.;
-            }
-
             if(p_ion_mask[ip] != 0) {
+
+                // Avoid temp slice
+                const amrex::Real xp = x_prev[ip];
+                const amrex::Real yp = y_prev[ip];
+
+                if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
+                    !laser_bounds.contains(xp, yp)) return;
+
+                Complex A = 0;
+                Complex A_dx = 0;
+                Complex A_dzeta = 0;
+
+                doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
+                    dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+
+                amrex::Real ux = 0._rt;
+                amrex::Real uy = 0._rt;
+                amrex::Real uz = 0._rt;
+
+                if (linear_polarization) {
+                    // Get the level from which the electron was ionized.
+                    // The -1 is needed as this variable was incremented in the ionization kernel above.
+                    const int ion_lev_loc = ion_lev[ip]-1;
+                    const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
+                    const Complex El = - A_dx * phys_const.c; // longitudinal component
+                    amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
+                    Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
+                    Ep *= E0;
+                    amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc];
+                    amrex::Real delta2 = delta * delta;
+                    amrex::Real width_p = amrex::abs(A) * delta * (1._rt - (3._rt/4._rt) * delta2
+                        - (3._rt/2._rt) * delta2 + laser_dp_second_prefactor[ion_lev_loc] * delta2);
+                    amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
+                    ux = p_pol; // linear polarization is assumed along x.
+                    uz = (amrex::abs(A * A) * 0.25_rt + p_pol * p_pol * 0.5_rt);
+                } else {
+                    amrex::Real const angle = amrex::Random(engine) * 2._rt * MathConst::pi;
+                    // A_t = A (e_x +/- i e_y) in circular polarization.
+                    // ux and uy differ from Massimo PRE 2020 by a factor of sqrt(2) due to different
+                    // convention for linear vs. circular polarization.
+                    ux = std::sqrt(amrex::abs(A*A)) * std::cos(angle);
+                    uy = std::sqrt(amrex::abs(A*A)) * std::sin(angle);
+                    // uz differs from Massimo PRE 2020 by a factor of 2 due to different
+                    // convention for linear vs. circular polarization.
+                    uz = amrex::abs(A*A);
+                }
+
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
                 // Copy ion data to new electron
-                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // sets the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} =
                     amrex::ParticleCPUWrapper{idcpu_ion[pidx]}; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
