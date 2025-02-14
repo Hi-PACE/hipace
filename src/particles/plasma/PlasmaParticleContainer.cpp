@@ -675,7 +675,7 @@ LaserIonization (const int islice,
                     amrex::Real width_p = amrex::abs(A) * delta * (1 - (3./4.) * delta2 - (3./2.) * delta2 + laser_dp_second_prefactor[ion_lev_loc] * delta2); 
                     amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol; // Linear polarization is assumed along x.
-                    uz = (amrex::abs(A * A) / 4. + p_pol * p_pol / 2.);
+                    uz = (amrex::abs(A * A) / 4._rt + p_pol * p_pol / 2._rt);
                 } else {
                     amrex::Real angle;
                     angle = amrex::Random(engine) * 2 * MathConst::pi;
