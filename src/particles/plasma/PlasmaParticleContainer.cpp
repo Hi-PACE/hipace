@@ -427,7 +427,8 @@ IonizationModule (const int lev,
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
-                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // sets the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
@@ -691,7 +692,7 @@ LaserIonization (const int islice,
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
                 // Copy ion data to new electron
-                // set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
                 amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} =
                     amrex::ParticleCPUWrapper{idcpu_ion[pidx]}; // current level
