@@ -95,8 +95,8 @@ BeamParticleContainer::ReadParameters ()
     if (m_do_spin_tracking) {
         if (m_injection_type != "from_file") {
             getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
-            queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
         }
+        queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
         for (auto& beam_tile : m_slices) {
             // Use 3 real and 0 int runtime components
             beam_tile.define(3, 0);
@@ -107,7 +107,7 @@ BeamParticleContainer::ReadParameters ()
     soa.GetIdCPUData().setArena(
         m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     for (int rcomp = 0; rcomp < soa.NumRealComps(); ++rcomp) {
-        soa.GetRealData()[rcomp].setArena(
+        soa.GetRealData(rcomp).setArena(
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
     for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
