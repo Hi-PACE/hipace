@@ -663,6 +663,8 @@ LaserIonization (const int islice,
                 amrex::Real ux = 0._rt;
                 amrex::Real uy = 0._rt;
                 amrex::Real uz = 0._rt;
+                // Get the level from which the electron was ionized.
+                // The -1 is needed as this variable was incremented in the ionization kernel above.
                 const int ion_lev_loc = ion_lev[ip]-1;
 
                 if (linear_polarization) {
