@@ -677,8 +677,7 @@ LaserIonization (const int islice,
                     ux = p_pol; // Linear polarization is assumed along x.
                     uz = (amrex::abs(A * A) / 4._rt + p_pol * p_pol / 2._rt);
                 } else {
-                    amrex::Real angle;
-                    angle = amrex::Random(engine) * 2 * MathConst::pi;
+                    amrex::Real const angle = amrex::Random(engine) * 2._rt * MathConst::pi;
                     // A_t = A (e_x +/- i e_y) in circular polarization
                     ux = std::sqrt(amrex::abs(A*A)) * std::cos(angle);
                     uy = std::sqrt(amrex::abs(A*A)) * std::sin(angle);
