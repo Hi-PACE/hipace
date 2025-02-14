@@ -663,11 +663,11 @@ LaserIonization (const int islice,
                 amrex::Real ux = 0._rt;
                 amrex::Real uy = 0._rt;
                 amrex::Real uz = 0._rt;
-                // Get the level from which the electron was ionized.
-                // The -1 is needed as this variable was incremented in the ionization kernel above.
-                const int ion_lev_loc = ion_lev[ip]-1;
 
                 if (linear_polarization) {
+                    // Get the level from which the electron was ionized.
+                    // The -1 is needed as this variable was incremented in the ionization kernel above.
+                    const int ion_lev_loc = ion_lev[ip]-1;
                     const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
                     const Complex El = - A_dx * phys_const.c; // longitudinal component
                     amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
