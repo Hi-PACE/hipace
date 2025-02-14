@@ -48,7 +48,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
         if(plasma.m_can_ionize) {
             for (int i=0; i<m_names.size(); ++i) {
                 if(m_names[i] == plasma.m_product_name) {
-                    plasma.m_product_pc = &m_all_plasmas[i];
+                    plasma.m_product_pc = &m_all_beams[i];
                 }
             }
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_pc != nullptr,
