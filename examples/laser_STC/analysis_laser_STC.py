@@ -31,7 +31,7 @@ profile = FromOpenPMDProfile (path = args.output_dir, iteration = 0, pol=[0,1],f
 laser = Laser(
         dim="xyt",
         lo=(-15e-6, -15e-6, -30e-15),
-        hi=(15e-6,15e-6, +30e-15),
+        hi=(15e-6, 15e-6, +30e-15),
         npoints=(127, 127, 200),
         profile=profile,
      )
