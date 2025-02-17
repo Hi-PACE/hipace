@@ -40,5 +40,5 @@ laser = Laser(
 Phi2,phi2 = get_phi2(laser.dim, laser.grid)
 [zeta_x, zeta_y], [nu_x, nu_y] = get_zeta(laser.dim, laser.grid,k0)
 print([zeta_x, zeta_y])
-#assert ((phi2-2.4e-24)/2.4e-24<0.01), 'Test laser_ionization did not pass'
+#assert ((phi2-2.4e-24)/2.4e-24<0.01), 'Test phi2 did not pass'
 assert ((zeta_y-2.4e-22)/2.4e-22<0.01), 'Test zeta did not pass'

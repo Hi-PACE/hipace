@@ -13,12 +13,12 @@ geometry.prob_hi     =  10e-6  10e-6  30e-6
 
 lasers.names = laser
 lasers.lambda0 = 600e-9
-lasers.solver_type = multigrid
-lasers.MG_tolerance_rel = 1e-5
+lasers.solver_type = fft
 laser.a0 = 0.1
 laser.position_mean = 0. 0. 0
 laser.w0 = 5e-6
 laser.L0 = 15e-6
+laser.focal_distance = 0
 #laser.phi2 = 2.4e-24
 #laser.beta = 3e-18
 laser.zeta = 2.4e-22
