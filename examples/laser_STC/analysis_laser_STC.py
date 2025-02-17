@@ -26,7 +26,7 @@ parser.add_argument('--output-dir',
 args = parser.parse_args()
 
 profile = FromOpenPMDProfile (path = args.output_dir, iteration = 0, pol=[0,1],field='LaserEnvelope'\
-                              ,coord='', is_envelope=True, prefix=)
+                              ,coord='', is_envelope=True, prefix='')
 
 laser = Laser(
         dim="xyt",
