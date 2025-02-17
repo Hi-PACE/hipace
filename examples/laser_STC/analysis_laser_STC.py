@@ -37,5 +37,5 @@ laser = Laser(
      )
 
 print(get_phi2(laser.dim, laser.grid))
-phi2 = get_phi2(laser.dim, laser.grid)
-assert ((phi2-2.4e-20)/2.4e-20<0.01), 'Test laser_ionization did not pass'
+Phi2,phi2 = get_phi2(laser.dim, laser.grid)
+assert ((phi2-2.4e-24)/2.4e-24<0.01), 'Test laser_ionization did not pass'
