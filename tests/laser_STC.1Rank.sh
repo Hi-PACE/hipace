@@ -26,4 +26,4 @@ rm -rf $TEST_NAME
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_STC \
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_laser_STC.py
+$HIPACE_EXAMPLE_DIR/analysis_laser_STC.py --output-dir = $TEST_NAME
