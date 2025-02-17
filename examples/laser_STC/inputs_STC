@@ -1,5 +1,5 @@
 max_step = 1
-amr.n_cell = 127 127 200
+amr.n_cell = 255 255 200
 
 hipace.verbose = 1
 hipace.dt = 1e-13
