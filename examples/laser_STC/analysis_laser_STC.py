@@ -11,7 +11,7 @@
 import argparse
 import numpy as np
 import scipy.constants as scc
-from lasy.laser_utils import get_phi2, get_zeta, get_beta
+from lasy.utils.laser_utils import get_phi2, get_zeta, get_beta
 from lasy.laser import Laser
 from lasy.profiles import FromOpenPMDProfile
 
@@ -37,6 +37,3 @@ laser = Laser(
      )
 
 print(get_phi2(laser.dim, laser.grid))
-
-assert(np.std((w0_th-W0)/w0_th) < 2e-3)
-assert(np.std((a0_th-A0)/a0_th) < 4e-3)

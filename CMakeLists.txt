@@ -354,7 +354,6 @@ if(BUILD_TESTING)
             WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
-
         if (NOT HiPACE_COMPUTE STREQUAL CUDA)
 
             # These tests only run on CPU

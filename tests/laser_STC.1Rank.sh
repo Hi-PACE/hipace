@@ -1,13 +1,10 @@
 #! /usr/bin/env bash
-
 #
 # This file is part of HiPACE++.
 #
 # Authors: Xingjian Hui
-
-
 # This file is part of the HiPACE++ test suite.
-# It tests the STC initialisation with LASY functions
+# It tests the STC initialisation with LASY functions.
 
 # abort on first encounted error
 set -eu -o pipefail
