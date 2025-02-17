@@ -1,5 +1,5 @@
 max_step = 1
-amr.n_cell = 127 1023 200
+amr.n_cell = 127 127 200
 
 hipace.verbose = 1
 hipace.dt = 1e-13
@@ -14,14 +14,14 @@ geometry.prob_hi     =  10e-6  10e-6  30e-6
 lasers.names = laser
 lasers.lambda0 = 600e-9
 lasers.solver_type = fft
-laser.a0 = 0.1
+laser.a0 = 10
 laser.position_mean = 0. 0. 0
 laser.w0 = 5e-6
 laser.L0 = 15e-6
 laser.focal_distance = 0
 laser.phi2 = 2.4e-24
 laser.beta = 3e-18
-laser.zeta = 2.4e-17
+laser.zeta = 2.4e-22
 laser.STC_theta_xy = 3.14150265358/2
 diagnostic.field_data = laserEnvelope
 diagnostic.diag_type = xyz
