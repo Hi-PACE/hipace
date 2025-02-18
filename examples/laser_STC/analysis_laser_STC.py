@@ -7,7 +7,6 @@
 # Authors: Xingjian Hui
 # License: BSD-3-Clause-LBNL
 
-
 import argparse
 import numpy as np
 import scipy.constants as scc
@@ -27,7 +26,6 @@ args = parser.parse_args()
 
 profile = FromOpenPMDProfile (path = args.output_dir, iteration = 0, pol=[1,0], field='laserEnvelope'\
                               ,coord='', is_envelope=True, prefix='openpmd')
-
 laser = Laser(
         dim="xyt",
         lo=(-15e-6, -15e-6, -30e-15),
@@ -39,7 +37,7 @@ laser = Laser(
 Phi2,phi2 = get_phi2(laser.dim, laser.grid)
 [beta_x, beta_y] = get_beta(laser.dim, laser.grid, k0)
 [zeta_x, zeta_y], [nu_x, nu_y] = get_zeta(laser.dim, laser.grid, k0)
-print([zeta_x, zeta_y])
 assert ((phi2-2.4e-24)/2.4e-24<0.01), 'Test phi2 did not pass'
+
 assert ((zeta_y-2.4e-22)/2.4e-22<0.01), 'Test zeta did not pass'
 assert ((beta_y-3e-18)/3e-18<0.01), 'Test zeta did not pass'
