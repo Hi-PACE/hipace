@@ -45,5 +45,6 @@ jobs:
     - name: Run Tests
       run: |
         source $HOME/profile.hipace
+        python -m pip install git+https://github.com/huixingjian/lasy-.git@fix_bug_STC
         conda activate openpmd
         ctest --test-dir build --output-on-failure
