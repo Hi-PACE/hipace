@@ -29,7 +29,7 @@ template struct PlasmaMomentumDerivative<DualNumber>;
 void
 AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice,
-                        int const lev, int const current_N_level)
+                        int const lev, [[maybe_unused]] int const current_N_level)
 {
     HIPACE_PROFILE("AdvancePlasmaParticles()");
     using namespace amrex::literals;
