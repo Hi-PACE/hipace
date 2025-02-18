@@ -411,7 +411,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     // Compute ADK prefactors (See Chen, JCP 236 (2013), equation (2))
     // For now, we assume l=0 and m=0.
     // The approximate expressions are used,
-    // without Gamma function.
+    // without Gamma function
     const PhysConst phys_const = make_constants_SI();
     const amrex::Real alpha = 0.0072973525693_rt;
     const amrex::Real a3 = alpha * alpha * alpha;
