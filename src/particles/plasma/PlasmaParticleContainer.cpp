@@ -754,7 +754,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
         // Loading the data
-        const auto ptd = pti.GetParticleTile().getParticleTileData();
+        const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
 
         amrex::Long const num_particles = pti.numParticles();
 
@@ -765,9 +765,9 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
             {
-                if (ptd.id(ip) != 2) // whether the plasma particle is from ionization
+                if (ptd_plasma.id(ip) != 2) // whether the plasma particle is from ionization
                 {
-                    ptd.id(ip).make_invalid(); // make the particle invalid in the plasma container
+                    ptd_plasma.id(ip).make_invalid(); // make the particle invalid in the plasma container
                     return {1};
                 } else {
                     return {0};
@@ -784,18 +784,20 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         auto new_size = old_size + num_new_beam_part.dataValue();
         beam_soa.resize(new_size);
 
+        auto ptd_beam = beam_elec.getBeamSlice(which_slice).getParticleTileData();
+
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0); 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (ptd.id(ip) != 2){
                     const long pidx = pid + old_size;
-                    beam_soa.GetRealData(BeamIdx::x).data() = ptd.pos(0, ip);
-                    beam_soa.GetRealData(BeamIdx::y).data() = ptd.pos(1, ip);
-                    beam_soa.GetRealData(BeamIdx::ux).data() = ptd.rdata(PlasmaIdx::ux)[ip];
-                    beam_soa.GetRealData(BeamIdx::uy).data() = ptd.rdata(PlasmaIdx::uy)[ip];
-                    beam_soa.GetRealData(BeamIdx::psi).data() = ptd.rdata(PlasmaIdx::psi)[ip];
-                    beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
-                    beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
+                    ptd_beam.rdata(BeamIdx::x)[ip] = ptd_plasma.pos(0, ip);
+                    //beam_soa.GetRealData(BeamIdx::y).data() = ptd.pos(1, ip);
+                    //beam_soa.GetRealData(BeamIdx::ux).data() = ptd.rdata(PlasmaIdx::ux)[ip];
+                    //beam_soa.GetRealData(BeamIdx::uy).data() = ptd.rdata(PlasmaIdx::uy)[ip];
+                    //beam_soa.GetRealData(BeamIdx::psi).data() = ptd.rdata(PlasmaIdx::psi)[ip];
+                    //beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
+                    //beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
                     // weird, how do we do a loop over ip for plasma particles and not for the beam
                 }
             }
