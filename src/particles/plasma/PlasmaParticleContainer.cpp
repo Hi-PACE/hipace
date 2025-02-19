@@ -789,16 +789,13 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0); 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
-                if (ptd.id(ip) != 2){
-                    const long pidx = pid + old_size;
-                    ptd_beam.rdata(BeamIdx::x)[ip] = ptd_plasma.pos(0, ip);
-                    //beam_soa.GetRealData(BeamIdx::y).data() = ptd.pos(1, ip);
-                    //beam_soa.GetRealData(BeamIdx::ux).data() = ptd.rdata(PlasmaIdx::ux)[ip];
-                    //beam_soa.GetRealData(BeamIdx::uy).data() = ptd.rdata(PlasmaIdx::uy)[ip];
-                    //beam_soa.GetRealData(BeamIdx::psi).data() = ptd.rdata(PlasmaIdx::psi)[ip];
-                    //beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
-                    //beam_soa.GetRealData(BeamIdx::w).data() = ptd.rdata(PlasmaIdx::w)[ip];
-                    // weird, how do we do a loop over ip for plasma particles and not for the beam
+                if (ptd_plasma.id(ip) != 2){
+                    const long pid_beam = amrex::Gpu::Atomic::Add(ip_elec, 1u);
+                    const long pidx_beam = pid + old_size;
+                    ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
+                    ptd_beam.rdata(BeamIdx::y)[pidx_beam]) = ptd_plasma.pos(1, ip);
+                    ptd_beam.rdata(BeamIdx::psi)[pidx_beam]) = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam]) = ptd_plasma.rdata(PlasmaIdx::w)[ip];
                 }
             }
 
