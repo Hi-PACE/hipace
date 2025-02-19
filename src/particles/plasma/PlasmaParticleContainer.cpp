@@ -629,7 +629,7 @@ LaserIonization (const int islice,
 
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time.
         // It calculates the momentum of ionized electrons based on equations (B8) and (B9)
-        // from the Massimo (2020) article and equation (12) from the P. Tomassini (2021) article.
+        // from the F. Massimo (2020) article and equation (12) from the P. Tomassini (2021) article.
         // Additionally, it computes the energy of emitted electrons and assigns their properties
         // (momentum, position, etc.) to newly created electrons in the plasma container.
         amrex::AnyCTO(
