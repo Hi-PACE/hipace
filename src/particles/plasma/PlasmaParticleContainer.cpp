@@ -8,7 +8,6 @@
  */
 #include "Hipace.H"
 #include "PlasmaParticleContainer.H"
-
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
@@ -781,12 +780,12 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
         auto& beam_elec = m_product_beam_pc;
 
-        auto& beam_soa = beam_elec.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        auto& beam_soa = beam_elec->getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         auto old_size = beam_soa.size();
         auto new_size = old_size + num_new_beam_part.dataValue();
         beam_soa.resize(new_size);
 
-        auto ptd_beam = beam_elec.getBeamSlice(which_slice).getParticleTileData();
+        auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0); 
         amrex::ParallelFor(num_particles,
@@ -795,14 +794,13 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
                     const long pid_beam = amrex::Gpu::Atomic::Add(ip_elec, 1u);
                     const long pidx_beam = pid + old_size;
                     ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
-                    ptd_beam.rdata(BeamIdx::y)[pidx_beam]) = ptd_plasma.pos(1, ip);
-                    ptd_beam.rdata(BeamIdx::psi)[pidx_beam]) = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                    ptd_beam.rdata(BeamIdx::w)[pidx_beam]) = ptd_plasma.rdata(PlasmaIdx::w)[ip];
+                    ptd_beam.rdata(BeamIdx::y)[pidx_beam] = ptd_plasma.pos(1, ip);
+                    ptd_beam.rdata(BeamIdx::psi)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip];
                 }
-            }
-
-        
+            });
     }
+}
 
         
 
@@ -829,8 +827,6 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 //            beam_soa.GetRealData(BeamIdx::x).data()=;
 //            beam_soa.GetRealData(BeamIdx::y).data()=;
 
-        }
-}
 
 void
 PlasmaParticleContainer::InSituComputeDiags (int islice)
