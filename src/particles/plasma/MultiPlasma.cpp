@@ -6,6 +6,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "MultiPlasma.H"
+#include "particles/beam/MultiBeam.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "particles/deposition/ExplicitDeposition.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
