@@ -759,6 +759,8 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         amrex::Long const num_particles = pti.numParticles();
 
         amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<uint64_t> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
 
         // This kernel calculate the number of ionized electrons in the plasma container and make them invalid
         reduce_op.eval(
