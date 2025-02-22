@@ -20,7 +20,7 @@ jobs:
 
     - name: install dependencies
       shell: bash
-      run: .github/workflows/setup/hip.sh
+      run: .github/workflows/setup/hip.sh 6.3.2
 
     - name: CCache Cache
       uses: actions/cache@v4
