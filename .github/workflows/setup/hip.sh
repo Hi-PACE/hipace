@@ -48,7 +48,7 @@ sudo apt-get update
 # meta-package: rocm-dkms
 # OpenCL: rocm-opencl
 # other: rocm-dev rocm-utils
-sudo apt-get install -y --no-install-recommends --fix-missing \
+sudo apt-get install -y --no-install-recommends \
     build-essential \
     gfortran        \
     libhiredis-dev  \
