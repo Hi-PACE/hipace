@@ -800,7 +800,13 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
                     const long pidx_beam = pid_beam + old_size;
                     ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
                     ptd_beam.rdata(BeamIdx::y)[pidx_beam] = ptd_plasma.pos(1, ip);
-                    ptd_beam.rdata(BeamIdx::psi)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
+                    ptd_beam.rdata(BeamIdx::z)[pidx_beam] = ptd_plasma.pos(2, ip);
+                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
+                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::uy)[ip];
+                    amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
+                    amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip];
+                    amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
+                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi);
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip];
                 }
             });
