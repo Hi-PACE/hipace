@@ -33,7 +33,7 @@ MultiPlasma::MultiPlasma ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_names[i]!="beam", "Cannot have plasma with name 'beam'");
         m_all_plasmas.emplace_back(PlasmaParticleContainer(m_names[i]));
     }
-    
+
 }
 
 void
@@ -46,14 +46,17 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
         plasma.InitData(gm[0]);
 
-        if(plasma.m_can_laser_injection) {
+        if(plasma.m_can_ionize) {
             for (int i=0; i<m_names.size(); ++i) {
-                if(m_names[i] == plasma.m_product_beam_name) {
-                    plasma.m_product_beam_pc = &m_all_plasmas[i];
+                if(m_names[i] == plasma.m_product_name) {
+                    plasma.m_product_pc = &m_all_plasmas[i];
                 }
             }
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_beam_pc != nullptr,
-                "Must specify a valid product beam for laser injection using ionization_product");
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_pc != nullptr,
+                "Must specify a valid product plasma for ionization using ionization_product");
+
+            plasma.InitIonizationModule(gm[0],
+                Hipace::m_background_density_SI); // geometry only for dz
         }
 
     }
@@ -63,18 +66,16 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
         plasma.InitData(gm[0]);
 
-        if(plasma.m_can_ionize) {
+        if(plasma.m_can_laser_injection) {
             for (int i=0; i<m_names.size(); ++i) {
-                if(m_names[i] == plasma.m_product_name) {
-                    plasma.m_product_pc = &m_all_beams[i];
+                if(m_names[i] == plasma.m_product_beam_name) {
+                    plasma.m_product_beam_pc = &m_all_beams[i];
                 }
             }
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_pc != nullptr,
-                "Must specify a valid product plasma for ionization using ionization_product");
-
-            plasma.InitIonizationModule(gm[0],
-                Hipace::m_background_density_SI); // geometry only for dz
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_beam_pc != nullptr,
+                "Must specify a valid product beam for laser injection using ionization_product");
         }
+
 
     }
     
