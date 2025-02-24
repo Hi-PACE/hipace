@@ -42,7 +42,6 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
        "Please specify exlusively either the pulse length L0 or the duration tau of the laser");
         if (duration_is_specified) m_L0 = m_tau * get_phys_const().c;
         if (length_is_specified) m_tau = m_L0 / get_phys_const().c;
-        if (duration_is_specified) m_L0 = m_tau*get_phys_const().c;
         queryWithParser(pp, "focal_distance", m_focal_distance);
         queryWithParser(pp, "position_mean",  m_position_mean);
         queryWithParser(pp, "zeta",  m_zeta);
