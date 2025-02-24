@@ -96,12 +96,6 @@ Hipace::Hipace () :
 
     amrex::ParmParse pph("hipace");
 
-    std::string str_dt {""};
-    queryWithParser(pph, "dt", str_dt);
-    if (str_dt != "adaptive") {
-        queryWithParser(pph, "dt", m_dt);
-        m_max_time = std::copysign(m_max_time, m_dt);
-    }
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
     m_numprocs = amrex::ParallelDescriptor::NProcs();
@@ -401,7 +395,13 @@ Hipace::Evolve ()
     for (int step = rank; step <= m_max_step; step += m_numprocs)
     {
         ResetAllQuantities();
-
+        std::string str_dt {""};
+        queryWithParser(pph, "dt", str_dt);
+        if (str_dt != "adaptive") {
+            m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
+            m_dt =  m_exe_dt(m_physical_time);
+        m_max_time = std::copysign(m_max_time, m_dt);
+    }
         const amrex::Box& bx = m_3D_ba[0][0];
 
         if (m_multi_laser.UseLaser()) {

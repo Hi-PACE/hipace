@@ -256,7 +256,10 @@ public:
      * or radiation reaction in normalized units */
     inline static amrex::Real m_background_density_SI = 0.;
     /** Time step for the beam evolution */
-    amrex::Real m_dt = +0.0;
+    amrex::Parser m_parser_dt;/**< owns data for dt_str */
+    /** stores the output function of makeFunctionWithParser for profile_real_str */
+    amrex::ParserExecutor<1> m_exe_dt;
+    amrex::Real m_dt;
     /** Number of binary collisions */
     inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
