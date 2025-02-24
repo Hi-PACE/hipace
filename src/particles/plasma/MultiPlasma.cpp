@@ -61,7 +61,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 
     }
 
-    for (auto& plasma : m_all_beams) {
+    for (auto& plasma : multi_beam.m_all_beams) {
         // make it think there is only level 0
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
         plasma.InitData(gm[0]);
