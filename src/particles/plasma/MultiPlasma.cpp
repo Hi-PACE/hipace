@@ -6,7 +6,6 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "MultiPlasma.H"
-#include "particles/beam/MultiBeam.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
 #include "particles/deposition/ExplicitDeposition.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
@@ -59,24 +58,15 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                 Hipace::m_background_density_SI); // geometry only for dz
         }
 
-    }
-    
-    MultiBeam multi_beam;
-    for (auto& plasma : multi_beam.m_all_beams) {
-        // make it think there is only level 0
-        plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
-        plasma.InitData(gm[0]);
-
         if(plasma.m_can_laser_injection) {
             for (int i=0; i<m_names.size(); ++i) {
                 if(m_names[i] == plasma.m_product_beam_name) {
-                    plasma.m_product_beam_pc = &m_all_beams[i];
+                    plasma.m_product_beam_pc = &m_all_plasmas[i];
                 }
             }
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_beam_pc != nullptr,
                 "Must specify a valid product beam for laser injection using ionization_product");
         }
-
 
     }
     
