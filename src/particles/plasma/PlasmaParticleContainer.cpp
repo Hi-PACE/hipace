@@ -634,7 +634,7 @@ LaserIonization (const int islice,
 
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time.
         // It calculates the momentum of ionized electrons based on equations (B8) and (B9)
-        // from the Massimo (2020) article and equation (14) from the C. Schroeder (2014) article.
+        // from the F. Massimo (2020) article and equation (12) from the P. Tomassini (2021) article.
         // Additionally, it computes the energy of emitted electrons and assigns their properties
         // (momentum, position, etc.) to newly created electrons in the plasma container.
         amrex::AnyCTO(
@@ -680,8 +680,11 @@ LaserIonization (const int islice,
                     Ep *= E0;
                     amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc];
                     amrex::Real delta2 = delta * delta;
-                    amrex::Real width_p = amrex::abs(A) * delta * (1._rt - (3._rt/4._rt) * delta2
-                        - (3._rt/2._rt) * delta2 + laser_dp_second_prefactor[ion_lev_loc] * delta2);
+                    amrex::Real delta4 = delta2 * delta2;
+                    amrex::Real alpha = laser_dp_second_prefactor[ion_lev_loc];
+                    amrex::Real s1 = - (7._rt/4._rt) + alpha / 2._rt;
+                    amrex::Real s2 = (1._rt/16._rt) * ( 8._rt * (alpha*alpha) - 68._rt*alpha + 131._rt );
+                    amrex::Real width_p = amrex::abs(A) * delta * (1._rt + s1*delta2 + s2*delta4);
                     amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol; // linear polarization is assumed along x.
                     uz = (amrex::abs(A * A) * 0.25_rt + p_pol * p_pol * 0.5_rt);
