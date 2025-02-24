@@ -390,25 +390,25 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const double start_time = amrex::second();
     const int rank = amrex::ParallelDescriptor::MyProc();
-
+    amrex::ParmParse pph("hipace");
     // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
     for (int step = rank; step <= m_max_step; step += m_numprocs)
     {
         ResetAllQuantities();
+        m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
         std::string str_dt {""};
         queryWithParser(pph, "dt", str_dt);
         if (str_dt != "adaptive") {
             m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
             m_dt =  m_exe_dt(m_physical_time);
-        m_max_time = std::copysign(m_max_time, m_dt);
-    }
+            m_max_time = std::copysign(m_max_time, m_dt);
+        }
         const amrex::Box& bx = m_3D_ba[0][0];
 
         if (m_multi_laser.UseLaser()) {
             AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
         }
 
-        m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
 
         if (m_physical_time == std::numeric_limits<amrex::Real>::infinity()) {
             if (step+1 <= m_max_step && !m_has_last_step) {
