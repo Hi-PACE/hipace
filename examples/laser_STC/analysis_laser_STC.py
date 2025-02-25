@@ -30,7 +30,7 @@ laser = Laser(
         dim="xyt",
         lo=(-10e-6, -10e-6, -10e-14),
         hi=(10e-6, 10e-6, +10e-14),
-        npoints=(127, 127, 200),
+        npoints=(127, 127, 400),
         profile=profile,
      )
 
