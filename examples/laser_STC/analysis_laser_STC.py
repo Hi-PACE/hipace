@@ -10,7 +10,7 @@
 import argparse
 import numpy as np
 import scipy.constants as scc
-from lasy.utils.laser_utils import get_phi2, get_zeta, get_beta
+from lasy.utils.laser_utils import get_phi2, get_zeta, get_beta, get_duration
 from lasy.laser import Laser
 from lasy.profiles import FromOpenPMDProfile
 
@@ -35,9 +35,10 @@ laser = Laser(
      )
 
 Phi2,phi2 = get_phi2(laser.dim, laser.grid)
+tau = get_duration(laser.dim, laser.grid)
 [beta_x, beta_y] = get_beta(laser.dim, laser.grid, k0)
 [zeta_x, zeta_y], [nu_x, nu_y] = get_zeta(laser.dim, laser.grid, k0)
-
+print("tau is ",tau)
 print("phi2 theory:", 2.4e-24, "measured:", phi2)
 print("zeta_y theory:", 2.4e-22, "measured:", zeta_y)
 print("beta_y theory:", 3e-18, "measured:", beta_y)
