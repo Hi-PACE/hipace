@@ -786,7 +786,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-        // This kernel does the transfer of the ionized electrons from the plasma container 
+        // This kernel does the transfer of the ionized electrons from the plasma container
         // to the beam container
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
