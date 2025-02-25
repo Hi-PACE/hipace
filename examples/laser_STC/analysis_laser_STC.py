@@ -35,7 +35,7 @@ laser = Laser(
      )
 
 Phi2,phi2 = get_phi2(laser.dim, laser.grid)
-tau = get_duration(laser.dim, laser.grid)
+tau = get_duration(laser.grid, laser.dim)
 [beta_x, beta_y] = get_beta(laser.dim, laser.grid, k0)
 [zeta_x, zeta_y], [nu_x, nu_y] = get_zeta(laser.dim, laser.grid, k0)
 print("tau is ",tau)
