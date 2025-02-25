@@ -70,7 +70,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                 "Must specify a valid product beam for laser injection using ionization_product");
         }
     }
-    
+
 }
 
 amrex::Real

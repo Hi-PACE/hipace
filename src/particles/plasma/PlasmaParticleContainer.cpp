@@ -431,7 +431,7 @@ IonizationModule (const int lev,
             if(p_ion_mask[ip] != 0) {
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
-              
+
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
                 amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
@@ -791,7 +791,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-        amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0); 
+        amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
