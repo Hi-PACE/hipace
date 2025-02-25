@@ -117,7 +117,11 @@ public:
 
     /** Do the transfer of particles from the plasma container to the beam container
      *
-     * \param[in] beams multibeam containing all beams
+     * \param[in] beams MultiBeam object containing all beams
+     * \param[in] beamnames Vector of strings representing the names of the beams
+     * \param[in] laser_geom Geometry of the laser used for ionization
+     * \param[in] laser MultiLaser object containing the laser details
+     * \param[in] islice Slice index corresponding to the current simulation slice
      */
     void PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
                  const MultiLaser& laser, const int islice
