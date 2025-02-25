@@ -742,12 +742,6 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 {
     if (!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
-    //extract the soa plasma container (see insitu function)
-    // same for the beam container (BeamParticleContainer.cpp see InSituComputeDiags)
-    // 1st kernel whcih calculate the number of plasma particles to transfer
-    // resize the beam container
-    // new kernel make_invalid() the plasma particles transferred
-    //new kernel to add partciles in the beam container
 
     amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
     uint32_t* AMREX_RESTRICT p_num_new_beam_part = num_new_beam_part.dataPtr();
@@ -755,7 +749,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        // Loading the data
+        // Loading the data from the plasma containers
         const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
 
         amrex::Long const num_particles = pti.numParticles();
@@ -764,7 +758,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         amrex::ReduceData<uint64_t> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
 
-        // This kernel calculate the number of ionized electrons in the plasma container and make them invalid
+        // This kernel calculates the number of ionized electrons in the plasma container and make them invalid
         reduce_op.eval(
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
@@ -784,6 +778,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
         auto& beam_elec = m_product_beam_pc;
 
+        // Resize the beam container
         auto& beam_soa = beam_elec->getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         auto old_size = beam_soa.size();
         auto new_size = old_size + num_new_beam_part.dataValue();
@@ -791,6 +786,8 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
+        // This kernel does the transfer of the ionized electrons from the plasma container 
+        // to the beam container
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
         amrex::ParallelFor(num_particles,
