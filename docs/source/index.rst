@@ -19,6 +19,7 @@ Its main features are:
 - Additional physics (field ionization, binary collisions, temperature effects, radiation reaction)
 
 For details on the algorithms that HiPACE++ implements, see the `HiPACE++ workshop slides (2023) <https://indico.desy.de/event/40158/>`__.
+
 HiPACE++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which provides for particle and field data structures.
 
 .. raw:: html
