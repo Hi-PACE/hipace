@@ -39,7 +39,8 @@ MultiPlasma::MultiPlasma ()
 void
 MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                        amrex::Vector<amrex::DistributionMapping> slice_dm,
-                       amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm)
+                       amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm,
+                       MultiBeam& beams)
 {
     for (auto& plasma : m_all_plasmas) {
         // make it think there is only level 0
@@ -59,15 +60,14 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                 Hipace::m_background_density_SI); // geometry only for dz
         }
 
-        MultiBeam multi_beam;
         if(plasma.m_can_laser_injection) {
             for (int i=0; i<m_names.size(); ++i) {
                 if(m_names[i] == plasma.m_product_beam_name) {
-                    plasma.m_product_beam_pc = &multi_beam.m_all_beams[i];
+                    plasma.m_product_beam_pc = beams.m_all_beams[i];
                 }
             }
-            //AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_beam_pc != nullptr,
-            //    "Must specify a valid product beam for laser injection using ionization_product");
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(plasma.m_product_beam_pc != nullptr,
+                "Must specify a valid product beam for laser injection using ionization_product");
         }
     }
 
