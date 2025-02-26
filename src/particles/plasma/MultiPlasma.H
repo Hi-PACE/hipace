@@ -31,6 +31,7 @@ public:
      * \param[in] slice_dm DistributionMapping of the transverse slice domain
      * \param[in] slice_gm slice geometry
      * \param[in] gm Geometry of the simulation, to get the cell size
+     * \param[in] beams MultiBeam object containing all beams
      */
     void InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                    amrex::Vector<amrex::DistributionMapping> slice_dm,
