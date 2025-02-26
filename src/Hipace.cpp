@@ -448,7 +448,7 @@ Hipace::Evolve ()
         }
 
         // Only reset plasma after receiving time step, to use proper density
-        m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
+        m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom, m_multi_laser);
 
         m_multi_laser.SetInitialChi(m_multi_plasma);
 
