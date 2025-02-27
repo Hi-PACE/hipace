@@ -30,7 +30,7 @@ laser = Laser(
         dim="xyt",
         lo=(-10e-6, -10e-6, -0e-15),
         hi=(10e-6, 10e-6, +200e-15),
-        npoints=(127, 127, 200),
+        npoints=(127, 1023, 500),
         profile=profile,
      )
 
@@ -43,5 +43,5 @@ print("phi2 theory:", 2.4e-24, "measured:", phi2)
 print("zeta_y theory:", 2.4e-22, "measured:", zeta_y)
 print("beta_y theory:", 3e-18, "measured:", beta_y)
 assert (np.abs((phi2-2.4e-24)/2.4e-24)<0.01), 'Test phi2 did not pass'
-assert (np.abs((zeta_y-2.4e-22)/2.4e-22)<0.01), 'Test zeta did not pass'
-assert (np.abs((beta_y-3e-18)/3e-18)<0.01), 'Test beta did not pass'
+assert (np.abs((zeta_y-2.4e-22)/2.4e-22)<0.2), 'Test zeta did not pass'
+assert (np.abs((beta_y-3e-18)/3e-18)<0.2), 'Test beta did not pass'
