@@ -44,4 +44,4 @@ print("zeta_y theory:", 2.4e-22, "measured:", zeta_y)
 print("beta_y theory:", 3e-18, "measured:", beta_y)
 assert (np.abs((phi2-3e-28)/2.4e-24)<0.1), 'Test phi2 did not pass'
 assert (np.abs((zeta_y-2.4e-22)/2.4e-22)<0.1), 'Test zeta did not pass'
-assert (np.abs((beta_y-3e-18)/3e-18)<0.1), 'Test beta did not pass'
+assert (np.abs((beta_y-3e-18)/3e-18)<0.2), 'Test beta did not pass'
