@@ -46,5 +46,5 @@ jobs:
       run: |
         source $HOME/profile.hipace
         conda activate openpmd
-        ython -m pip install git+https://github.com/LASY-org/lasy.git@development
+        python -m pip install git+https://github.com/LASY-org/lasy.git@development
         ctest --test-dir build --output-on-failure
