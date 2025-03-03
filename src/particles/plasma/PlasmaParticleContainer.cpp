@@ -784,6 +784,11 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         auto new_size = old_size + num_new_beam_part.dataValue();
         beam_soa.resize(new_size);
 
+        if(Hipace::m_verbose >= 3) {
+            amrex::Print() << "Number of ionized Plasma Particles (laser): "
+                        << num_new_beam_part.dataValue() << "\n";
+        }
+
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
         // This kernel does the transfer of the ionized electrons from the plasma container
@@ -795,6 +800,14 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
                 if (ptd_plasma.id(ip) != 2){
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
                     const long pidx_beam = pid_beam + old_size;
+                    if(Hipace::m_verbose >= 3) {
+                        amrex::Print() << "pid_beam: "
+                        << pid_beam << "\n";
+                    }
+                    if(Hipace::m_verbose >= 3) {
+                        amrex::Print() << "pidx_beam: "
+                        << pidx_beam << "\n";
+                    }
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
                     ptd_beam.rdata(BeamIdx::y)[pidx_beam] = ptd_plasma.pos(1, ip);
