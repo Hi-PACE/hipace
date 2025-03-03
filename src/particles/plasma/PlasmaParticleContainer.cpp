@@ -810,6 +810,10 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
                     }
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
+                    if(Hipace::m_verbose >= 3) {
+                        amrex::Print() << "ptd_beam.rdata(BeamIdx::x)[pidx_beam]: "
+                        << ptd_beam.rdata(BeamIdx::x)[pidx_beam] << "\n";
+                    }
                     ptd_beam.rdata(BeamIdx::y)[pidx_beam] = ptd_plasma.pos(1, ip);
                     ptd_beam.rdata(BeamIdx::z)[pidx_beam] = ptd_plasma.pos(2, ip);
                     ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
