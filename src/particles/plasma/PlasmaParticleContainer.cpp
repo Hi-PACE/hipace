@@ -609,10 +609,10 @@ LaserIonization (const int islice,
 
         if (num_new_electrons.dataValue() == 0) continue;
 
-        if(Hipace::m_verbose >= 3) {
-            amrex::Print() << "Number of ionized Plasma Particles (laser): "
-            << num_new_electrons.dataValue() << "\n";
-        }
+        //if(Hipace::m_verbose >= 3) {
+        //    amrex::Print() << "Number of ionized Plasma Particles (laser): "
+        //    << num_new_electrons.dataValue() << "\n";
+        //}
 
 
         // Resize electron particle tile
