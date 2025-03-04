@@ -644,7 +644,7 @@ LaserIonization (const int islice,
                 Hipace::m_depos_order_xy
             },
             [&] (auto cto_func) {
-                amrex::ParallelForRNG(num_ions, cto_func, );
+                amrex::ParallelForRNG(num_ions, cto_func);
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
