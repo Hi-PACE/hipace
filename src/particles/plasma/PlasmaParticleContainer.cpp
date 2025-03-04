@@ -800,16 +800,9 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
                 if (ptd_plasma.id(ip) != 2){
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
                     const long pidx_beam = pid_beam + old_size;
-                    amrex::Print() << "pid_beam: "
-                        << pid_beam << "\n";
-                    amrex::Print() << "pidx_beam: "
-                        << pidx_beam << "\n";
+                    printf("pid_beam: %d\n", pid_beam);
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
-                    
-                    amrex::Print() << "ptd_beam.rdata(BeamIdx::x)[pidx_beam]: "
-                        << ptd_beam.rdata(BeamIdx::x)[pidx_beam] << "\n";
-                    
                     ptd_beam.rdata(BeamIdx::y)[pidx_beam] = ptd_plasma.pos(1, ip);
                     ptd_beam.rdata(BeamIdx::z)[pidx_beam] = ptd_plasma.pos(2, ip);
                     ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
