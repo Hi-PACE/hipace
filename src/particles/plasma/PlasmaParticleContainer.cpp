@@ -795,19 +795,15 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         // to the beam container
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
-        amrex::ParallelFor(num_particles, m_verbose,
+        amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (ptd_plasma.id(ip) != 2){
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
                     const long pidx_beam = pid_beam + old_size;
-                    if(Hipace::m_verbose >= 3) {
-                        amrex::Print() << "pid_beam: "
+                    amrex::Print() << "pid_beam: "
                         << pid_beam << "\n";
-                    }
-                    if(Hipace::m_verbose >= 3) {
-                        amrex::Print() << "pidx_beam: "
+                    amrex::Print() << "pidx_beam: "
                         << pidx_beam << "\n";
-                    }
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
                     if(Hipace::m_verbose >= 3) {
