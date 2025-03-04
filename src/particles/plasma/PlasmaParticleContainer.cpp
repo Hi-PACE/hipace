@@ -747,7 +747,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
                  const MultiLaser& laser, const int islice)
 {
     printf("Hello from PlasmaToBeam\n");
-    printf((!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection));
+    printf("%d\n", (!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection));
     if (!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
 
