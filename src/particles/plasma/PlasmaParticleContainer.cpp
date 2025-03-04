@@ -644,7 +644,7 @@ LaserIonization (const int islice,
                 Hipace::m_depos_order_xy
             },
             [&] (auto cto_func) {
-                amrex::ParallelForRNG(num_ions, cto_func);
+                amrex::ParallelForRNG(num_ions, cto_func, );
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
@@ -795,7 +795,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         // to the beam container
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
-        amrex::ParallelFor(num_particles,
+        amrex::ParallelFor(num_particles, m_verbose,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (ptd_plasma.id(ip) != 2){
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
