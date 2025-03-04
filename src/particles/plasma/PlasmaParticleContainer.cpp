@@ -785,7 +785,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         beam_soa.resize(new_size);
 
         if(Hipace::m_verbose >= 3) {
-            amrex::Print() << "Number of ionized Plasma Particles (laser): "
+            amrex::Print() << "Number of transfered particles: "
                         << num_new_beam_part.dataValue() << "\n";
         }
 
