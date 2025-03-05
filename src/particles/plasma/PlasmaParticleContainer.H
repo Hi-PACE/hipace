@@ -231,7 +231,7 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_second_prefactor;
     // laser injection:
-    bool m_can_laser_injection = false; /**< whether laser injection is unabled */
+    bool m_can_laser_injection = false; /**< whether laser injection is enabled */
     std::string m_product_beam_name = ""; /**< name of Injection product beam */
     BeamParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
 
