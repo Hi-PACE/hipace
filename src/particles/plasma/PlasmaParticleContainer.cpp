@@ -76,7 +76,7 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
     queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
 
-    m_can_ionize = m_can_field_ionize || m_can_laser_ionize || m_can_laser_injection;
+    m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
 
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
