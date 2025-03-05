@@ -746,9 +746,7 @@ PlasmaParticleContainer::
 PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
                  const MultiLaser& laser, const int islice)
 {
-    printf("Hello from PlasmaToBeam\n");
-    printf("%d\n", (!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection));
-    if (!m_can_laser_ionize || !laser.UseLaser(islice) || !m_can_laser_injection) return;
+    if (!m_can_laser_ionize) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
 
     amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
@@ -771,7 +769,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
             {
-                if (ptd_plasma.id(ip) != 2) // whether the plasma particle is from ionization
+                if (ptd_plasma.id(ip) == 2) // whether the plasma particle is from ionization
                 {
                     ptd_plasma.id(ip).make_invalid(); // make the particle invalid in the plasma container
                     return {1};
@@ -805,7 +803,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
-                if (ptd_plasma.id(ip) != 2){
+                if (ptd_plasma.id(ip) == 2){
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
                     const long pidx_beam = pid_beam + old_size;
                     printf("pid_beam: %ld\n", pid_beam);

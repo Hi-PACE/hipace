@@ -596,7 +596,7 @@ which are valid only for certain beam types, are introduced further below under
     may be required to find the overall fastest setting for a specific simulation.
 
 * ``<plasma name>.can_laser_injection`` (`bool`) optional (default `0`)
-    Whether the laser injection is unabled. Can also be set to 1 by specifying ``<plasma name>.injection_product``.
+    Whether the laser injection is enabled. Can also be set to 1 by specifying ``<plasma name>.injection_product``.
 
 * ``<plasma name>.injection_product`` (`string`) optional (default "")
     Name of the beam species that contains the new electrons that are produced
