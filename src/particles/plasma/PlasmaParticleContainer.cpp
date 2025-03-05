@@ -83,7 +83,7 @@ PlasmaParticleContainer::ReadParameters ()
     }
 
     m_can_laser_injection = pp.contains("injection_product");
-    if (m_can_laser_ionize) {
+    if (m_can_laser_injection) {
         queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
     } else {
         m_can_laser_injection = false;
