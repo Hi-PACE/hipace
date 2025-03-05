@@ -72,24 +72,13 @@ PlasmaParticleContainer::ReadParameters ()
 
     queryWithParser(pp, "can_ionize", m_can_field_ionize);
     m_can_laser_ionize = false;
+    m_can_laser_injection = false;
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
+    queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
 
-    m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
+    m_can_ionize = m_can_field_ionize || m_can_laser_ionize || m_can_laser_injection;
 
     if(m_can_ionize) {
-        m_neutralize_background = false; // change default
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
-            "The initial ion level must be specified");
-    }
-
-    m_can_laser_injection = pp.contains("injection_product");
-    if (m_can_laser_injection) {
-        queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
-    } else {
-        m_can_laser_injection = false;
-    }
-
-    if(m_can_laser_injection) {
         m_neutralize_background = false; // change default
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial ion level must be specified");
