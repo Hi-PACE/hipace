@@ -88,6 +88,12 @@ PlasmaParticleContainer::ReadParameters ()
     } else {
         m_can_laser_injection = false;
     }
+
+    if(m_can_laser_injection) {
+        m_neutralize_background = false; // change default
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
+            "The initial ion level must be specified");
+    }
     
     queryWithParserAlt(pp, "neutralize_background", m_neutralize_background, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
@@ -478,9 +484,12 @@ LaserIonization (const int islice,
                  const MultiLaser& laser,
                  const amrex::Real background_density_SI)
 {
+    //printf("!m_can_laser_injection: %d\n", !m_can_laser_injection);
+    //printf("!laser.UseLaser(islice): %d\n", !laser.UseLaser(islice));
+    //printf("!m_can_laser_injection || !laser.UseLaser(islice): %d\n", !m_can_laser_injection || !laser.UseLaser(islice));
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_ionize || laser.UseLaser(),
     "Error: LaserIonization requires the laser to be enabled in the current slice.");
-    if (!m_can_laser_ionize || !laser.UseLaser(islice)) return;
+    if (!m_can_laser_injection || !laser.UseLaser(islice)) return;
     HIPACE_PROFILE("PlasmaParticleContainer::LaserIonization()");
 
     using namespace amrex::literals;
@@ -746,7 +755,7 @@ PlasmaParticleContainer::
 PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
                  const MultiLaser& laser, const int islice)
 {
-    if (!m_can_laser_ionize) return;
+    if (!m_can_laser_injection || !laser.UseLaser(islice)) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
 
     amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
