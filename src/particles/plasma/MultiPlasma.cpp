@@ -62,7 +62,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 
         if(plasma.m_can_laser_injection) {
             for (int i=0; i<m_names.size(); ++i) {
-                if(m_names[i] == plasma.m_product_beam_name) {
+                if(beams.m_names[i] == plasma.m_product_beam_name) {
                     plasma.m_product_beam_pc = &beams.m_all_beams[i];
                 }
             }
