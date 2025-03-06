@@ -746,8 +746,7 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
     if (!m_can_laser_injection || !laser.UseLaser(islice)) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
 
-    amrex::Gpu::DeviceScalar<uint32_t> num_new_beam_part(0);
-    uint32_t* AMREX_RESTRICT p_num_new_beam_part = num_new_beam_part.dataPtr();
+    uint32_t num_new_beam_part = 0;
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -777,19 +776,19 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
 
         auto [sum_new_beam_part] = reduce_data.value();
 
-        amrex::Gpu::Atomic::Add(p_num_new_beam_part, static_cast<uint32_t>(sum_new_beam_part));
+        num_new_beam_part = sum_new_beam_part;
 
         auto& beam_elec = m_product_beam_pc;
 
         // Resize the beam container
         auto& beam_soa = beam_elec->getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
         auto old_size = beam_soa.size();
-        auto new_size = old_size + num_new_beam_part.dataValue();
+        auto new_size = old_size + num_new_beam_part;
         beam_soa.resize(new_size);
 
         if(Hipace::m_verbose >= 3) {
             amrex::Print() << "Number of transfered particles: "
-                        << num_new_beam_part.dataValue() << "\n";
+                        << num_new_beam_part << "\n";
         }
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
