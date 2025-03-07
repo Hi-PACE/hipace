@@ -759,14 +759,13 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
         amrex::ReduceData<uint64_t> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
 
-        // This kernel calculates the number of ionized electrons in the plasma container and make them invalid
+        // This kernel calculates the number of ionized electrons in the plasma container
         reduce_op.eval(
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
             {
                 if (ptd_plasma.id(ip) == 2) // whether the plasma particle is from ionization
                 {
-                    ptd_plasma.id(ip).make_invalid(); // make the particle invalid in the plasma container
                     return {1};
                 } else {
                     return {0};
@@ -795,12 +794,13 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
         // This kernel does the transfer of the ionized electrons from the plasma container
-        // to the beam container
+        // to the beam container and make them invalid in the plasma container
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (ptd_plasma.id(ip) == 2){
+                    ptd_plasma.id(ip).make_invalid(); // make the particle invalid in the plasma container
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
                     const long pidx_beam = pid_beam + old_size;
                     printf("pid_beam: %ld\n", pid_beam);
