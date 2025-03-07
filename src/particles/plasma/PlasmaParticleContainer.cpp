@@ -738,8 +738,7 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
-PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
-                 const MultiLaser& laser, const int islice)
+PlasmaToBeam (const MultiLaser& laser, const int islice)
 {
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_injection || laser.UseLaser(),
     "Error: LaserIonization requires the laser to be enabled in the current slice.");
