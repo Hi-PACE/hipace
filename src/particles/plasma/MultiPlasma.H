@@ -114,9 +114,6 @@ public:
 
     /** Do the transfer of ionized plasma particles to beam particles
      *
-     * \param[in] beams MultiBeam object containing all beams
-     * \param[in] beamnames Vector of strings representing the names of the beams
-     * \param[in] laser_geom Geometry of the laser used for ionization
      * \param[in] laser MultiLaser object containing the laser details
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
