@@ -120,8 +120,7 @@ public:
      * \param[in] laser MultiLaser object containing the laser details
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void DoLaserInjection (MultiBeam& beams, const amrex::Vector< std::string > beamnames, const amrex::Geometry& laser_geom,
-                 const MultiLaser& laser, const int islice);
+    void DoLaserInjection (const MultiLaser& laser, const int islice);
 
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     bool AnySpeciesNeutralizeBackground () const;
