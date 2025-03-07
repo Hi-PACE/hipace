@@ -803,11 +803,11 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
                     ptd_plasma.id(ip).make_invalid(); // make the particle invalid in the plasma container
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
                     const long pidx_beam = pid_beam + old_size;
-                    printf("pid_beam: %ld\n", pid_beam);
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
-                    ptd_beam.rdata(BeamIdx::x)[pidx_beam] = ptd_plasma.pos(0, ip);
-                    ptd_beam.rdata(BeamIdx::y)[pidx_beam] = ptd_plasma.pos(1, ip);
-                    ptd_beam.rdata(BeamIdx::z)[pidx_beam] = ptd_plasma.pos(2, ip);
+                    ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
+                    std::cout << "ux" << ptd_beam.pos(0, pidx_beam) << std::endl;
+                    ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
+                    ptd_beam.pos(2, pidx_beam) = ptd_plasma.pos(2, ip);
                     ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
                     ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::uy)[ip];
                     amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
