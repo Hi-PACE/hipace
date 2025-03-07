@@ -805,7 +805,6 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
                     const long pidx_beam = pid_beam + old_size;
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
-                    std::cout << "ux" << ptd_beam.pos(0, pidx_beam) << std::endl;
                     ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
                     ptd_beam.pos(2, pidx_beam) = ptd_plasma.pos(2, ip);
                     ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
