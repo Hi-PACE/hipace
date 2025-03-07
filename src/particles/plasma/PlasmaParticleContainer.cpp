@@ -786,6 +786,8 @@ PlasmaToBeam (MultiBeam& beams, const amrex::Vector< std::string > beamnames, co
         auto new_size = old_size + num_new_beam_part;
         beam_soa.resize(new_size);
 
+        if (num_new_beam_particle == 0) continue;
+
         if(Hipace::m_verbose >= 3) {
             amrex::Print() << "Number of transfered particles: "
                         << num_new_beam_part << "\n";
