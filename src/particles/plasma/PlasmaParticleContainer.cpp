@@ -778,11 +778,6 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
 
         auto& beam_elec = m_product_beam_pc;
 
-        // Resize the beam container
-        auto& beam_soa = beam_elec->getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-        auto old_size = beam_soa.size();
-        auto new_size = old_size + num_new_beam_part;
-        beam_soa.resize(new_size);
 
         if (num_new_beam_part == 0) continue;
 
@@ -790,6 +785,12 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
             amrex::Print() << "Number of transfered particles: "
                         << num_new_beam_part << "\n";
         }
+
+        // Resize the beam container
+        auto& beam_soa = beam_elec->getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+        auto old_size = beam_soa.size();
+        auto new_size = old_size + num_new_beam_part;
+        beam_elec->resize(WhichBeamSlice::This, new_size, 0);
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
