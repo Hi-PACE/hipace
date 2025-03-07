@@ -815,9 +815,6 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
                     amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi);
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip];
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
                 }
             });
             amrex::Gpu::streamSynchronize();
