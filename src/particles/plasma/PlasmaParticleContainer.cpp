@@ -787,10 +787,10 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
         }
 
         // Resize the beam container
-        auto& beam_soa = beam_elec->getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-        auto old_size = beam_soa.size();
+        auto old_size_non_slip = beam_elec->getNumParticles(WhichBeamSlice::This);
+        auto old_size = beam_elec->getNumParticlesIncludingSlipped(WhichBeamSlice::This);
         auto new_size = old_size + num_new_beam_part;
-        beam_soa.resize(new_size);
+        beam_elec->resize(WhichBeamSlice::This, old_size_non_slip, new_size - old_size_non_slip);
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
@@ -815,7 +815,7 @@ PlasmaToBeam (const MultiLaser& laser, const int islice)
                     amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi);
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip];
-                    ptd_beam.idata(BeamIdx::nsubcycles )[pidx_beam] = 0;
+                    ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = 0;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                 }
             });
