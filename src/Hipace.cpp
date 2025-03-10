@@ -396,13 +396,7 @@ Hipace::Evolve ()
     {
         ResetAllQuantities();
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
-        std::string str_dt {""};
-        queryWithParser(pph, "dt", str_dt);
-        if (str_dt != "adaptive") {
-            m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
-            m_dt =  m_exe_dt(m_physical_time);
-            m_max_time = std::copysign(m_max_time, m_dt);
-        }
+
         const amrex::Box& bx = m_3D_ba[0][0];
 
         if (m_multi_laser.UseLaser()) {
@@ -416,8 +410,16 @@ Hipace::Evolve ()
             }
             break;
         }
-
-        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+        std::string str_dt {""};
+        queryWithParser(pph, "dt", str_dt);
+        if (str_dt != "adaptive") {
+            m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
+            m_dt =  m_exe_dt(m_physical_time);
+            m_max_time = std::copysign(m_max_time, m_dt);
+        }
+        else{
+            m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+        }
 
         amrex::Real next_time = 0.;
 
