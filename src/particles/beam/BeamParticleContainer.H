@@ -192,6 +192,10 @@ public:
         return m_total_num_particles;
     }
 
+    void updateSize (int n) {
+        m_total_num_particles = n;
+    }
+
     int numRealComponents () const {
         return BeamIdx::real_nattribs + (m_do_spin_tracking ? 3 : 0);
     }
