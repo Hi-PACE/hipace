@@ -6,7 +6,7 @@
 # This file is part of the HiPACE++ test suite.
 # It tests the STC initialisation with LASY functions.
 
-# abort on first encounted error
+# abort on first encountered error
 set -eu -o pipefail
 
 # Read input parameters
