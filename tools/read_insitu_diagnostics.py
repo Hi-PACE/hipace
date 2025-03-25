@@ -11,10 +11,24 @@ import glob
 import json
 from scipy import constants
 
+def count_braces(b):
+    num_open_braces = 0
+    num_char = 0
+    for bb in b:
+        num_char += 1
+        if bb == b'{'[0]:
+            num_open_braces += 1
+        elif bb == b'}'[0]:
+            num_open_braces -= 1
+        if num_open_braces == 0:
+            break
+    return num_char
+
 def get_buffer(file):
     with open(file, "rb") as f:
         bytes = f.read()
-        datatype_obj = json.JSONDecoder().raw_decode(bytes.decode(errors="replace"))
+        end = count_braces(bytes)
+        datatype_obj = json.JSONDecoder().raw_decode(bytes[:end].decode())
     return {"buffer" : bytes, "dtype" : np.dtype(datatype_obj[0]), "offset" : datatype_obj[1]}
 
 def read_file(filenames):
