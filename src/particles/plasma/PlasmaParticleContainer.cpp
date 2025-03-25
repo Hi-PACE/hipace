@@ -805,9 +805,8 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (ptd_plasma.id(ip) == 2){
-                    //ptd_plasma.id(ip).make_invalid(); // make the particle invalid in the plasma container
-                    const long pid_beam = 0;//amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
-                    const long pidx_beam = 0;//pid_beam + old_size;
+                    const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
+                    const long pidx_beam = pid_beam + old_size;
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
                     ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
