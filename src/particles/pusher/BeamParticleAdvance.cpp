@@ -136,6 +136,15 @@ AdvanceBeamParticlesSlice (
             amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
             amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
 
+            //if ((xp!=xp)||(yp!=yp)||(zp!=zp)||(ux!=ux)||(uy!=uy)||(uz!=uz)){
+            //    std::cout<< "breaks before" << std::endl; 
+            //    std::cout<<"xp: " << xp << std::endl;
+            //    std::cout<<"zp: " << zp << std::endl;
+            //    std::cout<<"ux: " << ux << std::endl;
+            //    std::cout<<"uy: " << uy << std::endl;
+            //    std::cout<<"uz: " << uz << std::endl;
+            //}
+
             int i = ptd.idata(BeamIdx::nsubcycles)[ip];
 
             amrex::RealVect spin {0._rt, 0._rt, 0._rt};
@@ -187,6 +196,21 @@ AdvanceBeamParticlesSlice (
                 // define field at particle position reals
                 amrex::ParticleReal ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                 amrex::ParticleReal Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
+
+                if ((xp!=xp)||(xp>1000)||(xp<-1000)){
+                    std::cout<<"subcycle number: " << i << std::endl;
+                    std::cout<<"inv_c2: " << inv_c2 << std::endl;
+                    std::cout<<"dt: " << dt << std::endl;
+                    std::cout<<"xp: " << xp << std::endl;
+                    std::cout<<"yp: " << yp << std::endl;
+                    std::cout<<"zp: " << zp << std::endl;
+                    std::cout<<"ux: " << ux << std::endl;
+                    std::cout<<"uy: " << uy << std::endl;
+                 
+                   std::cout<<"uz: " << uz << std::endl;
+                    std::cout<<"gammap_inv: " << gammap_inv << std::endl;
+                }
+
 
                 // field gather for a single particle
                 doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,

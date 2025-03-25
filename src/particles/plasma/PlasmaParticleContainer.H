@@ -118,9 +118,10 @@ public:
     /** Do the transfer of particles from the plasma container to the beam container
      *
      * \param[in] laser MultiLaser object containing the laser details
+     * \param[in] gm Geometry object for the whole domain
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void PlasmaToBeam (const MultiLaser& laser, const int islice);
+    void PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index

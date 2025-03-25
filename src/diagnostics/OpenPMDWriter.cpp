@@ -217,6 +217,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
     amrex::Gpu::streamSynchronize();
 
     const int nbeams = beams.get_nbeams();
+    std::cout << "beams.get_nbeams(): " << beams.get_nbeams() << std::endl;
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
@@ -232,6 +233,9 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         }
 
         // initialize beam IO on first slice
+        std::cout << "Checking assertion for beam " << ibeam << std::endl;
+        std::cout << "m_offset[" << ibeam << "] = " << m_offset[ibeam] << std::endl;
+        std::cout << "beam.getTotalNumParticles() = " << beam.getTotalNumParticles() << std::endl;
         AMREX_ALWAYS_ASSERT(m_offset[ibeam] <= beam.getTotalNumParticles());
         const uint64_t np_total = m_offset[ibeam];
 
