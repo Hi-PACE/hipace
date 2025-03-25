@@ -217,7 +217,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
     amrex::Gpu::streamSynchronize();
 
     const int nbeams = beams.get_nbeams();
-    std::cout << "beams.get_nbeams(): " << beams.get_nbeams() << std::endl;
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
