@@ -76,7 +76,7 @@ MultiBeam::AdvanceBeamParticlesSlice (
             ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level);
         }
     }
-    
+
 }
 
 void
