@@ -71,8 +71,10 @@ MultiBeam::AdvanceBeamParticlesSlice (
     const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
     int const current_N_level)
 {
-    for (int i=0; i<m_nbeams; i++) {
+    if (m_all_plasmas[i].m_do_push){
+        for (int i=0; i<m_nbeams; i++) {
         ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level);
+        }
     }
 }
 
