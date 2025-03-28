@@ -799,10 +799,11 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         const amrex::Real z_lo = gm[0].ProbLo()[2];
 
         const PhysConst phys_const = get_phys_const();
-        // This kernel does the transfer of the ionized electrons from the plasma container
-        // to the beam container and make them invalid in the plasma container
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
+        
+        // This kernel does the transfer of the ionized electrons from the plasma container
+        // to the beam container and make them invalid in the plasma container
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (ptd_plasma.id(ip) == 2){
