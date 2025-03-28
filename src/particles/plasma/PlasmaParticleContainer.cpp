@@ -801,27 +801,26 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         const PhysConst phys_const = get_phys_const();
         // This kernel does the transfer of the ionized electrons from the plasma container
         // to the beam container and make them invalid in the plasma container
-        amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
-        uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
+        amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
+        uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (ptd_plasma.id(ip) == 2){
-                    const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_elec, 1u);
+                    const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_beam, 1u);
                     const long pidx_beam = pid_beam + old_size;
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
                     ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
-                    ptd_beam.pos(2, pidx_beam) = z_lo + dz * islice;//ptd_plasma.pos(2, ip);
-                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = 0;//ptd_plasma.rdata(PlasmaIdx::ux)[ip];
-                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = 0;//ptd_plasma.rdata(PlasmaIdx::uy)[ip];
-                    amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
-                    amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip];
+                    ptd_beam.pos(2, pidx_beam) = z_lo + dz * islice;
+                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
+                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::uy)[ip];
+                    amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]/phys_const.c;
+                    amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]/phys_const.c;
                     amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                    //ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi);
-                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = 10*phys_const.c;
-                    //amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam];
-                    //const amrex::Real gaminv = 1./std::sqrt(1. + ux*ux + uy*uy + uz*uz);
-                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = 0;//ptd_plasma.rdata(PlasmaIdx::w)[ip] / (psi * gaminv);
+                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi)*phys_const.c;
+                    amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam]/phys_const.c;
+                    const amrex::Real gaminv = 1./std::sqrt(1. + ux*ux + uy*uy + uz*uz);
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] / (psi * gaminv);
                     ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = 0;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                     ptd_plasma.id(ip).make_invalid();
