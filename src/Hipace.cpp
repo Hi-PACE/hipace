@@ -687,6 +687,7 @@ Hipace::SolveOneSlice (int islice, int step)
                     m_salame_overloaded, current_N_level, step, islice, m_salame_relative_tolerance);
     }
 
+    // add external fields to the field grid
     for (int lev=0; lev<current_N_level; ++lev) {
         AddGridExternalFields(lev, islice);
     }

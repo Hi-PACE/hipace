@@ -101,13 +101,6 @@ public:
     /** Make Geometry, DistributionMapping and BoxArray for all MR levels */
     void MakeGeometry ();
 
-    /** \brief Dump simulation data to file
-     *
-     * \param[in] output_step current iteration
-     * \param[in] call_type whether the beams or the fields should be written to file
-     */
-    void WriteDiagnostics (int output_step, const OpenPMDWriterCallType call_type);
-
     /** \brief Return a copy of member struct for physical constants */
     PhysConst get_phys_const () {return m_phys_const;}
 
@@ -148,7 +141,7 @@ public:
      * \brief add external fields to the field grid
      *
      * \param[in] lev MR level
-     * \param[in] which_slice defines if this or the salame slice is handled
+     * \param[in] islice slice number
      */
     void AddGridExternalFields (const int lev, const int islice);
 
