@@ -121,14 +121,14 @@ public:
     /**
      * \brief Initialize Sx and Sy with the beam contributions
      *
-     * \param[lev] MR level
+     * \param[in] lev MR level
      */
     void InitializeSxSyWithBeam (const int lev);
 
     /**
      * \brief Knowing the sources Sx, Sy and chi, apply MG to solve for Bx, By
      *
-     * \param[lev] MR level
+     * \param[in] lev MR level
      * \param[in] which_slice defines if this or the salame slice is handled
      */
     void ExplicitMGSolveBxBy (const int lev, const int which_slice);
@@ -143,6 +143,14 @@ public:
      * \brief does Coulomb collisions between plasmas and beams
      */
     void doCoulombCollision ();
+
+    /**
+     * \brief add external fields to the field grid
+     *
+     * \param[in] lev MR level
+     * \param[in] which_slice defines if this or the salame slice is handled
+     */
+    void AddGridExternalFields (const int lev, const int islice);
 
     /**
        \brief Returns the rank id of the head rank.
@@ -310,6 +318,15 @@ public:
     inline static std::array<amrex::Real, 2> m_boundary_particle_lo;
     /** upper bound of bounding box for the particles */
     inline static std::array<amrex::Real, 2> m_boundary_particle_hi;
+
+    // Grid external fields
+
+    /** Whether grid external fields should be used for this beam */
+    bool m_use_gird_external_fields = false;
+    /** Grid external field functions for Bx By Bz */
+    amrex::GpuArray<amrex::ParserExecutor<4>, 3> m_grid_external_fields;
+    /** Owns data for m_grid_external_fields */
+    amrex::Array<amrex::Parser, 3> m_grid_external_fields_parser;
 
 private:
 
