@@ -21,13 +21,13 @@ Thereby, the following constants are predefined:
 ============ ========================= =====================
 **variable** **name**                  **Value**
 q_e          elementary charge         1.602176634e-19
-m_e          electron mass             9.1093837015e-31
-m_p          proton mass               1.67262192369e-27
-epsilon0     vacuum permittivity       8.8541878128e-12
-mu0          vacuum permeability       1.25663706212e-06
+m_e          electron mass             9.1093837139e-31
+m_p          proton mass               1.67262192595e-27
+epsilon0     vacuum permittivity       8.8541878188e-12
+mu0          vacuum permeability       1.2566370612685e-06
 clight       speed of light            299'792'458.
-hbar         reduced Planck constant   1.054571817e-34
-r_e          classical electron radius 2.817940326204929e-15
+hbar         reduced Planck constant   1.0545718176461565e-34
+r_e          classical electron radius 2.8179403205e-15
 ============ ========================= =====================
 
 For a list of supported functions see the
