@@ -249,7 +249,7 @@ Time step
 * ``hipace.max_time`` (`float`) optional (default `infinity`)
     Maximum physical time of the simulation. The ``dt`` of the last time step may be reduced so that ``t + dt = max_time``, both for the adaptive and a fixed time step.
 
-* ``hipace.dt`` (`float` or `string`)
+* ``hipace.dt`` (`float` or `string`) optional (default `0.`)
     Time step to advance the particle beam. For adaptive time step, use ``"adaptive"``.
 
 * ``hipace.dt_max`` (`float`) optional (default `inf`)
