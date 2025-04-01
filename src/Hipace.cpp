@@ -97,9 +97,9 @@ Hipace::Hipace () :
     amrex::ParmParse pph("hipace");
 
     std::string str_dt {""};
-    getWithParser(pph, "dt", str_dt);
+    queryWithParser(pph, "dt", str_dt);
     if (str_dt != "adaptive") {
-        getWithParser(pph, "dt", m_dt);
+        queryWithParser(pph, "dt", m_dt);
         m_max_time = std::copysign(m_max_time, m_dt);
     }
     queryWithParser(pph, "max_time", m_max_time);
