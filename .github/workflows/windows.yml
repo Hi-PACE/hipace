@@ -24,11 +24,13 @@ jobs:
           ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-
           ccache-windows-winmsvc-
     - name: install dependencies
+      env:
+        CMAKE_POLICY_VERSION_MINIMUM: 3.5
       run: |
         Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
         7z.exe x -r fftw-3.3.10.tar.gz
         7z.exe x -r fftw-3.3.10.tar
-        cmake -S fftw-3.3.10 -B build_fftw -DCMAKE_BUILD_TYPE=Debug -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+        cmake -S fftw-3.3.10 -B build_fftw -DCMAKE_BUILD_TYPE=Debug
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build_fftw --config Debug --target install --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
@@ -73,6 +75,8 @@ jobs:
         7z.exe x -r fftw-3.3.10.tar
     - name: install dependencies
       shell: cmd
+      env:
+        CMAKE_POLICY_VERSION_MINIMUM: 3.5
       run: |
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
         cmake -S fftw-3.3.10  ^
