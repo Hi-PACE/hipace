@@ -11,6 +11,8 @@ jobs:
     name: MSVC w/o MPI
     runs-on: windows-latest
     if: github.event.pull_request.draft == false
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
     steps:
     - uses: actions/checkout@v4
     - name: CCache Cache
