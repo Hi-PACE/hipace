@@ -24,6 +24,8 @@ jobs:
           ccache-windows-winmsvc-${{ hashFiles('.github/workflows/windows.yml') }}-
           ccache-windows-winmsvc-
     - name: install dependencies
+      env:
+        CMAKE_POLICY_VERSION_MINIMUM: 3.5
       run: |
         Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
         7z.exe x -r fftw-3.3.10.tar.gz
@@ -32,6 +34,7 @@ jobs:
         if(!$?) { Exit $LASTEXITCODE }
         cmake --build build_fftw --config Debug --target install --parallel 2
         if(!$?) { Exit $LASTEXITCODE }
+        unset CMAKE_POLICY_VERSION_MINIMUM
     - name: Build & Install
       run: |
         $env:FFTW3_DIR = "C:/Program Files (x86)/fftw/"
