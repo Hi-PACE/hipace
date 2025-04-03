@@ -755,15 +755,9 @@ InjectionCondition (const MultiLaser& laser, const int islice)
 
         amrex::Long const num_particles = pti.numParticles();
 
-        amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
-        amrex::ReduceData<uint64_t> reduce_data(reduce_op);
-        using ReduceTuple = typename decltype(reduce_data)::Type;
-
         // This kernel calculates the number of ionized electrons in the plasma container
-        reduce_op.eval(
-            num_particles, reduce_data,
-            [=] AMREX_GPU_DEVICE (int ip)
-            {
+        amrex::ParallelFor(num_particles,
+            [=] AMREX_GPU_DEVICE (int ip) {
                 amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
