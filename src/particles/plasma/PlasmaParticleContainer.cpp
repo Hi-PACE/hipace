@@ -755,7 +755,7 @@ InjectionCondition (const MultiLaser& laser, const int islice)
 
         amrex::Long const num_particles = pti.numParticles();
 
-        // This kernel calculates the number of ionized electrons in the plasma container
+        // This kernel marks the plasma particles that has been injected in the wake
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
@@ -763,7 +763,7 @@ InjectionCondition (const MultiLaser& laser, const int islice)
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                 amrex::Real uz = (1+ux*ux+uy*uy-psi*psi)/(2*psi);
                 const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
-                amrex::Real condition = psi - gam + uz;
+                amrex::Real condition = psi - gam + uz; // condition for injection
 
                 if (condition < 0){
                     ptd_plasma.id(ip) = 3;
