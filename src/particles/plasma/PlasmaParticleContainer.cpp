@@ -762,7 +762,7 @@ InjectionCondition (const MultiLaser& laser, const int islice)
         // This kernel calculates the number of ionized electrons in the plasma container
         reduce_op.eval(
             num_particles, reduce_data,
-            [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
+            [=] AMREX_GPU_DEVICE (int ip)
             {
                 amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
