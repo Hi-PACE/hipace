@@ -745,6 +745,10 @@ InjectionCondition (const MultiLaser& laser, const int islice)
     if (!m_can_laser_injection || !laser.UseLaser(islice)) return;
     HIPACE_PROFILE("PlasmaParticleContainer::InjectionCondition()");
 
+    using namespace amrex::literals;
+    const PhysConst phys_const = get_phys_const();
+    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
+
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
         const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
@@ -754,9 +758,6 @@ InjectionCondition (const MultiLaser& laser, const int islice)
         amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
         amrex::ReduceData<uint64_t> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
-
-        const PhysConst phys_const = get_phys_const();
-        const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
         // This kernel calculates the number of ionized electrons in the plasma container
         reduce_op.eval(
@@ -787,6 +788,10 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
 
     uint32_t num_new_beam_part = 0;
+
+    using namespace amrex::literals;
+    const PhysConst phys_const = get_phys_const();
+    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -840,10 +845,8 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         const amrex::Real z_lo = gm[0].ProbLo()[2];
         const amrex::Real dt = Hipace::GetInstance().m_dt;
 
-        const PhysConst phys_const = get_phys_const();
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
-        const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
         // This kernel does the transfer of the ionized electrons from the plasma container
         // to the beam container and make them invalid in the plasma container
