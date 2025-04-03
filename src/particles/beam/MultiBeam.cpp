@@ -72,8 +72,11 @@ MultiBeam::AdvanceBeamParticlesSlice (
     int const current_N_level)
 {
     for (int i=0; i<m_nbeams; i++) {
-        ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level);
+        if (m_all_beams[i].m_do_push){
+            ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level);
+        }
     }
+
 }
 
 void

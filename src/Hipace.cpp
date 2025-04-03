@@ -233,14 +233,24 @@ Hipace::Hipace () :
     queryWithParser(pph, "collisions", m_collision_names);
     /** Initialize the collision objects */
     m_ncollisions = m_collision_names.size();
-     for (int i = 0; i < m_ncollisions; ++i) {
-         m_all_collisions.emplace_back(CoulombCollision(m_multi_plasma.m_names, m_multi_beam.m_names, m_collision_names[i]));
-     }
-     if (m_normalized_units && m_ncollisions > 0) {
-         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
-             "For collisions with normalized units, a background plasma density must "
-             "be specified via 'hipace.background_density_SI'");
-     }
+    for (int i = 0; i < m_ncollisions; ++i) {
+        m_all_collisions.emplace_back(CoulombCollision(m_multi_plasma.m_names, m_multi_beam.m_names, m_collision_names[i]));
+    }
+    if (m_normalized_units && m_ncollisions > 0) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
+            "For collisions with normalized units, a background plasma density must "
+            "be specified via 'hipace.background_density_SI'");
+    }
+
+    // external fields applied to the grid
+    amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
+    m_use_gird_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str);
+    m_grid_external_fields[0] = makeFunctionWithParser<4>(field_str[0],
+        m_grid_external_fields_parser[0], {"x", "y", "z", "t"});
+    m_grid_external_fields[1] = makeFunctionWithParser<4>(field_str[1],
+        m_grid_external_fields_parser[1], {"x", "y", "z", "t"});
+    m_grid_external_fields[2] = makeFunctionWithParser<4>(field_str[2],
+        m_grid_external_fields_parser[2], {"x", "y", "z", "t"});
 }
 
 void
@@ -677,6 +687,11 @@ Hipace::SolveOneSlice (int islice, int step)
                     m_salame_overloaded, current_N_level, step, islice, m_salame_relative_tolerance);
     }
 
+    // add external fields to the field grid
+    for (int lev=0; lev<current_N_level; ++lev) {
+        AddGridExternalFields(lev, islice);
+    }
+
     // get beam diagnostics after SALAME but before beam push
     m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
     FillBeamDiagnostics(step);
@@ -1031,6 +1046,64 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
     m_predcorr_avg_B_error += relative_Bfield_error;
     if (m_verbose >= 2) amrex::Print() << "islice: " << islice <<
                 " n_iter: "<<i_iter<<" relative B field error: "<<relative_Bfield_error<< "\n";
+}
+
+void
+Hipace::AddGridExternalFields (const int lev, const int islice)
+{
+    if (!m_use_gird_external_fields) {
+        return;
+    }
+    HIPACE_PROFILE("Hipace::AddGridExternalFields()");
+
+    const amrex::Real dx = m_3D_geom[lev].CellSize(Direction::x);
+    const amrex::Real dy = m_3D_geom[lev].CellSize(Direction::y);
+    const amrex::Real dz = m_3D_geom[lev].CellSize(Direction::z);
+
+    const amrex::Real poff_x = GetPosOffset(0, m_3D_geom[lev], m_3D_geom[lev].Domain());
+    const amrex::Real poff_y = GetPosOffset(1, m_3D_geom[lev], m_3D_geom[lev].Domain());
+    const amrex::Real poff_z = GetPosOffset(2, m_3D_geom[lev], m_3D_geom[lev].Domain());
+
+    auto external_fields = m_grid_external_fields;
+
+    const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
+    const int EypBx = Comps[WhichSlice::This]["EypBx"];
+    const int Bx = Comps[WhichSlice::This]["By"];
+    const int By = Comps[WhichSlice::This]["Bx"];
+    const int Bz = Comps[WhichSlice::This]["Bz"];
+
+    const amrex::Real clight = m_phys_const.c;
+    const amrex::Real time = m_physical_time;
+
+    amrex::MultiFab& slicemf = m_fields.getSlices(lev);
+
+#ifdef AMREX_USE_OMP
+#pragma omp parallel
+#endif
+    for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
+
+        amrex::Box const& bx = mfi.tilebox();
+
+        Array3<amrex::Real> const arr = slicemf.array(mfi);
+
+        amrex::ParallelFor(to2D(bx),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
+            {
+                const amrex::Real x = i * dx + poff_x;
+                const amrex::Real y = j * dy + poff_y;
+                const amrex::Real z = islice * dz + poff_z;
+
+                const amrex::Real Bx = external_fields[0](x, y, z, time);
+                const amrex::Real By = external_fields[1](x, y, z, time);
+                const amrex::Real Bz = external_fields[2](x, y, z, time);
+
+                arr(i, j, ExmBy) -= clight * By;
+                arr(i, j, EypBx) += clight * Bx;
+                arr(i, j, Bx) += Bx;
+                arr(i, j, By) += By;
+                arr(i, j, Bz) += Bz;
+            });
+    }
 }
 
 void
