@@ -768,8 +768,8 @@ InjectionCondition (const MultiLaser& laser, const int islice)
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                 amrex::Real uz = (1+ux*ux+uy*uy-psi*psi)/(2*psi);
-                const amrex::Real gamma = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
-                amrex::Real condition = psi - gamma + uz;
+                const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
+                amrex::Real condition = psi - gam + uz;
 
                 if (condition < 0){
                     ptd_plasma.id(ip) = 3;
