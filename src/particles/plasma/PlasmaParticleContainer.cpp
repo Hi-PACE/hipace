@@ -797,7 +797,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
 
         const amrex::Real dz = gm[0].CellSize(2);// / m_pdf_ref_ratio;
         const amrex::Real z_lo = gm[0].ProbLo()[2];
-        const amrex::Real dt = Hipace::GetInstance().m_dt; 
+        const amrex::Real dt = Hipace::GetInstance().m_dt;
 
         const PhysConst phys_const = get_phys_const();
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
