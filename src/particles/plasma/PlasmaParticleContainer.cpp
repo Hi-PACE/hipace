@@ -821,7 +821,9 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi)*phys_const.c;
                     amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam]/phys_const.c;
                     const amrex::Real gaminv = 1./std::sqrt(1. + ux*ux + uy*uy + uz*uz);
-                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] / (psi * gaminv);
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] / (psi * gaminv) * dt; 
+                    // the coefficient dt is due to the change from the quasi-static plasma frame (x, y, ζ) 
+                    // to the beam frame (x, y, t), where dζ = c dt. This ensures correct charge density mapping.
                     ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = 0;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                     ptd_plasma.id(ip).make_invalid();
