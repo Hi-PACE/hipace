@@ -768,11 +768,11 @@ InjectionCondition (const int islice)
                 amrex::Real uz = (1+ux*ux+uy*uy-psi*psi)/(2*psi);
                 const amrex::Real gamma = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
                 amrex::Real condition = psi - gamma + uz;
-                
+
                 if (condition < 0){
                     amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 3;
                 }
-        }); 
+        });
     }
 }
 
