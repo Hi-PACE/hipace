@@ -860,8 +860,8 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                     amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi)*phys_const.c;
                     amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
-                    const amrex::Real gamma = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
-                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * gamma / (psi) * dt;
+                    const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * gam / (psi) * dt;
                     // the coefficient dt is due to the change from the quasi-static plasma frame (x, y, ζ)
                     // to the beam frame (x, y, t).
                     ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = 0;
