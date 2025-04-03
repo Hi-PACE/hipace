@@ -117,9 +117,10 @@ public:
 
     /** Mark the plasma particles that has been injected
      *
+     * \param[in] laser MultiLaser object containing the laser details
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void InjectionCondition (const int islice);
+    void InjectionCondition (const MultiLaser& laser, const int islice);
 
     /** Do the transfer of particles from the plasma container to the beam container
      *
