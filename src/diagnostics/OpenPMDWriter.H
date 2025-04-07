@@ -99,8 +99,8 @@ private:
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;
 
-    std::vector<std::vector<amrex::PinnedVector<uint64_t>>> m_uint64_beam_data {};
-    std::vector<std::vector<amrex::PinnedVector<amrex::ParticleReal>>> m_real_beam_data {};
+    std::vector<std::vector<amrex::Gpu::PinnedVector<uint64_t>>> m_uint64_beam_data {};
+    std::vector<std::vector<amrex::Gpu::PinnedVector<amrex::ParticleReal>>> m_real_beam_data {};
 
 public:
     /** Constructor */
