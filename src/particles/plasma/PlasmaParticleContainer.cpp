@@ -761,7 +761,7 @@ InjectionCondition (const MultiLaser& laser, const int islice)
                 amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                amrex::Real gamma_psi = 0.5_rt ( (1+ ux*ux + uy*uy)/(psi*psi) + 1); // gamma/(1+psi)
+                amrex::Real gamma_psi = 0.5_rt * ( (1+ ux*ux + uy*uy)/(psi*psi) + 1); // gamma/(1+psi)
                 amrex::Real condition = gamma_psi - m_max_qsa_weighting_factor; // condition for injection
 
                 if (condition > 0 && ptd_plasma.id(ip).is_valid()){
