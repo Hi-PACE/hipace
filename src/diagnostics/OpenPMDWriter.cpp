@@ -289,7 +289,7 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
                 const auto old_size = m_uint64_beam_data[ibeam][idx].size();
                 if (old_size < m_offset[ibeam] + np) {
                     m_uint64_beam_data[ibeam][idx].resize(
-                        std::max<uint64_t>(5*old_size/4, m_offset[ibeam] + np)
+                        std::max<uint64_t>(old_size+old_size/4, m_offset[ibeam] + np)
                     );
                 }
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
@@ -306,7 +306,7 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
                 const auto old_size = m_real_beam_data[ibeam][idx].size();
                 if (old_size < m_offset[ibeam] + np) {
                     m_real_beam_data[ibeam][idx].resize(
-                        std::max<uint64_t>(5*old_size/4, m_offset[ibeam] + np)
+                        std::max<uint64_t>(old_size+old_size/4, m_offset[ibeam] + np)
                     );
                 }
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
