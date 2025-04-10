@@ -623,6 +623,9 @@ Hipace::SolveOneSlice (int islice, int step)
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
                 m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
 
+            // deposit w, ux, uy, uz, ux2, uy2 and uz2 for all plasmas
+            m_multi_plasma.DepositTemperature(m_fields, WhichSlice::This, m_3D_geom, lev);
+
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
                 false, true, m_do_beam_jz_minus_rho, WhichSlice::This, WhichBeamSlice::This);
@@ -630,6 +633,9 @@ Hipace::SolveOneSlice (int islice, int step)
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
                 m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
+            
+            // deposit w, ux, uy, uz, ux2, uy2 and uz2 for all plasmas
+            m_multi_plasma.DepositTemperature(m_fields, WhichSlice::This, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
@@ -999,6 +1005,9 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
             // plasmas deposit jx jy to next temp slice
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::Next,
                 true, false, false, false, false, m_3D_geom, lev);
+            
+            // deposit w, ux, uy, uz, ux2, uy2 and uz2 for all plasmas
+            m_multi_plasma.DepositTemperature(m_fields, WhichSlice::This, m_3D_geom, lev);
 
             // beams deposit jx jy to the next slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
