@@ -116,6 +116,10 @@ Hipace::Hipace () :
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    m_deposit_temp = m_diags.needsTemp();
+    queryWithParser(pph, "deposit_temp", m_deposit_temp);
+    m_deposit_temp_individual = m_diags.needsTempIndividual();
+    queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
     queryWithParser(pph, "interpolate_neutralizing_background",
         m_interpolate_neutralizing_background);
     bool do_mfi_sync = false;

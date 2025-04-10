@@ -53,6 +53,17 @@ public:
         bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
         amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
+    /** Loop over plasma species and depose their currents into the current 2D slice in fields
+     *
+     * \param[in,out] fields the general field class, modified by this function
+     * \param[in] which_slice defines if this or the next slice is handled
+     * \param[in] gm Geometry of the simulation, to get the cell size etc.
+     * \param[in] lev MR level
+     */
+    void DepositTemperature (
+        Fields & fields, int which_slice, bool deposit_jx_jy,
+        amrex::Vector<amrex::Geometry> const& gm, int const lev);
+
     /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields
      *
      * \param[in,out] fields the general field class, modified by this function
