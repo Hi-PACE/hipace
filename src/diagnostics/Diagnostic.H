@@ -138,11 +138,11 @@ public:
      */
     bool needsRhoIndividual () const;
 
-    /** \brief determines if rho is requested as a diagnostic
+    /** \brief determines if the temperature parameters are requested as a diagnostic
      */
     bool needsTemp () const;
 
-    /** \brief determines if rho for every individual plasma is requested as a diagnostic
+    /** \brief determines if the temperature parameters for every individual plasma are requested as a diagnostic
      */
     bool needsTempIndividual () const;
 
