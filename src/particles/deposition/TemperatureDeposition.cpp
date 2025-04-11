@@ -23,7 +23,7 @@ void
 DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int which_slice,
                     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
-    if (!m_deposit_temp) { // deposit temperature in input
+    if (!Hipace::m_deposit_temp) { // deposit temperature in input
         return;
     }
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
