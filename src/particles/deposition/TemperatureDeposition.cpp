@@ -78,8 +78,7 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
             },
             // get_cell
             // return the lowest cell index that the particle deposits into
-            [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto depos_order) -> amrex::IntVectND<2>
+            [=] AMREX_GPU_DEVICE (int ip, auto ptd) -> amrex::IntVectND<2>
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
