@@ -8,6 +8,7 @@
 target_sources(HiPACE
   PRIVATE
     BeamDepositCurrent.cpp
+    TemperatureDeposition.cpp
     PlasmaDepositCurrent.cpp
     ExplicitDeposition.cpp
 )
