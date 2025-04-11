@@ -764,7 +764,7 @@ InjectionCondition (const MultiLaser& laser, const int islice)
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                 amrex::Real gamma_psi = 0.5_rt * ( (1+ ux*ux + uy*uy)/(psi*psi) + 1); // gamma/(1+psi)
-                amrex::Real condition = gamma_psi - 1; // condition for injection
+                amrex::Real condition = gamma_psi - 20; // condition for injection
 
                 if (condition > 0 && ptd_plasma.id(ip).is_valid()){
                     ptd_plasma.id(ip) = 3; // set the injected electron ID to 3
