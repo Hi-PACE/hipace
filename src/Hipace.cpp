@@ -1093,15 +1093,15 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
                 const amrex::Real y = j * dy + poff_y;
                 const amrex::Real z = islice * dz + poff_z;
 
-                const amrex::Real Bx = external_fields[0](x, y, z, time);
-                const amrex::Real By = external_fields[1](x, y, z, time);
-                const amrex::Real Bz = external_fields[2](x, y, z, time);
+                const amrex::Real Bxp = external_fields[0](x, y, z, time);
+                const amrex::Real Byp = external_fields[1](x, y, z, time);
+                const amrex::Real Bzp = external_fields[2](x, y, z, time);
 
-                arr(i, j, ExmBy) -= clight * By;
-                arr(i, j, EypBx) += clight * Bx;
-                arr(i, j, Bx) += Bx;
-                arr(i, j, By) += By;
-                arr(i, j, Bz) += Bz;
+                arr(i, j, ExmBy) -= clight * Byp;
+                arr(i, j, EypBx) += clight * Bxp;
+                arr(i, j, Bx) += Bxp;
+                arr(i, j, By) += Byp;
+                arr(i, j, Bz) += Bzp;
             });
     }
 }
