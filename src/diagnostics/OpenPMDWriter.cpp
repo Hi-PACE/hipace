@@ -225,7 +225,6 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration itera
         }
 
         // initialize beam IO on first slice
-        AMREX_ALWAYS_ASSERT(m_offset[ibeam] <= beam.getTotalNumParticles());
         const uint64_t np_total = m_offset[ibeam];
 
         SetupPos(beam_species, beam, np_total, geom);
