@@ -107,7 +107,7 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
 
                 const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip];
                 const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip];
-                amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
+                amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real uz = (1+ux*ux*clightinv2+uy*uy*clightinv2-psi*psi)/(2.*psi)*clight;
                 const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip];
 
