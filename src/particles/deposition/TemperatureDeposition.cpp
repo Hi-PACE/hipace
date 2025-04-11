@@ -71,8 +71,7 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
             int(pti.numParticles()),
             // is_valid
             // return whether the particle is valid and should deposit
-            [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto /*depos_order*/)
+            [=] AMREX_GPU_DEVICE (int ip, auto ptd)
             {
             // only deposit plasma currents on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
