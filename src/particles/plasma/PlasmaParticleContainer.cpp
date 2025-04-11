@@ -832,7 +832,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         auto old_size = beam_elec->getNumParticlesIncludingSlipped(WhichBeamSlice::This);
         auto new_size = old_size + num_new_beam_part;
         beam_elec->resize(WhichBeamSlice::This, old_size_non_slip, new_size - old_size_non_slip);
-        //beam_elec->updateSize(beam_elec->getTotalNumParticles() + new_size);
+        beam_elec->updateSize(beam_elec->getTotalNumParticles() + new_size);
         std::cout << "total particles: " << beam_elec->getTotalNumParticles() << std::endl;
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
