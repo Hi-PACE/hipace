@@ -98,8 +98,7 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
             // deposit
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
-                                  auto cache_idx, auto depos_idx,
-                                  auto depos_order) noexcept
+                                  auto cache_idx, auto depos_idx) noexcept
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
