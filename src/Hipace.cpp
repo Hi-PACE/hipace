@@ -403,7 +403,6 @@ Hipace::Evolve ()
             AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
         }
 
-
         if (m_physical_time == std::numeric_limits<amrex::Real>::infinity()) {
             if (step+1 <= m_max_step && !m_has_last_step) {
                 m_multi_buffer.put_time(m_physical_time);
@@ -414,11 +413,13 @@ Hipace::Evolve ()
         queryWithParser(pph, "dt", str_dt);
         if (str_dt != "adaptive") {
             m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
-            m_dt =  m_exe_dt(m_physical_time);
-            m_max_time = std::copysign(m_max_time, m_dt);
+            m_dt(WhichTimeStep::nm2)=m_dt(WhichTimeStep::nm1);
+            m_dt(WhichTimeStep::nm1)=m_dt(WhichTimeStep::n)
+            m_dt(WhichTimeStep::n) =  m_exe_dt(m_physical_time);
+            m_max_time = std::copysign(m_max_time, m_dt(WhichTimeStep::n));
         }
         else{
-            m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+            m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt(WhichTimeStep::n), m_multi_plasma);
         }
 
         amrex::Real next_time = 0.;
@@ -426,14 +427,14 @@ Hipace::Evolve ()
         // adjust time step to reach max_time
         if (m_physical_time == m_max_time) {
             m_has_last_step = true;
-            m_dt = 0.;
+            m_dt(WhichTimeStep::n) = 0.;
             next_time = std::numeric_limits<amrex::Real>::infinity();
-        } else if ((m_physical_time + m_dt >= m_max_time && m_physical_time < m_max_time) ||
-                   (m_physical_time + m_dt <= m_max_time && m_physical_time > m_max_time)) {
-            m_dt = m_max_time - m_physical_time;
+        } else if ((m_physical_time + m_dt(WhichTimeStep::n) >= m_max_time && m_physical_time < m_max_time) ||
+                   (m_physical_time + m_dt(WhichTimeStep::n) <= m_max_time && m_physical_time > m_max_time)) {
+                    m_dt(WhichTimeStep::n) = m_max_time - m_physical_time;
             next_time = m_max_time;
         } else {
-            next_time = m_physical_time + m_dt;
+            next_time = m_physical_time + m_dt(WhichTimeStep::n);
         }
 
         if (m_verbose >= 1) {
@@ -441,7 +442,7 @@ Hipace::Evolve ()
                       << " Rank " << rank
                       << " started step " << step
                       << " at time = " << m_physical_time
-                      << " with dt = " << m_dt << std::endl;
+                      << " with dt = " << m_dt(WhichTimeStep::n) << std::endl;
         }
 
         if (step+1 <= m_max_step) {
@@ -482,7 +483,7 @@ Hipace::Evolve ()
         };
 
         m_adaptive_time_step.CalculateFromMinUz(
-            m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
+            m_physical_time, m_dt(WhichTimeStep::n), m_multi_beam, m_multi_plasma);
 
         WriteDiagnostics(step);
 

@@ -259,7 +259,11 @@ public:
     amrex::Parser m_parser_dt;/**< owns data for dt_str */
     /** stores the output function of makeFunctionWithParser for profile_real_str */
     amrex::ParserExecutor<1> m_exe_dt;
-    amrex::Real m_dt;
+    /** stores time step of three recent time steps */
+    amrex::Array3<amrex::Real> m_dt={0, 0, 0};
+    /** \brief describes which time step with respect to the currently calculated is used */
+    namespace WhichTimeStep {enum dt {nm2,nm1,n}};
+
     /** Number of binary collisions */
     inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
