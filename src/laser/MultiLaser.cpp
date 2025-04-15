@@ -927,10 +927,10 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         amrex::pow(zp + beta * k0 * (x * std::cos(theta_xy) + yp * std::sin(theta_xy)) * clight \
                         -2._rt * I * (x * std::cos(theta_xy) + yp * std::sin(theta_xy))\
                         * (zeta + beta * zfoc) * clight * inv_complex_waist_2, 2);
-                    Complex stcfactor = prefactor * amrex::exp( - time_exponent );
-                    Complex exp_argument = - ( x * x + yp * yp ) * inv_complex_waist_2;
-                    Complex envelope = stcfactor * amrex::exp( exp_argument ) * \
-                       amrex::exp(I * yp * k0 * propagation_angle_yz + cep );
+                    Complex stcfactor = prefactor * amrex::exp( - time_exponent);
+                    Complex exp_argument = - (x * x + yp * yp) * inv_complex_waist_2;
+                    Complex envelope = stcfactor * amrex::exp(exp_argument) * \
+                       amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
                     arr(i, j, k, comp ) += envelope.real();
                     arr(i, j, k, comp + 1 ) += envelope.imag();
                     }
