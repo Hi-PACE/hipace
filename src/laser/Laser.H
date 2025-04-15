@@ -68,7 +68,7 @@ public:
     /** Wavelength from file */
     amrex::Real m_lambda0_from_file {0.};
     // Dirty thing
-    aremx::Real m_y_slope_z_foc = 0;
+    amrex::Real m_y_slope_z_foc = 0;
 };
 
 #endif // LASER_H_
