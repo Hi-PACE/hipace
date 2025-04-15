@@ -37,7 +37,7 @@ laser = Laser(
         profile=profile,
      )
 
-Phi2, phi2 = get_phi2(laser.dim, laser.grid)
+phi2 = get_gdd(laser.dim, laser.grid, omega0 = 2 * scc.pi*scc.c/lambda0)
 [beta_x, beta_y] = get_beta(laser.dim, laser.grid, k0)
 [zeta_x, zeta_y], [nu_x, nu_y] = get_zeta(laser.dim, laser.grid, k0)
 print("phi2 theory:", 3e-28, "measured:", phi2)
