@@ -10,7 +10,7 @@
 import argparse
 import numpy as np
 import scipy.constants as scc
-from lasy.utils.laser_utils import get_phi2, get_zeta, get_beta
+from lasy.utils.laser_utils import get_gdd, get_zeta, get_beta
 from lasy.laser import Laser
 from lasy.profiles import FromOpenPMDProfile
 
