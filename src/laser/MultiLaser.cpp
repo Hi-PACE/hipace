@@ -895,7 +895,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real phi2 = laser.m_phi2;
                 const amrex::Real clight = get_phys_const().c;
                 const amrex::Real theta_xy = laser.m_STC_theta_xy;
-                const amrex::Real y_slope_z_foc = laser.y_slope_z_foc;
+                const amrex::Real y_slope_z_foc = laser.m_y_slope_z_foc;
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
