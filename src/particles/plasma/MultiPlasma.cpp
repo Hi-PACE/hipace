@@ -156,8 +156,10 @@ MultiPlasma::DoLaserInjection (
     const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice)
 {
     for (auto& plasma : m_all_plasmas) {
-        plasma.InjectionCondition(laser, islice);
-        plasma.PlasmaToBeam(laser, gm, islice);
+        if (plasma=="Ar"){
+            plasma.InjectionCondition(laser, islice);
+            plasma.PlasmaToBeam(laser, gm, islice);
+        }
     }
 }
 
