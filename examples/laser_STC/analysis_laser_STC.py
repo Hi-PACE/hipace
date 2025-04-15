@@ -25,7 +25,7 @@ parser.add_argument('--output-dir',
 args = parser.parse_args()
 
 profile = FromOpenPMDProfile(
-    file_name=args.output_dir+ 'openpmd_000000.h5',
+    file_name=args.output_dir+ '/openpmd_000000.h5',
     envelope_name = 'laserEnvelope',
 )
 
