@@ -33,6 +33,7 @@ Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
     else if (m_laser_init_type == "gaussian") {
         queryWithParser(pp, "a0", m_a0);
         queryWithParser(pp, "w0", m_w0);
+        queryWithParser(pp, "y_slope_z_foc", m_y_slope_z_foc);
         queryWithParser(pp, "CEP", m_CEP);
         queryWithParser(pp, "propagation_angle_yz", m_propagation_angle_yz);
         queryWithParser(pp, "STC_theta_xy", m_STC_theta_xy);

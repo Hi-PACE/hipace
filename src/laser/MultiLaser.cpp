@@ -43,7 +43,6 @@ MultiLaser::ReadParameters ()
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
     queryWithParser(pp, "interp_order", m_interp_order);
     AMREX_ALWAYS_ASSERT(m_interp_order <= 3 && m_interp_order >= 0);
-
     bool mg_param_given = queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
     mg_param_given += queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
     mg_param_given += queryWithParser(pp, "MG_verbose", m_MG_verbose);
@@ -896,6 +895,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real phi2 = laser.m_phi2;
                 const amrex::Real clight = get_phys_const().c;
                 const amrex::Real theta_xy = laser.m_STC_theta_xy;
+                const amrex::Real y_slope_z_foc = laser.y_slope_z_foc;
                 amrex::ParallelFor(
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
@@ -914,19 +914,19 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     // Compute envelope for time step 0
-                    Complex diffract_factor = 1._rt + I * (zp - zfoc + z0 * std::cos(propagation_angle_yz)) \
+                    Complex diffract_factor = 1._rt + I * (zp - zfoc * (1 + y_slope_z_foc * y )+ z0 * std::cos(propagation_angle_yz)) \
                        * 2._rt/(k0 * w0_2);
                     Complex inv_complex_waist_2 = 1._rt /(w0_2 * diffract_factor);
                     // Time stretching due to STCs and phi2 complex envelope
                     // (1 if zeta=0, beta=0, phi2=0)
                     Complex stretch_factor = 1._rt \
-                        + 4._rt * (-zeta + beta * zfoc) * inv_tau2 * (-zeta + beta * zfoc) * inv_complex_waist_2 \
-                        + 2._rt * I * (phi2 - beta * beta * k0 * zfoc) * inv_tau2;
+                        + 4._rt * (-zeta + beta * zfoc * (1 + y_slope_z_foc * y )) * inv_tau2 * (-zeta + beta * zfoc *(1 + y_slope_z_foc * y )) * inv_complex_waist_2 \
+                        + 2._rt * I * (phi2 - beta * beta * k0 * zfoc * (1 + y_slope_z_foc * y )) * inv_tau2;
                     Complex prefactor = a0 / diffract_factor;
                     Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
                         amrex::pow(zp - beta * k0 * (x * std::cos(theta_xy) + yp * std::sin(theta_xy)) * clight \
                         -2._rt * I * (x * std::cos(theta_xy) + yp * std::sin(theta_xy))\
-                        * (-zeta - beta * zfoc) * clight * inv_complex_waist_2, 2);
+                        * (-zeta - beta * zfoc * (1 + y_slope_z_foc * y)) * clight * inv_complex_waist_2, 2);
                     Complex stcfactor = prefactor * amrex::exp( - time_exponent );
                     Complex exp_argument = - ( x * x + yp * yp ) * inv_complex_waist_2;
                     Complex envelope = stcfactor * amrex::exp( exp_argument ) * \

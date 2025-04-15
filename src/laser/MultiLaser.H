@@ -241,7 +241,6 @@ private:
     SpectralFieldLoc m_rhs;
     /** Complex FAB to store the RHS in Fourier space */
     SpectralFieldLoc m_rhs_fourier;
-
     // Data for in-situ diagnostics:
     /** Number of real laser properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nrp = 6;
