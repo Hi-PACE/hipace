@@ -407,7 +407,7 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 }
 
 void
-MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::GpuArray<amrex::Real, 3> dt, int step,
+MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::GpuArray<amrex::Real, 2> dt, int step,
                           amrex::Geometry const& geom_field_lev0)
 {
 
@@ -427,7 +427,7 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::GpuArra
 }
 
 void
-MultiLaser::AdvanceSliceMG (amrex::GpuArray<amrex::Real, 3> dt, int step)
+MultiLaser::AdvanceSliceMG (amrex::GpuArray<amrex::Real, 2> dt, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
@@ -611,7 +611,7 @@ MultiLaser::AdvanceSliceMG (amrex::GpuArray<amrex::Real, 3> dt, int step)
 }
 
 void
-MultiLaser::AdvanceSliceFFT (const amrex::GpuArray<amrex::Real, 3> dt, int step)
+MultiLaser::AdvanceSliceFFT (const amrex::GpuArray<amrex::Real, 2> dt, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");
@@ -825,7 +825,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     const amrex::Real poff_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
     const amrex::Real poff_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
     const amrex::Real poff_z = GetPosOffset(2, m_laser_geom_3D, m_laser_geom_3D.Domain());
-    const amrex::GpuArray<amrex::Real, 3> dx_arr = m_laser_geom_3D.CellSizeArray();
+    const amrex::GpuArray<amrex::Real, 2> dx_arr = m_laser_geom_3D.CellSizeArray();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel
