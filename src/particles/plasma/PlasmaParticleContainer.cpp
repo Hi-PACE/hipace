@@ -75,6 +75,7 @@ PlasmaParticleContainer::ReadParameters ()
     m_can_laser_injection = false;
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
     queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
+    queryWithParser(pp, "ionization_threshold", m_ionization_threshold);
 
     m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
 
@@ -748,6 +749,7 @@ InjectionCondition (const MultiLaser& laser, const int islice)
     using namespace amrex::literals;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
+    amrex::Real gamma_psi_condition = m_ionization_threshold;
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
@@ -764,7 +766,6 @@ InjectionCondition (const MultiLaser& laser, const int islice)
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                 amrex::Real gamma_psi = 0.5_rt * ( (1+ ux*ux + uy*uy)/(psi*psi) + 1); // gamma/(1+psi)
-                amrex::Real gamma_psi_condition = 4._rt;
                 amrex::Real condition = gamma_psi - gamma_psi_condition; // condition for injection
 
                 if (condition > 0 && ptd_plasma.id(ip)==2){
