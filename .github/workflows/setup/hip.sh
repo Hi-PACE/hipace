@@ -63,7 +63,8 @@ sudo apt-get install -y --no-install-recommends \
     rocm-dev${VERSION}    \
     rocfft-dev${VERSION}  \
     rocprim-dev${VERSION} \
-    rocrand-dev${VERSION}
+    rocrand-dev${VERSION} \
+    hiprand-dev${VERSION}
 
 # activate
 #
