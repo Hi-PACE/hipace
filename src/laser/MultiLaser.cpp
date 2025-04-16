@@ -825,7 +825,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     const amrex::Real poff_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
     const amrex::Real poff_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
     const amrex::Real poff_z = GetPosOffset(2, m_laser_geom_3D, m_laser_geom_3D.Domain());
-    const amrex::GpuArray<amrex::Real, 2> dx_arr = m_laser_geom_3D.CellSizeArray();
+    const amrex::GpuArray<amrex::Real, 3> dx_arr = m_laser_geom_3D.CellSizeArray();
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel
