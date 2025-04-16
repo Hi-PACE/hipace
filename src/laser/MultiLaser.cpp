@@ -770,7 +770,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Array3 dt, int step)
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
-            step == 0 ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
+            step == 0 ? 12._rt/(c*(dt(WhichTimeStep::n)+dt(WhichTimeStep::nm1)z)*dz) - I * 8._rt * ( k0 + djn ) / (c*(dt(WhichTimeStep::n)+dt(WhichTimeStep::nm1)z)) :
              6._rt/(c*(dt(WhichTimeStep::n)+dt(WhichTimeStep::nm1))*dz) + 4._rt/(c*c*(dt(WhichTimeStep::n)+dt(WhichTimeStep::nm1))*dt(WhichTimeStep::n))
              - I * 4._rt * ( k0 + djn ) / (c*(dt(WhichTimeStep::n)+dt(WhichTimeStep::nm1)));
         amrex::ParallelFor(
