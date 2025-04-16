@@ -413,7 +413,6 @@ Hipace::Evolve ()
         queryWithParser(pph, "dt", str_dt);
         if (str_dt != "adaptive") {
             m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
-            m_dt(WhichTimeStep::nm2)=m_dt(WhichTimeStep::nm1);
             m_dt(WhichTimeStep::nm1)=m_dt(WhichTimeStep::n)
             m_dt(WhichTimeStep::n) =  m_exe_dt(m_physical_time);
             m_max_time = std::copysign(m_max_time, m_dt(WhichTimeStep::n));
