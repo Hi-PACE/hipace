@@ -578,16 +578,15 @@ MultiLaser::AdvanceSliceMG (std::array<amrex::Real,2> dt, int step)
                     const Complex anm1jp2 = arr(i, j, nm1jp2_r) + I * arr(i, j, nm1jp2_i);
                     const Complex anm1j00 = arr(i, j, nm1j00_r) + I * arr(i, j, nm1j00_i);
                     rhs =
-                        + 8._rt/(c*(dt[1]+dt[0]z)*dz)*(-anp1jp1+anm1jp1)*exp1
-                        + 2._rt/(c*(dt[1]+dt[0]z)*dz)*(+anp1jp2-anm1jp2)*exp2
+                        + 8._rt/(c*(dt[1]+dt[0])*dz)*(-anp1jp1+anm1jp1)*exp1
+                        + 2._rt/(c*(dt[1]+dt[0])*dz)*(+anp1jp2-anm1jp2)*exp2
                         - 4._rt/(c*c*dt[1]*dt[0])*an00j00
                         + 2._rt * arr(i, j, chi) * an00j00
                         - lapA
-                        + ( -6._rt/(c*(dt[1]+dt[0]z)*dz)
-                        + 4._rt*I*djn/(c*(dt[1]+dt[0]z))
+                        + ( -6._rt/(c*(dt[1]+dt[0])*dz)
+                        + 4._rt*I*djn/(c*(dt[1]+dt[0]))
                         + 4._rt/(c*c*(dt[1]+dt[0])*dt[0])
-                        + I * 4._rt*k0/(c*(dt[1]+dt[0]z))
-                        ) * anm1j00;
+                        + I * 4._rt*k0/(c*(dt[1]+dt[0]))) * anm1j00;
                     if (do_avg_rhs) {
                         rhs += arr(i, j, chi) * anm1j00;
                     } else {
@@ -751,15 +750,15 @@ MultiLaser::AdvanceSliceFFT (const std::array<amrex::Real,2> dt, int step)
                     const Complex anm1jp2 = arr(i, j, nm1jp2_r) + I * arr(i, j, nm1jp2_i);
                     const Complex anm1j00 = arr(i, j, nm1j00_r) + I * arr(i, j, nm1j00_i);
                     rhs =
-                        + 8._rt/(c*(dt[1]+dt[0]z)*dz)*(-anp1jp1+anm1jp1)*exp1
-                        + 2._rt/(c*(dt[1]+dt[0]z)*dz)*(+anp1jp2-anm1jp2)*exp2
+                        + 8._rt/(c*(dt[1]+dt[0])*dz)*(-anp1jp1+anm1jp1)*exp1
+                        + 2._rt/(c*(dt[1]+dt[0])*dz)*(+anp1jp2-anm1jp2)*exp2
                         - 4._rt/(c*c*dt[1]*dt[0])*an00j00
                         + 2._rt * arr(i, j, chi) * an00j00
                         - lapA
-                        + ( -6._rt/(c*(dt[1]+dt[0]z)*dz)
-                        + 4._rt*I*djn/(c*(dt[1]+dt[0]z))
+                        + ( -6._rt/(c*(dt[1]+dt[0])*dz)
+                        + 4._rt*I*djn/(c*(dt[1]+dt[0]))
                         + 4._rt/(c*c*(dt[1]+dt[0])*dt[0])
-                        + I * 4._rt*k0/(c*(dt[1]+dt[0]z))
+                        + I * 4._rt*k0/(c*(dt[1]+dt[0]))
                         ) * anm1j00;
                 }
                 rhs_arr(i,j,0) = rhs;
