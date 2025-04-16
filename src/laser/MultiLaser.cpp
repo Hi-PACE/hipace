@@ -427,7 +427,7 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Array3 
 }
 
 void
-MultiLaser::AdvanceSliceMG (amrex::Array3 dt, int step)
+MultiLaser::AdvanceSliceMG (std::array<amrex::Real, 2> dt, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
