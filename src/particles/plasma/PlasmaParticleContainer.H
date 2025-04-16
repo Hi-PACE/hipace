@@ -236,6 +236,7 @@ public:
     // laser injection:
     bool m_can_laser_injection = false; /**< whether laser injection is enabled */
     amrex::Real m_ionization_threshold = 4.;
+    amrex::Real m_injection_weight_factor = 1.;
     std::string m_product_beam_name = ""; /**< name of Injection product beam */
     BeamParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
 

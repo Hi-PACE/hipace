@@ -76,6 +76,7 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
     queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
     queryWithParser(pp, "ionization_threshold", m_ionization_threshold);
+    queryWithParser(pp, "injection_weight_factor", m_injection_weight_factor);
 
     m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
 
@@ -842,6 +843,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         const amrex::Real dz = gm[0].CellSize(2);// / m_pdf_ref_ratio;
         const amrex::Real z_lo = gm[0].ProbLo()[2];
         const amrex::Real dt = Hipace::GetInstance().m_dt;
+        const amrex::Real f = m_injection_weight_factor;
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
@@ -865,7 +867,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi)*phys_const.c;
                     amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
                     const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
-                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * gam / (psi);
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * gam / (psi) * f;
                     // conservation of j_x and j_y
                     ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = 0;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
