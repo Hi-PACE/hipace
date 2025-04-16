@@ -523,10 +523,10 @@ MultiLaser::AdvanceSliceMG (std::array<amrex::Real,2> dt, int step)
 
         // D_j^n as defined in Benedetti's 2017 paper
         djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
-        acoeff_real_scalar = step == 0 ? 6._rt/(c*dt(1)*dz)
-            :6._rt / (c * (dt(1)+dt(0)) * dz) + 4._rt / (c * c * (dt(1)+dt(0))*dt(1));
-        acoeff_imag_scalar = step == 0 ? -4._rt * ( k0 + djn ) / (c*dt(1))
-            : -4._rt * ( k0 + djn ) / (c*(dt(1)+dt(0)));
+        acoeff_real_scalar = step == 0 ? 6._rt/(c*dt[1]*dz)
+            :6._rt / (c * (dt[1]+dt[0]) * dz) + 4._rt / (c * c * (dt[1]+dt[0])*dt[1]);
+        acoeff_imag_scalar = step == 0 ? -4._rt * ( k0 + djn ) / (c*dt[1])
+            : -4._rt * ( k0 + djn ) / (c*(dt[1]+dt[0]));
 
         amrex::ParallelFor(
             to2D(bx),
@@ -564,10 +564,10 @@ MultiLaser::AdvanceSliceMG (std::array<amrex::Real,2> dt, int step)
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
                     const Complex an00jp2 = arr(i, j, n00jp2_r) + I * arr(i, j, n00jp2_i);
                     rhs =
-                        + 8._rt/(c*dt(1)*dz)*(-anp1jp1+an00jp1)*exp1
-                        + 2._rt/(c*dt(1)*dz)*(+anp1jp2-an00jp2)*exp2
+                        + 8._rt/(c*dt[1]*dz)*(-anp1jp1+an00jp1)*exp1
+                        + 2._rt/(c*dt[1]*dz)*(+anp1jp2-an00jp2)*exp2
                         - lapA
-                        + ( -6._rt/(c*dt(1)*dz) + 4._rt*I*djn/(c*dt(1)) + I*4._rt*k0/(c*dt(1)) ) * an00j00;
+                        + ( -6._rt/(c*dt[1]*dz) + 4._rt*I*djn/(c*dt[1]) + I*4._rt*k0/(c*dt[1]) ) * an00j00;
                     if (do_avg_rhs) {
                         rhs += arr(i, j, chi) * an00j00;
                     } else {
@@ -578,15 +578,15 @@ MultiLaser::AdvanceSliceMG (std::array<amrex::Real,2> dt, int step)
                     const Complex anm1jp2 = arr(i, j, nm1jp2_r) + I * arr(i, j, nm1jp2_i);
                     const Complex anm1j00 = arr(i, j, nm1j00_r) + I * arr(i, j, nm1j00_i);
                     rhs =
-                        + 8._rt/(c*(dt(1)+dt(0)z)*dz)*(-anp1jp1+anm1jp1)*exp1
-                        + 2._rt/(c*(dt(1)+dt(0)z)*dz)*(+anp1jp2-anm1jp2)*exp2
-                        - 4._rt/(c*c*dt(1)*dt(0))*an00j00
+                        + 8._rt/(c*(dt[1]+dt[0]z)*dz)*(-anp1jp1+anm1jp1)*exp1
+                        + 2._rt/(c*(dt[1]+dt[0]z)*dz)*(+anp1jp2-anm1jp2)*exp2
+                        - 4._rt/(c*c*dt[1]*dt[0])*an00j00
                         + 2._rt * arr(i, j, chi) * an00j00
                         - lapA
-                        + ( -6._rt/(c*(dt(1)+dt(0)z)*dz)
-                        + 4._rt*I*djn/(c*(dt(1)+dt(0)z))
-                        + 4._rt/(c*c*(dt(1)+dt(0))*dt(0))
-                        + I * 4._rt*k0/(c*(dt(1)+dt(0)z))
+                        + ( -6._rt/(c*(dt[1]+dt[0]z)*dz)
+                        + 4._rt*I*djn/(c*(dt[1]+dt[0]z))
+                        + 4._rt/(c*c*(dt[1]+dt[0])*dt[0])
+                        + I * 4._rt*k0/(c*(dt[1]+dt[0]z))
                         ) * anm1j00;
                     if (do_avg_rhs) {
                         rhs += arr(i, j, chi) * anm1j00;
@@ -741,25 +741,25 @@ MultiLaser::AdvanceSliceFFT (const std::array<amrex::Real,2> dt, int step)
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
                     const Complex an00jp2 = arr(i, j, n00jp2_r) + I * arr(i, j, n00jp2_i);
                     rhs =
-                        + 8._rt/(c*dt(1)*dz)*(-anp1jp1+an00jp1)*exp1
-                        + 2._rt/(c*dt(1)*dz)*(+anp1jp2-an00jp2)*exp2
+                        + 8._rt/(c*dt[1]*dz)*(-anp1jp1+an00jp1)*exp1
+                        + 2._rt/(c*dt[1]*dz)*(+anp1jp2-an00jp2)*exp2
                         + 2._rt * arr(i, j, chi) * an00j00
                         - lapA
-                        + (-6._rt/(c*dt(1)*dz) + 4._rt*I*djn/(c*dt(1)) + I*4._rt*k0/(c*dt(1))) * an00j00;
+                        + (-6._rt/(c*dt[1]*dz) + 4._rt*I*djn/(c*dt[1]) + I*4._rt*k0/(c*dt[1])) * an00j00;
                 } else {
                     const Complex anm1jp1 = arr(i, j, nm1jp1_r) + I * arr(i, j, nm1jp1_i);
                     const Complex anm1jp2 = arr(i, j, nm1jp2_r) + I * arr(i, j, nm1jp2_i);
                     const Complex anm1j00 = arr(i, j, nm1j00_r) + I * arr(i, j, nm1j00_i);
                     rhs =
-                        + 8._rt/(c*(dt(1)+dt(0)z)*dz)*(-anp1jp1+anm1jp1)*exp1
-                        + 2._rt/(c*(dt(1)+dt(0)z)*dz)*(+anp1jp2-anm1jp2)*exp2
-                        - 4._rt/(c*c*dt(1)*dt(0))*an00j00
+                        + 8._rt/(c*(dt[1]+dt[0]z)*dz)*(-anp1jp1+anm1jp1)*exp1
+                        + 2._rt/(c*(dt[1]+dt[0]z)*dz)*(+anp1jp2-anm1jp2)*exp2
+                        - 4._rt/(c*c*dt[1]*dt[0])*an00j00
                         + 2._rt * arr(i, j, chi) * an00j00
                         - lapA
-                        + ( -6._rt/(c*(dt(1)+dt(0)z)*dz)
-                        + 4._rt*I*djn/(c*(dt(1)+dt(0)z))
-                        + 4._rt/(c*c*(dt(1)+dt(0))*dt(0))
-                        + I * 4._rt*k0/(c*(dt(1)+dt(0)z))
+                        + ( -6._rt/(c*(dt[1]+dt[0]z)*dz)
+                        + 4._rt*I*djn/(c*(dt[1]+dt[0]z))
+                        + 4._rt/(c*c*(dt[1]+dt[0])*dt[0])
+                        + I * 4._rt*k0/(c*(dt[1]+dt[0]z))
                         ) * anm1j00;
                 }
                 rhs_arr(i,j,0) = rhs;
@@ -774,9 +774,9 @@ MultiLaser::AdvanceSliceFFT (const std::array<amrex::Real,2> dt, int step)
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
-        step == 0 ? 6._rt/(c*dt(1)*dz) - I * 4._rt * ( k0 + djn ) / (c * dt(1)) :
-             6._rt / (c * (dt(1)+dt(0)) * dz) + 4._rt / (c * c * (dt(1)+dt(0))*dt(1))
-             - I * 4._rt * ( k0 + djn ) / (c*(dt(1)+dt(0)));
+        step == 0 ? 6._rt/(c*dt[1]*dz) - I * 4._rt * ( k0 + djn ) / (c * dt[1]) :
+             6._rt / (c * (dt[1]+dt[0]) * dz) + 4._rt / (c * c * (dt[1]+dt[0])*dt[1])
+             - I * 4._rt * ( k0 + djn ) / (c*(dt[1]+dt[0]));
         amrex::ParallelFor(
             to2D(bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
