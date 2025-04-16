@@ -407,7 +407,7 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 }
 
 void
-MultiLaser::AdvanceSlice (const int islice, const Fields& fields, std::array<amrex::Real,2> dt, int step,
+MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::GpuArray<amrex::Real, 3> dt, int step,
                           amrex::Geometry const& geom_field_lev0)
 {
 
@@ -427,7 +427,7 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, std::array<amr
 }
 
 void
-MultiLaser::AdvanceSliceMG (std::array<amrex::Real,2> dt, int step)
+MultiLaser::AdvanceSliceMG (amrex::GpuArray<amrex::Real, 3> dt, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
@@ -611,7 +611,7 @@ MultiLaser::AdvanceSliceMG (std::array<amrex::Real,2> dt, int step)
 }
 
 void
-MultiLaser::AdvanceSliceFFT (const std::array<amrex::Real,2> dt, int step)
+MultiLaser::AdvanceSliceFFT (const amrex::GpuArray<amrex::Real, 3> dt, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");

@@ -260,7 +260,7 @@ public:
     /** stores the output function of makeFunctionWithParser for profile_real_str */
     amrex::ParserExecutor<1> m_exe_dt;
     /** stores time step of three recent time steps */
-    std::array<amrex::Real,2> m_dt={0, 0};
+    amrex::GpuArray<amrex::Real, 3> m_dt={0, 0};
     /** Number of binary collisions */
     inline static int m_ncollisions = 0;
     /** Adaptive time step instance */
