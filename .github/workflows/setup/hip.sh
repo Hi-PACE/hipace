@@ -42,6 +42,7 @@ echo 'export PATH=/opt/rocm/llvm/bin:/opt/rocm/bin:/opt/rocm/profiler/bin:/opt/r
   | sudo tee -a /etc/profile.d/rocm.sh
 # we should not need to export HIP_PATH=/opt/rocm/hip with those installs
 
+sudo apt-get clean
 sudo apt-get update
 
 # Ref.: https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html#installing-development-packages-for-cross-compilation
@@ -60,8 +61,7 @@ sudo apt-get install -y --no-install-recommends \
     rocm-dev        \
     rocfft-dev      \
     rocprim-dev     \
-    rocrand-dev     \
-    hiprand-dev
+    rocrand-dev
 
 # activate
 #
