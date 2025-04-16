@@ -268,11 +268,11 @@ Hipace::InitData ()
 
     if (Hipace::HeadRank()) {
         m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, true);
-        m_adaptive_time_step.CalculateFromMinUz(m_physical_time,m_dt,m_multi_beam,m_multi_plasma);
-        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt, m_multi_plasma);
+        m_adaptive_time_step.CalculateFromMinUz(m_physical_time,m_dt(1),m_multi_beam,m_multi_plasma);
+        m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt(1), m_multi_plasma);
     }
 
-    m_adaptive_time_step.BroadcastTimeStep(m_dt);
+    m_adaptive_time_step.BroadcastTimeStep(m_dt(1));
 
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2), m_multi_beam, m_multi_laser);
 
