@@ -268,7 +268,7 @@ Hipace::InitData ()
 
     if (Hipace::HeadRank()) {
         m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, true);
-        m_adaptive_time_step.CalculateFromMinUz(m_physical_time,m_multi_beam,m_multi_plasma);
+        m_adaptive_time_step.CalculateFromMinUz(m_physical_time,m_dt[1],m_multi_beam,m_multi_plasma);
         m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt[1], m_multi_plasma);
     }
 
