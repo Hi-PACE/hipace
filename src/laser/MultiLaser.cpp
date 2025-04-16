@@ -407,7 +407,7 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 }
 
 void
-MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Array3 dt, int step,
+MultiLaser::AdvanceSlice (const int islice, const Fields& fields, std::array<amrex::Real, 2> dt, int step,
                           amrex::Geometry const& geom_field_lev0)
 {
 
