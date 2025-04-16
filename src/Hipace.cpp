@@ -413,7 +413,7 @@ Hipace::Evolve ()
         queryWithParser(pph, "dt", str_dt);
         if (str_dt != "adaptive") {
             m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
-            m_dt(0)=m_dt(1)
+            m_dt(0)=m_dt(1);
             m_dt(1) =  m_exe_dt(m_physical_time);
             m_max_time = std::copysign(m_max_time, m_dt(1));
         }
@@ -421,7 +421,7 @@ Hipace::Evolve ()
             m_adaptive_time_step.CalculateFromDensity(m_physical_time, m_dt(1), m_multi_plasma);
         }
 
-        amrex::Real next_time = 0.;
+        amrex::Real next_time = 0. ;
 
         // adjust time step to reach max_time
         if (m_physical_time == m_max_time) {
