@@ -260,7 +260,7 @@ public:
     /** stores the output function of makeFunctionWithParser for profile_real_str */
     amrex::ParserExecutor<1> m_exe_dt;
     /** stores time step of three recent time steps */
-    amrex::Array3<amrex::Real> m_dt={0, 0, 0};
+    std::array<amrex::Real, 3> m_dt={0, 0, 0};
     /** \brief describes which time step with respect to the currently calculated is used */
     namespace WhichTimeStep {enum dt {nm2,nm1,n}};
 
