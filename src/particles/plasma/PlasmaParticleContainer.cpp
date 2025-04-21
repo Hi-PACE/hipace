@@ -856,7 +856,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_beam, 1u);
                     const long pidx_beam = pid_beam + old_size;
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
-                    ptd_beam.id(pidx_beam) = p_ip_beam;
+                    ptd_beam.id(pidx_beam) = *p_ip_beam;
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
                     ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
                     ptd_beam.pos(2, pidx_beam) = z_lo + dz * islice;
