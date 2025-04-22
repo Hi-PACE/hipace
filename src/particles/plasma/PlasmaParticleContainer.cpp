@@ -241,12 +241,12 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        auto& soa = pti.GetStructOfArrays();
+        auto& ptile = pti.GetParticleTile();
         const amrex::Real * const AMREX_RESTRICT pos_x = to_prev ?
-            soa.GetRealData(PlasmaIdx::x_prev).data() : soa.GetRealData(PlasmaIdx::x).data();
+            ptile.GetRealData(PlasmaIdx::x_prev).data() : ptile.GetRealData(PlasmaIdx::x).data();
         const amrex::Real * const AMREX_RESTRICT pos_y = to_prev ?
-            soa.GetRealData(PlasmaIdx::y_prev).data() : soa.GetRealData(PlasmaIdx::y).data();
-        auto * AMREX_RESTRICT idcpup = soa.GetIdCPUData().data();
+            ptile.GetRealData(PlasmaIdx::y_prev).data() : ptile.GetRealData(PlasmaIdx::y).data();
+        auto * AMREX_RESTRICT idcpup = ptile.GetIdCPUData().data();
 
         const int lev1_idx = std::min(1, current_N_level-1);
         const int lev2_idx = std::min(2, current_N_level-1);
@@ -315,8 +315,6 @@ IonizationModule (const int lev,
             mfi_ion.index(), mfi_ion.LocalTileIndex());
         auto& ptile_ion = plevel_ion.at(index);
 
-        auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
-
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
         // Calculation of E0 in SI units for denormalization
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
@@ -325,13 +323,13 @@ IonizationModule (const int lev,
         const amrex::Real E0 = Hipace::m_normalized_units ?
                                wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
 
-        int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
-        const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
-        const amrex::Real * const y_prev = soa_ion.GetRealData(PlasmaIdx::y_prev).data();
-        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
-        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
-        const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
-        const auto * idcpup = soa_ion.GetIdCPUData().data();
+        int * const ion_lev = ptile_ion.GetIntData(PlasmaIdx::ion_lev).data();
+        const amrex::Real * const x_prev = ptile_ion.GetRealData(PlasmaIdx::x_prev).data();
+        const amrex::Real * const y_prev = ptile_ion.GetRealData(PlasmaIdx::y_prev).data();
+        const amrex::Real * const uxp = ptile_ion.GetRealData(PlasmaIdx::ux_half_step).data();
+        const amrex::Real * const uyp = ptile_ion.GetRealData(PlasmaIdx::uy_half_step).data();
+        const amrex::Real * const psip =ptile_ion.GetRealData(PlasmaIdx::psi_half_step).data();
+        const auto * idcpup = ptile_ion.GetIdCPUData().data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -417,7 +415,7 @@ IonizationModule (const int lev,
         const auto new_size = old_size + num_new_electrons.dataValue();
         ptile_elec.resize(new_size);
 
-        // Load electron soa and aos after resize
+        // Load electron after resize
         auto ptd_ion = ptile_ion.getParticleTileData();
         auto ptd_elec = ptile_elec.getParticleTileData();
 
@@ -510,8 +508,6 @@ LaserIonization (const int islice,
             mfi_ion.index(), mfi_ion.LocalTileIndex());
         auto& ptile_ion = plevel_ion.at(index);
 
-        auto& soa_ion = ptile_ion.GetStructOfArrays(); // for momenta and weights
-
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
         // Calcuation of E0 in SI units for denormalization
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
@@ -523,13 +519,13 @@ LaserIonization (const int islice,
         const amrex::Real omega0 = 2.0 * MathConst::pi * phys_const.c / lambda0;
         const bool linear_polarization = laser.LinearPolarization();
 
-        int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
-        const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
-        const amrex::Real * const y_prev = soa_ion.GetRealData(PlasmaIdx::y_prev).data();
-        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
-        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
-        const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
-        const auto * idcpup = soa_ion.GetIdCPUData().data();
+        int * const ion_lev = ptile_ion.GetIntData(PlasmaIdx::ion_lev).data();
+        const amrex::Real * const x_prev = ptile_ion.GetRealData(PlasmaIdx::x_prev).data();
+        const amrex::Real * const y_prev = ptile_ion.GetRealData(PlasmaIdx::y_prev).data();
+        const amrex::Real * const uxp = ptile_ion.GetRealData(PlasmaIdx::ux_half_step).data();
+        const amrex::Real * const uyp = ptile_ion.GetRealData(PlasmaIdx::uy_half_step).data();
+        const amrex::Real * const psip =ptile_ion.GetRealData(PlasmaIdx::psi_half_step).data();
+        const auto * idcpup = ptile_ion.GetIdCPUData().data();
 
         // Make Ion Mask and load ADK prefactors
         // Ion Mask is necessary to only resize electron particle tile once
@@ -623,7 +619,7 @@ LaserIonization (const int islice,
         const auto new_size = old_size + num_new_electrons.dataValue();
         ptile_elec.resize(new_size);
 
-        // Load electron soa and aos after resize
+        // Load electron after resize
         auto ptd_ion = ptile_ion.getParticleTileData();
         auto ptd_elec = ptile_elec.getParticleTileData();
 

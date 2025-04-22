@@ -176,9 +176,6 @@ InitParticles (const amrex::RealVect& a_u_std,
             scale_fac_fine /= 4.;
         }
 
-        // auto& particles = GetParticles(lev);
-        // auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
-
         auto& particle_tile = DefineAndReturnParticleTile(0, mfi);
 
         auto old_size = particle_tile.size();

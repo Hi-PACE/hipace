@@ -267,7 +267,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         m_total_num_particles = getBeamInitSlice().size();
         if (Hipace::HeadRank()) {
             m_init_sorter.sortParticlesByBox(
-                getBeamInitSlice().GetStructOfArrays().GetRealData(BeamIdx::z).dataPtr(),
+                getBeamInitSlice().GetRealData(BeamIdx::z).dataPtr(),
                 getBeamInitSlice().size(), m_initialize_on_cpu, geom);
         }
 #else
@@ -319,10 +319,10 @@ void BeamParticleContainer::TagByLevel (const int current_N_level,
 {
     HIPACE_PROFILE("BeamParticleContainer::TagByLevel()");
 
-    auto& soa = getBeamSlice(which_slice).GetStructOfArrays();
-    const amrex::Real * const pos_x = soa.GetRealData(BeamIdx::x).data();
-    const amrex::Real * const pos_y = soa.GetRealData(BeamIdx::y).data();
-    int * const p_mr_level = soa.GetIntData(BeamIdx::mr_level).data();
+    auto& slice = getBeamSlice(which_slice);
+    const amrex::Real * const pos_x = slice.GetRealData(BeamIdx::x).data();
+    const amrex::Real * const pos_y = slice.GetRealData(BeamIdx::y).data();
+    int * const p_mr_level = slice.GetIntData(BeamIdx::mr_level).data();
 
     const int lev1_idx = std::min(1, current_N_level-1);
     const int lev2_idx = std::min(2, current_N_level-1);
