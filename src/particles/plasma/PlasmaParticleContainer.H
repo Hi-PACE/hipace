@@ -47,12 +47,12 @@ struct PlasmaIdx
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
-    : public amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs, PlasmaIdx::int_nattribs>
+    : public amrex::ParticleContainerPureSoA2<amrex::Real, int>
 {
 public:
     /** Constructor */
     explicit PlasmaParticleContainer (std::string name) :
-        amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(),
+        amrex::ParticleContainerPureSoA2<amrex::Real, int>(),
         m_name(name)
     {
         ReadParameters();
@@ -250,12 +250,12 @@ private:
 };
 
 /** \brief Iterator over boxes in a particle container */
-class PlasmaParticleIterator : public amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>
+class PlasmaParticleIterator : public amrex::ParIterSoA2<amrex::Real, int>
 {
 public:
     /** Constructor */
     PlasmaParticleIterator (ContainerType& pc)
-        : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
+        : amrex::ParIterSoA2<amrex::Real, int>(pc, 0, DfltMfi) {}
 };
 
 #endif

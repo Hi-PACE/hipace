@@ -140,9 +140,9 @@ AdvanceBeamParticlesSlice (
 
             amrex::RealVect spin {0._rt, 0._rt, 0._rt};
             if (spin_tracking) {
-                spin[0] = ptd.m_runtime_rdata[0][ip];
-                spin[1] = ptd.m_runtime_rdata[1][ip];
-                spin[2] = ptd.m_runtime_rdata[2][ip];
+                spin[0] = ptd.rdata(BeamIdx::sx)[ip];
+                spin[1] = ptd.rdata(BeamIdx::sy)[ip];
+                spin[2] = ptd.rdata(BeamIdx::sz)[ip];
             }
 
             for (; i < n_subcycles; i++) {
@@ -328,9 +328,9 @@ AdvanceBeamParticlesSlice (
             ptd.rdata(BeamIdx::uz)[ip] = uz;
 
             if (spin_tracking) {
-                ptd.m_runtime_rdata[0][ip] = spin[0];
-                ptd.m_runtime_rdata[1][ip] = spin[1];
-                ptd.m_runtime_rdata[2][ip] = spin[2];
+                ptd.rdata(BeamIdx::sx)[ip] = spin[0];
+                ptd.rdata(BeamIdx::sy)[ip] = spin[1];
+                ptd.rdata(BeamIdx::sz)[ip] = spin[2];
             }
         });
 }

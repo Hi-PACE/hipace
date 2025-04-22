@@ -42,7 +42,7 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
-        const BeamTileInit::ParticleTileDataType& ptd, const amrex::Real& x,
+        const BeamTile::ParticleTileDataType& ptd, const amrex::Real& x,
         const amrex::Real& y, const amrex::Real& z, const amrex::Real& ux, const amrex::Real& uy,
         const amrex::Real& uz, const amrex::Real& weight, const amrex::Long pid,
         const amrex::Long ip, const amrex::Real& speed_of_light, const EnforceBC& enforceBC) noexcept
