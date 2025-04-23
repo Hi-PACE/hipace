@@ -26,9 +26,6 @@
 #   include <openPMD/openPMD.hpp>
 #endif
 
-/** \brief Whether the beam, the field data is written, or if it is just flushing the stored data */
-enum struct OpenPMDWriterCallType { beams, fields };
-
 #ifdef HIPACE_USE_OPENPMD
 /** \brief class handling the IO with openPMD */
 class OpenPMDWriter
@@ -102,8 +99,8 @@ private:
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;
 
-    std::vector<std::vector<std::shared_ptr<uint64_t>>> m_uint64_beam_data {};
-    std::vector<std::vector<std::shared_ptr<amrex::ParticleReal>>> m_real_beam_data {};
+    std::vector<std::vector<amrex::Gpu::PinnedVector<uint64_t>>> m_uint64_beam_data {};
+    std::vector<std::vector<amrex::Gpu::PinnedVector<amrex::ParticleReal>>> m_real_beam_data {};
 
 public:
     /** Constructor */
@@ -120,22 +117,29 @@ public:
      */
     void InitBeamData (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
 
-    /** \brief writing openPMD data
+    /** \brief writing openPMD beam data
      *
-     * \param[in] field_diag field diagnostic data
-     * \param[in] a_multi_beams multi beam container which is written to openPMD file
+     * \param[in] a_multi_beam multi beam container which is written to openPMD file
      * \param[in] physical_time Physical time of the currenerationt it.
      * \param[in] output_step current iteration to be written to file
      * \param[in] beamnames list of the names of the beam to be written to file
      * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
-     * \param[in] call_type whether the beams or the fields should be written to file
      */
-    void WriteDiagnostics (
-        const amrex::Vector<FieldDiagnosticData>& field_diag, MultiBeam& a_multi_beam,
-        const MultiLaser& a_multi_laser, const amrex::Real physical_time, const int output_step,
+    void WriteBeamDiagnostics (
+        MultiBeam& a_multi_beam, const amrex::Real physical_time, const int output_step,
         const amrex::Vector< std::string > beamnames,
-        amrex::Vector<amrex::Geometry> const& geom3D,
-        const OpenPMDWriterCallType call_type);
+        amrex::Vector<amrex::Geometry> const& geom3D);
+
+    /** \brief writing openPMD field data
+     *
+     * \param[in] field_diag field diagnostic data
+     * \param[in] a_multi_laser multi laser to get lambda0
+     * \param[in] physical_time Physical time of the currenerationt it.
+     * \param[in] output_step current iteration to be written to file
+     */
+    void WriteFieldDiagnostics (
+        const amrex::Vector<FieldDiagnosticData>& field_diag,
+        const MultiLaser& a_multi_laser, const amrex::Real physical_time, const int output_step);
 
     /** \brief Copy beam data into IO buffer
      *

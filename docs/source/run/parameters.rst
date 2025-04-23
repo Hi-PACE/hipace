@@ -161,6 +161,13 @@ General parameters
     If a parameter is present multiple times then the last occurrence will be used.
     Note that this will include some default AMReX parameters.
 
+* ``hipace.grid_external_B(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
+    External magnetic field applied to the field grid as a function of x, y, z and t.
+    This will affect both beam and plasma particles, as well as the field diagnostics.
+    The components represent Bx, By and Bz respectively.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current time step.
+
 Geometry
 --------
 
@@ -519,6 +526,9 @@ When both are specified, the per-species value is used.
     the domain. However, this will also result in a gap at the domain boundary,
     which can lead to noise.
 
+* ``<plasma name> or plasmas.do_push`` (`bool`) optional (default `1`)
+    When set to `0`, disables the plasma particle pusher.
+
 Beam parameters
 ---------------
 
@@ -579,6 +589,9 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
+
+* ``<beam name> or beams.do_push`` (`bool`) optional (default `1`)
+    When set to `0`, disables the beam particle pusher.
 
 * ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition and particle push on GPU.
