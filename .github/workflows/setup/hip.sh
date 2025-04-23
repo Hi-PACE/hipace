@@ -36,12 +36,15 @@ sudo apt-key add rocm.gpg.key
 
 source /etc/os-release  # set UBUNTU_CODENAME: focal or jammy or ...
 
-echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/${1-latest} ${UBUNTU_CODENAME} main" \
+VERSION=${1-6.3.2}
+
+echo "deb [arch=amd64] https://repo.radeon.com/rocm/apt/${VERSION} ${UBUNTU_CODENAME} main" \
   | sudo tee /etc/apt/sources.list.d/rocm.list
 echo 'export PATH=/opt/rocm/llvm/bin:/opt/rocm/bin:/opt/rocm/profiler/bin:/opt/rocm/opencl/bin:$PATH' \
   | sudo tee -a /etc/profile.d/rocm.sh
 # we should not need to export HIP_PATH=/opt/rocm/hip with those installs
 
+sudo apt-get clean
 sudo apt-get update
 
 # Ref.: https://rocmdocs.amd.com/en/latest/Installation_Guide/Installation-Guide.html#installing-development-packages-for-cross-compilation
@@ -57,11 +60,11 @@ sudo apt-get install -y --no-install-recommends \
     libzstd-dev     \
     ninja-build     \
     openmpi-bin     \
-    rocm-dev        \
-    rocfft-dev      \
-    rocprim-dev     \
-    rocrand-dev     \
-    hiprand-dev
+    rocm-dev${VERSION}    \
+    rocfft-dev${VERSION}  \
+    rocprim-dev${VERSION} \
+    rocrand-dev${VERSION} \
+    hiprand-dev${VERSION}
 
 # activate
 #
