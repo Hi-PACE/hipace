@@ -45,6 +45,4 @@ jobs:
     - name: Run Tests
       run: |
         source $HOME/profile.hipace
-        conda activate openpmd
-        conda update --all
         ctest --test-dir build --output-on-failure
