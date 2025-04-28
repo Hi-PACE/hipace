@@ -45,11 +45,6 @@ jobs:
     - name: Run Tests
       run: |
         source $HOME/profile.hipace
-<<<<<<< HEAD
-        conda activate openpmd
-        python -m pip install git+https://github.com/LASY-org/lasy.git@development
-=======
         python3 -m pip install --upgrade pip --user
         python3 -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api lasy --user
->>>>>>> origin_devel
         ctest --test-dir build --output-on-failure
