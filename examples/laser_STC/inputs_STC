@@ -1,5 +1,5 @@
 max_step = 0
-amr.n_cell = 255 255 2000
+amr.n_cell = 255 255 200
 
 hipace.verbose = 1
 hipace.dt = 1e-13
@@ -15,7 +15,7 @@ lasers.names = laser
 lasers.lambda0 = 600e-9
 lasers.solver_type = fft
 laser.a0 = 10
-laser.position_mean = 0. 0. 30e-6
+laser.position_mean = 0. 0. 90e-6
 laser.w0 = 5e-6
 laser.L0 = 15e-6
 laser.focal_distance = 0
