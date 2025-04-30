@@ -22,6 +22,6 @@ laser.focal_distance = 0
 laser.phi2 = 3e-28
 laser.beta = 3e-18
 laser.zeta = 2.4e-22
-laser.STC_theta_xy = 3.14150265358/2
+laser.STC_theta_xy = pi/2
 diagnostic.field_data = laserEnvelope
 diagnostic.diag_type = xyz
