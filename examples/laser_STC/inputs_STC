@@ -1,4 +1,4 @@
-max_step = 1
+max_step = 0
 amr.n_cell = 255 255 2000
 
 hipace.verbose = 1
