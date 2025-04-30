@@ -934,7 +934,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.zeta`` (`float`) optional (default `0.`)
           Spatial chirp at focus in :math:`second \cdot meter`.
 
-      * ``<laser name>.phi2`` (`float`) optional (default `pi/2`)
+      * ``<laser name>.phi2`` (`float`) optional (default `0`)
           Temporal chirp :math:`\phi^{(2)}` at focus in :math:`second^2`.
           Namely, a wave packet centered on frequency :math:`(\omega_0 + \delta \omega)` reaches its peak intensity at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`.
           Thus, a positive :math:`\phi^{(2)}` corresponds to positive chirp, i.e., red part of the spectrum in the front of the pulse and blue part in the back.
