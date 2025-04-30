@@ -9,7 +9,7 @@ amr.max_level = 0
 boundary.field = Dirichlet
 boundary.particle = Absorbing
 geometry.prob_lo     = -10e-6 -10e-6 -0e-6
-geometry.prob_hi     =  10e-6  10e-6 60e-6
+geometry.prob_hi     =  10e-6  10e-6 180e-6
 
 lasers.names = laser
 lasers.lambda0 = 600e-9
