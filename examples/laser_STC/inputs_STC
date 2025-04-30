@@ -12,7 +12,7 @@ geometry.prob_lo     = -10e-6 -10e-6 -0e-6
 geometry.prob_hi     =  10e-6  10e-6 180e-6
 
 lasers.names = laser
-lasers.lambda0 = 600e-9
+lasers.lambda0 = 800e-9
 lasers.solver_type = fft
 laser.a0 = 10
 laser.position_mean = 0. 0. 90e-6
