@@ -32,7 +32,7 @@ profile = FromOpenPMDProfile(
 laser = Laser(
         dim="xyt",
         lo=(-10e-6, -10e-6, -0e-15),
-        hi=(10e-6, 10e-6, +200e-15),
+        hi=(10e-6, 10e-6, +6e-15),
         npoints=(255, 255, 730),
         profile=profile,
      )
