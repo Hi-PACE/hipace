@@ -32,8 +32,8 @@ profile = FromOpenPMDProfile(
 laser = Laser(
         dim="xyt",
         lo=(-10e-6, -10e-6, -0e-15),
-        hi=(10e-6, 10e-6, +6e-15),
-        npoints=(255, 255, 730),
+        hi=(10e-6, 10e-6, +6e-13),
+        npoints=(255, 255, 200),
         profile=profile,
      )
 _, phi2 = get_dispersion(laser.grid,laser.dim, omega0 = 2 * scc.pi * scc.c / lambda0, order = 2)
