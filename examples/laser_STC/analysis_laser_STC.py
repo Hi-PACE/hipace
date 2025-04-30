@@ -14,7 +14,7 @@ from lasy.utils.laser_utils import get_dispersion, get_zeta, get_beta
 from lasy.laser import Laser
 from lasy.profiles import FromOpenPMDProfile
 
-lambda0 = .6e-6          # Laser wavelength
+lambda0 = .8e-6          # Laser wavelength
 k0 = 2 * scc.pi / lambda0
 
 parser = argparse.ArgumentParser(description='Compare laser propagation in vacuum with theory')
