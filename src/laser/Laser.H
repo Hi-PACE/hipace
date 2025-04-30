@@ -37,11 +37,10 @@ public:
     amrex::Real m_propagation_angle_yz {0.};
     amrex::Real m_L0 {0.}; /**< Laser length (HW 1/e in amplitude) */
     amrex::Real m_tau {0.}; /**< Laser duration (HW 1/e in amplitude) */
-    /** Time stretching factors */
-    amrex::Real m_STC_theta_xy {0.};
-    amrex::Real m_zeta {0.};
-    amrex::Real m_beta {0.};
-    amrex::Real m_phi2 {0.};
+    amrex::Real m_STC_theta_xy {0.};/**< Initial propagation angel on YZ plane */
+    amrex::Real m_zeta {0.};/**< The value of first order spatial chirp in m * s */
+    amrex::Real m_beta {0.};/**< The value of first order angular chirp in  s */
+    amrex::Real m_phi2 {0.};/**< The value of group delayed dispersion in s ^ -2 */
     /** Focal distance of the laser pulse */
     amrex::Real m_focal_distance {0.};
     /** Average position of the Gaussian laser pulse */
