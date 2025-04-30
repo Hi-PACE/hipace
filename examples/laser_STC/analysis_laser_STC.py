@@ -36,7 +36,7 @@ laser = Laser(
         npoints=(255, 255, 730),
         profile=profile,
      )
-_, phi2 = get_dispersion(laser.grid,laser.dim, omega0 = 2 * scc.pi * scc.c / lambda0, order = 2)
+_, phi2 = get_dispersion(laser.grid,laser.dim, omega0 = 2 * scc.pi * scc.c / lambda0, order = 1)
 [ _, beta_y] = get_beta(laser.dim, laser.grid, k0)
 [ _, zeta_y], [_, _] = get_zeta(laser.dim, laser.grid, k0)
 print("phi2 theory:", 3e-28, "measured:", phi2)
