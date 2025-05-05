@@ -34,10 +34,6 @@ MultiLaser::ReadParameters ()
     if (!m_use_laser) return;
     queryWithParser(pp, "lambda0", m_lambda0);
     DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
-    std::string polarization = "linear";
-    queryWithParser(pp, "polarization", polarization);
-    AMREX_ALWAYS_ASSERT(polarization == "linear" || polarization == "circular");
-    m_linear_polarization = polarization == "linear";
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
