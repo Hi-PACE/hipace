@@ -249,7 +249,7 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
         const int x_hi = m_slice_box.bigEnd(0);
         const int y_lo = m_slice_box.smallEnd(1);
         const int y_hi = m_slice_box.bigEnd(1);
-        
+
         amrex::ParallelFor(
             amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
             {m_interp_order},
@@ -279,8 +279,8 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
                         }
                     }
                 }
+
                 field_arr(i,j) = aabs;
-                
             });
     }
 
