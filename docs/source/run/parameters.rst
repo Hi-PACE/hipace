@@ -1191,3 +1191,29 @@ or beam in-situ diagnostic as ``[sx], [sx^2], [sy], [sy^2], [sz], [sz^2]``.
 
 * ``<beam name> or beams.spin_anom`` (`bool`) optional (default `0.00115965218128`)
     The anomalous magnetic moment. The default value is the moment for electrons.
+
+
+Parser
+------
+
+* ``parser.debug_print`` (list of `strings`) optional
+    Print an evaluated parser expression for debugging. The fist `string` from the input is the
+    expression to evaluate and all following `strings` can be used to define constants or variables
+    that are used in the expression. Constants are definded by ``"<constant name>=<value>""`` and
+    variables by ``"<variable name>=[<range begin>,<range end>,<num values>]"``, where the expression
+    will be evaluated at ``<num values>`` equally spaced points between ``<range begin>`` and
+    ``<range end>``. These are the same pionts as
+    ``numpy.linspace(<range begin>,<range end>,<num values>)`` gives. Up to four varibales are
+    supported. Note that constant and variable definitons have to be enclosed in double-quotes and
+    if provided through command-line parameters in bash, the full list of strings needs to be
+    enclosed in single-quotes. Example:
+
+    .. code-block:: bash
+
+        parser.debug_print = "10*x + y" "x=[0,9,10]" "y=2"
+
+    Output:
+
+    .. code-block:: bash
+
+        Parser Debug Print "10*x + y" = [2, 12, 22, 32, 42, 52, 62, 72, 82, 92]
