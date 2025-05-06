@@ -1199,12 +1199,12 @@ Parser
 * ``parser.debug_print`` (list of `strings`) optional
     Print an evaluated parser expression for debugging. The fist `string` from the input is the
     expression to evaluate and all following `strings` can be used to define constants or variables
-    that are used in the expression. Constants are definded by ``"<constant name>=<value>"`` and
+    that are used in the expression. Constants are defined by ``"<constant name>=<value>"`` and
     variables by ``"<variable name>=[<range begin>,<range end>,<num values>]"``, where the expression
     will be evaluated at ``<num values>`` equally spaced points between ``<range begin>`` and
-    ``<range end>``. These are the same pionts as
-    ``numpy.linspace(<range begin>,<range end>,<num values>)`` gives. Up to four varibales are
-    supported. Note that constant and variable definitons have to be enclosed in double-quotes and
+    ``<range end>``. These are the same points as
+    ``numpy.linspace(<range begin>,<range end>,<num values>)`` gives. Up to four variables are
+    supported. Note that constant and variable definitions have to be enclosed in double-quotes and
     if provided through command-line parameters in bash, the full list of strings needs to be
     enclosed in single-quotes. Example:
 
