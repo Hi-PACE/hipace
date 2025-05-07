@@ -788,8 +788,19 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
     uint32_t num_new_beam_part = 0;
 
     using namespace amrex::literals;
+    using Complex = amrex::GpuComplex<amrex::Real>;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
+
+    auto laser_geom = laser.GetLaserGeom();
+
+    const amrex::Real dx_inv = laser_geom.InvCellSize(0);
+    const amrex::Real dy_inv = laser_geom.InvCellSize(1);
+    const amrex::Real dzeta_inv = laser_geom.InvCellSize(2);
+
+    // Offset for converting positions to indexes
+    amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
+    amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -846,6 +857,9 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
 
+        // Extract laser array
+        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(pti);
+
         // This kernel does the transfer of the ionized electrons from the plasma container
         // to the beam container and make them invalid in the plasma container
         amrex::ParallelFor(num_particles,
@@ -853,6 +867,17 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                 if (ptd_plasma.id(ip) == 3){
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_beam, 1u);
                     const long pidx_beam = pid_beam + old_size;
+
+                    Complex A = 0;
+                    Complex A_dx = 0;
+                    Complex A_dzeta = 0;
+
+                    amrex::Real xp = ptd_plasma.pos(0, ip);
+                    amrex::Real yp = ptd_plasma.pos(1, ip);
+    
+                    doLaserGatherShapeN<2>(xp, yp, A, A_dx, A_dzeta, laser_arr,
+                        dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.id(pidx_beam) = pid_beam;
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
