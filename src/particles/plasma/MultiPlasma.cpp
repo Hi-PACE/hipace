@@ -153,7 +153,7 @@ MultiPlasma::DoLaserIonization (
 
 void
 MultiPlasma::DoLaserInjection (
-    const int lev, const MultiLaser& laser, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int islice)
+    const int lev, const Fields& fields, const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.InjectionCondition(lev, fields, laser, islice);
