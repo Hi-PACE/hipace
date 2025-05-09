@@ -75,7 +75,7 @@ PlasmaParticleContainer::ReadParameters ()
     m_can_laser_injection = false;
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
     queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
-    queryWithParser(pp, "ionization_threshold", m_ionization_threshold);
+    queryWithParser(pp, "uz_threshold", m_uz_threshold);
     queryWithParser(pp, "injection_weight_factor", m_injection_weight_factor);
 
     m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
@@ -740,7 +740,7 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
-InjectionCondition (const MultiLaser& laser, const int islice)
+InjectionCondition (const int lev, const MultiLaser& laser, const int islice)
 {
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_injection || laser.UseLaser(),
     "Error: LaserIonization requires the laser to be enabled in the current slice.");
@@ -748,28 +748,60 @@ InjectionCondition (const MultiLaser& laser, const int islice)
     HIPACE_PROFILE("PlasmaParticleContainer::InjectionCondition()");
 
     using namespace amrex::literals;
+    using Complex = amrex::GpuComplex<amrex::Real>;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
-    amrex::Real gamma_psi_condition = m_ionization_threshold;
+    amrex::Real uz_condition = m_uz_threshold;
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+
         const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
 
         amrex::Long const num_particles = pti.numParticles();
 
-        //amrex::Real const max_qsa_weighting_factor = m_max_qsa_weighting_factor;
+        const int ez_comp = Comps[WhichSlice::This]["Ez"];
+        auto laser_geom = laser.GetLaserGeom();
 
         // This kernel marks the plasma particles that has been injected in the wake
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
+                amrex::Real xp = ptd_plasma.pos(0, ip);
+                amrex::Real yp = ptd_plasma.pos(1, ip);
+
+                // Extract properties associated with physical size of the box
+                const amrex::Real dx_inv = laser_geom.InvCellSize(0);
+                const amrex::Real dy_inv = laser_geom.InvCellSize(1);
+                const amrex::Real dzeta_inv = laser_geom.InvCellSize(2);
+
+                // Offset for converting positions to indexes
+                amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
+                amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
+
+                // Gather A
+                Complex A = 0;
+                Complex A_dx = 0;
+                Complex A_dzeta = 0;
+                doLaserGatherShapeN<2>(xp, yp, A, A_dx, A_dzeta, laser_arr,
+                    dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+
+                // Gather Ez
+                amrex::Real Ezp = 0._rt;
+                doGatherEz(xp, yp, Ezp, slice_arr, ez_comp,
+                                       dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+                // Calculation of uz
                 amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                amrex::Real gamma_psi = 0.5_rt * ( (1+ ux*ux + uy*uy)/(psi*psi) + 1); // gamma/(1+psi)
-                amrex::Real condition = gamma_psi - gamma_psi_condition; // condition for injection
+                amrex::Real uz = (1 + ux*ux + uy*uy - psi*psi 
+                    + 0.5_rt*amrex::abs(A*A))/(2.*psi)*phys_const.c;
 
-                if (condition > 0 && ptd_plasma.id(ip)==2){
+                amrex::Real condition = uz - uz_condition; // condition for injection
+
+                if (condition > 0 && Ezp < 0){
                     ptd_plasma.id(ip) = 3; // set the injected electron ID to 3
                 }
         });

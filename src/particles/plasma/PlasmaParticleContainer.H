@@ -117,10 +117,11 @@ public:
 
     /** Mark the plasma particles that has been injected
      *
+     * \param[in] lev MR level
      * \param[in] laser MultiLaser object containing the laser details
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void InjectionCondition (const MultiLaser& laser, const int islice);
+    void InjectionCondition (const int lev, const MultiLaser& laser, const int islice);
 
     /** Do the transfer of particles from the plasma container to the beam container
      *
@@ -235,7 +236,7 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_second_prefactor;
     // laser injection:
     bool m_can_laser_injection = false; /**< whether laser injection is enabled */
-    amrex::Real m_ionization_threshold = 4.;
+    amrex::Real m_uz_threshold = 1.;
     amrex::Real m_injection_weight_factor = 1.;
     std::string m_product_beam_name = ""; /**< name of Injection product beam */
     BeamParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
