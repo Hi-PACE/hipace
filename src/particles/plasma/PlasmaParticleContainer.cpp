@@ -755,8 +755,11 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
+        //extract slice_arr for Ez gathering
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        // Extract laser array for A gathering
+        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(pti);
 
         const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
 
