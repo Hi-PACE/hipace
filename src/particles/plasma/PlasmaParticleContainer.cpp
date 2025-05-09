@@ -800,7 +800,7 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
                 amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                 amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                 amrex::Real uz = (1 + ux*ux + uy*uy - psi*psi 
-                    + 0.5_rt*amrex::abs(A*A))/(2.*psi)*phys_const.c;
+                    + 0.5_rt*amrex::abs(A*A))/(2.*psi);
 
                 amrex::Real condition = uz - uz_condition; // condition for injection
 
