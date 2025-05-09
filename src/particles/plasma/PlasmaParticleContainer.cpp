@@ -888,7 +888,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                     amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
                     amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                     amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy-psi*psi)/(2.*psi)*phys_const.c;
+                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*amrex::abs(A*A))/(2.*psi)*phys_const.c;
                     amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
                     const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz);
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * gam / (psi) * f;
