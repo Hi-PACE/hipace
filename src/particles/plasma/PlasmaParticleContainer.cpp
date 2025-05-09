@@ -740,7 +740,7 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
-InjectionCondition (const int lev, const MultiLaser& laser, const int islice)
+InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser, const int islice)
 {
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_injection || laser.UseLaser(),
     "Error: LaserIonization requires the laser to be enabled in the current slice.");

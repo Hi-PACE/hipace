@@ -115,11 +115,12 @@ public:
     /** Do the transfer of ionized plasma particles to beam particles
      *
      * \param[in] lev MR level
+     * \param[in] fields the general field class
      * \param[in] laser MultiLaser object containing the laser details
      * \param[in] gm Geometry object for the whole domain
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void DoLaserInjection (const int lev, const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice);
+    void DoLaserInjection (const int lev, const Fields& fields, const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     bool AnySpeciesNeutralizeBackground () const;
