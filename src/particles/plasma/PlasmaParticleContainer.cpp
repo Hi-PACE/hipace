@@ -753,11 +753,22 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     amrex::Real uz_condition = m_uz_threshold;
 
+    auto laser_geom = laser.GetLaserGeom();
+     // Offset for converting positions to indexes
+     amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
+     amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
+     // Extract properties associated with physical size of the box
+     const amrex::Real dx_inv = laser_geom.InvCellSize(0);
+     const amrex::Real dy_inv = laser_geom.InvCellSize(1);
+     const amrex::Real dzeta_inv = laser_geom.InvCellSize(2);
+
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        //extract slice_arr for Ez gathering
+        //extract slice_arr and ez_comp for Ez gathering
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
         Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int ez_comp = Comps[WhichSlice::This]["Ez"];
+
         // Extract laser array for A gathering
         Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(pti);
 
@@ -765,23 +776,12 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
 
         amrex::Long const num_particles = pti.numParticles();
 
-        const int ez_comp = Comps[WhichSlice::This]["Ez"];
-        auto laser_geom = laser.GetLaserGeom();
 
         // This kernel marks the plasma particles that has been injected in the wake
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 amrex::Real xp = ptd_plasma.pos(0, ip);
                 amrex::Real yp = ptd_plasma.pos(1, ip);
-
-                // Extract properties associated with physical size of the box
-                const amrex::Real dx_inv = laser_geom.InvCellSize(0);
-                const amrex::Real dy_inv = laser_geom.InvCellSize(1);
-                const amrex::Real dzeta_inv = laser_geom.InvCellSize(2);
-
-                // Offset for converting positions to indexes
-                amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
-                amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
 
                 // Gather A
                 Complex A = 0;
