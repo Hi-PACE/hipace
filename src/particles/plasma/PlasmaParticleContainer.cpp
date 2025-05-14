@@ -804,7 +804,7 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
 
                 amrex::Real condition = uz - uz_condition; // condition for injection
 
-                if (condition > 0 && Ezp < 0){
+                if (ptd_plasma.id(ip).is_valid() && (condition > 0) && (Ezp < 0)){
                     ptd_plasma.id(ip) = 3; // set the injected electron ID to 3
                 }
         });
