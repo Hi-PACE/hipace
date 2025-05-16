@@ -14,6 +14,8 @@
 
 class MultiBuffer
 {
+    // for the MPI datatypes if compiled without MPI
+    using namespace amrex;
 
 public:
 
