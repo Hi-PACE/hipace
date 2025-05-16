@@ -45,5 +45,6 @@ jobs:
     - name: Run Tests
       run: |
         source $HOME/profile.hipace
-        conda activate openpmd
+        python3 -m pip install --upgrade pip --user
+        python3 -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api lasy --user
         ctest --test-dir build --output-on-failure
