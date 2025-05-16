@@ -26,7 +26,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                     amrex::Vector<amrex::Geometry> const& gm, 
                     int const lev)
 {
-    if (!Hipace::m_deposit_temp) { // deposit temperature in input
+    if (!Hipace::m_deposit_temp || !Hipace::m_deposit_temp_individual) { // deposit temperature in input
         return;
     }
     HIPACE_PROFILE("TemperatureDeposition_PlasmaParticleContainer()");
@@ -35,7 +35,6 @@ DepositTemperature (PlasmaParticleContainer& plasma,
     // only deposit ux individual on WhichSlice::This
     const bool deposit_temp_individual = true;
     const std::string ux_str = deposit_temp_individual ? "ux_" + plasma.GetName() : "ux";
-    using Complex = amrex::GpuComplex<amrex::Real>;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
