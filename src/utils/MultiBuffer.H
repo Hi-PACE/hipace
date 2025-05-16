@@ -76,7 +76,7 @@ private:
         std::size_t m_buffer_size = 0;
         memory_location m_location = memory_location::nowhere;
         comm_progress m_progress = comm_progress::uninitialized;
-        MPI_Request m_request = MPI_REQUEST_NULL;
+        MPI_Request m_request =  MPI_REQUEST_NULL;
         comm_progress m_metadata_progress = comm_progress::uninitialized;
         MPI_Request m_metadata_request = MPI_REQUEST_NULL;
     };
