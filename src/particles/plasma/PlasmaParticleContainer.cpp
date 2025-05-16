@@ -755,7 +755,7 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
 
         amrex::Long const num_particles = pti.numParticles();
 
-        amrex::Real dt = Hipace::m_dt;
+        const amrex::Real dt = Hipace::GetInstance().m_dt;
 
         // This kernel marks the plasma particles that has been injected in the wake
         amrex::ParallelFor(num_particles,
