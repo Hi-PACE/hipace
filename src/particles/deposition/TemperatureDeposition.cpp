@@ -69,7 +69,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real clightinv2 = clightinv*clightinv;
 
-        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(pti);
+        const bool use_laser = Hipace::m_use_laser;
 
         // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
 
@@ -108,10 +108,10 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
 
-                amrex::Real Aabssqp;
+                amrex::Real Aabssqp = 0._rt;
 
-                if constexpr (use_laser) {
-                    doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, arr, cache_idx[0],
+                if (use_laser) {
+                    doLaserGatherShapeN<0>(xp, yp, Aabssqp, arr, cache_idx[0],
                                                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 }
 
