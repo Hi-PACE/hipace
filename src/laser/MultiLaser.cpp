@@ -851,15 +851,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 );
                 AMREX_ASSERT_WITH_MESSAGE(laser.m_lambda0_from_file == m_lambda0 && m_lambda0 != 0,
                 "The central wavelength of laser from openPMD file and other lasers must be identical");
-                m_lambda0 = laser.m_lambda0_from_file;
-                 #ifdef AMREX_USE_MPI
-                // need to communicate m_lambda0 as it is read in from the input file only by the head rank
-                MPI_Bcast(&m_lambda0,
-                1,
-                amrex::ParallelDescriptor::Mpi_typemap<decltype(m_lambda0)>::type(),
-                Hipace::HeadRankID(),
-                amrex::ParallelDescriptor::Communicator());
-                #endif
             }
             if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;

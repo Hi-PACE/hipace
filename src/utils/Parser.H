@@ -170,8 +170,11 @@ namespace Parser
             amrex::ParmParse pp_my_constants("my_constants");
             if (pos_count_trim == 0) {
                 loc_str.replace(pos, pos_end-pos+1, "");
-            } else if (pp_my_constants.contains(parse_string.c_str())) {
+            } else if (amrex::ParmParse{}.contains(parse_string.c_str()) ||
+                       pp.contains(parse_string.c_str()) ||
+                       pp_my_constants.contains(parse_string.c_str())) {
                 // use my_constants directly (with recursive string parsing) if available
+                // also check in local and global namespaces, same as the amrex parser
                 if (recursive_symbols.count(parse_string) != 0) {
                     amrex::ErrorStream() << "Expression '"
                                          << str
@@ -181,7 +184,13 @@ namespace Parser
                     AMREX_ALWAYS_ASSERT(recursive_symbols.count(parse_string) == 0);
                 }
                 std::string replacer;
-                pp_my_constants.get(parse_string.c_str(), replacer);
+                if (amrex::ParmParse{}.contains(parse_string.c_str())) {
+                    amrex::ParmParse{}.get(parse_string.c_str(), replacer);
+                } else if (pp.contains(parse_string.c_str())) {
+                    pp.get(parse_string.c_str(), replacer);
+                } else {
+                    pp_my_constants.get(parse_string.c_str(), replacer);
+                }
                 std::string parse_val;
                 recursive_symbols.insert(parse_string);
                 // for proper escape handling
@@ -305,6 +314,11 @@ namespace Parser
             fillWithParser(pp, str_arr[i], val_arr[i]);
         }
     }
+
+    /** \brief print the value of a user provided function for the purposes of debugging
+     */
+    void
+    DebugPrint ();
 }
 
 /** \brief fill val with the evaluated expression from the input file
@@ -377,18 +391,20 @@ getWithParserAlt (const amrex::ParmParse& pp, char const * const str, T& val,
  * \param[in] func_str string that gets Parsed to a function
  * \param[out] parser Parser which owns the data of the returned function
  * \param[in] varnames names of the N arguments used in the parsed function
+ * \param[in] pp ParmParse that is searched for user constants
  */
 template<int N>
 inline auto
 makeFunctionWithParser (std::string const& func_str,
                         amrex::Parser& parser,
-                        amrex::Vector<std::string> const& varnames)
+                        amrex::Vector<std::string> const& varnames,
+                        const amrex::ParmParse& pp = amrex::ParmParse{})
 {
     std::string clean_str = func_str;
     for (char& c : clean_str) {
         if (c=='\n' || c=='\r' || c=='\t') c = ' ';
     }
-    parser = amrex::ParmParse{}.makeParser(clean_str, varnames);
+    parser = pp.makeParser(clean_str, varnames);
     return parser.compile<N>();
 }
 
