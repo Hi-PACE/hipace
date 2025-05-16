@@ -2,7 +2,7 @@
  *
  * This file is part of HiPACE++.
  *
- * Authors: EyaDammak, AlexanderSinn, MaxThevenet
+ * Authors: EyaDammak, AlexanderSinn
  * License: BSD-3-Clause-LBNL
  */
 #ifndef TEMPERATUREDEPOSITION_H_
