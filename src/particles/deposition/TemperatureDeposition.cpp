@@ -141,12 +141,12 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 compute_single_shape_factor<false, 0>(ymid, 0);
 
                 amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), wp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), w*uxp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), w*uyp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), w*uzp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[4]), w*uxp*uxp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), w*uyp*uyp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), w*uzp*uzp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), wp*uxp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), wp*uyp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), wp*uzp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[4]), wp*uxp*uxp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), wp*uyp*uyp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), wp*uzp*uzp);
             },
             isl_fab.array(),
             isl_fab.box(), pti.GetParticleTile().getParticleTileData(),

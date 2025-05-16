@@ -596,8 +596,6 @@ Hipace::SolveOneSlice (int islice, int step)
         m_multi_beam.ReorderParticles( WhichBeamSlice::This, step, m_slice_geom[0]);
     }
 
-    m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
-
     if (m_N_level > 1) {
         m_multi_beam.TagByLevel(current_N_level, m_3D_geom, WhichSlice::This);
         m_multi_plasma.TagByLevel(current_N_level, m_3D_geom);
@@ -614,12 +612,17 @@ Hipace::SolveOneSlice (int islice, int step)
     // write laser aabs into fields MultiFab
     m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
 
-    // deposit current
-    for (int lev=0; lev<current_N_level; ++lev) {
+    // has to be after aabs writing
+    m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
 
+    // deposit temperature
+    for (int lev=0; lev<current_N_level; ++lev) {
         // deposit w, ux, uy, uz, ux2, uy2 and uz2 for all plasmas
         m_multi_plasma.DepositTemperature(m_fields, WhichSlice::This, m_3D_geom, lev);
+    }
 
+    // deposit current
+    for (int lev=0; lev<current_N_level; ++lev) {
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
