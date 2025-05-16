@@ -748,63 +748,22 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
     HIPACE_PROFILE("PlasmaParticleContainer::InjectionCondition()");
 
     using namespace amrex::literals;
-    using Complex = amrex::GpuComplex<amrex::Real>;
-    const PhysConst phys_const = get_phys_const();
-    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
-    amrex::Real uz_condition = m_uz_threshold;
-
-    auto laser_geom = laser.GetLaserGeom();
-     // Offset for converting positions to indexes
-     amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
-     amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
-     // Extract properties associated with physical size of the box
-     const amrex::Real dx_inv = laser_geom.InvCellSize(0);
-     const amrex::Real dy_inv = laser_geom.InvCellSize(1);
-     const amrex::Real dzeta_inv = laser_geom.InvCellSize(2);
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        //extract slice_arr and ez_comp for Ez gathering
-        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
-        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
-        const int ez_comp = Comps[WhichSlice::This]["Ez"];
-
-        // Extract laser array for A gathering
-        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(pti);
-
         const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
 
         amrex::Long const num_particles = pti.numParticles();
 
+        amrex::Real dt = Hipace::m_dt;
 
         // This kernel marks the plasma particles that has been injected in the wake
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
-                amrex::Real xp = ptd_plasma.pos(0, ip);
-                amrex::Real yp = ptd_plasma.pos(1, ip);
+                // condition for injection
+                amrex::Real condition = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip] - dt;
 
-                // Gather A
-                Complex A = 0;
-                Complex A_dx = 0;
-                Complex A_dzeta = 0;
-                doLaserGatherShapeN<2>(xp, yp, A, A_dx, A_dzeta, laser_arr,
-                    dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
-
-                // Gather Ez
-                amrex::Real Ezp = 0._rt;
-                doGatherEz(xp, yp, Ezp, slice_arr, ez_comp,
-                                       dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-
-                // Calculation of uz
-                amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
-                amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
-                amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                amrex::Real uz = (1 + ux*ux + uy*uy - psi*psi 
-                    + 0.5_rt*amrex::abs(A*A))/(2.*psi);
-
-                amrex::Real condition = uz - uz_condition; // condition for injection
-
-                if (ptd_plasma.id(ip)==2 && (condition > 0) && (Ezp < 0)){
+                if (ptd_plasma.id(ip) == 2 && (condition > 0._rt)){
                     ptd_plasma.id(ip) = 3; // set the injected electron ID to 3
                 }
         });
@@ -909,7 +868,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
 
                     amrex::Real xp = ptd_plasma.pos(0, ip);
                     amrex::Real yp = ptd_plasma.pos(1, ip);
-    
+
                     doLaserGatherShapeN<2>(xp, yp, A, A_dx, A_dzeta, laser_arr,
                         dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
 

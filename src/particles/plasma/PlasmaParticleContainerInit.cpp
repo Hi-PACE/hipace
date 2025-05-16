@@ -301,6 +301,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0] * c_light;
                 ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1] * c_light;
                 ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
+                ptd.rdata(PlasmaIdx::time_integral)[pidx] = 0._rt;
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
@@ -355,6 +356,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                         ptd.rdata(PlasmaIdx::uy_half_step)[pidx] * uy_arr[imirror];
                     ptd.rdata(PlasmaIdx::psi_half_step)[midx] =
                         ptd.rdata(PlasmaIdx::psi_half_step)[pidx];
+                    ptd.rdata(PlasmaIdx::time_integral)[midx] = 0._rt;
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
