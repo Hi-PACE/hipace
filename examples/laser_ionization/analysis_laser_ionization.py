@@ -99,7 +99,7 @@ uz2_linear, _ = ts_linear.get_field(field='uz^2_elec', iteration=iteration)
 uz2_mean_linear = np.mean(uz2_linear, axis=(1, 2))
 uz2_average_linear = statistics.mean(uz2_mean_linear[0:10])
 
-temp_diags_linear = 1./3*(ux2_linear + uy2_linear +uz2_linear)*scc.m_e*scc.c**2/scc.e
+temp_diags_linear = 1./3*(ux2_average_linear + uy2_average_linear +uz2_average_linear)*scc.m_e*scc.c**2/scc.e
 
 ux2_circular, _ = ts_circular.get_field(field='ux^2_elec', iteration=iteration)
 ux2_mean_circular = np.mean(ux2_circular, axis=(1, 2))
