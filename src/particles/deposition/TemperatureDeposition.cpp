@@ -2,7 +2,7 @@
  *
  * This file is part of HiPACE++.
  *
- * Authors: EyaDammak, AlexanderSinn 
+ * Authors: AlexanderSinn, EyaDammak
  * License: BSD-3-Clause-LBNL
  */
 #include "TemperatureDeposition.H"
@@ -20,8 +20,11 @@
 
 
 void
-DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int which_slice,
-                    amrex::Vector<amrex::Geometry> const& gm, int const lev)
+DepositTemperature (PlasmaParticleContainer& plasma, 
+                    Fields & fields,  
+                    const int which_slice,
+                    amrex::Vector<amrex::Geometry> const& gm, 
+                    int const lev)
 {
     if (!Hipace::m_deposit_temp) { // deposit temperature in input
         return;
@@ -101,26 +104,22 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx) noexcept
-            {
-                
-                
+            {   
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
 
-                Complex A = 0;
-                Complex A_dx = 0;
-                Complex A_dzeta = 0;
+                amrex::Real Aabssqp;
 
                 if constexpr (use_laser) {
-                    doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
-                        dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+                    doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, arr, cache_idx[0],
+                                                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 }
 
                 const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip];
                 const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip];
                 amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real uz = (1._rt + ux*ux*clightinv2 + uy*uy*clightinv2 
-                    + 0.5_rt*amrex::abs(A*A) - psi*psi)/(2.*psi) * clight;
+                    + 0.5_rt*Aabssqp*Aabssqp - psi*psi)/(2.*psi) * clight;
                 const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip];
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
