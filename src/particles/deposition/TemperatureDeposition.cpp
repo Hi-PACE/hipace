@@ -75,7 +75,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
 
         // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
 
-        SharedMemoryDeposition<1, 1, false>(
+        SharedMemoryDeposition<1, 1, true>(
             int(pti.numParticles()),
             // is_valid
             // return whether the particle is valid and should deposit
