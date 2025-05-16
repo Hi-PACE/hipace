@@ -20,27 +20,25 @@
 
 
 void
-DepositTemperature (PlasmaParticleContainer& plasma, 
-                    Fields & fields,  
+DepositTemperature (PlasmaParticleContainer& plasma,
+                    Fields & fields,
                     const int which_slice,
-                    amrex::Vector<amrex::Geometry> const& gm, 
+                    amrex::Vector<amrex::Geometry> const& gm,
                     int const lev)
 {
-    if (!Hipace::m_deposit_temp || !Hipace::m_deposit_temp_individual) { // deposit temperature in input
+    if (!Hipace::m_deposit_temp_individual) { // deposit temperature in input
         return;
     }
     HIPACE_PROFILE("TemperatureDeposition_PlasmaParticleContainer()");
     using namespace amrex::literals;
 
-    // only deposit ux individual on WhichSlice::This
-    const bool deposit_temp_individual = true;
-    const std::string ux_str = deposit_temp_individual ? "ux_" + plasma.GetName() : "ux";
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
     {
         // Create the map with weight, momentum and squared momentum
         amrex::FArrayBox& isl_fab = fields.getSlices(lev)[pti];
+
         const int w = Comps[WhichSlice::This]["w_" + plasma.GetName()];
         const int ux = Comps[WhichSlice::This]["ux_" + plasma.GetName()];
         const int uy = Comps[WhichSlice::This]["uy_" + plasma.GetName()];
@@ -106,7 +104,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx) noexcept
-            {   
+            {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
 
@@ -122,12 +120,13 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                     Aabssqp *= laser_norm_ion;
                 }
 
-                const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip];
-                const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip];
+                const amrex::Real uxp = ptd.rdata(PlasmaIdx::ux)[ip]*clightinv;
+                const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip]*clightinv;
                 amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
-                const amrex::Real uz = (1._rt + ux*ux*clightinv2 + uy*uy*clightinv2 
-                    + 0.5_rt*Aabssqp - psi*psi)/(2.*psi) * clight;
-                const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip];
+                const amrex::Real uzp = (1._rt + uxp*uxp + uyp*uyp
+                    + 0.5_rt*Aabssqp*0. - psi*psi)/(2.*psi);
+                const amrex::Real gamma = (1.0_rt + uxp*uxp + uyp*uyp + psi*psi)/(2.0_rt*psi);
+                const amrex::Real wp = ptd.rdata(PlasmaIdx::w)[ip] * gamma / psi;
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
@@ -141,17 +140,38 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 auto [shape_y, j] =
                 compute_single_shape_factor<false, 0>(ymid, 0);
 
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), w);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), w*ux);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), w*uy);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), w*uz);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[4]), w*ux*ux);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), w*uy*uy);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), w*uz*uz);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), wp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), w*uxp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), w*uyp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), w*uzp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[4]), w*uxp*uxp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), w*uyp*uyp);
+                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), w*uzp*uzp);
             },
             isl_fab.array(),
             isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-            amrex::GpuArray<int, 0>{aabs},
-            amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq});
+            amrex::GpuArray<int, 1>{aabs},
+            amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq}
+        );
+
+
+
+        Array3<amrex::Real> field_arr = isl_fab.array();
+
+        amrex::ParallelFor(
+            to2D(isl_fab.box()),
+            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
+                {
+                    amrex::Real wp_inv = field_arr(i, j, w) == amrex::Real{0} ? amrex::Real{0} : amrex::Real{1} / field_arr(i, j, w);
+                    field_arr(i, j, ux) *= wp_inv;
+                    field_arr(i, j, uy) *= wp_inv;
+                    field_arr(i, j, uz) *= wp_inv;
+                    field_arr(i, j, uxsq) *= wp_inv;
+                    field_arr(i, j, uysq) *= wp_inv;
+                    field_arr(i, j, uzsq) *= wp_inv;
+                }
+        );
+
+
     }
 }

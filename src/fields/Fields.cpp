@@ -96,9 +96,6 @@ Fields::AllocData (
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
             }
-            if (Hipace::m_deposit_temp) {
-                Comps[isl].multi_emplace(N_Comps, "w", "ux", "uy", "uz", "ux^2", "uy^2", "uz^2");
-            }
             if (Hipace::m_deposit_temp_individual) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                     Comps[isl].multi_emplace(N_Comps, "w_" + plasma_name, "ux_" + plasma_name, "uy_" + plasma_name,
@@ -152,9 +149,6 @@ Fields::AllocData (
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
-            }
-            if (Hipace::m_deposit_temp) {
-                Comps[isl].multi_emplace(N_Comps, "w", "ux", "uy", "uz", "ux^2", "uy^2", "uz^2");
             }
             if (Hipace::m_deposit_temp_individual) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
@@ -600,9 +594,6 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
         for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
             setVal(0., lev, WhichSlice::This, "rho_" + plasma_name);
         }
-    }
-    if (Hipace::m_deposit_temp) {
-        setVal(0., lev, WhichSlice::This, "w", "ux", "uy", "uz", "ux^2", "uy^2", "uz^2");
     }
     if (Hipace::m_deposit_temp_individual) {
         for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {

@@ -116,8 +116,6 @@ Hipace::Hipace () :
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
-    m_deposit_temp = m_diags.needsTemp();
-    queryWithParser(pph, "deposit_temp", m_deposit_temp);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
     queryWithParser(pph, "interpolate_neutralizing_background",
@@ -621,7 +619,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
         // deposit w, ux, uy, uz, ux2, uy2 and uz2 for all plasmas
         m_multi_plasma.DepositTemperature(m_fields, WhichSlice::This, m_3D_geom, lev);
-        
+
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
