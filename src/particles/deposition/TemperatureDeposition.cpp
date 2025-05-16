@@ -2,7 +2,7 @@
  *
  * This file is part of HiPACE++.
  *
- * Authors: AlexanderSinn, EyaDammak, MaxThevenet
+ * Authors: EyaDammak, AlexanderSinn 
  * License: BSD-3-Clause-LBNL
  */
 #include "TemperatureDeposition.H"
@@ -26,12 +26,13 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
     if (!Hipace::m_deposit_temp) { // deposit temperature in input
         return;
     }
-    HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
+    HIPACE_PROFILE("TemperatureDeposition_PlasmaParticleContainer()");
     using namespace amrex::literals;
 
     // only deposit ux individual on WhichSlice::This
     const bool deposit_temp_individual = true;
     const std::string ux_str = deposit_temp_individual ? "ux_" + plasma.GetName() : "ux";
+    using Complex = amrex::GpuComplex<amrex::Real>;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
@@ -64,6 +65,8 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
         const amrex::Real clight = pc.c;
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real clightinv2 = clightinv*clightinv;
+
+        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(pti);
 
         // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
 
@@ -99,32 +102,29 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int 
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx) noexcept
             {
+                
+                
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
+
+                Complex A = 0;
+                Complex A_dx = 0;
+                Complex A_dzeta = 0;
+
+                if constexpr (use_laser) {
+                    doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
+                        dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+                }
 
                 const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip];
                 const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip];
                 amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
-                const amrex::Real uz = (1+ux*ux*clightinv2+uy*uy*clightinv2-psi*psi)/(2.*psi)*clight;
+                const amrex::Real uz = (1._rt + ux*ux*clightinv2 + uy*uy*clightinv2 
+                    + 0.5_rt*amrex::abs(A*A) - psi*psi)/(2.*psi) * clight;
                 const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip];
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
-
-                // amrex::Real Aabssqp = 0._rt;
-                // if constexpr (use_laser) {
-                //     doLaserGatherShapeN<0>(xp, yp, Aabssqp, arr, cache_idx[0],
-                //                                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                //     Aabssqp *= laser_norm_ion;
-                // }
-
-                // calculate gamma/psi for plasma particles
-                // const amrex::Real gamma_psi = 0.5_rt * (
-                //     (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv
-                //     + vx_c * vx_c * clightinv * clightinv
-                //     + vy_c * vy_c * clightinv * clightinv
-                //     + 1._rt
-                // );
 
                 // --- Compute shape factors
                 // x direction
