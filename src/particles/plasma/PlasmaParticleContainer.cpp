@@ -451,6 +451,7 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::psi_half_step][pidx] = 1._rt;
+                arrdata_elec[PlasmaIdx::time_integral][pidx] = arrdata_ion[PlasmaIdx::time_integral][ip];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
@@ -721,6 +722,7 @@ LaserIonization (const int islice,
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = ux * phys_const.c;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = uy * phys_const.c;
                 arrdata_elec[PlasmaIdx::psi_half_step][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A)) - uz;
+                arrdata_elec[PlasmaIdx::time_integral][pidx] = arrdata_ion[PlasmaIdx::time_integral][ip];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
