@@ -12,10 +12,12 @@
 #include "particles/beam/MultiBeam.H"
 #include "laser/MultiLaser.H"
 
+// for the MPI datatypes if compiled without MPI
+// this is super bad
+using namespace amrex;
+
 class MultiBuffer
 {
-    // for the MPI datatypes if compiled without MPI
-    using namespace amrex;
 
 public:
 
