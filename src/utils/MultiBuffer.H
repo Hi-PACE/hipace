@@ -12,9 +12,24 @@
 #include "particles/beam/MultiBeam.H"
 #include "laser/MultiLaser.H"
 
-// for the MPI datatypes if compiled without MPI
-// this is super bad
-using namespace amrex;
+#ifndef AMREX_USE_MPI
+// declare MPI datatypes if compiled without MPI
+using MPI_Op       = int;
+using MPI_Comm     = int;
+using MPI_Group    = int;
+using MPI_Datatype = int;
+using MPI_Request  = int;
+struct MPI_Status {};
+static constexpr int MPI_DATATYPE_NULL = 0;
+static constexpr int MPI_REQUEST_NULL  = 0;
+static constexpr int MPI_COMM_WORLD    = 0;
+static constexpr int MPI_COMM_NULL     = 0;
+static constexpr int MPI_GROUP_NULL    = 0;
+static constexpr int MPI_PROC_NULL     = 0;
+static constexpr int MPI_MAX_PROCESSOR_NAME = 64;
+static constexpr int MPI_MINLOC = 0;
+static constexpr int MPI_MAXLOC = 0;
+#endif
 
 class MultiBuffer
 {
