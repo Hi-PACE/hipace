@@ -64,6 +64,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             : dx_inv*dy_inv*dz_inv;
 
         const PhysConst pc = get_phys_const();
+        const int aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
         const amrex::Real clight = pc.c;
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real clightinv2 = clightinv*clightinv;
@@ -150,7 +151,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             },
             isl_fab.array(),
             isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-            amrex::GpuArray<int, 0>{},
+            amrex::GpuArray<int, 0>{aabs},
             amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq});
     }
 }
