@@ -68,8 +68,10 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         const amrex::Real clight = pc.c;
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real clightinv2 = clightinv*clightinv;
-
+        const bool can_ionize = plasma.m_can_ionize;
         const bool use_laser = Hipace::m_use_laser;
+        const amrex::Real laser_norm = (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass)
+            * (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass);
 
         // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
 
@@ -109,10 +111,15 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 const amrex::Real yp = ptd.pos(1, ip);
 
                 amrex::Real Aabssqp = 0._rt;
-
+                amrex::Real laser_norm_ion = laser_norm;
+                if (can_ionize) {
+                    laser_norm_ion *=
+                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                }
                 if (use_laser) {
                     doLaserGatherShapeN<0>(xp, yp, Aabssqp, arr, cache_idx[0],
                                                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                    Aabssqp *= laser_norm_ion;
                 }
 
                 const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip];
