@@ -86,20 +86,56 @@ Ty2_c = all_data_circular['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 Tz2_c = all_data_circular['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_circular = 1./3*(Tx2_c+Ty2_c+Tz2_c)
 
+# calculation of temperature with Open-PMD viewer diagnostics
+ux2_linear, _ = ts_linear.get_field(field='ux^2_elec', iteration=iteration)
+ux2_mean_linear = np.mean(ux2_linear, axis=(1, 2))
+ux2_average_linear = statistics.mean(ux2_mean_linear[0:10])
+
+uy2_linear, _ = ts_linear.get_field(field='uy^2_elec', iteration=iteration)
+uy2_mean_linear = np.mean(uy2_linear, axis=(1, 2))
+uy2_average_linear = statistics.mean(uy2_mean_linear[0:10])
+
+uz2_linear, _ = ts_linear.get_field(field='uz^2_elec', iteration=iteration)
+uz2_mean_linear = np.mean(uz2_linear, axis=(1, 2))
+uz2_average_linear = statistics.mean(uz2_mean_linear[0:10])
+
+temp_diags_linear = 1./3*(ux2_linear + uy2_linear +uz2_linear)*scc.m_e*scc.c**2/scc.e
+
+ux2_circular, _ = ts_circular.get_field(field='ux^2_elec', iteration=iteration)
+ux2_mean_circular = np.mean(ux2_circular, axis=(1, 2))
+ux2_average_circular = statistics.mean(ux2_mean_circular[0:10])
+
+uy2_circular, _ = ts_circular.get_field(field='uy^2_elec', iteration=iteration)
+uy2_mean_circular = np.mean(uy2_circular, axis=(1, 2))
+uy2_average_circular = statistics.mean(uy2_mean_circular[0:10])
+
+uz2_circular, _ = ts_circular.get_field(field='uz^2_elec', iteration=iteration)
+uz2_mean_circular = np.mean(uz2_circular, axis=(1, 2))
+uz2_average_circular = statistics.mean(uz2_mean_circular[0:10])
+
+temp_diags_circular = 1./3*(ux2_circular + uy2_circular +uz2_circular)*scc.m_e*scc.c**2/scc.e
+
 temp_eV_warpx_linear = 1.00286009
 temp_eV_warpx_circular = 9.68224535
 
-print(f"temp_eV_warpx_linear = {temp_eV_warpx_linear}")
-print(f"temp_eV_hipace_linear = {temp_eV_linear}")
+print(f"temperature (eV) Warpx, linear = {temp_eV_warpx_linear}")
+print(f"temperature (eV) HiPACE++, linear with insitu diagnostics = {temp_eV_linear}")
+print(f"temperature (eV) HiPACE++, linear with Open-PMD diagnostics = {temp_diags_linear}")
 
-print(f"temp_eV_warpx_circular = {temp_eV_warpx_circular}")
-print(f"temp_eV_hipace_circular = {temp_eV_circular}")
+print(f"temperature (eV) Warpx, circular = {temp_eV_warpx_circular}")
+print(f"temperature (eV) HiPACE++, circular with insitu diagnostics = {temp_eV_circular}")
+print(f"temperature (eV) HiPACE++, circular with Open-PMD diagnostics = {temp_diags_circular}")
 
 relative_diff_temp_linear = np.abs( ( temp_eV_linear - temp_eV_warpx_linear ) / temp_eV_warpx_linear )
 relative_diff_temp_circular = np.abs( ( temp_eV_circular - temp_eV_warpx_circular ) / temp_eV_warpx_circular )
 
+relative_diff_temp_linear_diags = np.abs( ( temp_diags_linear - temp_eV_warpx_linear ) / temp_eV_warpx_linear )
+relative_diff_temp_circular_diags = np.abs( ( temp_diags_circular - temp_eV_warpx_circular ) / temp_eV_warpx_circular )
+
 assert ( (relative_diff_linear < tolerance) and \
          (relative_diff_circular < tolerance) and \
          (relative_diff_temp_linear < tolerance) and \
-         (relative_diff_temp_circular < tolerance)), \
+         (relative_diff_temp_circular < tolerance) \
+         (relative_diff_temp_linear_diags < tolerance) and \
+         (relative_diff_temp_circular_diags < tolerance)), \
          'Test laser_ionization did not pass'
