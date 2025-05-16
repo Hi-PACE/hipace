@@ -12,7 +12,7 @@ on: [push, pull_request]
 jobs:
   build_hip:
     name: HIP SP
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     # -Werror
     env: {CXXFLAGS: "-Wno-deprecated-declarations -Wno-error=pass-failed"}
     steps:
@@ -20,7 +20,7 @@ jobs:
 
     - name: install dependencies
       shell: bash
-      run: .github/workflows/setup/hip.sh 6.3.2
+      run: .github/workflows/setup/hip.sh
 
     - name: CCache Cache
       uses: actions/cache@v4
