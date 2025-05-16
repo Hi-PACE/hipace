@@ -88,7 +88,7 @@ MultiPlasma::DepositCurrent (
 
 void
 MultiPlasma::DepositTemperature (
-    Fields & fields, int which_slice,    
+    Fields & fields, int which_slice,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
