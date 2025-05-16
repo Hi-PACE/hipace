@@ -113,7 +113,7 @@ uz2_circular, _ = ts_circular.get_field(field='uz^2_elec', iteration=iteration)
 uz2_mean_circular = np.mean(uz2_circular, axis=(1, 2))
 uz2_average_circular = statistics.mean(uz2_mean_circular[0:10])
 
-temp_diags_circular = 1./3*(ux2_circular + uy2_circular +uz2_circular)*scc.m_e*scc.c**2/scc.e
+temp_diags_circular = 1./3*(ux2_average_circular + uy2_average_circular +uz2_average_circular)*scc.m_e*scc.c**2/scc.e
 
 temp_eV_warpx_linear = 1.00286009
 temp_eV_warpx_circular = 9.68224535
