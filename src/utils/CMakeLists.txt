@@ -12,4 +12,5 @@ target_sources(HiPACE
     IOUtil.cpp
     GridCurrent.cpp
     MultiBuffer.cpp
+    Parser.cpp
 )

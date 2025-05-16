@@ -21,13 +21,13 @@ Thereby, the following constants are predefined:
 ============ ========================= =====================
 **variable** **name**                  **Value**
 q_e          elementary charge         1.602176634e-19
-m_e          electron mass             9.1093837015e-31
-m_p          proton mass               1.67262192369e-27
-epsilon0     vacuum permittivity       8.8541878128e-12
-mu0          vacuum permeability       1.25663706212e-06
+m_e          electron mass             9.1093837139e-31
+m_p          proton mass               1.67262192595e-27
+epsilon0     vacuum permittivity       8.8541878188e-12
+mu0          vacuum permeability       1.2566370612685e-06
 clight       speed of light            299'792'458.
-hbar         reduced Planck constant   1.054571817e-34
-r_e          classical electron radius 2.817940326204929e-15
+hbar         reduced Planck constant   1.0545718176461565e-34
+r_e          classical electron radius 2.8179403205e-15
 ============ ========================= =====================
 
 For a list of supported functions see the
@@ -1191,3 +1191,29 @@ or beam in-situ diagnostic as ``[sx], [sx^2], [sy], [sy^2], [sz], [sz^2]``.
 
 * ``<beam name> or beams.spin_anom`` (`bool`) optional (default `0.00115965218128`)
     The anomalous magnetic moment. The default value is the moment for electrons.
+
+
+Parser
+------
+
+* ``parser.debug_print`` (list of `strings`) optional
+    Print an evaluated parser expression for debugging. The fist `string` from the input is the
+    expression to evaluate and all following `strings` can be used to define constants or variables
+    that are used in the expression. Constants are defined by ``"<constant name>=<value>"`` and
+    variables by ``"<variable name>=[<range begin>,<range end>,<num values>]"``, where the expression
+    will be evaluated at ``<num values>`` equally spaced points between ``<range begin>`` and
+    ``<range end>``. These are the same points as
+    ``numpy.linspace(<range begin>,<range end>,<num values>)`` gives. Up to four variables are
+    supported. Note that constant and variable definitions have to be enclosed in double-quotes and
+    if provided through command-line parameters in bash, the full list of strings needs to be
+    enclosed in single-quotes. Example:
+
+    .. code-block:: bash
+
+        parser.debug_print = "10*x + y" "x=[0,9,10]" "y=2"
+
+    Output:
+
+    .. code-block:: bash
+
+        Parser Debug Print "10*x + y" = [2, 12, 22, 32, 42, 52, 62, 72, 82, 92]
