@@ -19,6 +19,7 @@ my_constants.lambda0_nm = 800
 hipace.file_prefix = laser_ionization.1Rank
 hipace.do_tiling = 0
 hipace.deposit_rho_individual = 1
+hipace.deposit_temp_individual = 1
 
 geometry.prob_lo     = -10.*kp_inv   -10.*kp_inv   -15.*kp_inv #box shifted
 geometry.prob_hi     =  10.*kp_inv    10.*kp_inv    5.*kp_inv
