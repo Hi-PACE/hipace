@@ -763,7 +763,7 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 // condition for injection
-                amrex::Real condition = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip] - dt;
+                const amrex::Real condition = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip] - dt;
 
                 if (ptd_plasma.id(ip) == 2 && (condition > 0._rt)){
                     ptd_plasma.id(ip) = 3; // set the injected electron ID to 3
@@ -786,6 +786,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
     const PhysConst phys_const = get_phys_const();
+    const amrex::Real clight = phys_const.c;
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
     auto laser_geom = laser.GetLaserGeom();
@@ -849,6 +850,7 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         const amrex::Real z_lo = gm[0].ProbLo()[2];
         const amrex::Real dt = Hipace::GetInstance().m_dt;
         const amrex::Real f = m_injection_weight_factor;
+        const int n_subcycles = beam_elec.m_n_subcycles;
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
@@ -885,11 +887,12 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                     amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                     amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*amrex::abs(A*A))/(2.*psi)*phys_const.c;
-                    amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
-                    const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A));
-                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * gam / (psi) * f;
+                    //amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
+                    //const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A));
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * dt * clight * dzeta_inv;
                     // conservation of j_x and j_y
-                    ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = 0;
+                    // don't push beam on this time step
+                    ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = n_subcycles;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                     ptd_plasma.id(ip).make_invalid();
                 }
