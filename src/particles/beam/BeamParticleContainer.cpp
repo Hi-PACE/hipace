@@ -383,9 +383,9 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
                 if (do_spin_tracking) {
-                    ptd.m_runtime_rdata[0][ip] = ptd_init.m_runtime_rdata[0][idx_src];
-                    ptd.m_runtime_rdata[1][ip] = ptd_init.m_runtime_rdata[1][idx_src];
-                    ptd.m_runtime_rdata[2][ip] = ptd_init.m_runtime_rdata[2][idx_src];
+                    ptd.rdata(BeamIdx::sx)[ip] = ptd_init.rdata(BeamIdx::sx)[idx_src];
+                    ptd.rdata(BeamIdx::sy)[ip] = ptd_init.rdata(BeamIdx::sy)[idx_src];
+                    ptd.rdata(BeamIdx::sz)[ip] = ptd_init.rdata(BeamIdx::sz)[idx_src];
                 }
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
