@@ -87,30 +87,34 @@ Tz2_c = all_data_circular['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_circular = 1./3*(Tx2_c+Ty2_c+Tz2_c)
 
 # calculation of temperature with Open-PMD viewer diagnostics
+wf_l, _ = ts_linear.get_field(field='w_elec', iteration=iteration)
+
 ux2_linear, _ = ts_linear.get_field(field='ux^2_elec', iteration=iteration)
-ux2_mean_linear = np.mean(ux2_linear, axis=(1, 2))
+ux2_mean_linear = np.sum(np.sum(ux2_linear*wf_l, axis=1),axis=1) / np.sum(np.sum(wf_l, axis=1),axis=1)
 ux2_average_linear = statistics.mean(ux2_mean_linear[0:10])
 
 uy2_linear, _ = ts_linear.get_field(field='uy^2_elec', iteration=iteration)
-uy2_mean_linear = np.mean(uy2_linear, axis=(1, 2))
+uy2_mean_linear = np.sum(np.sum(ux2_linear*wf_l, axis=1),axis=1) / np.sum(np.sum(wf_l, axis=1),axis=1)
 uy2_average_linear = statistics.mean(uy2_mean_linear[0:10])
 
 uz2_linear, _ = ts_linear.get_field(field='uz^2_elec', iteration=iteration)
-uz2_mean_linear = np.mean(uz2_linear, axis=(1, 2))
+uz2_mean_linear = np.sum(np.sum(uz2_linear*wf_l, axis=1),axis=1) / np.sum(np.sum(wf_l, axis=1),axis=1)
 uz2_average_linear = statistics.mean(uz2_mean_linear[0:10])
 
 temp_diags_linear = 1./3*(ux2_average_linear + uy2_average_linear +uz2_average_linear)*scc.m_e*scc.c**2/scc.e
 
+wf_c, _ = ts_circular.get_field(field='w_elec', iteration=iteration)
+
 ux2_circular, _ = ts_circular.get_field(field='ux^2_elec', iteration=iteration)
-ux2_mean_circular = np.mean(ux2_circular, axis=(1, 2))
+ux2_mean_circular = np.sum(np.sum(ux2_circular*wf_c, axis=1),axis=1) / np.sum(np.sum(wf_c, axis=1),axis=1)
 ux2_average_circular = statistics.mean(ux2_mean_circular[0:10])
 
 uy2_circular, _ = ts_circular.get_field(field='uy^2_elec', iteration=iteration)
-uy2_mean_circular = np.mean(uy2_circular, axis=(1, 2))
+uy2_mean_circular = np.sum(np.sum(uy2_circular*wf_c, axis=1),axis=1) / np.sum(np.sum(wf_c, axis=1),axis=1)
 uy2_average_circular = statistics.mean(uy2_mean_circular[0:10])
 
 uz2_circular, _ = ts_circular.get_field(field='uz^2_elec', iteration=iteration)
-uz2_mean_circular = np.mean(uz2_circular, axis=(1, 2))
+uz2_mean_circular = np.sum(np.sum(uz2_circular*wf_c, axis=1),axis=1) / np.sum(np.sum(wf_c, axis=1),axis=1)
 uz2_average_circular = statistics.mean(uz2_mean_circular[0:10])
 
 temp_diags_circular = 1./3*(ux2_average_circular + uy2_average_circular +uz2_average_circular)*scc.m_e*scc.c**2/scc.e
