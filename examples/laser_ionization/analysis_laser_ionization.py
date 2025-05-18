@@ -94,7 +94,7 @@ ux2_mean_linear = np.sum(np.sum(ux2_linear*wf_l, axis=1),axis=1) / np.sum(np.sum
 ux2_average_linear = statistics.mean(ux2_mean_linear[0:10])
 
 uy2_linear, _ = ts_linear.get_field(field='uy^2_elec', iteration=iteration)
-uy2_mean_linear = np.sum(np.sum(ux2_linear*wf_l, axis=1),axis=1) / np.sum(np.sum(wf_l, axis=1),axis=1)
+uy2_mean_linear = np.sum(np.sum(uy2_linear*wf_l, axis=1),axis=1) / np.sum(np.sum(wf_l, axis=1),axis=1)
 uy2_average_linear = statistics.mean(uy2_mean_linear[0:10])
 
 uz2_linear, _ = ts_linear.get_field(field='uz^2_elec', iteration=iteration)
