@@ -142,4 +142,4 @@ assert ( (relative_diff_linear < tolerance) and \
          (relative_diff_temp_circular < tolerance) \
          (relative_diff_temp_linear_diags < tolerance) and \
          (relative_diff_temp_circular_diags < tolerance)), \
-         'Test laser_ionization did not pass'
+         'Test laser_ionization did not pass')
