@@ -806,7 +806,7 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
                 amrex::Real uz = (1 + ux*ux + uy*uy - psi*psi
                     + 0.5_rt*amrex::abs(A*A))/(2.*psi);
 
-                const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A))
+                const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A));
                 const amrex::Real psi_inv = 1._rt / psi;
                 const amrex::Real gam_psi = gam * psi_inv;
 
