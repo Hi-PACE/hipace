@@ -614,6 +614,11 @@ Hipace::SolveOneSlice (int islice, int step)
     // write laser aabs into fields MultiFab
     m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
 
+    // detect particles to be injected
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_multi_plasma.DetectInjection(lev, m_fields, m_multi_laser, islice);
+    }
+
     // deposit current
     for (int lev=0; lev<current_N_level; ++lev) {
         if (m_explicit) {
@@ -715,10 +720,8 @@ Hipace::SolveOneSlice (int islice, int step)
     // plasma laser ionization
     m_multi_plasma.DoLaserIonization(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
 
-    // injection
-    for (int lev=0; lev<current_N_level; ++lev) {
-        m_multi_plasma.DoLaserInjection(lev, m_fields, m_multi_laser, m_3D_geom, islice);
-    }
+    // transfer of particles for injection
+    m_multi_plasma.DoTransfer(m_multi_laser, m_3D_geom, islice);
 
     // Push plasma particles
     for (int lev=0; lev<current_N_level; ++lev) {

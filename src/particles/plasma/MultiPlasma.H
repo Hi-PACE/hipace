@@ -38,7 +38,6 @@ public:
                    amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm,
                    MultiBeam& beams);
 
-
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *
      * \param[in,out] fields the general field class, modified by this function
@@ -112,15 +111,22 @@ public:
     void DoLaserIonization (const int islice, const amrex::Geometry& laser_geom,
                             const MultiLaser& laser);
 
-    /** Do the transfer of ionized plasma particles to beam particles
+    /** Detect the plasma particles to be injected
      *
      * \param[in] lev MR level
-     * \param[in] fields the general field class
+     * \param[in,out] fields the general field class, modified by this function
+     * \param[in] laser MultiLaser object containing the laser details
+     * \param[in] islice Slice index corresponding to the current simulation slice
+     */
+    void DetectInjection (const int lev, const Fields& fields, const MultiLaser& laser, const int islice);
+
+    /** Do the transfer of detected ionized plasma particles to beam particles
+     *
      * \param[in] laser MultiLaser object containing the laser details
      * \param[in] gm Geometry object for the whole domain
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void DoLaserInjection (const int lev, const Fields& fields, const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice);
+    void DoTransfer (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     bool AnySpeciesNeutralizeBackground () const;
