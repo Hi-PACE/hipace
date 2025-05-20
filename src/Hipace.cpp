@@ -256,11 +256,11 @@ Hipace::Hipace () :
     m_use_gird_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str)
         || m_use_gird_external_fields;
     m_grid_external_fields[3] = makeFunctionWithParser<4>(field_str[0],
-        m_grid_external_fields_parser[4], {"x", "y", "z", "t"});
+        m_grid_external_fields_parser[3], {"x", "y", "z", "t"});
     m_grid_external_fields[4] = makeFunctionWithParser<4>(field_str[1],
-        m_grid_external_fields_parser[5], {"x", "y", "z", "t"});
+        m_grid_external_fields_parser[4], {"x", "y", "z", "t"});
     m_grid_external_fields[5] = makeFunctionWithParser<4>(field_str[2],
-        m_grid_external_fields_parser[6], {"x", "y", "z", "t"});
+        m_grid_external_fields_parser[5], {"x", "y", "z", "t"});
 }
 
 void
