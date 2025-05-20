@@ -245,7 +245,7 @@ Hipace::Hipace () :
 
     // external fields applied to the grid
     amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
-    m_use_gird_external_fields = queryWithParser(pph, "grid_external_E(x,y,z,t)", field_str);
+    m_use_grid_external_fields = queryWithParser(pph, "grid_external_E(x,y,z,t)", field_str);
     m_grid_external_fields[0] = makeFunctionWithParser<4>(field_str[0],
         m_grid_external_fields_parser[0], {"x", "y", "z", "t"});
     m_grid_external_fields[1] = makeFunctionWithParser<4>(field_str[1],
@@ -253,8 +253,8 @@ Hipace::Hipace () :
     m_grid_external_fields[2] = makeFunctionWithParser<4>(field_str[2],
         m_grid_external_fields_parser[2], {"x", "y", "z", "t"});
     field_str = {"0", "0", "0"};
-    m_use_gird_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str)
-        || m_use_gird_external_fields;
+    m_use_grid_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str)
+        || m_use_grid_external_fields;
     m_grid_external_fields[3] = makeFunctionWithParser<4>(field_str[0],
         m_grid_external_fields_parser[3], {"x", "y", "z", "t"});
     m_grid_external_fields[4] = makeFunctionWithParser<4>(field_str[1],
@@ -1061,7 +1061,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
 void
 Hipace::AddGridExternalFields (const int lev, const int islice)
 {
-    if (!m_use_gird_external_fields) {
+    if (!m_use_grid_external_fields) {
         return;
     }
     HIPACE_PROFILE("Hipace::AddGridExternalFields()");
