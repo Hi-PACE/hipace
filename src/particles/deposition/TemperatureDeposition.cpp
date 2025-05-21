@@ -53,13 +53,11 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         // Extract box properties
         const amrex::Real dx_inv = gm[lev].InvCellSize(0);
         const amrex::Real dy_inv = gm[lev].InvCellSize(1);
-        const amrex::Real dz_inv = gm[lev].InvCellSize(2);
         // in normalized units this is rescaling dx and dy for MR,
         // while in SI units it's the factor for charge to charge density
         const PhysConst pc = get_phys_const();
         const int aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
         const amrex::Real clightinv = 1.0_rt/pc.c;
-        const amrex::Real clightinv2 = clightinv*clightinv;
         const bool can_ionize = plasma.m_can_ionize;
         const bool use_laser = Hipace::m_use_laser;
         const amrex::Real laser_norm = (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass)
