@@ -1028,7 +1028,7 @@ Field diagnostics
 
     * **Predictor-Corrector Solver:**
       Includes ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam.
-      ``rhomjz`` is defined as :math:`\rho - j_z/c`.
+      ``rhomjz`` is defined as :math:`\rho-j_z/c`.
 
     * **Explicit Solver:**
       Separates the current and charge densities for the beam and plasmas:
