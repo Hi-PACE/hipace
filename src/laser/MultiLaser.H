@@ -171,6 +171,9 @@ public:
     /** Get the geometry of the Laser Box */
     const amrex::Geometry& GetLaserGeom () const { return m_laser_geom_3D; }
 
+    /** Whether the polarization is linear. If not, circular polarization is assumed */
+    bool LinearPolarization () const { return m_linear_polarization; }
+
     /** If the laser geometry includes this slice
      * \param[in] islice slice index
      */
@@ -194,6 +197,7 @@ private:
      * the central wavelength influences the solver. As long as all the lasers are on the same grid
      * (part of MultiLaser), this must be a property of MultiLaser. */
     amrex::Real m_lambda0 {0.};
+    bool m_linear_polarization {true}; /**< Whether polarization is linear. Otherwise, circular */
     amrex::Vector<std::string> m_names {"no_laser"}; /**< name of the laser */
     int m_nlasers; /**< Number of laser pulses */
     amrex::Vector<Laser> m_all_lasers; /**< Each is a laser pulse */

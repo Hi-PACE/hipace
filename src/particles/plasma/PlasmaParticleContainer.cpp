@@ -3,7 +3,7 @@
  * This file is part of HiPACE++.
  *
  * Authors: AlexanderSinn, Andrew Myers, MaxThevenet, Severin Diederichs
- * Weiqun Zhang, Angel Ferran Pousa
+ * Weiqun Zhang, Angel Ferran Pousa, EyaDammak
  * License: BSD-3-Clause-LBNL
  */
 #include "Hipace.H"
@@ -65,9 +65,14 @@ PlasmaParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
 
     bool ion_lev_specified = queryWithParser(pp, "initial_ion_level", m_init_ion_lev);
-    m_can_ionize = pp.contains("ionization_product");
+    m_can_field_ionize = pp.contains("ionization_product");
 
-    queryWithParser(pp, "can_ionize", m_can_ionize);
+    queryWithParser(pp, "can_ionize", m_can_field_ionize);
+    m_can_laser_ionize = false;
+    queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
+
+    m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
+
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
@@ -168,6 +173,7 @@ PlasmaParticleContainer::ReadParameters ()
         "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
         "to use the fine plasma patch feature");
     queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
+    queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
 }
 
 void
@@ -265,7 +271,7 @@ IonizationModule (const int lev,
                   const Fields& fields,
                   const amrex::Real background_density_SI)
 {
-    if (!m_can_ionize) return;
+    if (!m_can_field_ionize) return;
     HIPACE_PROFILE("PlasmaParticleContainer::IonizationModule()");
 
     using namespace amrex::literals;
@@ -292,8 +298,6 @@ IonizationModule (const int lev,
         amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
 
-        const int depos_order_xy = Hipace::m_depos_order_xy;
-
         auto& plevel_ion = GetParticles(0);
         auto index = std::make_pair(mfi_ion.index(), mfi_ion.LocalTileIndex());
         if(plevel_ion.find(index) == plevel_ion.end()) continue;
@@ -304,7 +308,7 @@ IonizationModule (const int lev,
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
 
         const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
-        // calcuation of E0 in SI units for denormalization
+        // Calculation of E0 in SI units for denormalization
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
                                          (PhysConstSI::ep0 * PhysConstSI::m_e) );
@@ -331,6 +335,11 @@ IonizationModule (const int lev,
 
         long num_ions = ptile_ion.numParticles();
 
+
+        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
+        // and calculates ionization probability. If ionization occurs, it increments
+        // `p_num_new_electrons` to calculate the number of ionized electrons.
+        // It also constructs a mask with 1 boolean per macro-ion: 1 if ionized, 0 otherwise.
         amrex::AnyCTO(
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>
@@ -338,7 +347,8 @@ IonizationModule (const int lev,
                 Hipace::m_depos_order_xy
             },
             [&] (auto cto_func) {
-                amrex::ParallelForRNG(num_ions, cto_func);
+                amrex::ParallelForRNG(num_ions, cto_func); // enables the use of amrex::Random within the loop
+
             },
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
@@ -346,11 +356,11 @@ IonizationModule (const int lev,
             if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
                 amrex::ConstParticleCPUWrapper(idcpup[ip]) != lev) return;
 
-            // avoid temp slice
+            // Avoid temp slice
             const amrex::Real xp = x_prev[ip];
             const amrex::Real yp = y_prev[ip];
 
-            // define field at particle position reals
+            // Define field at particle position reals
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
             amrex::ParticleReal Bxp = 0., Byp = 0., Bzp = 0.;
 
@@ -379,7 +389,7 @@ IonizationModule (const int lev,
             {
                 ion_lev[ip] += 1;
                 p_ion_mask[ip] = 1;
-                amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u );
+                amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
             }
         });
         amrex::Gpu::streamSynchronize();
@@ -387,12 +397,12 @@ IonizationModule (const int lev,
         if (num_new_electrons.dataValue() == 0) continue;
 
         if(Hipace::m_verbose >= 3) {
-            amrex::Print() << "Number of ionized Plasma Particles: "
+            amrex::Print() << "Number of ionized Plasma Particles (field): "
             << num_new_electrons.dataValue() << "\n";
         }
 
 
-        // resize electron particle tile
+        // Resize electron particle tile
         const auto old_size = ptile_elec.numParticles();
         const auto new_size = old_size + num_new_electrons.dataValue();
         ptile_elec.resize(new_size);
@@ -408,15 +418,17 @@ IonizationModule (const int lev,
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
 
+        // This kernel adds the new ionized electrons to the Plasma Particle Container
         amrex::ParallelFor(num_ions,
             [=] AMREX_GPU_DEVICE (long ip) {
 
             if(p_ion_mask[ip] != 0) {
-                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u );
+                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
-                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2; // only for valid/invalid
+                // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
@@ -424,7 +436,7 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
                 arrdata_elec[PlasmaIdx::ux     ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy     ][pidx] = 0._rt;
-                // later we could consider adding a finite temperature to the ionized electrons
+                // Later we could consider adding a finite temperature to the ionized electrons
                 arrdata_elec[PlasmaIdx::psi    ][pidx] = 1._rt;
                 arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
@@ -443,7 +455,277 @@ IonizationModule (const int lev,
             }
         });
 
-        // synchronize before ion_mask and ip_elec go out of scope
+        // Synchronize before ion_mask and ip_elec go out of scope
+        amrex::Gpu::streamSynchronize();
+    }
+}
+
+void
+PlasmaParticleContainer::
+LaserIonization (const int islice,
+                 const amrex::Geometry& laser_geom,
+                 const MultiLaser& laser,
+                 const amrex::Real background_density_SI)
+{
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_ionize || laser.UseLaser(),
+    "Error: LaserIonization requires the laser to be enabled in the current slice.");
+    if (!m_can_laser_ionize || !laser.UseLaser(islice)) return;
+    HIPACE_PROFILE("PlasmaParticleContainer::LaserIonization()");
+
+    using namespace amrex::literals;
+    using Complex = amrex::GpuComplex<amrex::Real>;
+    constexpr Complex I(0.,1.);
+
+    const PhysConst phys_const = get_phys_const();
+
+    // Loop over particle boxes with both ion and electron Particle Containers at the same time
+    for (amrex::MFIter mfi_ion = MakeMFIter(0, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
+    {
+        // Extract laser array
+        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(mfi_ion);
+
+        const CheckDomainBounds laser_bounds {laser_geom};
+
+        // Extract properties associated with physical size of the box
+        const amrex::Real dx_inv = laser_geom.InvCellSize(0);
+        const amrex::Real dy_inv = laser_geom.InvCellSize(1);
+        const amrex::Real dzeta_inv = laser_geom.InvCellSize(2);
+
+        // Offset for converting positions to indexes
+        amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
+        amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
+
+        auto& plevel_ion = GetParticles(0);
+        auto index = std::make_pair(mfi_ion.index(), mfi_ion.LocalTileIndex());
+        if(plevel_ion.find(index) == plevel_ion.end()) continue;
+        auto& ptile_elec = m_product_pc->DefineAndReturnParticleTile(0,
+            mfi_ion.index(), mfi_ion.LocalTileIndex());
+        auto& ptile_ion = plevel_ion.at(index);
+
+        auto& soa_ion = ptile_ion.GetStructOfArrays(); // for momenta and weights
+
+        const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
+        // Calcuation of E0 in SI units for denormalization
+        const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
+                                         PhysConstSI::q_e*PhysConstSI::q_e /
+                                         (PhysConstSI::ep0 * PhysConstSI::m_e) );
+        const amrex::Real E0 = Hipace::m_normalized_units ?
+                               wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
+        const amrex::Real lambda0 = laser.GetLambda0();
+        const amrex::Real omega0 = 2.0 * MathConst::pi * phys_const.c / lambda0;
+        const bool linear_polarization = laser.LinearPolarization();
+
+        int * const ion_lev = soa_ion.GetIntData(PlasmaIdx::ion_lev).data();
+        const amrex::Real * const x_prev = soa_ion.GetRealData(PlasmaIdx::x_prev).data();
+        const amrex::Real * const y_prev = soa_ion.GetRealData(PlasmaIdx::y_prev).data();
+        const amrex::Real * const uxp = soa_ion.GetRealData(PlasmaIdx::ux_half_step).data();
+        const amrex::Real * const uyp = soa_ion.GetRealData(PlasmaIdx::uy_half_step).data();
+        const amrex::Real * const psip =soa_ion.GetRealData(PlasmaIdx::psi_half_step).data();
+        const auto * idcpup = soa_ion.GetIdCPUData().data();
+
+        // Make Ion Mask and load ADK prefactors
+        // Ion Mask is necessary to only resize electron particle tile once
+        amrex::Gpu::DeviceVector<uint8_t> ion_mask(ptile_ion.numParticles(), 0);
+        uint8_t* AMREX_RESTRICT p_ion_mask = ion_mask.data();
+        amrex::Gpu::DeviceScalar<uint32_t> num_new_electrons(0);
+        uint32_t* AMREX_RESTRICT p_num_new_electrons = num_new_electrons.dataPtr();
+        amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor.data();
+        amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor.data();
+        amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
+        amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
+        amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
+        amrex::Real* AMREX_RESTRICT laser_dp_second_prefactor = m_laser_dp_second_prefactor.data();
+
+        long num_ions = ptile_ion.numParticles();
+
+        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
+        // and calculates ionization probability. If ionization occurs, it increments
+        // `p_num_new_electrons` to calculate the number of ionized electrons.
+        // It also constructs a mask with 1 boolean per macro-ion: 1 if ionized, 0 otherwise.
+        amrex::AnyCTO(
+            amrex::TypeList<
+                amrex::CompileTimeOptions<0, 1, 2, 3>
+            >{}, {
+                Hipace::m_depos_order_xy
+            },
+            [&] (auto cto_func) {
+                amrex::ParallelForRNG(num_ions, cto_func); // enables the use of `amrex::Random` within the loop
+
+            },
+            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
+                                  auto depos_order_xy) {
+
+            // Avoid temp slice
+            const amrex::Real xp = x_prev[ip];
+            const amrex::Real yp = y_prev[ip];
+
+            if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
+                !laser_bounds.contains(xp, yp)) return;
+
+            Complex A = 0;
+            Complex A_dx = 0;
+            Complex A_dzeta = 0;
+
+            doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
+                dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+
+            // Convert from vector potential to electric field. Units are fixed later.
+            const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
+            const Complex El = - A_dx * phys_const.c; // longitudinal component
+
+            // Get amplitude of the electric field envelope and normalize to correct SI unit.
+            amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
+            Ep *= phys_const.m_e * phys_const.c / phys_const.q_e * E0;
+
+            // Compute probability of ionization p
+            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
+                                               + uyp[ip] * uyp[ip] * clightsq
+                                               + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
+            const int ion_lev_loc = ion_lev[ip];
+            // gamma / (psi + 1) to complete dt for QSA
+            amrex::Real w_dtau_dc = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
+                std::pow(Ep, adk_power[ion_lev_loc]) *
+                std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
+
+            amrex::Real const w_dtau_ac = w_dtau_dc *
+                (linear_polarization ? std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]) : 1._rt);
+
+            amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
+
+            amrex::Real random_draw = amrex::Random(engine);
+            if (random_draw < p)
+            {
+                ion_lev[ip] += 1;
+                p_ion_mask[ip] = 1;
+                amrex::Gpu::Atomic::Add( p_num_new_electrons, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
+            }
+        });
+        amrex::Gpu::streamSynchronize();
+
+        if (num_new_electrons.dataValue() == 0) continue;
+
+        if(Hipace::m_verbose >= 3) {
+            amrex::Print() << "Number of ionized Plasma Particles (laser): "
+            << num_new_electrons.dataValue() << "\n";
+        }
+
+
+        // Resize electron particle tile
+        const auto old_size = ptile_elec.numParticles();
+        const auto new_size = old_size + num_new_electrons.dataValue();
+        ptile_elec.resize(new_size);
+
+        // Load electron soa and aos after resize
+        auto arrdata_ion = ptile_ion.GetStructOfArrays().realarray();
+        auto arrdata_elec = ptile_elec.GetStructOfArrays().realarray();
+        auto int_arrdata_elec = ptile_elec.GetStructOfArrays().intarray();
+        auto idcpu_elec = ptile_elec.GetStructOfArrays().GetIdCPUData().data();
+        auto idcpu_ion = ptile_ion.GetStructOfArrays().GetIdCPUData().data();
+
+        const int init_ion_lev = m_product_pc->m_init_ion_lev;
+
+        amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
+        uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
+
+        // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time.
+        // It calculates the momentum of ionized electrons based on equations (B8) and (B9)
+        // from the F. Massimo (2020) article and equation (12) from the P. Tomassini (2021) article.
+        // Additionally, it computes the energy of emitted electrons and assigns their properties
+        // (momentum, position, etc.) to newly created electrons in the plasma container.
+        amrex::AnyCTO(
+            amrex::TypeList<
+                amrex::CompileTimeOptions<0, 1, 2, 3>
+            >{}, {
+                Hipace::m_depos_order_xy
+            },
+            [&] (auto cto_func) {
+                amrex::ParallelForRNG(num_ions, cto_func);
+            },
+            [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
+                                  auto depos_order_xy) {
+
+            if(p_ion_mask[ip] != 0) {
+
+                // Avoid temp slice
+                const amrex::Real xp = x_prev[ip];
+                const amrex::Real yp = y_prev[ip];
+
+                if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0 ||
+                    !laser_bounds.contains(xp, yp)) return;
+
+                Complex A = 0;
+                Complex A_dx = 0;
+                Complex A_dzeta = 0;
+
+                doLaserGatherShapeN<depos_order_xy>(xp, yp, A, A_dx, A_dzeta, laser_arr,
+                    dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+
+                amrex::Real ux = 0._rt;
+                amrex::Real uy = 0._rt;
+                amrex::Real uz = 0._rt;
+
+                if (linear_polarization) {
+                    // Get the level from which the electron was ionized.
+                    // The -1 is needed as this variable was incremented in the ionization kernel above.
+                    const int ion_lev_loc = ion_lev[ip]-1;
+                    const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
+                    const Complex El = - A_dx * phys_const.c; // longitudinal component
+                    amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
+                    Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
+                    Ep *= E0;
+                    const amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc];
+                    const amrex::Real delta2 = delta * delta;
+                    const amrex::Real delta4 = delta2 * delta2;
+                    const amrex::Real alpha = laser_dp_second_prefactor[ion_lev_loc];
+                    const amrex::Real s1 = - (7._rt/4._rt) + alpha / 2._rt;
+                    const amrex::Real s2 = (1._rt/16._rt) * ( 8._rt * (alpha*alpha) - 68._rt*alpha + 131._rt );
+                    const amrex::Real width_p = amrex::abs(A) * delta * (1._rt + s1*delta2 + s2*delta4);
+                    amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
+                    ux = p_pol; // linear polarization is assumed along x.
+                    uz = (amrex::abs(A * A) * 0.25_rt + p_pol * p_pol * 0.5_rt);
+                } else {
+                    amrex::Real const angle = amrex::Random(engine) * 2._rt * MathConst::pi;
+                    // A_t = A (e_x +/- i e_y) in circular polarization.
+                    // ux and uy differ from Massimo PRE 2020 by a factor of sqrt(2) due to different
+                    // convention for linear vs. circular polarization.
+                    ux = std::sqrt(amrex::abs(A*A)) * std::cos(angle);
+                    uy = std::sqrt(amrex::abs(A*A)) * std::sin(angle);
+                    // uz differs from Massimo PRE 2020 by a factor of 2 due to different
+                    // convention for linear vs. circular polarization.
+                    uz = amrex::abs(A*A);
+                }
+
+                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
+                const long pidx = pid + old_size;
+                // Copy ion data to new electron
+                // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
+                amrex::ParticleCPUWrapper{idcpu_elec[pidx]} =
+                    amrex::ParticleCPUWrapper{idcpu_ion[pidx]}; // current level
+                arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
+                arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
+                arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
+                arrdata_elec[PlasmaIdx::ux     ][pidx] = ux * phys_const.c;
+                arrdata_elec[PlasmaIdx::uy     ][pidx] = uy * phys_const.c;
+                arrdata_elec[PlasmaIdx::psi    ][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz)-uz; //psi = gamma - uz
+                arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
+                arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
+                arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = ux * phys_const.c;
+                arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = uy * phys_const.c;
+                arrdata_elec[PlasmaIdx::psi_half_step][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz)-uz;
+#ifdef HIPACE_USE_AB5_PUSH
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
+                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                    arrdata_elec[iforce][pidx] = 0._rt;
+                }
+#endif
+                int_arrdata_elec[PlasmaIdx::ion_lev][pidx] = init_ion_lev;
+            }
+        });
+
+        // Synchronize before ion_mask and ip_elec go out of scope
         amrex::Gpu::streamSynchronize();
     }
 }
@@ -465,7 +747,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        // loading the data
+        // Loading the data
         const auto ptd = pti.GetParticleTile().getParticleTileData();
 
         amrex::Long const num_particles = pti.numParticles();
@@ -486,13 +768,13 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
                     return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
                 }
-                // particle's Lorentz factor
+                // Particle's Lorentz factor
                 const amrex::Real gamma = (1.0_rt + ux*ux + uy*uy + psi*psi)/(2.0_rt*psi);
-                // the *c from uz cancels with the /c from the proper velocity conversion
+                // The *c from uz cancels with the /c from the proper velocity conversion
                 const amrex::Real uz = (gamma - psi);
-                // weight with quasi-static weighting factor
+                // Weight with quasi-static weighting factor
                 const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip] * gamma/psi;
-                // no quasi-static weighting factor to calculate quasi-static energy
+                // No quasi-static weighting factor to calculate quasi-static energy
                 const amrex::Real energy = ptd.rdata(PlasmaIdx::w)[ip] * (gamma - 1._rt);
                 return {            // Tuple contains:
                     w,              // 0    sum(w)
@@ -541,16 +823,16 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
     HIPACE_PROFILE("PlasmaParticleContainer::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD
-    // create subdirectory
+    // Create subdirectory
     openPMD::auxiliary::create_directories(m_insitu_file_prefix);
 #endif
 
-    // zero pad the rank number;
+    // Zero pad the rank number;
     std::string::size_type n_zeros = 4;
     std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
     std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
 
-    // open file
+    // Open file
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
@@ -560,8 +842,8 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
     const int is_normalized_units = Hipace::m_normalized_units;
 
-    // specify the structure of the data later available in python
-    // avoid pointers to temporary objects as second argument, stack variables are ok
+    // Specify the structure of the data later available in python
+    // Avoid pointers to temporary objects as second argument, stack variables are ok
     const amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"    , &time},
         {"step"    , &step},
@@ -609,16 +891,16 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
     };
 
     if (ofs.tellp() == 0) {
-        // write JSON header containing a NumPy structured datatype
+        // Write JSON header containing a NumPy structured datatype
         insitu_utils::write_header(all_data, ofs);
     }
 
-    // write binary data according to datatype in header
+    // Write binary data according to datatype in header
     insitu_utils::write_data(all_data, ofs);
 
-    // close file
+    // Close file
     ofs.close();
-    // assert no file errors
+    // Assert no file errors
 #ifdef HIPACE_USE_OPENPMD
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ofs, "Error while writing insitu plasma diagnostics");
 #else
@@ -626,7 +908,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         "Maybe the specified subdirectory does not exist");
 #endif
 
-    // reset arrays for insitu data
+    // Reset arrays for insitu data
     for (auto& x : m_insitu_rdata) x = 0.;
     for (auto& x : m_insitu_idata) x = 0;
     for (auto& x : m_insitu_sum_rdata) x = 0.;

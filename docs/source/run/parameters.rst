@@ -21,13 +21,13 @@ Thereby, the following constants are predefined:
 ============ ========================= =====================
 **variable** **name**                  **Value**
 q_e          elementary charge         1.602176634e-19
-m_e          electron mass             9.1093837015e-31
-m_p          proton mass               1.67262192369e-27
-epsilon0     vacuum permittivity       8.8541878128e-12
-mu0          vacuum permeability       1.25663706212e-06
+m_e          electron mass             9.1093837139e-31
+m_p          proton mass               1.67262192595e-27
+epsilon0     vacuum permittivity       8.8541878188e-12
+mu0          vacuum permeability       1.2566370612685e-06
 clight       speed of light            299'792'458.
-hbar         reduced Planck constant   1.054571817e-34
-r_e          classical electron radius 2.817940326204929e-15
+hbar         reduced Planck constant   1.0545718176461565e-34
+r_e          classical electron radius 2.8179403205e-15
 ============ ========================= =====================
 
 For a list of supported functions see the
@@ -160,6 +160,13 @@ General parameters
     Print all input parameters before running the simulation.
     If a parameter is present multiple times then the last occurrence will be used.
     Note that this will include some default AMReX parameters.
+
+* ``hipace.grid_external_B(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
+    External magnetic field applied to the field grid as a function of x, y, z and t.
+    This will affect both beam and plasma particles, as well as the field diagnostics.
+    The components represent Bx, By and Bz respectively.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current time step.
 
 Geometry
 --------
@@ -446,6 +453,9 @@ When both are specified, the per-species value is used.
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
+* ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `<plasma name>.can_ionize`)
+    Whether this plasma can be ionized by a laser.
+
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial ionization state of the plasma. `0` for neutral gasses.
     If set, the plasma charge gets multiplied by this number. If the plasma species is not ionizable,
@@ -516,6 +526,9 @@ When both are specified, the per-species value is used.
     the domain. However, this will also result in a gap at the domain boundary,
     which can lead to noise.
 
+* ``<plasma name> or plasmas.do_push`` (`bool`) optional (default `1`)
+    When set to `0`, disables the plasma particle pusher.
+
 Beam parameters
 ---------------
 
@@ -576,6 +589,9 @@ which are valid only for certain beam types, are introduced further below under
 * ``<beam name>.do_z_push`` (`bool`) optional (default `1`)
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
+
+* ``<beam name> or beams.do_push`` (`bool`) optional (default `1`)
+    When set to `0`, disables the beam particle pusher.
 
 * ``<beam name> or beams.reorder_period`` (`int`) optional (default `0`)
     Reorder particles periodically to speed-up current deposition and particle push on GPU.
@@ -847,6 +863,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.names`` (list of `string`) optional (default `no_laser`)
     The names of the laser pulses, separated by a space.
     To run without a laser, choose the name ``no_laser``.
+
+* ``lasers.polarization`` (`linear` or `circular`) optional (default `linear`)
+    Polarization of the laser pulse.
+    The ponderomotive force is 2x larger in circular polarization than in linear polarization.
+    Note that the envelope of the vector potential stored in arrays is independent on the polarization, such that the energy is actually 2x higher in circular polarization than in linear polarization.
 
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
@@ -1170,3 +1191,29 @@ or beam in-situ diagnostic as ``[sx], [sx^2], [sy], [sy^2], [sz], [sz^2]``.
 
 * ``<beam name> or beams.spin_anom`` (`bool`) optional (default `0.00115965218128`)
     The anomalous magnetic moment. The default value is the moment for electrons.
+
+
+Parser
+------
+
+* ``parser.debug_print`` (list of `strings`) optional
+    Print an evaluated parser expression for debugging. The fist `string` from the input is the
+    expression to evaluate and all following `strings` can be used to define constants or variables
+    that are used in the expression. Constants are defined by ``"<constant name>=<value>"`` and
+    variables by ``"<variable name>=[<range begin>,<range end>,<num values>]"``, where the expression
+    will be evaluated at ``<num values>`` equally spaced points between ``<range begin>`` and
+    ``<range end>``. These are the same points as
+    ``numpy.linspace(<range begin>,<range end>,<num values>)`` gives. Up to four variables are
+    supported. Note that constant and variable definitions have to be enclosed in double-quotes and
+    if provided through command-line parameters in bash, the full list of strings needs to be
+    enclosed in single-quotes. Example:
+
+    .. code-block:: bash
+
+        parser.debug_print = "10*x + y" "x=[0,9,10]" "y=2"
+
+    Output:
+
+    .. code-block:: bash
+
+        Parser Debug Print "10*x + y" = [2, 12, 22, 32, 42, 52, 62, 72, 82, 92]
