@@ -129,7 +129,9 @@ Diagnostic::needsTempIndividual () const {
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
             // we don't know the names of all the plasmas here so just look for "ux_..."
-            if (c.find("ux_") == 0) {
+            if (c.find("w_") == 0 ||
+                c.find("ux_") == 0 || c.find("uy_") == 0 || c.find("uz_") == 0 ||
+                c.find("ux^2_") == 0 || c.find("uy^2_") == 0 || c.find("uz^2_") == 0) {
                 return true;
             }
         }
