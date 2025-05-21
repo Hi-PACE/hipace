@@ -120,7 +120,6 @@ Diagnostic::needsRhoIndividual () const {
     return false;
 }
 
-
 bool
 Diagnostic::needsTemp () const {
     amrex::ParmParse ppd("diagnostic");
