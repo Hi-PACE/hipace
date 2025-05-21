@@ -1017,72 +1017,72 @@ Field diagnostics
 * ``<diag name> or diagnostic.include_ghost_cells`` (`bool`) optional (default `0`)
     Whether the field diagnostics should include ghost cells.
 
-* ``<diag name> or diagnostic.field_data`` (`string`) optional (default `all`)  
-  Specifies the fields to be written to file, separated by a space. The field names can be:
+* ``<diag name> or diagnostic.field_data`` (`string`) optional (default `all`)
+    Specifies the fields to be written to file, separated by a space. The field names can be:
 
-  * ``all``: Includes all available fields.  
-  * ``none``: Excludes all fields.  
-  * A subset of the following: ``ExmBy``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
-
-  **Additional Fields for Specific Solvers:**
-  
-  * **Predictor-Corrector Solver:**  
-    Includes ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam.  
-    ``rhomjz`` is defined as :math:`\rho-j_z/c`.
-
-  * **Explicit Solver:**  
-    Separates the current and charge densities for the beam and plasmas:  
-      * Beam-specific fields: ``jx_beam``, ``jy_beam``, ``jz_beam``.  
-      * Plasma-specific fields: ``jx``, ``jy``, and ``rhomjz``.
-
-  **Plasma-Deposited Diagnostics:**
-  
-  * General fields:  
-      * ``rho``: Total charge density.  
-      * ``w``: Particle weights.  
-      * Momentum components and their squares: ``ux``, ``uy``, ``uz``, ``ux^2``, ``uy^2``, ``uz^2``.
-  
-  * Species-specific fields (replace `<plasma name>` with the species name):  
-      * ``rho_<plasma name>``: Charge density of the species.  
-      * ``w_<plasma name>``: Particle weights of the species.  
-      * Momentum components for the species: ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
-
-  **Laser-Specific Fields:**
-
-  When a laser pulse is used:
-  * ``laserEnvelope``: The complex envelope of the laser in the ``laser`` base geometry.  
-  * ``chi``: Plasma proper density (:math:`n/\gamma`).
-
-  **Adding and Removing Fields:**
-  
-  Fields can be added or removed from the list dynamically:  
-      * To remove a field after including ``all``, use ``remove_<field name>``.  
-      * If a field is added and removed multiple times, the last occurrence takes precedence.
-
-* ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
-    Lower limit for the diagnostic grid.
-
-* ``<diag name> or diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
-    Upper limit for the diagnostic grid.
-
-* ``hipace.deposit_rho`` (`bool`) optional (default `0`)
-    If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
-    Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
-    If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
-
-* ``hipace.deposit_rho_individual`` (`bool`) optional (default `0`)
-    This option works similar to ``hipace.deposit_rho``,
-    however the charge density from every plasma species will be deposited into individual fields
-    that are accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
-
-* ``hipace.deposit_temp`` (`bool`) optional (default `0`)
-    If the weight, momentum (``ux``, ``uy``, ``uz``) and their squares (``ux^2``, ``uy^2``, ``uz^2``) of the plasma should be deposited so that it is available as a diagnostic.
-    If one of them is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
-
-* ``hipace.deposit_temp_individual`` (`bool`) optional (default `0`)
-    This option works similar to ``hipace.deposit_temp``,
-    however the weights, momentum and their squares from every plasma species will be deposited into individual fields
-    that are accessible as ``ux_<plasma name>`` or ``ux^2_<plasma name>`` in ``diagnostic.field_data``.
+    * ``all``: Includes all available fields.  
+    * ``none``: Excludes all fields.  
+    * A subset of the following: ``ExmBy``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
+    
+    **Additional Fields for Specific Solvers:**
+      
+    * **Predictor-Corrector Solver:**  
+        Includes ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam.  
+        ``rhomjz`` is defined as :math:`\rho-j_z/c`.
+    
+    * **Explicit Solver:**  
+        Separates the current and charge densities for the beam and plasmas:  
+        * Beam-specific fields: ``jx_beam``, ``jy_beam``, ``jz_beam``.  
+        * Plasma-specific fields: ``jx``, ``jy``, and ``rhomjz``.
+    
+      **Plasma-Deposited Diagnostics:**
+      
+        * General fields:  
+        * ``rho``: Total charge density.  
+        * ``w``: Particle weights.  
+        * Momentum components and their squares: ``ux``, ``uy``, ``uz``, ``ux^2``, ``uy^2``, ``uz^2``.
+      
+    * Species-specific fields (replace `<plasma name>` with the species name):  
+        * ``rho_<plasma name>``: Charge density of the species.  
+        * ``w_<plasma name>``: Particle weights of the species.  
+        * Momentum components for the species: ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
+    
+      **Laser-Specific Fields:**
+    
+        When a laser pulse is used:
+        * ``laserEnvelope``: The complex envelope of the laser in the ``laser`` base geometry.  
+        * ``chi``: Plasma proper density (:math:`n/\gamma`).
+    
+      **Adding and Removing Fields:**
+      
+        Fields can be added or removed from the list dynamically:  
+        * To remove a field after including ``all``, use ``remove_<field name>``.  
+        * If a field is added and removed multiple times, the last occurrence takes precedence.
+    
+    * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
+        Lower limit for the diagnostic grid.
+    
+    * ``<diag name> or diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
+        Upper limit for the diagnostic grid.
+    
+    * ``hipace.deposit_rho`` (`bool`) optional (default `0`)
+        If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
+        Otherwise only ``rhomjz`` equal to :math:`\rho-j_z/c` will be available.
+        If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+    
+    * ``hipace.deposit_rho_individual`` (`bool`) optional (default `0`)
+        This option works similar to ``hipace.deposit_rho``,
+        however the charge density from every plasma species will be deposited into individual fields
+        that are accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
+    
+    * ``hipace.deposit_temp`` (`bool`) optional (default `0`)
+        If the weight, momentum (``ux``, ``uy``, ``uz``) and their squares (``ux^2``, ``uy^2``, ``uz^2``) of the plasma should be deposited so that it is available as a diagnostic.
+        If one of them is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+    
+    * ``hipace.deposit_temp_individual`` (`bool`) optional (default `0`)
+        This option works similar to ``hipace.deposit_temp``,
+        however the weights, momentum and their squares from every plasma species will be deposited into individual fields
+        that are accessible as ``ux_<plasma name>`` or ``ux^2_<plasma name>`` in ``diagnostic.field_data``.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^
