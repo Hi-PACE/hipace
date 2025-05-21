@@ -121,22 +121,6 @@ Diagnostic::needsRhoIndividual () const {
 }
 
 bool
-Diagnostic::needsTemp () const {
-    amrex::ParmParse ppd("diagnostic");
-    for (auto& fd : m_field_data) {
-        amrex::ParmParse pp(fd.m_diag_name);
-        amrex::Vector<std::string> comps{};
-        queryWithParserAlt(pp, "field_data", comps, ppd);
-        for (auto& c : comps) {
-            if (c == "ux") {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool
 Diagnostic::needsTempIndividual () const {
     amrex::ParmParse ppd("diagnostic");
     for (auto& fd : m_field_data) {
