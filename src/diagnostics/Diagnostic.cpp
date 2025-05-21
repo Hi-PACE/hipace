@@ -147,6 +147,7 @@ Diagnostic::needsTempIndividual () const {
         for (auto& c : comps) {
             // we don't know the names of all the plasmas here so just look for "ux_..."
             if (c.find("ux_") == 0) {
+                return true;
             }
         }
     }
