@@ -427,7 +427,7 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields,amrex::GpuArray
 }
 
 void
-MultiLaser::AdvanceSliceMG (const amrex::GpuArray<amrex::Real, 2> m_dt, int step)
+MultiLaser::AdvanceSliceMG (const amrex::GpuArray<amrex::Real, 2> dt, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
@@ -558,7 +558,7 @@ MultiLaser::AdvanceSliceMG (const amrex::GpuArray<amrex::Real, 2> m_dt, int step
                     acoeff_real_scalar + arr(i, j, chi) : acoeff_real_scalar;
 
                 Complex rhs;
-                if (step == 0) {
+                if (step == 0  || (dt[1]!=dt[0])) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
@@ -607,7 +607,7 @@ MultiLaser::AdvanceSliceMG (const amrex::GpuArray<amrex::Real, 2> m_dt, int step
 }
 
 void
-MultiLaser::AdvanceSliceFFT (const amrex::GpuArray<amrex::Real, 2> m_dt, int step)
+MultiLaser::AdvanceSliceFFT (const amrex::GpuArray<amrex::Real, 2> dt, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");
@@ -730,7 +730,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::GpuArray<amrex::Real, 2> m_dt, int ste
                 const Complex anp1jp1 = arr(i, j, np1jp1_r) + I * arr(i, j, np1jp1_i);
                 const Complex anp1jp2 = arr(i, j, np1jp2_r) + I * arr(i, j, np1jp2_i);
                 Complex rhs;
-                if (step == 0) {
+                if (step == 0 || (dt[1]!=dt[0])) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
