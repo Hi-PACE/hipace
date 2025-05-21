@@ -21,8 +21,9 @@
  * \param[in] lev MR level
  */
 void
-DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields, const int which_slice,
+DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields,
                 amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
 
 #endif //  TEMPERATUREDEPOSITION_H_
+
