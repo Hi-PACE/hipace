@@ -26,4 +26,3 @@ DepositTemperature (PlasmaParticleContainer& plasma, Fields & fields,
 
 
 #endif //  TEMPERATUREDEPOSITION_H_
-
