@@ -619,7 +619,7 @@ Hipace::SolveOneSlice (int islice, int step)
     // deposit temperature
     for (int lev=0; lev<current_N_level; ++lev) {
         // deposit w, ux, uy, uz, ux2, uy2 and uz2 for all plasmas
-        m_multi_plasma.DepositTemperature(m_fields, WhichSlice::This, m_3D_geom, lev);
+        m_multi_plasma.DepositTemperature(m_fields, m_3D_geom, lev);
     }
 
     // deposit current
