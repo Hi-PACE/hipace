@@ -1028,7 +1028,7 @@ Field diagnostics
   
   * **Predictor-Corrector Solver:**  
     Includes ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam.  
-    ``rhomjz`` is defined as :math:`\rho - j_z/c`.
+    ``rhomjz`` is defined as :math:`\rho-j_z/c`.
 
   * **Explicit Solver:**  
     Separates the current and charge densities for the beam and plasmas:  
@@ -1036,8 +1036,6 @@ Field diagnostics
       * Plasma-specific fields: ``jx``, ``jy``, and ``rhomjz``.
 
   **Plasma-Deposited Diagnostics:**
-  
-  To include plasma-deposited diagnostics, explicitly mention the desired field in ``field_data``:
   
   * General fields:  
       * ``rho``: Total charge density.  
@@ -1052,7 +1050,6 @@ Field diagnostics
   **Laser-Specific Fields:**
 
   When a laser pulse is used:
-  
   * ``laserEnvelope``: The complex envelope of the laser in the ``laser`` base geometry.  
   * ``chi``: Plasma proper density (:math:`n/\gamma`).
 
