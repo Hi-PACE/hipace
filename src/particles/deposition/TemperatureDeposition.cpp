@@ -163,7 +163,5 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                     field_arr(i, j, uzsq) *= wp_inv;
                 }
         );
-
-
     }
 }
