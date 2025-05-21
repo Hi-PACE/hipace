@@ -18,7 +18,6 @@
 #include "utils/Constants.H"
 #include "utils/GPUUtil.H"
 
-
 void
 DepositTemperature (PlasmaParticleContainer& plasma,
                     Fields & fields,
@@ -53,8 +52,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         // Extract box properties
         const amrex::Real dx_inv = gm[lev].InvCellSize(0);
         const amrex::Real dy_inv = gm[lev].InvCellSize(1);
-        // in normalized units this is rescaling dx and dy for MR,
-        // while in SI units it's the factor for charge to charge density
+        // extract laser properties and boolean for the presence of the laser and for ionization
         const PhysConst pc = get_phys_const();
         const int aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
         const amrex::Real clightinv = 1.0_rt/pc.c;
@@ -63,19 +61,16 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         const amrex::Real laser_norm = (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass)
             * (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass);
 
-        // Loop over particles and deposit into jx_fab, jy_fab, jz_fab, and rho_fab
-
+        // Loop over particles
         SharedMemoryDeposition<1, 1, true>(
             int(pti.numParticles()),
             // is_valid
             // return whether the particle is valid and should deposit
             [=] AMREX_GPU_DEVICE (int ip, auto ptd)
             {
-            // only deposit plasma currents on or below their according MR level
+            // only deposit on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
             },
-            // get_cell
-            // return the lowest cell index that the particle deposits into
             [=] AMREX_GPU_DEVICE (int ip, auto ptd) -> amrex::IntVectND<2>
             {
                 const amrex::Real xp = ptd.pos(0, ip);
@@ -92,7 +87,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
 
                 return {i, j};
             },
-            // deposit
+            // deposit of weight, momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq) 
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx) noexcept
@@ -116,7 +111,8 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip]*clightinv;
                 amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real uzp = (1._rt + uxp*uxp + uyp*uyp
-                    + 0.5_rt*Aabssqp*0. - psi*psi)/(2.*psi);
+                    + 0.5_rt*Aabssqp*0. - psi*psi)/(2.*psi); 
+                // The term with the vector potential 0.5|A|^2 is turned off until the insitu-diagnostics are changed
                 const amrex::Real gamma = (1.0_rt + uxp*uxp + uyp*uyp + psi*psi)/(2.0_rt*psi);
                 const amrex::Real wp = ptd.rdata(PlasmaIdx::w)[ip] * gamma / psi;
 
@@ -144,12 +140,11 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
             amrex::GpuArray<int, 1>{aabs},
             amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq}
-        );
-
-
-
+        );   
         Array3<amrex::Real> field_arr = isl_fab.array();
 
+        // Normalize the components of momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq) 
+        // by dividing them by the weight (w) of each particle. If the weight is zero, no division is performed.
         amrex::ParallelFor(
             to2D(isl_fab.box()),
             [=] AMREX_GPU_DEVICE (int i, int j) noexcept
