@@ -22,7 +22,6 @@
 void
 DepositTemperature (PlasmaParticleContainer& plasma,
                     Fields & fields,
-                    const int which_slice,
                     amrex::Vector<amrex::Geometry> const& gm,
                     int const lev)
 {
@@ -57,13 +56,8 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         const amrex::Real dz_inv = gm[lev].InvCellSize(2);
         // in normalized units this is rescaling dx and dy for MR,
         // while in SI units it's the factor for charge to charge density
-        const amrex::Real invvol = Hipace::m_normalized_units ?
-            gm[0].CellSize(0)*gm[0].CellSize(1)*dx_inv*dy_inv
-            : dx_inv*dy_inv*dz_inv;
-
         const PhysConst pc = get_phys_const();
         const int aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
-        const amrex::Real clight = pc.c;
         const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real clightinv2 = clightinv*clightinv;
         const bool can_ionize = plasma.m_can_ionize;
