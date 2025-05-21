@@ -56,7 +56,6 @@ public:
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *
      * \param[in,out] fields the general field class, modified by this function
-     * \param[in] which_slice defines if this or the next slice is handled
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
@@ -171,4 +170,3 @@ private:
 };
 
 #endif // MULTIPLASMA_H_
-
