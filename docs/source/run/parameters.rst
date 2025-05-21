@@ -1058,25 +1058,25 @@ Field diagnostics
         * If a field is added and removed multiple times, the last occurrence takes precedence.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
-  Lower limit for the diagnostic grid.
+   Lower limit for the diagnostic grid.
 
 * ``<diag name> or diagnostic.patch_hi`` (3 `float`) optional (default `infinity infinity infinity`)
-  Upper limit for the diagnostic grid.
+   Upper limit for the diagnostic grid.
 
 * ``hipace.deposit_rho`` (`bool`) optional (default `0`)
-  If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
-  Otherwise only ``rhomjz`` equal to :math:`\rho - j_z/c` will be available.
-  If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+   If the charge density ``rho`` of the plasma should be deposited so that it is available as a diagnostic.
+   Otherwise only ``rhomjz`` equal to :math:`\rho - j_z/c` will be available.
+   If ``rho`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
 
 * ``hipace.deposit_rho_individual`` (`bool`) optional (default `0`)
-  This option works similarly to ``hipace.deposit_rho``,
-  but the charge density from every plasma species will be deposited into individual fields
-  accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
+   This option works similarly to ``hipace.deposit_rho``,
+   but the charge density from every plasma species will be deposited into individual fields
+   accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
 
 * ``hipace.deposit_temp_individual`` (`bool`) optional (default `0`)
-  This option works similarly to ``hipace.deposit_temp``,
-  but the weights, momentum, and their squares from every plasma species
-  will be deposited into individual fields accessible as ``ux_<plasma name>`` or ``ux^2_<plasma name>`` in ``diagnostic.field_data``.
+   This option works similarly to ``hipace.deposit_temp``,
+   but the weights, momentum, and their squares from every plasma species
+   will be deposited into individual fields accessible as ``ux_<plasma name>`` or ``ux^2_<plasma name>`` in ``diagnostic.field_data``.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^
