@@ -1038,9 +1038,7 @@ Field diagnostics
   * Plasma-Deposited Diagnostics:
 
     * General fields:  
-        * ``rho``: Total charge density.  
-        * ``w``: Particle weights.  
-        * Momentum components and their squares: ``ux``, ``uy``, ``uz``, ``ux^2``, ``uy^2``, ``uz^2``.
+        * ``rho``: Total charge density.
 
     * Species-specific fields (replace `<plasma name>` with the species name):  
         * ``rho_<plasma name>``: Charge density of the species.  
@@ -1074,11 +1072,6 @@ Field diagnostics
   This option works similarly to ``hipace.deposit_rho``,  
   but the charge density from every plasma species will be deposited into individual fields  
   accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
-
-* ``hipace.deposit_temp`` (`bool`) optional (default `0`)  
-  If the weight, momentum (``ux``, ``uy``, ``uz``), and their squares (``ux^2``, ``uy^2``, ``uz^2``) of the plasma  
-  should be deposited so that it is available as a diagnostic.  
-  If one of them is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
 
 * ``hipace.deposit_temp_individual`` (`bool`) optional (default `0`)  
   This option works similarly to ``hipace.deposit_temp``,  
