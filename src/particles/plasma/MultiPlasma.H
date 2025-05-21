@@ -59,8 +59,8 @@ public:
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
-    void DepositTemperature (
-        Fields & fields, int which_slice,
+    void DoDepositTemperature (
+        Fields & fields,
         amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Loop over plasma species and depose Sx and Sy into the current 2D slice in fields

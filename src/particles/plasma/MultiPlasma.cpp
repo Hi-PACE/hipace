@@ -87,7 +87,7 @@ MultiPlasma::DepositCurrent (
 }
 
 void
-MultiPlasma::DepositTemperature (
+MultiPlasma::DoDepositTemperature (
     Fields & fields,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
