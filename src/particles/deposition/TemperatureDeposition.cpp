@@ -6,7 +6,6 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "TemperatureDeposition.H"
-
 #include "DepositionUtil.H"
 #include "particles/particles_utils/ShapeFactors.H"
 #include "particles/particles_utils/FieldGather.H"
