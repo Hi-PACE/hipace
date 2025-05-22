@@ -92,8 +92,7 @@ MultiPlasma::DoDepositTemperature (
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        ::DepositTemperature(m_all_plasmas[i], fields,
-                         gm, lev);
+        ::DepositTemperature(m_all_plasmas[i], fields, gm, lev);
     }
 }
 
