@@ -1035,7 +1035,7 @@ Field diagnostics
         * Beam-specific fields: ``jx_beam``, ``jy_beam``, ``jz_beam``.
         * Plasma-specific fields: ``jx``, ``jy``, and ``rhomjz``.
 
-  * Plasma-Deposited Diagnostics:
+  * Plasma diagnostics:
 
     * General fields:
         * ``rho``: Total charge density.
