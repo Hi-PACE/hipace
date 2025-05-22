@@ -1051,7 +1051,7 @@ Field diagnostics
         * ``laserEnvelope``: The complex envelope of the laser in the ``laser`` base geometry.
         * ``chi``: Plasma proper density (:math:`n/\gamma`).
 
-  * Adding and Removing Fields:
+  * Adding and removing fields:
 
     Fields can be added or removed from the list dynamically:
         * To remove a field after including ``all``, use ``remove_<field name>``.
