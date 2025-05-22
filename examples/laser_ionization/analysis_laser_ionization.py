@@ -122,7 +122,7 @@ print(f"temperature (eV) HiPACE++, circular with Open-PMD diagnostics = {temp_di
 relative_diff_temp_linear = np.abs( ( temp_eV_linear - temp_eV_warpx_linear ) / temp_eV_warpx_linear )
 relative_diff_temp_circular = np.abs( ( temp_eV_circular - temp_eV_warpx_circular ) / temp_eV_warpx_circular )
 
-# Error of temperature calculation between insitu-diagnostics and Open-PMD diagnostics in HiPACE++ 
+# Error of temperature calculation between insitu-diagnostics and Open-PMD diagnostics in HiPACE++
 error_h_h_linear = np.abs( ( temp_eV_linear - temp_diags_linear ) / temp_eV_linear )
 error_h_h_circular = np.abs( ( temp_eV_circular - temp_diags_circular ) / temp_eV_circular )
 
