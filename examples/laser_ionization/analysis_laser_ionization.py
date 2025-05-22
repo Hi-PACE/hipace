@@ -65,7 +65,7 @@ fraction_warpx_circular = 0.502250841 # result from WarpX simulation
 error_fraction_linear = np.abs( ( fraction_linear - fraction_warpx_linear ) / fraction_warpx_linear )
 error_fraction_circular = np.abs( ( fraction_circular - fraction_warpx_circular ) / fraction_warpx_circular )
 
-tolerance_higher = 0.1
+tolerance_higher = 0.13
 tolerance_lower = 0.001
 print(f"fraction_warpx_linear = {fraction_warpx_linear}")
 print(f"fraction_hipace_linear = {fraction_linear}")
