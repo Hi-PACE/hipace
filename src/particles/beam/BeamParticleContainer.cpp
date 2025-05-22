@@ -57,6 +57,7 @@ BeamParticleContainer::ReadParameters ()
     getWithParser(pp, "injection_type", m_injection_type);
     queryWithParser(pp, "duz_per_uz0_dzeta", m_duz_per_uz0_dzeta);
     queryWithParser(pp, "do_z_push", m_do_z_push);
+    queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
     queryWithParserAlt(pp, "do_radiation_reaction", m_do_radiation_reaction, pp_alt);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
@@ -91,25 +92,28 @@ BeamParticleContainer::ReadParameters ()
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
-    auto& soa = getBeamInitSlice().GetStructOfArrays();
-    soa.GetIdCPUData().setArena(
-        m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    for (int rcomp = 0; rcomp < soa.NumRealComps(); ++rcomp) {
-        soa.GetRealData()[rcomp].setArena(
-            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    }
-    for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
-        soa.GetIntData()[icomp].setArena(
-            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    }
     queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
     if (m_do_spin_tracking) {
-        getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
+        if (m_injection_type != "from_file") {
+            getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
+        }
         queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
         for (auto& beam_tile : m_slices) {
             // Use 3 real and 0 int runtime components
             beam_tile.define(3, 0);
         }
+        getBeamInitSlice().define(3, 0);
+    }
+    auto& soa = getBeamInitSlice().GetStructOfArrays();
+    soa.GetIdCPUData().setArena(
+        m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
+    for (int rcomp = 0; rcomp < soa.NumRealComps(); ++rcomp) {
+        soa.GetRealData(rcomp).setArena(
+            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
+    }
+    for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
+        soa.GetIntData(icomp).setArena(
+            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
 }
 
@@ -368,6 +372,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
 
         const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
         const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
+        const bool do_spin_tracking = m_do_spin_tracking;
 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (const int ip) {
@@ -379,7 +384,11 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
                 ptd.rdata(BeamIdx::ux)[ip] = ptd_init.rdata(BeamIdx::ux)[idx_src];
                 ptd.rdata(BeamIdx::uy)[ip] = ptd_init.rdata(BeamIdx::uy)[idx_src];
                 ptd.rdata(BeamIdx::uz)[ip] = ptd_init.rdata(BeamIdx::uz)[idx_src];
-
+                if (do_spin_tracking) {
+                    ptd.m_runtime_rdata[0][ip] = ptd_init.m_runtime_rdata[0][idx_src];
+                    ptd.m_runtime_rdata[1][ip] = ptd_init.m_runtime_rdata[1][idx_src];
+                    ptd.m_runtime_rdata[2][ip] = ptd_init.m_runtime_rdata[2][idx_src];
+                }
                 ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
                 ptd.idata(BeamIdx::mr_level)[ip] = 0;
@@ -387,12 +396,11 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         );
     }
 
-    if (m_do_spin_tracking) {
+    if (m_do_spin_tracking && m_injection_type != "from_file") {
         HIPACE_PROFILE("BeamParticleContainer::initializeSpin()");
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
         const amrex::RealVect initial_spin_norm = m_initial_spin / m_initial_spin.vectorLength();
-
         amrex::ParallelFor(getNumParticles(which_slice),
             [=] AMREX_GPU_DEVICE (const int ip) {
                 ptd.m_runtime_rdata[0][ip] = initial_spin_norm[0];
@@ -401,6 +409,10 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
             }
         );
     }
+
+    // remove invalid particles so they don't show up in the beam diagnostic of the first time step
+    amrex::removeInvalidParticles(getBeamSlice(which_slice));
+    resize(which_slice, getBeamSlice(which_slice).size(), 0);
 }
 
 void

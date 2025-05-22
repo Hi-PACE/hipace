@@ -12,6 +12,9 @@
 #include "particles/beam/MultiBeam.H"
 #include "laser/MultiLaser.H"
 
+// declare MPI datatypes if compiled without MPI
+using namespace amrex::mpidatatypes;
+
 class MultiBuffer
 {
 

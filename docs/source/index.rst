@@ -18,6 +18,8 @@ Its main features are:
 - Adaptive time step and sub-cycling
 - Additional physics (field ionization, binary collisions, temperature effects, radiation reaction)
 
+For details on the algorithms in HiPACE++, see the `HiPACE++ workshop slides (2023) <https://indico.desy.de/event/40158/>`__. Although the algorithms and input parameters may have changed since then, this should provide a good introduction on the methods.
+
 HiPACE++ relies on the `AMReX <https://amrex-codes.github.io>`__ library, which provides for particle and field data structures.
 
 .. raw:: html

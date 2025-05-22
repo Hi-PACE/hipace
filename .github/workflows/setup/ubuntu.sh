@@ -31,4 +31,4 @@ sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 2
 sudo update-alternatives --set python /usr/bin/python3
 
 python -m pip install --upgrade pip
-python -m pip install --upgrade matplotlib==3.2.2 numpy scipy openpmd-viewer openpmd-api
+python -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api
