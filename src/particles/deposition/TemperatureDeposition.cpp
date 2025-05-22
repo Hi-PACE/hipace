@@ -120,12 +120,9 @@ DepositTemperature (PlasmaParticleContainer& plasma,
 
                 // --- Compute shape factors
                 // x direction
-                auto [shape_x, i] =
-                compute_single_shape_factor<false, 0>(xmid, 0);
-
+                auto [shape_x, i] = compute_single_shape_factor<false, 0>(xmid, 0);
                 // y direction
-                auto [shape_y, j] =
-                compute_single_shape_factor<false, 0>(ymid, 0);
+                auto [shape_y, j] = compute_single_shape_factor<false, 0>(ymid, 0);
 
                 amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), wp);
                 amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), wp*uxp);
