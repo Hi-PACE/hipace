@@ -615,7 +615,7 @@ MultiLaser::AdvanceSliceMG (const amrex::Real dt, const amrex::Real dt_pre, int 
 }
 
 void
-MultiLaser::AdvanceSliceFFT (const const amrex::Real dt, const amrex::Real dt_pre,, int step)
+MultiLaser::AdvanceSliceFFT (const const amrex::Real dt, const amrex::Real dt_pre, int step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");
