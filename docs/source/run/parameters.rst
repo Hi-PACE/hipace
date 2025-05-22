@@ -1037,25 +1037,22 @@ Field diagnostics
 
   * Plasma diagnostics:
 
-    * General fields:
-         * ``rho``: Total charge density.
+      * General fields:
+          * ``rho``: Total charge density.
 
-    * Species-specific fields (replace `<plasma name>` with the species name):
-         * ``rho_<plasma name>``: Charge density of the species.
-         * ``w_<plasma name>``: Particle weights of the species.
-         * Momentum components for the species: ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
+      * Species-specific fields (replace `<plasma name>` with the species name):
+          * ``rho_<plasma name>``: Charge density of the species.
+          * ``w_<plasma name>``: Particle weights of the species.
+          * Momentum components for the species: ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
 
   * Laser fields:
-
     When a laser pulse is used:
-         * ``laserEnvelope``: The complex envelope of the laser in the ``laser`` base geometry.
-         * ``chi``: Plasma proper density (:math:`n/\gamma`).
+          * ``laserEnvelope``: The complex envelope of the laser in the ``laser`` base geometry.
+          * ``chi``: Plasma proper density (:math:`n/\gamma`).
 
   * Adding and removing fields:
-
-    Fields can be added or removed from the list dynamically:
-         * To remove a field after including ``all``, use ``remove_<field name>``.
-         * If a field is added and removed multiple times, the last occurrence takes precedence.
+          * To remove a field after including ``all``, use ``remove_<field name>``.
+          * If a field is added and removed multiple times, the last occurrence takes precedence.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
     Lower limit for the diagnostic grid.
