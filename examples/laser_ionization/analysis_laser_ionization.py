@@ -86,7 +86,7 @@ Ty2_c = all_data_circular['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 Tz2_c = all_data_circular['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_circular = 1./3*(Tx2_c+Ty2_c+Tz2_c)
 
-# calculation of temperature with Open-PMD viewer diagnostics
+# calculation of temperature with OpenPMD-viewer diagnostics
 wf_l, _ = ts_linear.get_field(field='w_elec', iteration=iteration)
 
 ux2_linear, _ = ts_linear.get_field(field='ux^2_elec', iteration=iteration)
