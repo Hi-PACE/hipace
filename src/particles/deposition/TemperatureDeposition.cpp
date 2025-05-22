@@ -140,7 +140,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         Array3<amrex::Real> field_arr = isl_fab.array();
 
         // Normalize the components of momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)
-        // by dividing them by the weight (w) of each particle. If the weight is zero, no division is performed.
+        // by dividing them by the total weight (w) in each cell. If the weight is zero, no division is performed.
         amrex::ParallelFor(
             to2D(isl_fab.box()),
             [=] AMREX_GPU_DEVICE (int i, int j) noexcept
