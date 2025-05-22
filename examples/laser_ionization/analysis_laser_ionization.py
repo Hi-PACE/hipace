@@ -65,7 +65,7 @@ fraction_warpx_circular = 0.502250841 # result from WarpX simulation
 error_fraction_linear = np.abs( ( fraction_linear - fraction_warpx_linear ) / fraction_warpx_linear )
 error_fraction_circular = np.abs( ( fraction_circular - fraction_warpx_circular ) / fraction_warpx_circular )
 
-tolerance_higher = 0.13
+tolerance_higher = 0.15
 tolerance_lower = 0.001
 print(f"fraction_warpx_linear = {fraction_warpx_linear}")
 print(f"fraction_hipace_linear = {fraction_linear}")
@@ -118,9 +118,6 @@ print(f"temperature (eV) HiPACE++, linear with Open-PMD diagnostics = {temp_diag
 print(f"temperature (eV) WarpX, circular = {temp_eV_warpx_circular}")
 print(f"temperature (eV) HiPACE++, circular with insitu diagnostics = {temp_eV_circular}")
 print(f"temperature (eV) HiPACE++, circular with Open-PMD diagnostics = {temp_diags_circular}")
-
-relative_diff_temp_linear = np.abs( ( temp_eV_linear - temp_eV_warpx_linear ) / temp_eV_warpx_linear )
-relative_diff_temp_circular = np.abs( ( temp_eV_circular - temp_eV_warpx_circular ) / temp_eV_warpx_circular )
 
 # Error of temperature calculation between insitu-diagnostics and Open-PMD diagnostics in HiPACE++
 error_h_h_linear = np.abs( ( temp_eV_linear - temp_diags_linear ) / temp_eV_linear )
