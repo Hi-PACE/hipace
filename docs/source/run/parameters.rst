@@ -1024,7 +1024,7 @@ Field diagnostics
   * ``none``: Excludes all fields.
   * A subset of the following: ``ExmBy``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
 
-  * Additional Fields for Specific Solvers:
+  * Additional fields for specific solvers:
 
     * **Predictor-Corrector Solver:**
       Includes ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam.
