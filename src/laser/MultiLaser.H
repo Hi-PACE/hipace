@@ -120,7 +120,7 @@ public:
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      * \param[in] geom_field_lev0 Geometry of the fields on MR level 0
      */
-    void AdvanceSlice (const int islice, const Fields& fields, amrex::GpuArray<amrex::Real, 2> dt, int step,
+    void AdvanceSlice (const int islice, const Fields& fields, const amrex::Real dt, const amrex::Real dt_pre,, int step,
                        amrex::Geometry const& geom_field_lev0);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
@@ -129,7 +129,7 @@ public:
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSliceMG (amrex::GpuArray<amrex::Real, 2> dt, int step);
+    void AdvanceSliceMG (const amrex::Real dt, const amrex::Real dt_pre,, int step);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
@@ -137,7 +137,7 @@ public:
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSliceFFT (amrex::GpuArray<amrex::Real, 2> dt, int step);
+    void AdvanceSliceFFT (const amrex::Real dt, const amrex::Real dt_pre,, int step);
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).

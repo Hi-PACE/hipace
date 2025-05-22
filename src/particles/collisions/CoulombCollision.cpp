@@ -299,8 +299,8 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
                                          (PhysConstSI::ep0*PhysConstSI::m_e));
-        const amrex::Real dt = normalized_units ? Hipace::GetInstance().m_dt[1]/wp
-                                                : Hipace::GetInstance().m_dt[1];
+        const amrex::Real dt = normalized_units ? Hipace::GetInstance().m_dt/wp
+                                                : Hipace::GetInstance().m_dt;
 
         // Extract particles in the tile that `mfi` points to
         // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
