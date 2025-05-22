@@ -1045,7 +1045,7 @@ Field diagnostics
         * ``w_<plasma name>``: Particle weights of the species.
         * Momentum components for the species: ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
 
-  * Laser-Specific Fields:
+  * Laser fields:
 
     When a laser pulse is used:
         * ``laserEnvelope``: The complex envelope of the laser in the ``laser`` base geometry.
