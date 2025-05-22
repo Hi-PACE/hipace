@@ -62,10 +62,11 @@ fraction_circular = -rho_average_circular / scc.e / n0
 fraction_warpx_linear = 0.41014984 # result from WarpX simulation
 fraction_warpx_circular = 0.502250841 # result from WarpX simulation
 
-relative_diff_linear = np.abs( ( fraction_linear - fraction_warpx_linear ) / fraction_warpx_linear )
-relative_diff_circular = np.abs( ( fraction_circular - fraction_warpx_circular ) / fraction_warpx_circular )
+error_fraction_linear = np.abs( ( fraction_linear - fraction_warpx_linear ) / fraction_warpx_linear )
+error_fraction_circular = np.abs( ( fraction_circular - fraction_warpx_circular ) / fraction_warpx_circular )
 
-tolerance = 0.15
+tolerance_higher = 0.1
+tolerance_lower = 0.001
 print(f"fraction_warpx_linear = {fraction_warpx_linear}")
 print(f"fraction_hipace_linear = {fraction_linear}")
 print(f"fraction_warpx_circular = {fraction_warpx_circular}")
@@ -121,13 +122,18 @@ print(f"temperature (eV) HiPACE++, circular with Open-PMD diagnostics = {temp_di
 relative_diff_temp_linear = np.abs( ( temp_eV_linear - temp_eV_warpx_linear ) / temp_eV_warpx_linear )
 relative_diff_temp_circular = np.abs( ( temp_eV_circular - temp_eV_warpx_circular ) / temp_eV_warpx_circular )
 
-relative_diff_temp_linear_diags = np.abs( ( temp_diags_linear - temp_eV_warpx_linear ) / temp_eV_warpx_linear )
-relative_diff_temp_circular_diags = np.abs( ( temp_diags_circular - temp_eV_warpx_circular ) / temp_eV_warpx_circular )
+# Error of temperature calculation between insitu-diagnostics and Open-PMD diagnostics in HiPACE++ 
+error_h_h_linear = np.abs( ( temp_eV_linear - temp_diags_linear ) / temp_eV_linear )
+error_h_h_circular = np.abs( ( temp_eV_circular - temp_diags_circular ) / temp_eV_circular )
 
-assert ( (relative_diff_linear < tolerance) and \
-         (relative_diff_circular < tolerance) and \
-         (relative_diff_temp_linear < tolerance) and \
-         (relative_diff_temp_circular < tolerance) and \
-         (relative_diff_temp_linear_diags < tolerance) and \
-         (relative_diff_temp_circular_diags < tolerance)), \
+# Error of temperature calculation between HiPACE++ and WarpX
+error_h_w_linear = np.abs( ( temp_eV_linear - temp_eV_warpx_linear ) / temp_eV_warpx_linear )
+error_h_w_circular = np.abs( ( temp_eV_circular - temp_eV_warpx_circular ) / temp_eV_warpx_circular )
+
+assert ( (error_fraction_linear < tolerance_higher) and \
+         (error_fraction_circular < tolerance_higher) and \
+         (error_h_h_linear < tolerance_lower) and \
+         (error_h_h_linear < tolerance_lower) and \
+         (error_h_w_linear < tolerance_higher) and \
+         (error_h_w_circular < tolerance_higher)), \
          'Test laser_ionization did not pass'
