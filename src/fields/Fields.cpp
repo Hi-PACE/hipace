@@ -75,6 +75,9 @@ Fields::AllocData (
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "jx", "jy", "Ez");
+            }
 
             isl = WhichSlice::This;
             // (Bx, By), (Sy, Sx) and (chi, chi2) adjacent for explicit solver
@@ -108,6 +111,9 @@ Fields::AllocData (
 
             isl = WhichSlice::Previous;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "Ez");
+            }
 
             isl = WhichSlice::RhomJzIons;
             if (m_any_neutral_background) {
@@ -133,6 +139,9 @@ Fields::AllocData (
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx", "jy");
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "Ez");
+            }
 
             isl = WhichSlice::This;
             // Bx and By adjacent for explicit solver
@@ -159,7 +168,9 @@ Fields::AllocData (
 
             isl = WhichSlice::Previous;
             Comps[isl].multi_emplace(N_Comps, "Bx", "By", "jx", "jy");
-
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "Ez");
+            }
 
             isl = WhichSlice::RhomJzIons;
             if (m_any_neutral_background) {
@@ -618,6 +629,9 @@ Fields::ShiftSlices (int lev)
     } else {
         shift(lev, WhichSlice::PCPrevIter, WhichSlice::Previous, "Bx", "By");
         shift(lev, WhichSlice::Previous, WhichSlice::This, "Bx", "By", "jx", "jy");
+    }
+    if (Hipace::m_depos_order_z == 2) {
+        shift(lev, WhichSlice::Previous, WhichSlice::This, "Ez");
     }
 }
 
