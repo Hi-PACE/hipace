@@ -86,7 +86,6 @@ AdvanceBeamParticlesSlice (
     const amrex::Real y_pos_offset_lev2 = GetPosOffset(1, gm[lev2_idx], slice_fab_lev2.box());
 
     // z is the same for all levels
-    amrex::Real const z_pos_offset = GetPosOffset(2, gm[lev0_idx], slice_fab_lev0.box());
     amrex::Real const dz_inv = gm[lev0_idx].InvCellSize(2);
 
     const CheckDomainBounds lev1_bounds {gm[lev1_idx]};
@@ -208,12 +207,12 @@ AdvanceBeamParticlesSlice (
                     // x,y direction
                     const amrex::Real xmid = (xp-x_pos_offset)*dx_inv;
                     const amrex::Real ymid = (yp-y_pos_offset)*dy_inv;
-                    const amrex::Real zmid = (zp-z_pos_offset)*dz_inv;
+                    const amrex::Real zmid = (zp-min_z)*dz_inv-0.5_rt;
 
                     auto [shape_p, pcell] =
-                        compute_single_shape_factor<false, depos_order.value>(zmid, 2);
+                        compute_single_shape_factor<false, 2>(zmid, 2);
                     auto [shape_n, ncell] =
-                        compute_single_shape_factor<false, depos_order.value>(zmid, 0);
+                        compute_single_shape_factor<false, 2>(zmid, 0);
 
                     Ezp *= (1._rt - shape_p - shape_n);
 

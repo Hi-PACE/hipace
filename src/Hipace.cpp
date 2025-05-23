@@ -729,7 +729,7 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     if (m_depos_order_z == 2) {
-        CalculateEzNext(current_N_level);
+        CalculateEzNext(current_N_level, step);
     }
 
     // get minimum beam acceleration on level 0
@@ -760,7 +760,7 @@ Hipace::SolveOneSlice (int islice, int step)
 }
 
 void
-Hipace::CalculateEzNext (const int current_N_level)
+Hipace::CalculateEzNext (const int current_N_level, const int step)
 {
     if (m_N_level > 1) {
         // tag to next slice for deposition
@@ -768,6 +768,17 @@ Hipace::CalculateEzNext (const int current_N_level)
     }
 
     for (int lev=0; lev<current_N_level; ++lev) {
+
+        if (m_explicit) {
+            // add beam jx jy to the next slice
+            m_fields.duplicate(lev, WhichSlice::Next, {"jx", "jy"},
+                                    WhichSlice::Next, {"jx_beam", "jy_beam"});
+        } else {
+            // beams deposit jx jy to the next slice
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+                m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
+        }
+
         // deposit plasma jx and jy on the next slice
         m_multi_plasma.DepositCurrent(m_fields,
             WhichSlice::Next, true, false, false, false, false, m_3D_geom, lev);
