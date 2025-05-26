@@ -138,6 +138,10 @@ public:
      */
     bool needsRhoIndividual () const;
 
+    /** \brief determines if the temperature parameters for every individual plasma are requested as a diagnostic
+     */
+    bool needsTempIndividual () const;
+
     /** \brief calculate box which possibly was trimmed in case of slice IO
      *
      * \param[in] slice_dir slicing direction

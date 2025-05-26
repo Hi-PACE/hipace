@@ -120,6 +120,25 @@ Diagnostic::needsRhoIndividual () const {
     return false;
 }
 
+bool
+Diagnostic::needsTempIndividual () const {
+    amrex::ParmParse ppd("diagnostic");
+    for (auto& fd : m_field_data) {
+        amrex::ParmParse pp(fd.m_diag_name);
+        amrex::Vector<std::string> comps{};
+        queryWithParserAlt(pp, "field_data", comps, ppd);
+        for (auto& c : comps) {
+            // we don't know the names of all the plasmas here so just look for "ux_..."
+            if (c.find("w_") == 0 ||
+                c.find("ux_") == 0 || c.find("uy_") == 0 || c.find("uz_") == 0 ||
+                c.find("ux^2_") == 0 || c.find("uy^2_") == 0 || c.find("uz^2_") == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void
 Diagnostic::Initialize (int nlev, bool use_laser) {
     amrex::ParmParse ppd("diagnostic");

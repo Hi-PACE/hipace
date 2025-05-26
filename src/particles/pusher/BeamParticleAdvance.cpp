@@ -48,6 +48,10 @@ AdvanceBeamParticlesSlice (
     const int by_comp = Comps[WhichSlice::This]["By"];
     const int bz_comp = Comps[WhichSlice::This]["Bz"];
 
+    const bool do_ez_inzerp = (Hipace::m_depos_order_z == 2);
+    const int ez_comp_prev = do_ez_inzerp ? Comps[WhichSlice::Previous]["Ez"] : -1;
+    const int ez_comp_next = do_ez_inzerp ? Comps[WhichSlice::Next]["Ez"] : -1;
+
     const int lev0_idx = 0;
     const int lev1_idx = std::min(1, current_N_level-1);
     const int lev2_idx = std::min(2, current_N_level-1);
@@ -80,6 +84,9 @@ AdvanceBeamParticlesSlice (
     const amrex::Real y_pos_offset_lev0 = GetPosOffset(1, gm[lev0_idx], slice_fab_lev0.box());
     const amrex::Real y_pos_offset_lev1 = GetPosOffset(1, gm[lev1_idx], slice_fab_lev1.box());
     const amrex::Real y_pos_offset_lev2 = GetPosOffset(1, gm[lev2_idx], slice_fab_lev2.box());
+
+    // z is the same for all levels
+    amrex::Real const dz_inv = gm[lev0_idx].InvCellSize(2);
 
     const CheckDomainBounds lev1_bounds {gm[lev1_idx]};
     const CheckDomainBounds lev2_bounds {gm[lev2_idx]};
@@ -119,13 +126,16 @@ AdvanceBeamParticlesSlice (
     omp::ParallelFor(
         amrex::TypeList<
             amrex::CompileTimeOptions<0, 1, 2, 3>,
+            amrex::CompileTimeOptions<false, true>,
             amrex::CompileTimeOptions<false, true>
         >{}, {
             Hipace::m_depos_order_xy,
-            use_external_fields
+            use_external_fields,
+            do_ez_inzerp
         },
         beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This),
-        [=] AMREX_GPU_DEVICE (int ip, auto depos_order, auto c_use_external_fields) {
+        [=] AMREX_GPU_DEVICE (int ip, auto depos_order, auto c_use_external_fields,
+                              auto c_do_ez_inzerp) {
 
             if (!ptd.id(ip).is_valid()) return;
 
@@ -192,6 +202,34 @@ AdvanceBeamParticlesSlice (
                 doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                     slice_arr, psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+                if (c_do_ez_inzerp.value) {
+                    // x,y,z direction
+                    const amrex::Real xmid = (xp-x_pos_offset)*dx_inv;
+                    const amrex::Real ymid = (yp-y_pos_offset)*dy_inv;
+                    const amrex::Real zmid = (zp-min_z)*dz_inv-0.5_rt;
+
+                    auto [shape_p, pcell] =
+                        compute_single_shape_factor<false, 2>(zmid, 2);
+                    auto [shape_n, ncell] =
+                        compute_single_shape_factor<false, 2>(zmid, 0);
+
+                    Ezp *= (1._rt - shape_p - shape_n);
+
+                    // Gather Ez field on particle from grid
+                    for (int iy=0; iy<=depos_order.value; iy++){
+                        for (int ix=0; ix<=depos_order.value; ix++){
+                            // Compute shape factors
+                            auto [shape_y, jcell] =
+                                compute_single_shape_factor<false, depos_order.value>(ymid, iy);
+                            auto [shape_x, icell] =
+                                compute_single_shape_factor<false, depos_order.value>(xmid, ix);
+
+                            Ezp += shape_p * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_prev);
+                            Ezp += shape_n * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_next);
+                        }
+                    }
+                }
 
                 if (c_use_external_fields.value) {
                     ApplyExternalField(xp, yp, zp, time, clight, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
