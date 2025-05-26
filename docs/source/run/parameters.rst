@@ -162,6 +162,13 @@ General parameters
     If a parameter is present multiple times then the last occurrence will be used.
     Note that this will include some default AMReX parameters.
 
+* ``hipace.grid_external_E(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
+    External electric field applied to the field grid as a function of x, y, z and t.
+    This will affect both beam and plasma particles, as well as the field diagnostics.
+    The components represent Ex, Ey and Ez respectively.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current time step.
+
 * ``hipace.grid_external_B(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
     External magnetic field applied to the field grid as a function of x, y, z and t.
     This will affect both beam and plasma particles, as well as the field diagnostics.
