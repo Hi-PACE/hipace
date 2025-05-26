@@ -36,8 +36,8 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     "Current deposition can only be done in this slice (WhichSlice::This), the next slice "
     " (WhichSlice::Next), or the SALAME slice (WhichSlice::Salame)");
 
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0,
-        "Only order 0 deposition is allowed for beam per-slice deposition");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_depos_order_z == 0 || Hipace::m_depos_order_z == 2,
+        "Only order 0 or 2 deposition is allowed for beam per-slice Ez interpolation");
 
     // Extract the fields currents
     // Extract FabArray for this box (because there is currently no transverse
