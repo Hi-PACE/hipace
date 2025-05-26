@@ -204,7 +204,7 @@ AdvanceBeamParticlesSlice (
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                 if (c_do_ez_inzerp.value) {
-                    // x,y direction
+                    // x,y,z direction
                     const amrex::Real xmid = (xp-x_pos_offset)*dx_inv;
                     const amrex::Real ymid = (yp-y_pos_offset)*dy_inv;
                     const amrex::Real zmid = (zp-min_z)*dz_inv-0.5_rt;
@@ -216,7 +216,7 @@ AdvanceBeamParticlesSlice (
 
                     Ezp *= (1._rt - shape_p - shape_n);
 
-                    // Gather field on particle from field on grid
+                    // Gather Ez field on particle from grid
                     for (int iy=0; iy<=depos_order.value; iy++){
                         for (int ix=0; ix<=depos_order.value; ix++){
                             // Compute shape factors
