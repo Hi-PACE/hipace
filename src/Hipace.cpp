@@ -420,7 +420,7 @@ Hipace::Evolve ()
             }
             break;
         }
-        std::string str_dt {""};
+        std::string str_dt {"0."};
         queryWithParser(pph, "dt", str_dt);
         if (str_dt != "adaptive") {
             m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
