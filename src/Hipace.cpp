@@ -348,6 +348,40 @@ Hipace::MakeGeometry ()
         getWithParser(pp_mrlev, "patch_lo", patch_lo_lev);
         getWithParser(pp_mrlev, "patch_hi", patch_hi_lev);
 
+        std::array<int, 2> ref_ratio {0, 0};
+        bool have_rr = queryWithParser(pp_mrlev, "ref_ratio", ref_ratio);
+
+        if (have_rr) {
+            std::array<amrex::Real, 2> patch_center_lev {
+                0.5 * (patch_hi_lev[0] + patch_lo_lev[0]),
+                0.5 * (patch_hi_lev[1] + patch_lo_lev[1])
+            };
+
+            std::array<amrex::Real, 2> patch_len_lev {
+                n_cells_lev[0] * m_3D_geom[lev-1].CellSize(0) / ref_ratio[0],
+                n_cells_lev[1] * m_3D_geom[lev-1].CellSize(1) / ref_ratio[1],
+            };
+
+            std::array<amrex::Real, 2> old_patch_len {
+                patch_hi_lev[0] - patch_lo_lev[0],
+                patch_hi_lev[1] - patch_lo_lev[1]
+            };
+
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                old_patch_len[0] > 0. && old_patch_len[1] > 0. &&
+                (std::abs((patch_len_lev[0] - old_patch_len[0]) / old_patch_len[0]) <= 0.05) &&
+                (std::abs((patch_len_lev[1] - old_patch_len[1]) / old_patch_len[1]) <= 0.05),
+                "The refined patch would need to be changed by more than 5% "
+                "to fit the requested refinement ratio"
+            );
+
+            patch_lo_lev[0] = patch_center_lev[0] - patch_len_lev[0] * 0.5;
+            patch_lo_lev[1] = patch_center_lev[1] - patch_len_lev[1] * 0.5;
+
+            patch_hi_lev[0] = patch_center_lev[0] + patch_len_lev[0] * 0.5;
+            patch_hi_lev[1] = patch_center_lev[1] + patch_len_lev[1] * 0.5;
+        }
+
         const amrex::Real pos_offset_z = GetPosOffset(2, m_3D_geom[0], m_3D_geom[0].Domain());
 
         const int zeta_lo = std::max( m_3D_geom[lev-1].Domain().smallEnd(2),
@@ -385,6 +419,30 @@ Hipace::MakeGeometry ()
         amrex::Vector<int> procmap_lev{amrex::ParallelDescriptor::MyProc()};
         m_3D_ba[lev].define(bl_lev);
         m_3D_dm[lev].define(procmap_lev);
+    }
+
+    if (m_verbose > 0) {
+        for (int lev=0; lev<m_N_level; ++lev) {
+            amrex::Print()
+                << "Using "
+                << m_3D_geom[lev].Domain().length()
+                << " cells\n    from "
+                << amrex::RealVect{m_3D_geom[lev].ProbLoArray()}
+                << "\n    to "
+                << amrex::RealVect{m_3D_geom[lev].ProbHiArray()};
+            if (lev > 0) {
+                amrex::Print()
+                    << "\n    on MR level "
+                    << lev
+                    << " with refinement ratio "
+                    << amrex::RealVect{
+                        m_3D_geom[lev-1].CellSize(0) / m_3D_geom[lev].CellSize(0),
+                        m_3D_geom[lev-1].CellSize(1) / m_3D_geom[lev].CellSize(1),
+                        m_3D_geom[lev-1].CellSize(2) / m_3D_geom[lev].CellSize(2)
+                    };
+            }
+            amrex::Print() << "\n";
+        }
     }
 
     // make slice Geometry, BoxArray, DistributionMapping every level
