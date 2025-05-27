@@ -117,21 +117,16 @@ public:
                           const amrex::Real background_density_SI);
 
     /** Mark the plasma particles that has been injected
-     *
-     * \param[in] lev MR level
-     * \param[in] fields the general field class
-     * \param[in] laser MultiLaser object containing the laser details
-     * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser, const int islice);
+    void InjectionCondition ();
 
     /** Do the transfer of particles from the plasma container to the beam container
      *
-     * \param[in] laser MultiLaser object containing the laser details
+     * \param[in] fields
      * \param[in] gm Geometry object for the whole domain
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice);
+    void PlasmaToBeam (const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index

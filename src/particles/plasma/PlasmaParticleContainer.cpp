@@ -742,11 +742,9 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
-InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser, const int islice)
+InjectionCondition ()
 {
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_injection || laser.UseLaser(),
-    "Error: LaserIonization requires the laser to be enabled in the current slice.");
-    if (!m_can_laser_injection || !laser.UseLaser(islice)) return;
+    if (!m_can_laser_injection) return;
     HIPACE_PROFILE("PlasmaParticleContainer::InjectionCondition()");
 
     using namespace amrex::literals;
@@ -765,7 +763,9 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
                 // condition for injection
                 const amrex::Real condition = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip] - dt;
 
-                if (ptd_plasma.id(ip) == 2 && (condition > 0._rt)){
+                //AMREX_DEVICE_PRINTF("time_integral %f dt %f\n", ptd_plasma.rdata(PlasmaIdx::time_integral)[ip], dt);
+
+                if (ptd_plasma.id(ip).is_valid() && (condition > 0._rt)){
                     ptd_plasma.id(ip) = 3; // set the injected electron ID to 3
                 }
         });
@@ -774,30 +774,19 @@ InjectionCondition (const int lev, const Fields& fields, const MultiLaser& laser
 
 void
 PlasmaParticleContainer::
-PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm, const int islice)
+PlasmaToBeam (const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int islice)
 {
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_can_laser_injection || laser.UseLaser(),
-    "Error: LaserIonization requires the laser to be enabled in the current slice.");
-    if (!m_can_laser_injection || !laser.UseLaser(islice)) return;
+    if (!m_can_laser_injection) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
 
     uint32_t num_new_beam_part = 0;
 
     using namespace amrex::literals;
-    using Complex = amrex::GpuComplex<amrex::Real>;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight = phys_const.c;
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
-    auto laser_geom = laser.GetLaserGeom();
-
-    const amrex::Real dx_inv = laser_geom.InvCellSize(0);
-    const amrex::Real dy_inv = laser_geom.InvCellSize(1);
-    const amrex::Real dzeta_inv = laser_geom.InvCellSize(2);
-
-    // Offset for converting positions to indexes
-    amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
-    amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
+    const amrex::Real dzeta_inv = gm[0].InvCellSize(2);
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -851,12 +840,12 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
         const amrex::Real dt = Hipace::GetInstance().m_dt;
         //const amrex::Real f = m_injection_weight_factor;
         const int n_subcycles = beam_elec->m_n_subcycles;
+        const amrex::Real uz_condition = m_uz_threshold;
+
+        const amrex::Real poff_z = GetPosOffset(2, gm[0], gm[0].Domain());
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
-
-        // Extract laser array
-        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(pti);
 
         // This kernel does the transfer of the ionized electrons from the plasma container
         // to the beam container and make them invalid in the plasma container
@@ -866,27 +855,31 @@ PlasmaToBeam (const MultiLaser& laser, amrex::Vector<amrex::Geometry> const& gm,
                     const long pid_beam = amrex::Gpu::Atomic::Add(p_ip_beam, 1u);
                     const long pidx_beam = pid_beam + old_size;
 
-                    Complex A = 0;
-                    Complex A_dx = 0;
-                    Complex A_dzeta = 0;
+                    amrex::Real Aabssqp = 0;
+                    const amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
+                    const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
+                    const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
 
-                    amrex::Real xp = ptd_plasma.pos(0, ip);
-                    amrex::Real yp = ptd_plasma.pos(1, ip);
+                    amrex::Real integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip];
+                    amrex::Real extra = integral - dt;
+                    amrex::Real extra_gamma_psi = extra * dzeta_inv * clight;
 
-                    doLaserGatherShapeN<2>(xp, yp, A, A_dx, A_dzeta, laser_arr,
-                        dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+                    amrex::Real gamma_psi = 0.5_rt*(1._rt / psi)*(1._rt / psi)*(
+                        1.0_rt + Aabssqp
+                        + ux*ux*(clight_inv*clight_inv)
+                        + uy*uy*(clight_inv*clight_inv))
+                        + 0.5_rt;
+
+                    amrex::Real frac = extra_gamma_psi / (gamma_psi - uz_condition);
 
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.id(pidx_beam) = pid_beam;
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
                     ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
-                    ptd_beam.pos(2, pidx_beam) = z_lo + dz * islice;
+                    ptd_beam.pos(2, pidx_beam) = poff_z + dz * (islice - frac);
                     ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
                     ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::uy)[ip];
-                    amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
-                    amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
-                    amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*amrex::abs(A*A))/(2.*psi)*phys_const.c;
+                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*Aabssqp)/(2.*psi)*phys_const.c;
                     //amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
                     //const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A));
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * dt * clight * dzeta_inv;

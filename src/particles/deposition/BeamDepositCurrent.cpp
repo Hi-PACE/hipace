@@ -58,6 +58,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     const int     jyb_cmp = do_beam_jx_jy_deposition  ? Comps[which_slice]["jy"    +beam_str] : -1;
     const int     jzb_cmp = do_beam_jz_deposition     ? Comps[which_slice]["jz"    +beam_str] : -1;
     const int rhomjzb_cmp = do_beam_rhomjz_deposition ? Comps[which_slice]["rhomjz"+beam_str] : -1;
+    const int     rho_cmp = (which_slice == WhichSlice::This) && Hipace::m_deposit_rho ? Comps[which_slice]["rho"] : -1;
 
     // Offset for converting positions to indexes
     amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
@@ -101,7 +102,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                 isl_fab.array(), isl_fab.box(),
                 beam.getBeamSlice(which_beam_slice).getParticleTileData(),
                 amrex::GpuArray<int, 0>{},
-                amrex::GpuArray<int, 4>{jxb_cmp, jyb_cmp, jzb_cmp, rhomjzb_cmp});
+                amrex::GpuArray<int, 5>{jxb_cmp, jyb_cmp, jzb_cmp, rhomjzb_cmp, rho_cmp});
         },
         // is_valid
         // return whether the particle is valid and should deposit
@@ -189,6 +190,11 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
                         amrex::Gpu::Atomic::Add(
                             arr.ptr(i_cell+ix, j_cell+iy, depos_idx[3]),
                             sx_cell[ix]*sy_cell[iy]*wqrhomjz);
+                    }
+                    if (depos_idx[4] != -1) { // deposit_rho
+                        amrex::Gpu::Atomic::Add(
+                            arr.ptr(i_cell+ix, j_cell+iy, depos_idx[4]),
+                            sx_cell[ix]*sy_cell[iy]*wq);
                     }
                 }
             }
