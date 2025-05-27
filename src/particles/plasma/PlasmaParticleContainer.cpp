@@ -754,6 +754,20 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
         amrex::Long const num_particles = pti.numParticles();
 
+        const PhysConst pc = get_phys_const();
+        const bool use_laser = Hipace::m_use_laser;
+        const amrex::Geometry& gm = Hipace::GetInstance().m_3D_geom[0];
+        const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
+        amrex::FArrayBox& isl_fab = Hipace::GetInstance().m_fields.getSlices(0)[pti];
+        Array3<amrex::Real> arr = isl_fab.array();
+        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
+        const amrex::Real dx_inv = gm.InvCellSize(0);
+        const amrex::Real dy_inv = gm.InvCellSize(1);
+        const bool can_ionize = m_can_ionize;
+        const amrex::Real laser_norm = (m_charge/pc.q_e) * (pc.m_e/m_mass)
+            * (m_charge/pc.q_e) * (pc.m_e/m_mass);
+
         amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
         amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
@@ -770,8 +784,22 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
                     return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
                 }
+
+                amrex::Real Aabssqp = 0._rt;
+                if (use_laser) {
+                    amrex::Real laser_norm_ion = laser_norm;
+                    if (can_ionize) {
+                        laser_norm_ion *=
+                            ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    }
+                    doLaserGatherShapeN<2>(x, y, Aabssqp, arr, aabs_comp,
+                                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                    Aabssqp *= laser_norm_ion;
+                }
+
                 // Particle's Lorentz factor
-                const amrex::Real gamma = (1.0_rt + ux*ux + uy*uy + psi*psi)/(2.0_rt*psi);
+                const amrex::Real gamma = (1._rt + ux*ux + uy*uy + psi*psi
+                    + 0.5_rt*Aabssqp)/(2._rt*psi);
                 // The *c from uz cancels with the /c from the proper velocity conversion
                 const amrex::Real uz = (gamma - psi);
                 // Weight with quasi-static weighting factor
