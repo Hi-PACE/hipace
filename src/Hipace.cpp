@@ -441,7 +441,7 @@ Hipace::Evolve ()
             next_time = std::numeric_limits<amrex::Real>::infinity();
         } else if ((m_physical_time + m_dt >= m_max_time && m_physical_time < m_max_time) ||
                    (m_physical_time + m_dt <= m_max_time && m_physical_time > m_max_time)) {
-                    m_dt = m_max_time - m_physical_time;
+            m_dt = m_max_time - m_physical_time;
             next_time = m_max_time;
         } else {
             next_time = m_physical_time + m_dt;
