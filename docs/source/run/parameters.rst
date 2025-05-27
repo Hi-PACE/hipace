@@ -227,6 +227,10 @@ Geometry
 * ``mr_lev1.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
+* ``mr_lev1.ref_ratio`` (2 `int`) optional (default `0 0`)
+    The refinement ratio of level 1 compared to level 0 in the x and y directions. If specified,
+    ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
+
 * ``mr_lev2.n_cell`` (2 `integer`)
     Number of cells in x and y for level 2.
     The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
@@ -236,6 +240,10 @@ Geometry
 
 * ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
+
+* ``mr_lev2.ref_ratio`` (2 `int`) optional (default `0 0`)
+    The refinement ratio of level 2 compared to level 1 in the x and y directions. If specified,
+    ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
 
 * ``lasers.n_cell`` (2 `integer`)
     Number of cells in x and y for the laser grid.
