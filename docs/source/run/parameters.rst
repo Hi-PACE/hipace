@@ -227,7 +227,7 @@ Geometry
 * ``mr_lev1.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
-* ``mr_lev1.ref_ratio`` (2 `int`) optional (default `0 0`)
+* ``mr_lev1.ref_ratio`` (2 `float`) optional (default `0 0`)
     The refinement ratio of level 1 compared to level 0 in the x and y directions. If specified,
     ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
 
@@ -241,7 +241,7 @@ Geometry
 * ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
-* ``mr_lev2.ref_ratio`` (2 `int`) optional (default `0 0`)
+* ``mr_lev2.ref_ratio`` (2 `float`) optional (default `0 0`)
     The refinement ratio of level 2 compared to level 1 in the x and y directions. If specified,
     ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
 

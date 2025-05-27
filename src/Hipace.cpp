@@ -350,10 +350,10 @@ Hipace::MakeGeometry ()
         getWithParser(pp_mrlev, "patch_lo", patch_lo_lev);
         getWithParser(pp_mrlev, "patch_hi", patch_hi_lev);
 
-        std::array<int, 2> ref_ratio {0, 0};
-        bool have_rr = queryWithParser(pp_mrlev, "ref_ratio", ref_ratio);
+        std::array<amrex::Real, 2> ref_ratio {0, 0};
+        const bool rr_specified = queryWithParser(pp_mrlev, "ref_ratio", ref_ratio);
 
-        if (have_rr) {
+        if (rr_specified) {
             std::array<amrex::Real, 2> patch_center_lev {
                 0.5_rt * (patch_hi_lev[0] + patch_lo_lev[0]),
                 0.5_rt * (patch_hi_lev[1] + patch_lo_lev[1])
