@@ -519,7 +519,9 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name> or plasmas.fine_ppc`` (2 `int`) optional (default `0 0`)
     The number of plasma particles per cell in x and y inside the fine plasma patch. This must be
-    divisible by the ppc outside the fine patch in both directions.
+    divisible by the ppc outside the fine patch in both directions. The ppc number is taken reletaive
+    to the cell size of mesh refinement level 0 so it typically should be much larger than
+    ``<plasma name> or plasmas.ppc``.
 
 * ``<plasma name> or plasmas.fine_transition_cells`` (`int`) optional (default `5`)
     Number of cells that are used just outside of the fine plasma patch to smoothly transition

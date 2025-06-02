@@ -318,6 +318,7 @@ Hipace::MakeGeometry ()
     m_slice_geom.resize(m_N_level);
     m_slice_dm.resize(m_N_level);
     m_slice_ba.resize(m_N_level);
+    m_plasma_fine_patch.resize(m_N_level);
 
     // make 3D Geometry, BoxArray, DistributionMapping on level 0
     amrex::ParmParse pp_amr("amr");
@@ -352,6 +353,9 @@ Hipace::MakeGeometry ()
 
         std::array<amrex::Real, 2> ref_ratio {0, 0};
         const bool rr_specified = queryWithParser(pp_mrlev, "ref_ratio", ref_ratio);
+
+        m_plasma_fine_patch[lev] = {0, 0};
+        queryWithParser(pp_mrlev, "plasma_fine_patch", m_plasma_fine_patch[lev]);
 
         if (rr_specified) {
             std::array<amrex::Real, 2> patch_center_lev {
