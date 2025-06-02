@@ -159,7 +159,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 {
                     amrex::Real r[2];
                     bool do_init = false;
-                    ParticleUtil::get_position_unit_cell_fine<n_lev>(r, do_init, i_part,
+                    ParticleUtil::template get_position_unit_cell_fine<n_lev>(r, do_init, i_part,
                         ppc_lev, fine_transition_cells,
                         use_fine_patch ? arr_fine(i, j, comp_a) : 0);
 
@@ -213,7 +213,7 @@ InitParticles (const amrex::RealVect& a_u_std,
             {
                 amrex::Real r[2];
                 bool do_init = false;
-                ParticleUtil::get_position_unit_cell_fine<n_lev>(r, do_init, i_part,
+                ParticleUtil::template get_position_unit_cell_fine<n_lev>(r, do_init, i_part,
                     ppc_lev, fine_transition_cells,
                     use_fine_patch ? arr_fine(i, j, comp_a) : 0);
 
@@ -273,7 +273,7 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 amrex::Real r[2] = {0.,0.};
                 bool do_init = false;
-                ParticleUtil::get_position_unit_cell_fine<n_lev>(r, do_init, i_part,
+                ParticleUtil::template get_position_unit_cell_fine<n_lev>(r, do_init, i_part,
                     ppc_lev, fine_transition_cells,
                     use_fine_patch ? arr_fine(i, j, comp_a) : 0);
 
