@@ -218,7 +218,7 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
         m_use_fine_patch = queryWithParserAlt(pp, "fine_ppc", fine_ppc, pp_alt) ||
             m_use_fine_patch;
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            fine_ppc.size() == 2 || fine_ppc.size() == 4,
+            fine_ppc.size() == 0 || fine_ppc.size() == 2 || fine_ppc.size() == 4,
             "fine_ppc must have either two or four components"
         );
         if (fine_ppc.size() == 2) {
