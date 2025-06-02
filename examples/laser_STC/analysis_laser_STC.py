@@ -26,7 +26,7 @@ args = parser.parse_args()
 
 profile = FromOpenPMDProfile(
     file_name=args.output_dir+ '/openpmd_000000.h5',
-    envelope_name = 'laserEnvelope',
+    envelope_name='laserEnvelope',
 )
 
 laser = Laser(
@@ -36,7 +36,7 @@ laser = Laser(
         npoints=(255, 255, 1000),
         profile=profile,
      )
-_, phi2 = get_dispersion(laser.grid,laser.dim, omega0 = 2 * scc.pi * scc.c / lambda0, order = 2)
+_, phi2 = get_dispersion(laser.grid,laser.dim, omega0=2*scc.pi*scc.c/lambda0, order=2)
 [ _, beta_y] = get_beta(laser.dim, laser.grid, k0)
 [ _, zeta_y], [_, _] = get_zeta(laser.dim, laser.grid, k0)
 print("phi2 theory:", 2.4e-27, "measured:", phi2)
