@@ -1,0 +1,27 @@
+max_step = 0
+amr.n_cell = 255 255 2000
+
+hipace.verbose = 1
+hipace.dt = 1e-13
+diagnostic.output_period = 8
+
+amr.max_level = 0
+boundary.field = Dirichlet
+boundary.particle = Absorbing
+geometry.prob_lo     = -10e-6 -10e-6 -90e-6
+geometry.prob_hi     =  10e-6  10e-6  90e-6
+
+lasers.names = laser
+lasers.lambda0 = 800e-9
+lasers.solver_type = fft
+laser.a0 = 10
+laser.position_mean = 0. 0. 0
+laser.w0 = 5e-6
+laser.L0 = 15e-6
+laser.focal_distance = 0
+laser.phi2 = 2.4e-27
+laser.beta = 3e-18
+laser.zeta = 2.4e-22
+laser.STC_theta_xy = pi/2
+diagnostic.field_data = laserEnvelope
+diagnostic.diag_type = xyz

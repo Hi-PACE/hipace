@@ -247,13 +247,22 @@ Hipace::Hipace () :
 
     // external fields applied to the grid
     amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
-    m_use_gird_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str);
+    m_use_grid_external_fields = queryWithParser(pph, "grid_external_E(x,y,z,t)", field_str);
     m_grid_external_fields[0] = makeFunctionWithParser<4>(field_str[0],
         m_grid_external_fields_parser[0], {"x", "y", "z", "t"});
     m_grid_external_fields[1] = makeFunctionWithParser<4>(field_str[1],
         m_grid_external_fields_parser[1], {"x", "y", "z", "t"});
     m_grid_external_fields[2] = makeFunctionWithParser<4>(field_str[2],
         m_grid_external_fields_parser[2], {"x", "y", "z", "t"});
+    field_str = {"0", "0", "0"};
+    m_use_grid_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str)
+        || m_use_grid_external_fields;
+    m_grid_external_fields[3] = makeFunctionWithParser<4>(field_str[0],
+        m_grid_external_fields_parser[3], {"x", "y", "z", "t"});
+    m_grid_external_fields[4] = makeFunctionWithParser<4>(field_str[1],
+        m_grid_external_fields_parser[4], {"x", "y", "z", "t"});
+    m_grid_external_fields[5] = makeFunctionWithParser<4>(field_str[2],
+        m_grid_external_fields_parser[5], {"x", "y", "z", "t"});
 }
 
 void
@@ -1162,7 +1171,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
 void
 Hipace::AddGridExternalFields (const int lev, const int islice)
 {
-    if (!m_use_gird_external_fields) {
+    if (!m_use_grid_external_fields) {
         return;
     }
     HIPACE_PROFILE("Hipace::AddGridExternalFields()");
@@ -1179,6 +1188,7 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
 
     const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
     const int EypBx = Comps[WhichSlice::This]["EypBx"];
+    const int Ez = Comps[WhichSlice::This]["Ez"];
     const int Bx = Comps[WhichSlice::This]["By"];
     const int By = Comps[WhichSlice::This]["Bx"];
     const int Bz = Comps[WhichSlice::This]["Bz"];
@@ -1204,12 +1214,16 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
                 const amrex::Real y = j * dy + poff_y;
                 const amrex::Real z = islice * dz + poff_z;
 
-                const amrex::Real Bxp = external_fields[0](x, y, z, time);
-                const amrex::Real Byp = external_fields[1](x, y, z, time);
-                const amrex::Real Bzp = external_fields[2](x, y, z, time);
+                const amrex::Real Exp = external_fields[0](x, y, z, time);
+                const amrex::Real Eyp = external_fields[1](x, y, z, time);
+                const amrex::Real Ezp = external_fields[2](x, y, z, time);
+                const amrex::Real Bxp = external_fields[3](x, y, z, time);
+                const amrex::Real Byp = external_fields[4](x, y, z, time);
+                const amrex::Real Bzp = external_fields[5](x, y, z, time);
 
-                arr(i, j, ExmBy) -= clight * Byp;
-                arr(i, j, EypBx) += clight * Bxp;
+                arr(i, j, ExmBy) += Exp - clight * Byp;
+                arr(i, j, EypBx) += Eyp + clight * Bxp;
+                arr(i, j, Ez) += Ezp;
                 arr(i, j, Bx) += Bxp;
                 arr(i, j, By) += Byp;
                 arr(i, j, Bz) += Bzp;
