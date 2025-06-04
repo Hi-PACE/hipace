@@ -221,15 +221,16 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
             fine_ppc.size() == 0 || fine_ppc.size() == 2 || fine_ppc.size() == 4,
             "fine_ppc must have either two or four components"
         );
-        if (fine_ppc.size() == 2) {
+        if (fine_ppc.size() >= 2) {
             m_ppc_fine[0] = fine_ppc[0];
             m_ppc_fine[1] = fine_ppc[1];
-            m_ppc_fine2 = m_ppc_fine;
-        } else if (fine_ppc.size() == 4) {
+        } else {
+            m_ppc_fine = m_ppc;
+        }
+        if (fine_ppc.size() == 4) {
             m_ppc_fine2[0] = fine_ppc[2];
             m_ppc_fine2[1] = fine_ppc[3];
         } else {
-            m_ppc_fine = m_ppc;
             m_ppc_fine2 = m_ppc_fine;
         }
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_fine_patch ||

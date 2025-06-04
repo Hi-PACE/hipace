@@ -36,7 +36,7 @@ InitParticles (const amrex::RealVect& a_u_std,
 
     const bool use_fine_patch = m_use_fine_patch;
 
-    amrex::Array<amrex::Array<int, 2>, n_lev> ppc_lev {};
+    amrex::Array<amrex::Array<int, 2ul>, n_lev> ppc_lev {};
     ppc_lev[0] = m_ppc;
 
     ppc_lev[1] = m_ppc_fine;

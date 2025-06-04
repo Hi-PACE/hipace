@@ -65,7 +65,7 @@ namespace ParticleUtil
     template<int n_level>
     AMREX_GPU_HOST_DEVICE
     void get_position_unit_cell_fine (amrex::Real* r, bool& do_init, int i_part,
-                                      const amrex::Array<amrex::Array<int, 2>, n_level>& nppc,
+                                      const amrex::Array<amrex::Array<int, 2ul>, n_level>& nppc,
                                       const int n_fine_transition_cells,
                                       const int i_fine_transition_cells)
     {
