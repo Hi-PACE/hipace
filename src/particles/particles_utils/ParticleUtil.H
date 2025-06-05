@@ -62,14 +62,14 @@ namespace ParticleUtil
         r[2] = (0.5_rt + iz_part)/nz;
     }
 
-    template<int n_level>
+    template<std::size_t n_level>
     AMREX_GPU_HOST_DEVICE
     void get_position_unit_cell_fine (amrex::Real* r, bool& do_init, int i_part,
-        const amrex::Array<amrex::Array<int, std::size_t{2}>, std::size_t{n_level}>& nppc,
+        const amrex::Array<amrex::Array<int, std::size_t{2}>, n_level>& nppc,
         const int n_fine_transition_cells,
         const int i_fine_transition_cells)
     {
-        for (int lev = 0; lev < n_level; ++lev) {
+        for (int lev = 0; lev < int(n_level); ++lev) {
             if (i_fine_transition_cells == lev * (n_fine_transition_cells + 1)) {
                 // no interplation needed
                 int nx = nppc[lev][0];
@@ -84,7 +84,7 @@ namespace ParticleUtil
                     do_init = false;
                 }
                 return;
-            } else if (lev + 1 < n_level &&
+            } else if (lev + 1 < int(n_level) &&
                 i_fine_transition_cells > lev * (n_fine_transition_cells + 1) &&
                 i_fine_transition_cells < (lev + 1) * (n_fine_transition_cells + 1)) {
                 // interplation between lev and lev + 1
