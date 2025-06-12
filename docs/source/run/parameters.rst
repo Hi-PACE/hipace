@@ -862,7 +862,6 @@ For more information on the algorithm, see the corresponding publication `S. Die
 Laser parameters
 ----------------
 
-The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
 The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
 Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored on the same array,
 which you can find in the output openPMD file as a complex array named `laserEnvelope`.
@@ -874,7 +873,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 
 * ``lasers.polarization`` (`linear` or `circular`) optional (default `linear`)
     Polarization of the laser pulse.
-    The ponderomotive force is 2x larger in circular polarization than in linear polarization.
+    For the same peak amplitude, the ponderomotive force is 2x larger in circular polarization than in linear polarization.
     Note that the envelope of the vector potential stored in arrays is independent on the polarization, such that the energy is actually 2x higher in circular polarization than in linear polarization.
 
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
@@ -905,7 +904,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``<laser name>.init_type`` (list of `string`) optional (default `gaussian`)
     The initialisation method of laser. Possible options are:
 
-      Option: ``gaussian`` (default) the laser is initialised with an ideal gaussian pulse.
+      ``gaussian`` (default): the laser is initialised with an ideal Gaussian pulse: :math:`a(x,y,z) = a_0 e^{-(x^2/w_0^2 + y^2/w_0^2 + z^2/L_0^2)}`.
 
       * ``<laser name>.a0`` (`float`) optional (default `0`)
           Peak normalized vector potential of the laser pulse.
@@ -955,7 +954,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
           .. math::
                \tau' = \sqrt{ \tau^2 + 4 (\phi^{(2)})^2/\tau^2 }
 
-      Option: ``from_file`` the laser is loaded from an openPMD file.
+      ``from_file``: the laser is loaded from an openPMD file.
 
       * ``<laser name>.input_file`` (`string`) optional (default `""`)
           Path to an openPMD file containing a laser envelope.
@@ -970,7 +969,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.iteration`` (`int`) optional (default `0`)
           Iteration of the openPMD file to be read in.
 
-      Option: ``parser``, the laser is initialized with the expression of the complex envelope function.
+      ``parser``: the laser is initialized with the expression of the complex envelope function.
 
       * ``<laser name>.laser_real(x,y,z)`` optional (`string`) (default `""`)
           Expression for the real part of the laser envelope in `x, y, z`.
