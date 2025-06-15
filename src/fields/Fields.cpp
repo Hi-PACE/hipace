@@ -75,6 +75,9 @@ Fields::AllocData (
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "jx", "jy", "Ez");
+            }
 
             isl = WhichSlice::This;
             // (Bx, By), (Sy, Sx) and (chi, chi2) adjacent for explicit solver
@@ -96,12 +99,21 @@ Fields::AllocData (
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
             }
+            if (Hipace::m_deposit_temp_individual) {
+                for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+                    Comps[isl].multi_emplace(N_Comps, "w_" + plasma_name, "ux_" + plasma_name, "uy_" + plasma_name,
+                    "uz_" + plasma_name, "ux^2_" + plasma_name, "uy^2_" + plasma_name, "uz^2_" + plasma_name);
+                }
+            }
             if (Hipace::m_do_beam_jz_minus_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rhomjz_beam");
             }
 
             isl = WhichSlice::Previous;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "Ez");
+            }
 
             isl = WhichSlice::RhomJzIons;
             if (m_any_neutral_background) {
@@ -127,6 +139,9 @@ Fields::AllocData (
 
             int isl = WhichSlice::Next;
             Comps[isl].multi_emplace(N_Comps, "jx", "jy");
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "Ez");
+            }
 
             isl = WhichSlice::This;
             // Bx and By adjacent for explicit solver
@@ -144,10 +159,18 @@ Fields::AllocData (
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
             }
+            if (Hipace::m_deposit_temp_individual) {
+                for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+                    Comps[isl].multi_emplace(N_Comps, "w_" + plasma_name, "ux_" + plasma_name, "uy_" + plasma_name,
+                    "uz_" + plasma_name, "ux^2_" + plasma_name, "uy^2_" + plasma_name, "uz^2_" + plasma_name);
+                }
+            }
 
             isl = WhichSlice::Previous;
             Comps[isl].multi_emplace(N_Comps, "Bx", "By", "jx", "jy");
-
+            if (Hipace::m_depos_order_z == 2) {
+                Comps[isl].multi_emplace(N_Comps, "Ez");
+            }
 
             isl = WhichSlice::RhomJzIons;
             if (m_any_neutral_background) {
@@ -547,6 +570,9 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
             LevelUp(geom, lev, WhichSlice::This, "jy_beam");
             duplicate(lev, WhichSlice::This, {"jx"     , "jy"     },
                            WhichSlice::This, {"jx_beam", "jy_beam"});
+            if (Hipace::m_depos_order_z == 2) {
+                LevelUp(geom, lev, WhichSlice::Previous, "Ez");
+            }
         }
         // Set all quantities on WhichSlice::This to 0 except:
         // Bx, By, Bz, Psi and Ez which are set by field solvers and
@@ -568,6 +594,9 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
             LevelUp(geom, lev, WhichSlice::Previous, "By");
             LevelUp(geom, lev, WhichSlice::Previous, "jx");
             LevelUp(geom, lev, WhichSlice::Previous, "jy");
+            if (Hipace::m_depos_order_z == 2) {
+                LevelUp(geom, lev, WhichSlice::Previous, "Ez");
+            }
         }
         setVal(0., lev, WhichSlice::This,
             "ExmBy", "EypBx", "jx", "jy", "jz", "rhomjz");
@@ -581,6 +610,12 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
     if (Hipace::m_deposit_rho_individual) {
         for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
             setVal(0., lev, WhichSlice::This, "rho_" + plasma_name);
+        }
+    }
+    if (Hipace::m_deposit_temp_individual) {
+        for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
+            setVal(0., lev, WhichSlice::This, "w_" + plasma_name, "ux_" + plasma_name, "uy_" + plasma_name,
+            "uz_" + plasma_name, "ux^2_" + plasma_name, "uy^2_" + plasma_name, "uz^2_" + plasma_name);
         }
     }
 }
@@ -600,6 +635,9 @@ Fields::ShiftSlices (int lev)
     } else {
         shift(lev, WhichSlice::PCPrevIter, WhichSlice::Previous, "Bx", "By");
         shift(lev, WhichSlice::Previous, WhichSlice::This, "Bx", "By", "jx", "jy");
+    }
+    if (Hipace::m_depos_order_z == 2) {
+        shift(lev, WhichSlice::Previous, WhichSlice::This, "Ez");
     }
 }
 

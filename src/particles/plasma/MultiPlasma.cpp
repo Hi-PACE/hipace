@@ -7,6 +7,7 @@
  */
 #include "MultiPlasma.H"
 #include "particles/deposition/PlasmaDepositCurrent.H"
+#include "particles/deposition/TemperatureDeposition.H"
 #include "particles/deposition/ExplicitDeposition.H"
 #include "particles/pusher/PlasmaParticleAdvance.H"
 #include "utils/HipaceProfilerWrapper.H"
@@ -82,6 +83,16 @@ MultiPlasma::DepositCurrent (
         ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
                          gm, lev);
+    }
+}
+
+void
+MultiPlasma::DoDepositTemperature (
+    Fields & fields,
+    amrex::Vector<amrex::Geometry> const& gm, int const lev)
+{
+    for (int i=0; i<m_nplasmas; i++) {
+        ::DepositTemperature(m_all_plasmas[i], fields, gm, lev);
     }
 }
 

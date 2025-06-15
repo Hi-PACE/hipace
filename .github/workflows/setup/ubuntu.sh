@@ -32,3 +32,4 @@ sudo update-alternatives --set python /usr/bin/python3
 
 python -m pip install --upgrade pip
 python -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api
+python -m pip install git+https://github.com/LASY-org/lasy.git@development

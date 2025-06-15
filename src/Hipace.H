@@ -126,6 +126,14 @@ public:
      */
     void ExplicitMGSolveBxBy (const int lev, const int which_slice);
 
+    /**
+     * \brief Compute Ez on the Next slice
+     *
+     * \param[in] current_N_level number of MR levels
+     * \param[in] step current time step
+     */
+    void CalculateEzNext (const int current_N_level, const int step);
+
     /** \brief Reset plasma and field slice quantities to initial value.
      *
      * Typically done at the beginning of each iteration.
@@ -229,6 +237,8 @@ public:
     inline static bool m_deposit_rho = false;
     /** Whether to deposit rho for every individual plasma for diagnostics */
     inline static bool m_deposit_rho_individual = false;
+    /** Whether to deposit temperature for every individual plasma for diagnostics */
+    inline static bool m_deposit_temp_individual = false;
     /** Whether to interpolate the neutralizing background to MR levels 1 and 2 instead of depositing it */
     inline static bool m_interpolate_neutralizing_background = false;
     /** Whether to use tiling for particle operations */
@@ -315,11 +325,11 @@ public:
     // Grid external fields
 
     /** Whether grid external fields should be used for this beam */
-    bool m_use_gird_external_fields = false;
-    /** Grid external field functions for Bx By Bz */
-    amrex::GpuArray<amrex::ParserExecutor<4>, 3> m_grid_external_fields;
+    bool m_use_grid_external_fields = false;
+    /** Grid external field functions for Ex Ey Ez Bx By Bz */
+    amrex::GpuArray<amrex::ParserExecutor<4>, 6> m_grid_external_fields;
     /** Owns data for m_grid_external_fields */
-    amrex::Array<amrex::Parser, 3> m_grid_external_fields_parser;
+    amrex::Array<amrex::Parser, 6> m_grid_external_fields_parser;
 
 private:
 

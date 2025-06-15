@@ -8,6 +8,7 @@ diagnostic.output_period = 1
 hipace.verbose = 1
 
 hipace.depos_order_xy = 2
+hipace.depos_order_z = 2
 hipace.dt = adaptive
 hipace.nt_per_betatron = 30
 

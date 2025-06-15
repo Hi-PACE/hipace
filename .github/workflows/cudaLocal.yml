@@ -46,5 +46,6 @@ jobs:
       run: |
         source $HOME/profile.hipace
         python3 -m pip install --upgrade pip --user
-        python3 -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api lasy --user
+        python3 -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api --user
+        python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
         ctest --test-dir build --output-on-failure
