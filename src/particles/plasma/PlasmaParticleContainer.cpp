@@ -193,6 +193,13 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
                 fine_ppc[1+2*(lev-1)] = m_ppc[1] *
                     static_cast<int>(std::round(geom3d[0].CellSize(1) / geom3d[lev].CellSize(1)));
 
+                if (lev > 1) {
+                    fine_ppc[0+2*(lev-1)] = (fine_ppc[0+2*(lev-1)] + fine_ppc[0+2*(lev-2)] - 1)
+                        / fine_ppc[0+2*(lev-2)] * fine_ppc[0+2*(lev-2)];
+                    fine_ppc[1+2*(lev-1)] = (fine_ppc[1+2*(lev-1)] + fine_ppc[1+2*(lev-2)] - 1)
+                        / fine_ppc[1+2*(lev-2)] * fine_ppc[1+2*(lev-2)];
+                }
+
                 fine_patch_str =
                     "if((x-(" +
                     std::to_string(0.5*(geom3d[lev].ProbHi(0) + geom3d[lev].ProbLo(0))) +
@@ -217,6 +224,10 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 
         m_use_fine_patch = queryWithParserAlt(pp, "fine_ppc", fine_ppc, pp_alt) ||
             m_use_fine_patch;
+
+        std::cout << "fine_ppc " << fine_ppc[0] << " "<< fine_ppc[1] << " "<< fine_ppc[2] << " "<< fine_ppc[3] << std::endl;
+        std::cout << "fine_patch(x,y) " << fine_patch_str << std::endl;
+
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             fine_ppc.size() == 0 || fine_ppc.size() == 2 || fine_ppc.size() == 4,
             "fine_ppc must have either two or four components"
