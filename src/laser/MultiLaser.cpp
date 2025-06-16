@@ -738,7 +738,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, const amrex::Real dt_pre, int
                 const Complex anp1jp1 = arr(i, j, np1jp1_r) + I * arr(i, j, np1jp1_i);
                 const Complex anp1jp2 = arr(i, j, np1jp2_r) + I * arr(i, j, np1jp2_i);
                 Complex rhs;
-                if (step == 0)) {
+                if (step == 0) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
