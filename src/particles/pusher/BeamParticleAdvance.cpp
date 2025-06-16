@@ -30,7 +30,7 @@ AdvanceBeamParticlesSlice (
     const int n_subcycles = beam.m_n_subcycles;
     const bool radiation_reaction = beam.m_do_radiation_reaction;
     const amrex::Real time = Hipace::GetInstance().m_physical_time;
-    const amrex::Real dt = Hipace::GetInstance().m_dt/ n_subcycles;
+    const amrex::Real dt = Hipace::GetInstance().m_dt / n_subcycles;
     const amrex::Real background_density_SI = Hipace::m_background_density_SI;
     const bool normalized_units = Hipace::m_normalized_units;
     const bool spin_tracking = beam.m_do_spin_tracking;
