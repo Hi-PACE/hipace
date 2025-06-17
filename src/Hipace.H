@@ -260,8 +260,9 @@ public:
     amrex::Parser m_parser_dt;/**< owns data for dt_str */
     /** stores the output function of makeFunctionWithParser for profile_real_str */
     amrex::ParserExecutor<1> m_exe_dt;
-    /** stores time step of two recent time steps */
+    /** stores time step of current time steps */
     amrex::Real m_dt = 0;
+    /** stores time step of previous time steps */
     amrex::Real m_dt_pre = 0;
     /** Number of binary collisions */
     inline static int m_ncollisions = 0;
