@@ -566,7 +566,7 @@ MultiLaser::AdvanceSliceMG (const amrex::Real dt, const amrex::Real dt_pre, int 
                     acoeff_real_scalar + arr(i, j, chi) : acoeff_real_scalar;
 
                 Complex rhs;
-                if (step == 0  || (dt!=dt_pre)) {
+                if (step == 0)) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
