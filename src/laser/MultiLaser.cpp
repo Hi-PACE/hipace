@@ -543,7 +543,7 @@ MultiLaser::AdvanceSliceMG (const amrex::Real dt, const amrex::Real dt_pre, int 
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
-                if (step == 0) {
+                if (step == 0 || dt_pre!= dt) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
                         (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
                         (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
@@ -566,7 +566,7 @@ MultiLaser::AdvanceSliceMG (const amrex::Real dt, const amrex::Real dt_pre, int 
                     acoeff_real_scalar + arr(i, j, chi) : acoeff_real_scalar;
 
                 Complex rhs;
-                if (step == 0) {
+                if (step == 0 || dt_pre!= dt) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
