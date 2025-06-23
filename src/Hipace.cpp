@@ -252,6 +252,8 @@ Hipace::Hipace () :
         m_grid_external_fields[i] = makeFunctionWithParser<4>(field_str[i],
             m_grid_external_fields_parser[i], {"x", "y", "z", "t"});
     }
+    DeprecatedInput("hipace", "grid_external_E(x,y,z,t)", "grid_external_fields(x,y,z,t)");
+    DeprecatedInput("hipace", "grid_external_B(x,y,z,t)", "grid_external_fields(x,y,z,t)");
 }
 
 void
