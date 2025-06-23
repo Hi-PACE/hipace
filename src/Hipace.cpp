@@ -442,9 +442,9 @@ Hipace::MakeGeometry ()
                     << lev
                     << " with refinement ratio "
                     << amrex::RealVect{
-                        m_3D_geom[lev-1].CellSize(0) / m_3D_geom[lev].CellSize(0),
-                        m_3D_geom[lev-1].CellSize(1) / m_3D_geom[lev].CellSize(1),
-                        m_3D_geom[lev-1].CellSize(2) / m_3D_geom[lev].CellSize(2)
+                        m_3D_geom[0].CellSize(0) / m_3D_geom[lev].CellSize(0),
+                        m_3D_geom[0].CellSize(1) / m_3D_geom[lev].CellSize(1),
+                        m_3D_geom[0].CellSize(2) / m_3D_geom[lev].CellSize(2)
                     };
             }
             amrex::Print() << "\n";
