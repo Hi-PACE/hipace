@@ -326,10 +326,10 @@ public:
 
     /** Whether grid external fields should be used for this beam */
     bool m_use_grid_external_fields = false;
-    /** Grid external field functions for Ex Ey Ez Bx By Bz Psi*/
-    amrex::GpuArray<amrex::ParserExecutor<4>, 7> m_grid_external_fields;
+    /** Grid external field functions for Bx By Bz Psi Ez*/
+    amrex::GpuArray<amrex::ParserExecutor<4>, 5> m_grid_external_fields;
     /** Owns data for m_grid_external_fields */
-    amrex::Array<amrex::Parser, 7> m_grid_external_fields_parser;
+    amrex::Array<amrex::Parser, 5> m_grid_external_fields_parser;
 
 private:
 

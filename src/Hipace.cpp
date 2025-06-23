@@ -246,31 +246,12 @@ Hipace::Hipace () :
     }
 
     // external fields applied to the grid
-    amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
-    m_use_grid_external_fields = queryWithParser(pph, "grid_external_E(x,y,z,t)", field_str);
-    m_grid_external_fields[0] = makeFunctionWithParser<4>(field_str[0],
-        m_grid_external_fields_parser[0], {"x", "y", "z", "t"});
-    m_grid_external_fields[1] = makeFunctionWithParser<4>(field_str[1],
-        m_grid_external_fields_parser[1], {"x", "y", "z", "t"});
-    m_grid_external_fields[2] = makeFunctionWithParser<4>(field_str[2],
-        m_grid_external_fields_parser[2], {"x", "y", "z", "t"});
-    field_str = {"0", "0", "0"};
-    m_use_grid_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str)
-        || m_use_grid_external_fields;
-    m_grid_external_fields[3] = makeFunctionWithParser<4>(field_str[0],
-        m_grid_external_fields_parser[3], {"x", "y", "z", "t"});
-    m_grid_external_fields[4] = makeFunctionWithParser<4>(field_str[1],
-        m_grid_external_fields_parser[4], {"x", "y", "z", "t"});
-    m_grid_external_fields[5] = makeFunctionWithParser<4>(field_str[2],
-        m_grid_external_fields_parser[5], {"x", "y", "z", "t"});
-    std::string psi_str = "0";
-    bool psi_is_specified = queryWithParser(pph, "grid_external_Psi(x,y,z,t)", psi_str);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(psi_is_specified == m_use_grid_external_fields,
-        "Must specify 'grid_external_Psi(x,y,z,t)' when using "
-        "'grid_external_E(x,y,z,t)' or 'grid_external_B(x,y,z,t)'! Psi is defined by: "
-        "d/dx Psi = - (Ex - c*By) and d/dy Psi = - (Ey + c*Bx)");
-    m_grid_external_fields[6] = makeFunctionWithParser<4>(psi_str,
-        m_grid_external_fields_parser[6], {"x", "y", "z", "t"});
+    amrex::Array<std::string, 5> field_str = {"0", "0", "0", "0", "0"};
+    m_use_grid_external_fields = queryWithParser(pph, "grid_external_fields(x,y,z,t)", field_str);
+    for (int i = 0; i < 5; ++i) {
+        m_grid_external_fields[i] = makeFunctionWithParser<4>(field_str[i],
+            m_grid_external_fields_parser[i], {"x", "y", "z", "t"});
+    }
 }
 
 void
@@ -1124,21 +1105,23 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
     const amrex::Real dy = m_3D_geom[lev].CellSize(Direction::y);
     const amrex::Real dz = m_3D_geom[lev].CellSize(Direction::z);
 
+    const amrex::Real dx_inv = m_3D_geom[lev].InvCellSize(Direction::x);
+    const amrex::Real dy_inv = m_3D_geom[lev].InvCellSize(Direction::y);
+
     const amrex::Real poff_x = GetPosOffset(0, m_3D_geom[lev], m_3D_geom[lev].Domain());
     const amrex::Real poff_y = GetPosOffset(1, m_3D_geom[lev], m_3D_geom[lev].Domain());
     const amrex::Real poff_z = GetPosOffset(2, m_3D_geom[lev], m_3D_geom[lev].Domain());
 
     auto external_fields = m_grid_external_fields;
 
-    const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
-    const int EypBx = Comps[WhichSlice::This]["EypBx"];
-    const int Ez = Comps[WhichSlice::This]["Ez"];
     const int Bx = Comps[WhichSlice::This]["By"];
     const int By = Comps[WhichSlice::This]["Bx"];
     const int Bz = Comps[WhichSlice::This]["Bz"];
     const int Psi = Comps[WhichSlice::This]["Psi"];
+    const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
+    const int EypBx = Comps[WhichSlice::This]["EypBx"];
+    const int Ez = Comps[WhichSlice::This]["Ez"];
 
-    const amrex::Real clight = m_phys_const.c;
     const amrex::Real time = m_physical_time;
 
     amrex::MultiFab& slicemf = m_fields.getSlices(lev);
@@ -1157,23 +1140,29 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
             {
                 const amrex::Real x = i * dx + poff_x;
                 const amrex::Real y = j * dy + poff_y;
+                const amrex::Real xlo = (i-1) * dx + poff_x;
+                const amrex::Real ylo = (j-1) * dy + poff_y;
+                const amrex::Real xhi = (i+1) * dx + poff_x;
+                const amrex::Real yhi = (j+1) * dy + poff_y;
                 const amrex::Real z = islice * dz + poff_z;
 
-                const amrex::Real Exp = external_fields[0](x, y, z, time);
-                const amrex::Real Eyp = external_fields[1](x, y, z, time);
-                const amrex::Real Ezp = external_fields[2](x, y, z, time);
-                const amrex::Real Bxp = external_fields[3](x, y, z, time);
-                const amrex::Real Byp = external_fields[4](x, y, z, time);
-                const amrex::Real Bzp = external_fields[5](x, y, z, time);
-                const amrex::Real Psip = external_fields[6](x, y, z, time);
+                const amrex::Real Bxp = external_fields[0](x, y, z, time);
+                const amrex::Real Byp = external_fields[1](x, y, z, time);
+                const amrex::Real Bzp = external_fields[2](x, y, z, time);
+                const amrex::Real Psip = external_fields[3](x, y, z, time);
+                const amrex::Real Psipxlo = external_fields[3](xlo, y, z, time);
+                const amrex::Real Psipxhi = external_fields[3](xhi, y, z, time);
+                const amrex::Real Psipylo = external_fields[3](x, ylo, z, time);
+                const amrex::Real Psipyhi = external_fields[3](x, yhi, z, time);
+                const amrex::Real Ezp = external_fields[4](x, y, z, time);
 
-                arr(i, j, ExmBy) += Exp - clight * Byp;
-                arr(i, j, EypBx) += Eyp + clight * Bxp;
-                arr(i, j, Ez) += Ezp;
                 arr(i, j, Bx) += Bxp;
                 arr(i, j, By) += Byp;
                 arr(i, j, Bz) += Bzp;
                 arr(i, j, Psi) += Psip;
+                arr(i, j, ExmBy) += - (Psipxhi - Psipxlo) * dx_inv;
+                arr(i, j, EypBx) += - (Psipyhi - Psipylo) * dy_inv;
+                arr(i, j, Ez) += Ezp;
             });
     }
 }
