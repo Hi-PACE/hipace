@@ -176,6 +176,15 @@ General parameters
     Note that z refers to the location of the beam particle inside the moving frame of reference
     (zeta) and t to the physical time of the current time step.
 
+* ``hipace.grid_external_Psi(x,y,z,t)`` (`float`) optional (default `0.`)
+    External plasma wake potential :math:`\Psi = \phi - cA_z`
+    applied to the field grid as a function of x, y, z and t. Must be specified when using
+    ``hipace.grid_external_E(x,y,z,t)`` or ``hipace.grid_external_B(x,y,z,t)`` such that it is
+    consistand with :math:`\frac{d}{dx} \Psi = - (E_x - c B_y)` and
+    :math:`\frac{d}{dy} \Psi = - (E_y + c B_x)`.
+    Note that z refers to the location of the beam particle inside the moving frame of reference
+    (zeta) and t to the physical time of the current time step.
+
 Geometry
 --------
 

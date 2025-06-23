@@ -263,6 +263,14 @@ Hipace::Hipace () :
         m_grid_external_fields_parser[4], {"x", "y", "z", "t"});
     m_grid_external_fields[5] = makeFunctionWithParser<4>(field_str[2],
         m_grid_external_fields_parser[5], {"x", "y", "z", "t"});
+    std::string psi_str = "0";
+    bool psi_is_specified = queryWithParser(pph, "grid_external_Psi(x,y,z,t)", psi_str);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(psi_is_specified == m_use_grid_external_fields,
+        "Must specify 'grid_external_Psi(x,y,z,t)' when using "
+        "'grid_external_E(x,y,z,t)' or 'grid_external_B(x,y,z,t)'! Psi is defined by: "
+        "d/dx Psi = - (Ex - c*By) and d/dy Psi = - (Ey + c*Bx)");
+    m_grid_external_fields[6] = makeFunctionWithParser<4>(psi_str,
+        m_grid_external_fields_parser[6], {"x", "y", "z", "t"});
 }
 
 void
@@ -1128,6 +1136,7 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
     const int Bx = Comps[WhichSlice::This]["By"];
     const int By = Comps[WhichSlice::This]["Bx"];
     const int Bz = Comps[WhichSlice::This]["Bz"];
+    const int Psi = Comps[WhichSlice::This]["Psi"];
 
     const amrex::Real clight = m_phys_const.c;
     const amrex::Real time = m_physical_time;
@@ -1156,6 +1165,7 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
                 const amrex::Real Bxp = external_fields[3](x, y, z, time);
                 const amrex::Real Byp = external_fields[4](x, y, z, time);
                 const amrex::Real Bzp = external_fields[5](x, y, z, time);
+                const amrex::Real Psip = external_fields[6](x, y, z, time);
 
                 arr(i, j, ExmBy) += Exp - clight * Byp;
                 arr(i, j, EypBx) += Eyp + clight * Bxp;
@@ -1163,6 +1173,7 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
                 arr(i, j, Bx) += Bxp;
                 arr(i, j, By) += Byp;
                 arr(i, j, Bz) += Bzp;
+                arr(i, j, Psi) += Psip;
             });
     }
 }
