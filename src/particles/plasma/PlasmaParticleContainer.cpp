@@ -179,7 +179,7 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
         bool fine_patch_specified = false;
 
         for (int lev = 1; lev < Hipace::GetInstance().m_N_level; ++lev) {
-            if (Hipace::GetInstance().m_plasma_fine_patch[1] != std::array<amrex::Real, 2>{0, 0}) {
+            if (Hipace::GetInstance().m_plasma_fine_patch[lev]!=std::array<amrex::Real, 2>{0, 0}) {
                 fine_ppc.resize(2*lev, 0);
 
                 for (int j = 1; j < lev; ++j) {
@@ -194,12 +194,14 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
                     static_cast<int>(std::round(geom3d[0].CellSize(1) / geom3d[lev].CellSize(1)));
 
                 if (lev > 1) {
+                    // make ppc of lev divisible by ppc of lev-1
                     fine_ppc[0+2*(lev-1)] = (fine_ppc[0+2*(lev-1)] + fine_ppc[0+2*(lev-2)] - 1)
                         / fine_ppc[0+2*(lev-2)] * fine_ppc[0+2*(lev-2)];
                     fine_ppc[1+2*(lev-1)] = (fine_ppc[1+2*(lev-1)] + fine_ppc[1+2*(lev-2)] - 1)
                         / fine_ppc[1+2*(lev-2)] * fine_ppc[1+2*(lev-2)];
                 }
 
+                // if((x-xc)^2/lenx^2 + (y-yc)^2/leny^2, lev, ...)
                 fine_patch_str =
                     "if((x-(" +
                     std::to_string(0.5*(geom3d[lev].ProbHi(0) + geom3d[lev].ProbLo(0))) +

@@ -233,6 +233,11 @@ Geometry
     The refinement ratio of level 1 compared to level 0 in the x and y directions. If specified,
     ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
 
+* ``mr_lev1.plasma_fine_patch`` (2 `float`) optional (default `0 0`)
+    Enable a fine patch for all plasmas using the location and refinement ratio of level 1.
+    The two parameters specify how large the diameter of the fine patch should be compared to the
+    length of level 1. It is recommended to use at least ``1.5 1.5`` to include the corners.
+
 * ``mr_lev2.n_cell`` (2 `integer`)
     Number of cells in x and y for level 2.
     The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
@@ -244,8 +249,13 @@ Geometry
     Upper end of the refined grid in x, y and z.
 
 * ``mr_lev2.ref_ratio`` (2 `float`) optional (default `0 0`)
-    The refinement ratio of level 2 compared to level 1 in the x and y directions. If specified,
+    The refinement ratio of level 2 compared to level 0 in the x and y directions. If specified,
     ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
+
+* ``mr_lev2.plasma_fine_patch`` (2 `float`) optional (default `0 0`)
+    Enable a fine patch for all plasmas using the location and refinement ratio of level 2.
+    The two parameters specify how large the diameter of the fine patch should be compared to the
+    length of level 2. It is recommended to use at least ``1.5 1.5`` to include the corners.
 
 * ``lasers.n_cell`` (2 `integer`)
     Number of cells in x and y for the laser grid.

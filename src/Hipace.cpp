@@ -351,10 +351,10 @@ Hipace::MakeGeometry ()
         getWithParser(pp_mrlev, "patch_lo", patch_lo_lev);
         getWithParser(pp_mrlev, "patch_hi", patch_hi_lev);
 
-        std::array<amrex::Real, 2> ref_ratio {0, 0};
+        std::array<amrex::Real, 2> ref_ratio {0, 0}; // relative to level 0
         const bool rr_specified = queryWithParser(pp_mrlev, "ref_ratio", ref_ratio);
 
-        m_plasma_fine_patch[lev] = {0, 0};
+        m_plasma_fine_patch[lev] = {0, 0}; // relative to level lev patch length
         queryWithParser(pp_mrlev, "plasma_fine_patch", m_plasma_fine_patch[lev]);
 
         if (rr_specified) {
@@ -364,8 +364,8 @@ Hipace::MakeGeometry ()
             };
 
             std::array<amrex::Real, 2> patch_len_lev {
-                n_cells_lev[0] * m_3D_geom[lev-1].CellSize(0) / ref_ratio[0],
-                n_cells_lev[1] * m_3D_geom[lev-1].CellSize(1) / ref_ratio[1],
+                n_cells_lev[0] * m_3D_geom[0].CellSize(0) / ref_ratio[0],
+                n_cells_lev[1] * m_3D_geom[0].CellSize(1) / ref_ratio[1],
             };
 
             std::array<amrex::Real, 2> old_patch_len {
