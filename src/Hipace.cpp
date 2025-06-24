@@ -402,7 +402,6 @@ Hipace::Evolve ()
     const double start_time = amrex::second();
     const int rank = amrex::ParallelDescriptor::MyProc();
     m_comm = amrex::ParallelDescriptor::Communicator();
-    const int n_ranks = amrex::ParallelDescriptor::NProcs();
     amrex::ParmParse pph("hipace");
     // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
     for (int step = rank; step <= m_max_step; step += m_numprocs)
