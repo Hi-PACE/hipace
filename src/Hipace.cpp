@@ -401,6 +401,8 @@ Hipace::Evolve ()
     HIPACE_PROFILE("Hipace::Evolve()");
     const double start_time = amrex::second();
     const int rank = amrex::ParallelDescriptor::MyProc();
+    m_comm = amrex::ParallelDescriptor::Communicator();
+    const int n_ranks = amrex::ParallelDescriptor::NProcs();
     amrex::ParmParse pph("hipace");
     // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
     for (int step = rank; step <= m_max_step; step += m_numprocs)
@@ -424,8 +426,28 @@ Hipace::Evolve ()
         queryWithParser(pph, "dt", str_dt);
         if (str_dt != "adaptive") {
             m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
-            m_dt_pre = step == 0 ? m_exe_dt(m_physical_time) : m_dt;
+            //Receive the time step of previous rank
+            if (step == 0)  m_dt = m_exe_dt(m_physical_time);
+            else{
+                MPI_Irecv(
+                    &m_dt_pre,
+                    1,
+                    amrex::Real,
+                    rank - 1,
+                    "time step",
+                    m_comm,
+                    &recv_request);
+                }
             m_dt =  m_exe_dt(m_physical_time);
+            //Send time step to next rank
+            MPI_Isend(
+                    &m_dt,
+                    1,
+                    amrex::Real,
+                    rank + 1,
+                    "time step",
+                    m_comm,
+                    &recv_request);
             m_max_time = std::copysign(m_max_time, m_dt);
         }
         else{
