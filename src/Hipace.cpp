@@ -423,30 +423,40 @@ Hipace::Evolve ()
         }
         std::string str_dt {"0."};
         queryWithParser(pph, "dt", str_dt);
+        constexpr int tag_time_step = 100;  // Use an integer for the tag
+
         if (str_dt != "adaptive") {
             m_exe_dt = makeFunctionWithParser<1>(str_dt, m_parser_dt, {"t"});
-            //Receive the time step of previous rank
-            if (step == 0)  m_dt = m_exe_dt(m_physical_time);
-            else{
+
+            if (step == 0) {
+                m_dt = m_exe_dt(m_physical_time);
+            } else {
+                MPI_Request recv_request;
                 MPI_Irecv(
                     &m_dt_pre,
                     1,
                     amrex::Real,
                     rank - 1,
-                    "time step",
-                    m_comm,
+                    tag_time_step,
+                    amrex::ParallelDescriptor::m_comm,
                     &recv_request);
-                }
-            m_dt =  m_exe_dt(m_physical_time);
-            //Send time step to next rank
+                // You should later call MPI_Wait or MPI_Test to complete it
+            }
+
+            m_dt = m_exe_dt(m_physical_time);
+
+            MPI_Request send_request;
             MPI_Isend(
-                    &m_dt,
-                    1,
-                    amrex::Real,
-                    rank + 1,
-                    "time step",
-                    m_comm,
-                    &recv_request);
+                &m_dt,
+                1,
+                amrex::Real,
+                rank + 1,
+                tag_time_step,
+                amrex::ParallelDescriptor::m_comm,
+                &send_request);
+            // You should also wait or test this one
+            MPI_Wait(&recv_request, MPI_STATUS_IGNORE);
+            MPI_Wait(&send_request, MPI_STATUS_IGNORE);
             m_max_time = std::copysign(m_max_time, m_dt);
         }
         else{
