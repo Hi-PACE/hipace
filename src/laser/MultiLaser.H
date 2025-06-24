@@ -126,15 +126,16 @@ public:
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
      *
-     * \param[in] dt time step of the simulation
+     * \param[in] dt *  \param[in] dt_pre the time step on last rank
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
+     * \param[in] dt_pre the time step on last rank
      */
     void AdvanceSliceMG (const amrex::Real dt, const amrex::Real dt_pre, int step);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
      *
-     * \param[in] dt time step of the simulation of current rank
+     * \param[in] dt *  \param[in] dt_pre the time step on last rank
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      *  \param[in] dt_pre the time step on last rank
      */
@@ -142,19 +143,18 @@ public:
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).
-     *
-     * \param[in] islice slice index
-     * \param[in] comp laser component to initialize
-     * \param[in] dt_pre the time step on last rank
-     */
-    void InitLaserSlice (const int islice, const int comp);
-
-    /** Compute in-situ laser diagnostics of current slice, store in member variable
      * \param[in] step current time step
      * \param[in] time physical time
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] max_step maximum time step of simulation
      * \param[in] max_time maximum time of simulation
+     * \param[in] dt_pre the time step on last rank
+     */
+    void InitLaserSlice (const int islice, const int comp);
+
+    /** Compute in-situ laser diagnostics of current slice, store in member variable
+     * \param[in] islice slice index
+     * \param[in] comp laser component to initialize
      */
     void InSituComputeDiags (int step, amrex::Real time, int islice,
                              int max_step, amrex::Real max_time);
