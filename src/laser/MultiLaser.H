@@ -116,9 +116,10 @@ public:
     /** Wrapper function to advance a laser slice by 1 time step.
      * \param[in] islice slice index
      * \param[in] fields Field object
-     * \param[in] dt time step of the simulation
+     * \param[in] dt time step of the simulation of the current rank
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      * \param[in] geom_field_lev0 Geometry of the fields on MR level 0
+     * \param[in] dt_pre  time step of the previous rank
      */
     void AdvanceSlice (const int islice, const Fields& fields, const amrex::Real dt, const amrex::Real dt_pre, int step,
                        amrex::Geometry const& geom_field_lev0);
@@ -126,35 +127,35 @@ public:
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
      *
-     * \param[in] dt *  \param[in] dt_pre the time step on last rank
+     * \param[in] dt time step of the simulation of the current rank
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
-     * \param[in] dt_pre the time step on last rank
+     * \param[in] dt_pre  time step of the previous rank
      */
     void AdvanceSliceMG (const amrex::Real dt, const amrex::Real dt_pre, int step);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
      *
-     * \param[in] dt *  \param[in] dt_pre the time step on last rank
+     * \param[in] dt time step of the simulation of the current rank
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
-     *  \param[in] dt_pre the time step on last rank
+     * \param[in] dt_pre  time step of the previous rank
      */
     void AdvanceSliceFFT (const amrex::Real dt, const amrex::Real dt_pre, int step);
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).
+     *
+     * \param[in] islice slice index
+     * \param[in] comp laser component to initialize
+     */
+    void InitLaserSlice (const int islice, const int comp);
+
+    /** Compute in-situ laser diagnostics of current slice, store in member variable
      * \param[in] step current time step
      * \param[in] time physical time
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] max_step maximum time step of simulation
      * \param[in] max_time maximum time of simulation
-     * \param[in] dt_pre the time step on last rank
-     */
-    void InitLaserSlice (const int islice, const int comp);
-
-    /** Compute in-situ laser diagnostics of current slice, store in member variable
-     * \param[in] islice slice index
-     * \param[in] comp laser component to initialize
      */
     void InSituComputeDiags (int step, amrex::Real time, int islice,
                              int max_step, amrex::Real max_time);
