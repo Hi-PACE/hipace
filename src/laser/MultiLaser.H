@@ -134,8 +134,9 @@ public:
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
      *
-     * \param[in] dt time step of the simulation
+     * \param[in] dt time step of the simulation of current rank
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
+     *  \param[in] dt_pre the time step on last rank
      */
     void AdvanceSliceFFT (const amrex::Real dt, const amrex::Real dt_pre, int step);
 
@@ -144,6 +145,7 @@ public:
      *
      * \param[in] islice slice index
      * \param[in] comp laser component to initialize
+     * \param[in] dt_pre the time step on last rank
      */
     void InitLaserSlice (const int islice, const int comp);
 
