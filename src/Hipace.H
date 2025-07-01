@@ -29,10 +29,6 @@
 #  include <AMReX_MLMG.H>
 #endif
 
-#ifdef HIPACE_USE_OPENPMD
-#   include <openPMD/openPMD.hpp>
-#endif
-
 #include <memory>
 
 namespace hpmg { class MultiGrid; }
