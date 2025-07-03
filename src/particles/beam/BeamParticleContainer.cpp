@@ -151,8 +151,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             queryWithParser(pp, "zmin", m_zmin);
             queryWithParser(pp, "zmax", m_zmax);
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !m_do_salame ||
-                (m_zmin != -std::numeric_limits<amrex::Real>::infinity() &&
-                 m_zmax !=  std::numeric_limits<amrex::Real>::infinity()),
+                (m_zmin != -std::numeric_limits<amrex::Real>::max() &&
+                 m_zmax !=  std::numeric_limits<amrex::Real>::max()),
                 "For the SALAME algorithm it is mandatory to either use a 'can' profile or "
                 "'zmin' and 'zmax' with a gaussian profile");
         } else {

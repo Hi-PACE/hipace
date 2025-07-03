@@ -67,7 +67,7 @@ InitParticles (const amrex::RealVect& a_u_std,
     {
         amrex::Box tile_box  = mfi.tilebox(box_nodal, box_grow);
 
-        if (a_radius != std::numeric_limits<amrex::Real>::infinity()) {
+        if (a_radius != std::numeric_limits<amrex::Real>::max()) {
             amrex::IntVect lo_limit {
                 static_cast<int>(std::round((-a_radius - plo[0])/dx[0] - 2)),
                 static_cast<int>(std::round((-a_radius - plo[1])/dx[1] - 2)),
