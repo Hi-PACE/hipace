@@ -420,15 +420,15 @@ then
 fi
 
 # transverse_benchmark.1Rank.sh
-if [[ $all_tests = true ]] || [[ $one_test_name = "transverse_benchmark.1Rank" ]]
+if [[ $all_tests = true ]] || [[ $one_test_name = "transverse_benchmark.1Rank.sh" ]]
 then
     cd $build_dir
-    ctest --output-on-failure -R transverse_benchmark.1Rank \
+    ctest --output-on-failure -R transverse_benchmark.1Rank.sh \
         || echo "ctest command failed, maybe just because checksums are different. Keep going"
     cd $checksum_dir
     ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/transverse_benchmark.1Rank \
-                     --test-name transverse_benchmark.1Rank
+                     --file_name ${build_dir}/bin/transverse_benchmark.1Rank.sh \
+                     --test-name transverse_benchmark.1Rank.sh
 fi
 
 # laser_ionization.1Rank
@@ -441,16 +441,4 @@ then
     ./checksumAPI.py --reset-benchmark \
                      --file_name ${build_dir}/bin/laser_ionization.1Rank/linear \
                      --test-name laser_ionization.1Rank
-fi
-
-# mesh_refinement.SI.2Rank
-if [[ $all_tests = true ]] || [[ $one_test_name = "mesh_refinement.SI.2Rank" ]]
-then
-    cd $build_dir
-    ctest --output-on-failure -R mesh_refinement.SI.2Rank \
-        || echo "ctest command failed, maybe just because checksums are different. Keep going"
-    cd $checksum_dir
-    ./checksumAPI.py --reset-benchmark \
-                     --file_name ${build_dir}/bin/mesh_refinement.SI.2Rank \
-                     --test-name mesh_refinement.SI.2Rank
 fi
