@@ -17,7 +17,7 @@ FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
 # Run the mesh refinement test and verify checksum
-mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_mesh_refinenemt \
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_mesh_refinement \
         max_step = 5 \
         amr.n_cell = 63 63 100 \
         mr_lev1.n_cell = 31 31 \
