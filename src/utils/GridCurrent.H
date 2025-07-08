@@ -25,8 +25,8 @@ private:
     amrex::Real m_peak_current_density {0.}; /**< peak density for the grid current */
 
 public:
-    /** Constructor */
-    explicit GridCurrent ();
+    /** Read parameters from the input file */
+    void ReadParameters ();
 
     /** calculate the adaptive time step based on the beam energy
      * \param[in,out] fields the general field class, modified by this function

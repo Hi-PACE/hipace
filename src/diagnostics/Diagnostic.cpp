@@ -17,7 +17,8 @@
 #include <string>
 #include <vector>
 
-Diagnostic::Diagnostic (int nlev, bool use_laser)
+void
+Diagnostic::ReadParameters (int nlev, bool use_laser)
 {
     amrex::ParmParse ppd("diagnostic");
     amrex::ParmParse pph("hipace");

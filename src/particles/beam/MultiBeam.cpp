@@ -13,7 +13,8 @@
 #include "utils/IOUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-MultiBeam::MultiBeam ()
+void
+MultiBeam::ReadParameters ()
 {
     amrex::ParmParse pp("beams");
     queryWithParser(pp, "names", m_names);
@@ -24,6 +25,7 @@ MultiBeam::MultiBeam ()
     m_nbeams = m_names.size();
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
+        m_all_beams.back().ReadParameters();
     }
     m_n_real_particles.resize(m_nbeams, 0);
 }

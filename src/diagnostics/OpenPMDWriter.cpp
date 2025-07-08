@@ -79,8 +79,8 @@ namespace utils {
     }
 }
 
-
-OpenPMDWriter::OpenPMDWriter ()
+void
+OpenPMDWriter::ReadParameters ()
 {
     amrex::ParmParse pp("hipace");
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
@@ -110,6 +110,8 @@ OpenPMDWriter::OpenPMDWriter ()
     amrex::ParmParse ppd("diagnostic");
     queryWithParser(ppd, "openpmd_viewer_u_workaround", m_openpmd_viewer_workaround);
 }
+
+OpenPMDWriter::OpenPMDWriter () {}
 
 OpenPMDWriter::~OpenPMDWriter() {}
 

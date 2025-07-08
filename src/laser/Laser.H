@@ -25,7 +25,10 @@ public:
     void GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D);
     template<typename input_type>
     void GetEnvelopeFromFile (amrex::Geometry laser_geom_3D);
-    Laser (std::string name, amrex::Geometry laser_geom_3D);
+    Laser (std::string name);
+
+    /** Read parameters from the input file */
+    void ReadParameters (const amrex::Geometry& laser_geom_3D);
 
     std::string m_name {""};
     /** The way to initialize a laser (from_file/gaussian/parser)*/

@@ -19,9 +19,14 @@
 #include <openPMD/openPMD.hpp>
 #endif
 
-Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
+Laser::Laser (std::string name)
 {
     m_name = name;
+}
+
+void
+Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
+{
     amrex::ParmParse pp(m_name);
     queryWithParser(pp, "init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") {

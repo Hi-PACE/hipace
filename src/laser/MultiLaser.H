@@ -59,12 +59,7 @@ class MultiLaser
 
 public:
 
-    /** Constructor */
-    explicit MultiLaser ()
-    {
-        ReadParameters();
-    }
-
+    /** Read parameters from the input file */
     void ReadParameters ();
 
     /** get function for the 2D slices */

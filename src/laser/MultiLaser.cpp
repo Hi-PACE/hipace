@@ -109,7 +109,8 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
     m_nlasers = m_names.size();
 
     for (int i = 0; i < m_nlasers; ++i) {
-        m_all_lasers.emplace_back(Laser(m_names[i], m_laser_geom_3D));
+        m_all_lasers.emplace_back(Laser(m_names[i]));
+        m_all_lasers.back().ReadParameters(m_laser_geom_3D);
         amrex::Print()<<"Laser "+ m_names[i] + " loaded" << "\n";
     }
 

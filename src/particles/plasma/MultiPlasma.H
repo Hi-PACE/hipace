@@ -17,12 +17,8 @@ class MultiPlasma
 
 public:
 
-    /** Constructor
-     */
-    MultiPlasma ();
-
-    /** Destructor */
-    ~MultiPlasma () {}
+    /** Read parameters from the input file */
+    void ReadParameters ();
 
     /** \brief Loop over plasma species and initialize them.
      *

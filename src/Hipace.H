@@ -85,6 +85,9 @@ public:
      * and initialize longitudinal and transverse MPI communicators */
     Hipace ();
 
+    /** Read parameters from the input file */
+    void ReadParameters ();
+
     /** Get singleton instance */
     static Hipace& GetInstance ();
 

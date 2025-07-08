@@ -54,12 +54,9 @@ public:
     explicit PlasmaParticleContainer (std::string name) :
         amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(),
         m_name(name)
-    {
-        ReadParameters();
-    }
+    {}
 
-    /** Read parameters from the input file
-     */
+    /** Read parameters from the input file */
     void ReadParameters ();
 
     /** Allocate data for the beam particles and initialize particles with requested beam profile

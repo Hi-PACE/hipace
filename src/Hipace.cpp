@@ -73,13 +73,23 @@ Hipace::GetInstance ()
 }
 
 Hipace::Hipace () :
-    Hipace_early_init(this),
-    m_fields(m_N_level),
-    m_multi_beam(),
-    m_multi_plasma(),
-    m_adaptive_time_step(m_multi_beam.get_nbeams()),
-    m_multi_laser(),
-    m_diags(m_N_level, m_multi_laser.UseLaser())
+    Hipace_early_init(this)
+{
+    ReadParameters();
+    m_fields.ReadParameters(m_N_level);
+    m_multi_beam.ReadParameters();
+    m_multi_plasma.ReadParameters();
+    m_adaptive_time_step.ReadParameters(m_multi_beam.get_nbeams());
+    m_multi_laser.ReadParameters();
+    m_grid_current.ReadParameters();
+    m_diags.ReadParameters(m_N_level, m_multi_laser.UseLaser());
+#ifdef HIPACE_USE_OPENPMD
+    m_openpmd_writer.ReadParameters();
+#endif
+}
+
+void
+Hipace::ReadParameters ()
 {
     amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);

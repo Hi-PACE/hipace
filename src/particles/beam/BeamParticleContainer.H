@@ -71,9 +71,7 @@ public:
     /** Constructor */
     explicit BeamParticleContainer (std::string name) :
         m_name(name)
-    {
-        ReadParameters();
-    }
+    {}
 
     /** Read parameters in the input file */
     void ReadParameters ();
