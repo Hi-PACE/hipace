@@ -22,9 +22,11 @@
 #include <cstdint>
 #include <vector>
 
-#ifdef HIPACE_USE_OPENPMD
-#   include <openPMD/openPMD.hpp>
-#endif
+namespace openPMD {
+    class Series;
+    class Iteration;
+    class ParticleSpecies;
+}
 
 #ifdef HIPACE_USE_OPENPMD
 /** \brief class handling the IO with openPMD */
@@ -58,7 +60,7 @@ private:
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] beamnames list of the names of the beam to be written to file
      */
-    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration iteration,
+    void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration& iteration,
                                 const amrex::Geometry& geom,
                                 const amrex::Vector< std::string > beamnames);
 
@@ -69,7 +71,7 @@ private:
      * \param[in,out] iteration openPMD iteration to which the data is written
      */
     void WriteFieldData (const FieldDiagnosticData& fd, const MultiLaser& a_multi_laser,
-                         openPMD::Iteration iteration);
+                         openPMD::Iteration& iteration);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
      */
@@ -105,6 +107,8 @@ private:
 public:
     /** Constructor */
     explicit OpenPMDWriter ();
+
+    ~OpenPMDWriter ();
 
     /** \brief Initialize diagnostics (collective operation)
      */

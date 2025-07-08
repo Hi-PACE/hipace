@@ -24,7 +24,7 @@ private:
     /** Number of time steps per betatron period for the adaptive time step */
     amrex::Real m_nt_per_betatron = 20.;
     /** Upper bound of the time step. Avoid gigantic time step(s) when beam starts near vacuum */
-    amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::infinity();
+    amrex::Real m_dt_max = std::numeric_limits<amrex::Real>::max();
     /** uz*mass/charge of the slowest particles */
     amrex::Real m_min_uz_mq = std::numeric_limits<amrex::Real>::max();
     /** Threshold beam momentum, below which the time step is not decreased */

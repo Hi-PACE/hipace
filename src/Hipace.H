@@ -29,10 +29,6 @@
 #  include <AMReX_MLMG.H>
 #endif
 
-#ifdef HIPACE_USE_OPENPMD
-#   include <openPMD/openPMD.hpp>
-#endif
-
 #include <memory>
 
 namespace hpmg { class MultiGrid; }
@@ -206,7 +202,7 @@ public:
     /** Number of time iterations */
     inline static int m_max_step = 0;
     /** Maximum simulation time */
-    inline static amrex::Real m_max_time = std::numeric_limits<amrex::Real>::infinity();
+    inline static amrex::Real m_max_time = std::numeric_limits<amrex::Real>::max();
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
     inline static amrex::Real m_physical_time = 0.0;

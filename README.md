@@ -1,7 +1,7 @@
 # HiPACE++
 
 [![Documentation Status](https://readthedocs.org/projects/hipace/badge/?version=latest)](https://hipace.readthedocs.io/en/latest/?badge=latest)
-![linux](https://github.com/Hi-PACE/hipace/workflows/linux/badge.svg?branch=development&event=push)
+![linux](https://github.com/Hi-PACE/hipace/actions/workflows/linux.yml/badge.svg?branch=development&event=push)
 <!-- ![macOS](https://github.com/Hi-PACE/hipace/workflows/macos/badge.svg?branch=development&event=push) -->
 [![DOI (source)](https://img.shields.io/badge/DOI%20(source)-10.5281/zenodo.5358483-blue.svg)](https://doi.org/10.5281/zenodo.5358483)
 [![DOI (paper)](https://img.shields.io/badge/DOI%20(paper)-10.1016/j.cpc.2022.108421-blue.svg)](https://doi.org/10.1016/j.cpc.2022.108421)
@@ -29,6 +29,6 @@ through Lawrence Berkeley National Laboratory (subject to receipt of
 any required approvals from the U.S. Dept. of Energy) and Deutsches
 Elektronen-Synchrotron (DESY). All rights reserved.
 
-Please see the full license agreement and notices in [license.txt](license.txt).  
-Please see the notices in [legal.txt](legal.txt).  
+Please see the full license agreement and notices in [license.txt](license.txt).
+Please see the notices in [legal.txt](legal.txt).
 The SPDX license identifier is `BSD-3-Clause-LBNL`.

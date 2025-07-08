@@ -17,10 +17,6 @@
 #include <iostream>
 #include <vector>
 
-#ifdef HIPACE_USE_OPENPMD
-#include <openPMD/openPMD.hpp>
-#endif
-
 namespace utils
 {
     /** Get the Relative Cell Position of Values in an MultiFab
@@ -60,19 +56,6 @@ namespace utils
      */
      bool doDiagnostics (int output_period, int output_step, int max_step,
                     amrex::Real output_time, amrex::Real max_time);
-
-#ifdef HIPACE_USE_OPENPMD
-    std::pair< std::string, std::string >
-    name2openPMD ( std::string const& fullName );
-
-    /** Get the openPMD physical dimensionality of a record
-     *
-     * @param record_name name of the openPMD record
-     * @return map with base quantities and power scaling
-     */
-    std::map< openPMD::UnitDimension, double >
-    getUnitDimension ( std::string const & record_name );
-#endif
 
     struct format_time {
         double seconds = 0;

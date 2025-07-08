@@ -246,12 +246,12 @@ private:
     std::string m_injection_type;
     uint64_t m_id64 = 1; /**< 64 bit ID to initialize many particles without overflowing */
     /** Min longitudinal particle position of the beam */
-    amrex::Real m_zmin = -std::numeric_limits<amrex::Real>::infinity();
+    amrex::Real m_zmin = -std::numeric_limits<amrex::Real>::max();
     /** Max longitudinal particle position of the beam */
-    amrex::Real m_zmax = std::numeric_limits<amrex::Real>::infinity();
-    amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< Radius of the beam */
+    amrex::Real m_zmax = std::numeric_limits<amrex::Real>::max();
+    amrex::Real m_radius {std::numeric_limits<amrex::Real>::max()}; /**< Radius of the beam */
     /** radius of the beam insitu diagnostics */
-    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
+    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::max()};
     GetInitialMomentum m_get_momentum {}; /**< momentum profile of the beam */
     /** After how many slices the particles are reordered. 0: off */
     int m_reorder_period = 0;
