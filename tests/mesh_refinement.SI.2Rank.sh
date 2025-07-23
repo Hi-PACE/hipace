@@ -23,6 +23,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_mesh_refinement \
         mr_lev1.n_cell = 31 31 \
         driver.num_particles = 1e6 \
         witness.num_particles = 1e6 \
+        hipace.depos_order_xy = 1 \
         hipace.file_prefix = $TEST_NAME
 
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
