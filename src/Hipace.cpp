@@ -75,7 +75,6 @@ Hipace::GetInstance ()
 Hipace::Hipace () :
     Hipace_early_init(this)
 {
-    ReadParameters();
     m_fields.ReadParameters(m_N_level);
     m_multi_beam.ReadParameters();
     m_multi_plasma.ReadParameters();
@@ -86,6 +85,7 @@ Hipace::Hipace () :
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.ReadParameters();
 #endif
+    ReadParameters();
 }
 
 void
@@ -247,7 +247,8 @@ Hipace::ReadParameters ()
     /** Initialize the collision objects */
     m_ncollisions = m_collision_names.size();
     for (int i = 0; i < m_ncollisions; ++i) {
-        m_all_collisions.emplace_back(CoulombCollision(m_multi_plasma.m_names, m_multi_beam.m_names, m_collision_names[i]));
+        m_all_collisions.emplace_back(CoulombCollision());
+        m_all_collisions.back().ReadParameters(m_multi_plasma.m_names, m_multi_beam.m_names, m_collision_names[i]);
     }
     if (m_normalized_units && m_ncollisions > 0) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
