@@ -71,7 +71,7 @@ namespace ParticleUtil
     {
         for (int lev = 0; lev < int(n_level); ++lev) {
             if (i_fine_transition_cells == lev * (n_fine_transition_cells + 1)) {
-                // no interplation needed
+                // no interpolation needed
                 int nx = nppc[lev][0];
                 int ny = nppc[lev][1];
                 if (i_part < nx * ny) {
@@ -87,7 +87,7 @@ namespace ParticleUtil
             } else if (lev + 1 < int(n_level) &&
                 i_fine_transition_cells > lev * (n_fine_transition_cells + 1) &&
                 i_fine_transition_cells < (lev + 1) * (n_fine_transition_cells + 1)) {
-                // interplation between lev and lev + 1
+                // interpolation between lev and lev + 1
                 int nx_fine = nppc[lev+1][0];
                 int ny_fine = nppc[lev+1][1];
                 if (i_part < nx_fine * ny_fine) {
