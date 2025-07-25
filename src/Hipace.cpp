@@ -373,7 +373,7 @@ Hipace::MakeGeometry ()
                 patch_hi_lev[1] - patch_lo_lev[1]
             };
 
-            if (true || !(old_patch_len[0] > 0._rt && old_patch_len[1] > 0._rt &&
+            if (!(old_patch_len[0] > 0._rt && old_patch_len[1] > 0._rt &&
                 (std::abs((patch_len_lev[0] - old_patch_len[0]) / old_patch_len[0]) <= 0.05_rt) &&
                 (std::abs((patch_len_lev[1] - old_patch_len[1]) / old_patch_len[1]) <= 0.05_rt))) {
 
