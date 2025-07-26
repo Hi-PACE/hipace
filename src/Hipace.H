@@ -29,10 +29,6 @@
 #  include <AMReX_MLMG.H>
 #endif
 
-#ifdef HIPACE_USE_OPENPMD
-#   include <openPMD/openPMD.hpp>
-#endif
-
 #include <memory>
 
 namespace hpmg { class MultiGrid; }
@@ -204,7 +200,7 @@ public:
     /** Number of time iterations */
     inline static int m_max_step = 0;
     /** Maximum simulation time */
-    inline static amrex::Real m_max_time = std::numeric_limits<amrex::Real>::infinity();
+    inline static amrex::Real m_max_time = std::numeric_limits<amrex::Real>::max();
     /** Physical time of the simulation. At the end of the time step, it is the physical time
      * at which the fields have been calculated. The beam is one step ahead. */
     inline static amrex::Real m_physical_time = 0.0;
@@ -326,10 +322,10 @@ public:
 
     /** Whether grid external fields should be used for this beam */
     bool m_use_grid_external_fields = false;
-    /** Grid external field functions for Ex Ey Ez Bx By Bz */
-    amrex::GpuArray<amrex::ParserExecutor<4>, 6> m_grid_external_fields;
+    /** Grid external field functions for Bx By Bz Psi Ez*/
+    amrex::GpuArray<amrex::ParserExecutor<4>, 5> m_grid_external_fields;
     /** Owns data for m_grid_external_fields */
-    amrex::Array<amrex::Parser, 6> m_grid_external_fields_parser;
+    amrex::Array<amrex::Parser, 5> m_grid_external_fields_parser;
 
 private:
 

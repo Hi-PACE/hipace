@@ -172,9 +172,9 @@ public:
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
-    amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
+    amrex::Real m_radius {std::numeric_limits<amrex::Real>::max()}; /**< radius of the plasma */
     /** radius of the plasma insitu diagnostics */
-    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
+    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::max()};
     amrex::Real m_hollow_core_radius {0.}; /**< hollow core radius of the plasma */
     bool m_use_fine_patch = false;
     int m_fine_transition_cells = 5;
