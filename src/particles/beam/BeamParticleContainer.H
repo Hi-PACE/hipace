@@ -45,7 +45,7 @@ struct WhichBeamSlice {
     enum beam_slice : int { Next=0, This, N };
 };
 
-using BeamTile = amrex::ParticleTile2<amrex::Real, int>;
+using BeamTile = amrex::ParticleTileRT<amrex::Real, int>;
 
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer
