@@ -101,16 +101,20 @@ BeamParticleContainer::ReadParameters ()
     }
 
     getBeamInitSlice().define(
-        m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena(),
         BeamIdx::real_nattribs_in_buffer + (m_do_spin_tracking ? 3 : 0),
-        BeamIdx::int_nattribs_in_buffer
+        BeamIdx::int_nattribs_in_buffer,
+        nullptr,
+        nullptr,
+        m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena()
     );
 
     for (auto& beam_tile : m_slices) {
         beam_tile.define(
-            amrex::The_Arena(),
             BeamIdx::real_nattribs + (m_do_spin_tracking ? 3 : 0),
-            BeamIdx::int_nattribs
+            BeamIdx::int_nattribs,
+            nullptr,
+            nullptr,
+            amrex::The_Arena()
         );
     }
 }
