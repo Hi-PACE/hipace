@@ -434,61 +434,11 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
         HIPACE_PROFILE("BeamParticleContainer::ReorderParticles()");
 
         const int np = getNumParticles(beam_slice);
-        const int np_total = getNumParticlesIncludingSlipped(beam_slice);
         auto& ptile = getBeamSlice(beam_slice);
         amrex::Gpu::DeviceVector<unsigned int> perm;
         amrex::PermutationForDeposition<unsigned int>(perm, np, ptile, slice_geom.Domain(),
                                                       slice_geom, m_reorder_idx_type);
-        const unsigned int* permutations = perm.dataPtr();
-
-        {
-            amrex::Gpu::AsyncVector<uint64_t> tmp_idcpu(np_total);
-
-            auto src = ptile.GetIdCPUData().data();
-            uint64_t* dst = tmp_idcpu.data();
-            amrex::ParallelFor(np_total,
-                [=] AMREX_GPU_DEVICE (int i) {
-                    dst[i] = src[permutations[i]];
-                });
-            amrex::ParallelFor(np_total,
-                [=] AMREX_GPU_DEVICE (int i) {
-                    src[i] = dst[i];
-                });
-        }
-
-        {
-            amrex::Gpu::AsyncVector<amrex::Real> tmp_real(np_total);
-
-            for (int comp = 0; comp < ptile.NumRealComps(); ++comp) {
-                auto src = ptile.GetRealData(comp).data();
-                amrex::ParticleReal* dst = tmp_real.data();
-                amrex::ParallelFor(np_total,
-                    [=] AMREX_GPU_DEVICE (int i) {
-                        dst[i] = src[permutations[i]];
-                    });
-                amrex::ParallelFor(np_total,
-                    [=] AMREX_GPU_DEVICE (int i) {
-                        src[i] = dst[i];
-                    });
-            }
-        }
-
-        {
-            amrex::Gpu::AsyncVector<int> tmp_int(np_total);
-
-            for (int comp = 0; comp < ptile.NumIntComps(); ++comp) {
-                auto src = ptile.GetIntData(comp).data();
-                int* dst = tmp_int.data();
-                amrex::ParallelFor(np_total,
-                    [=] AMREX_GPU_DEVICE (int i) {
-                        dst[i] = src[permutations[i]];
-                    });
-                amrex::ParallelFor(np_total,
-                    [=] AMREX_GPU_DEVICE (int i) {
-                        src[i] = dst[i];
-                    });
-            }
-        }
+        amrex::ReorderParticles(ptile, perm.dataPtr());
     }
 }
 
