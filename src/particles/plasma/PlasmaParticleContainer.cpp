@@ -156,31 +156,109 @@ PlasmaParticleContainer::ReadParameters ()
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
-
-    queryWithParserAlt(pp, "fine_transition_cells", m_fine_transition_cells, pp_alt);
-    m_ppc_fine = m_ppc;
-    m_use_fine_patch = queryWithParserAlt(pp, "fine_ppc", m_ppc_fine, pp_alt);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_fine_patch ||
-        (m_ppc[0] > 0 && m_ppc[1] > 0 && m_ppc_fine[0] > 0 && m_ppc_fine[1] > 0),
-        "must have non zero ppc and fine_ppc to use the fine plasma patch feature");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_fine_patch ||
-        (m_ppc_fine[0] % m_ppc[0] == 0 && m_ppc_fine[1] % m_ppc[1] == 0),
-        "fine_ppc must be divisible by ppc");
-    std::string fine_patch_str = "0.";
-    bool fine_patch_specified = queryWithParserAlt(pp, "fine_patch(x,y)", fine_patch_str, pp_alt);
-    m_fine_patch_func = makeFunctionWithParser<2>(fine_patch_str, m_parser_fine_patch, {"x", "y"});
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_use_fine_patch == fine_patch_specified,
-        "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
-        "to use the fine plasma patch feature");
     queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
 }
 
 void
-PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
+PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 {
     reserveData();
     resizeData();
+
+    if (!m_read_fine_patch) {
+        m_read_fine_patch = true;
+
+        amrex::ParmParse pp(m_name);
+        amrex::ParmParse pp_alt("plasmas");
+
+        queryWithParserAlt(pp, "fine_transition_cells", m_fine_transition_cells, pp_alt);
+
+        std::vector<int> fine_ppc {};
+        std::string fine_patch_str = "0";
+        bool fine_patch_specified = false;
+
+        for (int lev = 1; lev < Hipace::GetInstance().m_N_level; ++lev) {
+            if (Hipace::GetInstance().m_plasma_fine_patch[lev]!=std::array<amrex::Real, 2>{0, 0}) {
+                fine_ppc.resize(2*lev, 0);
+
+                for (int j = 1; j < lev; ++j) {
+                    fine_ppc[0+2*(j-1)] = std::max(m_ppc[0], fine_ppc[0+2*(j-1)]);
+                    fine_ppc[1+2*(j-1)] = std::max(m_ppc[1], fine_ppc[1+2*(j-1)]);
+                }
+
+                fine_ppc[0+2*(lev-1)] = m_ppc[0] *
+                    static_cast<int>(std::round(geom3d[0].CellSize(0) / geom3d[lev].CellSize(0)));
+
+                fine_ppc[1+2*(lev-1)] = m_ppc[1] *
+                    static_cast<int>(std::round(geom3d[0].CellSize(1) / geom3d[lev].CellSize(1)));
+
+                if (lev > 1) {
+                    // make ppc of lev divisible by ppc of lev-1
+                    fine_ppc[0+2*(lev-1)] = (fine_ppc[0+2*(lev-1)] + fine_ppc[0+2*(lev-2)] - 1)
+                        / fine_ppc[0+2*(lev-2)] * fine_ppc[0+2*(lev-2)];
+                    fine_ppc[1+2*(lev-1)] = (fine_ppc[1+2*(lev-1)] + fine_ppc[1+2*(lev-2)] - 1)
+                        / fine_ppc[1+2*(lev-2)] * fine_ppc[1+2*(lev-2)];
+                }
+
+                // if((x-xc)^2/lenx^2 + (y-yc)^2/leny^2, lev, ...)
+                fine_patch_str =
+                    "if((x-(" +
+                    std::to_string(0.5*(geom3d[lev].ProbHi(0) + geom3d[lev].ProbLo(0))) +
+                    "))^2/(" +
+                    std::to_string(0.5 * Hipace::GetInstance().m_plasma_fine_patch[lev][0] *
+                                geom3d[lev].ProbLength(0)) +
+                    ")^2 + (y-(" +
+                    std::to_string(0.5*(geom3d[lev].ProbHi(1) + geom3d[lev].ProbLo(1))) +
+                    "))^2/(" +
+                    std::to_string(0.5 * Hipace::GetInstance().m_plasma_fine_patch[lev][1] *
+                                geom3d[lev].ProbLength(1)) +
+                    ")^2 < 1, " +
+                    std::to_string(lev) +
+                    ", " +
+                    fine_patch_str +
+                    ")";
+
+                fine_patch_specified = true;
+                m_use_fine_patch = true;
+            }
+        }
+
+        m_use_fine_patch = queryWithParserAlt(pp, "fine_ppc", fine_ppc, pp_alt) ||
+            m_use_fine_patch;
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            fine_ppc.size() == 0 || fine_ppc.size() == 2 || fine_ppc.size() == 4,
+            "fine_ppc must have either two or four components"
+        );
+        if (fine_ppc.size() >= 2) {
+            m_ppc_fine[0] = fine_ppc[0];
+            m_ppc_fine[1] = fine_ppc[1];
+        } else {
+            m_ppc_fine = m_ppc;
+        }
+        if (fine_ppc.size() == 4) {
+            m_ppc_fine2[0] = fine_ppc[2];
+            m_ppc_fine2[1] = fine_ppc[3];
+        } else {
+            m_ppc_fine2 = m_ppc_fine;
+        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_fine_patch ||
+            (m_ppc[0] > 0 && m_ppc[1] > 0 && m_ppc_fine[0] > 0 && m_ppc_fine[1] > 0 &&
+            m_ppc_fine2[0] > 0 && m_ppc_fine2[1] > 0),
+            "must have non zero ppc and fine_ppc to use the fine plasma patch feature");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_fine_patch ||
+            (m_ppc_fine[0] % m_ppc[0] == 0 && m_ppc_fine[1] % m_ppc[1] == 0 &&
+            m_ppc_fine2[0] % m_ppc_fine[0] == 0 && m_ppc_fine2[1] % m_ppc_fine[1] == 0),
+            "fine_ppc must be divisible by ppc");
+        fine_patch_specified = queryWithParserAlt(pp, "fine_patch(x,y)", fine_patch_str, pp_alt) ||
+            fine_patch_specified;
+        m_fine_patch_func = makeFunctionWithParser<2>(fine_patch_str,
+                                                      m_parser_fine_patch, {"x", "y"});
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_use_fine_patch == fine_patch_specified,
+            "Both 'fine_ppc' and 'fine_patch(x,y)' must be specified "
+            "to use the fine plasma patch feature");
+    }
 
     InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
 
@@ -191,7 +269,7 @@ PlasmaParticleContainer::InitData (const amrex::Geometry& geom)
             "Must choose a different plasma insitu file prefix compared to the full diagnostics");
 #endif
         // Allocate memory for in-situ diagnostics
-        m_nslices = geom.Domain().length(2);
+        m_nslices = geom3d[0].Domain().length(2);
         m_insitu_rdata.resize(m_nslices*m_insitu_nrp, 0.);
         m_insitu_idata.resize(m_nslices*m_insitu_nip, 0);
         m_insitu_sum_rdata.resize(m_insitu_nrp, 0.);
