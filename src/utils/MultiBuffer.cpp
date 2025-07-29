@@ -128,8 +128,8 @@ void MultiBuffer::initialize (int nslices, MultiBeam& beams, MultiLaser& laser) 
             amrex::Abort("comms_buffer.max_size_GiB must be large enough to fit "
                          "all the data needed for all beams and the laser "
                          "between all ranks if there are more timesteps than ranks!\n"
-                         "Data needed: " + std::to_string(1.05*size_estimate) + " GiB\n"
-                         "Space available: " + std::to_string(max_size_GiB*n_ranks) + " GiB\n");
+                         "Data needed: " + amrex::ToString(1.05*size_estimate) + " GiB\n"
+                         "Space available: " + amrex::ToString(max_size_GiB*n_ranks) + " GiB\n");
         }
     }
 

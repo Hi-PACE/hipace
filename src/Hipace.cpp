@@ -381,9 +381,9 @@ Hipace::MakeGeometry ()
                     "The refined patch would need to be changed by more than 5% "
                     "to fit the requested refinement ratio! "
                     "The patch length from patch_lo and patch_hi is " +
-                    std::to_string(old_patch_len[0]) + " and " + std::to_string(old_patch_len[1]) +
+                    amrex::ToString(old_patch_len) +
                     " but the ref ratio and number of cells would give " +
-                    std::to_string(patch_len_lev[0]) + " and " + std::to_string(patch_len_lev[1]) +
+                    amrex::ToString(patch_len_lev) +
                     "!");
             }
 

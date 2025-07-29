@@ -209,6 +209,7 @@ namespace Parser
                 double parse_val = 0.;
                 fillWithParser(pp, parse_string, parse_val);
                 std::stringstream ss{};
+                ss.precision(16);
                 ss << parse_val;
                 loc_str.replace(pos, pos_end-pos+1, ss.str());
             }

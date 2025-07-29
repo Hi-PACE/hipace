@@ -204,17 +204,17 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
                 // if((x-xc)^2/lenx^2 + (y-yc)^2/leny^2, lev, ...)
                 fine_patch_str =
                     "if((x-(" +
-                    std::to_string(0.5*(geom3d[lev].ProbHi(0) + geom3d[lev].ProbLo(0))) +
+                    amrex::ToString(0.5*(geom3d[lev].ProbHi(0) + geom3d[lev].ProbLo(0))) +
                     "))^2/(" +
-                    std::to_string(0.5 * Hipace::GetInstance().m_plasma_fine_patch[lev][0] *
-                                geom3d[lev].ProbLength(0)) +
+                    amrex::ToString(0.5 * Hipace::GetInstance().m_plasma_fine_patch[lev][0] *
+                                    geom3d[lev].ProbLength(0)) +
                     ")^2 + (y-(" +
-                    std::to_string(0.5*(geom3d[lev].ProbHi(1) + geom3d[lev].ProbLo(1))) +
+                    amrex::ToString(0.5*(geom3d[lev].ProbHi(1) + geom3d[lev].ProbLo(1))) +
                     "))^2/(" +
-                    std::to_string(0.5 * Hipace::GetInstance().m_plasma_fine_patch[lev][1] *
-                                geom3d[lev].ProbLength(1)) +
+                    amrex::ToString(0.5 * Hipace::GetInstance().m_plasma_fine_patch[lev][1] *
+                                    geom3d[lev].ProbLength(1)) +
                     ")^2 < 1, " +
-                    std::to_string(lev) +
+                    amrex::ToString(lev) +
                     ", " +
                     fine_patch_str +
                     ")";
