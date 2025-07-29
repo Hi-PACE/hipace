@@ -120,7 +120,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                     const amrex::Real x = plo[0] + (i + 0.5_rt + x_offset)*dx[0];
                     const amrex::Real y = plo[1] + (j + 0.5_rt + y_offset)*dx[1];
                     const int fine_val = static_cast<int>(std::round(fine_patch_func(x, y)));
-                    arr_fine(i, j, comp_a) = std::min(max_lev, std::max(0, fine_val))
+                    arr_fine(i, j, comp_a) = std::min(max_lev+0, std::max(0, fine_val))
                                              * (fine_transition_cells + 1);
                 });
 
