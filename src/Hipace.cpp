@@ -1192,12 +1192,6 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
 
     auto external_fields = m_grid_external_fields;
 
-<<<<<<< HEAD
-    const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
-    const int EypBx = Comps[WhichSlice::This]["EypBx"];
-    const int Ez = Comps[WhichSlice::This]["Ez"];
-=======
->>>>>>> development
     const int Bx = Comps[WhichSlice::This]["By"];
     const int By = Comps[WhichSlice::This]["Bx"];
     const int Bz = Comps[WhichSlice::This]["Bz"];
@@ -1230,18 +1224,6 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
                 const amrex::Real yhi = (j+1) * dy + poff_y;
                 const amrex::Real z = islice * dz + poff_z;
 
-<<<<<<< HEAD
-                const amrex::Real Exp = external_fields[0](x, y, z, time);
-                const amrex::Real Eyp = external_fields[1](x, y, z, time);
-                const amrex::Real Ezp = external_fields[2](x, y, z, time);
-                const amrex::Real Bxp = external_fields[3](x, y, z, time);
-                const amrex::Real Byp = external_fields[4](x, y, z, time);
-                const amrex::Real Bzp = external_fields[5](x, y, z, time);
-
-                arr(i, j, ExmBy) += Exp - clight * Byp;
-                arr(i, j, EypBx) += Eyp + clight * Bxp;
-                arr(i, j, Ez) += Ezp;
-=======
                 const amrex::Real Bxp = external_fields[0](x, y, z, time);
                 const amrex::Real Byp = external_fields[1](x, y, z, time);
                 const amrex::Real Bzp = external_fields[2](x, y, z, time);
@@ -1252,7 +1234,6 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
                 const amrex::Real Psipyhi = external_fields[3](x, yhi, z, time);
                 const amrex::Real Ezp = external_fields[4](x, y, z, time);
 
->>>>>>> development
                 arr(i, j, Bx) += Bxp;
                 arr(i, j, By) += Byp;
                 arr(i, j, Bz) += Bzp;
