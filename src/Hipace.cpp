@@ -247,23 +247,14 @@ Hipace::Hipace () :
     }
 
     // external fields applied to the grid
-    amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
-    m_use_grid_external_fields = queryWithParser(pph, "grid_external_E(x,y,z,t)", field_str);
-    m_grid_external_fields[0] = makeFunctionWithParser<4>(field_str[0],
-        m_grid_external_fields_parser[0], {"x", "y", "z", "t"});
-    m_grid_external_fields[1] = makeFunctionWithParser<4>(field_str[1],
-        m_grid_external_fields_parser[1], {"x", "y", "z", "t"});
-    m_grid_external_fields[2] = makeFunctionWithParser<4>(field_str[2],
-        m_grid_external_fields_parser[2], {"x", "y", "z", "t"});
-    field_str = {"0", "0", "0"};
-    m_use_grid_external_fields = queryWithParser(pph, "grid_external_B(x,y,z,t)", field_str)
-        || m_use_grid_external_fields;
-    m_grid_external_fields[3] = makeFunctionWithParser<4>(field_str[0],
-        m_grid_external_fields_parser[3], {"x", "y", "z", "t"});
-    m_grid_external_fields[4] = makeFunctionWithParser<4>(field_str[1],
-        m_grid_external_fields_parser[4], {"x", "y", "z", "t"});
-    m_grid_external_fields[5] = makeFunctionWithParser<4>(field_str[2],
-        m_grid_external_fields_parser[5], {"x", "y", "z", "t"});
+    amrex::Array<std::string, 5> field_str = {"0", "0", "0", "0", "0"};
+    m_use_grid_external_fields = queryWithParser(pph, "grid_external_fields(x,y,z,t)", field_str);
+    for (int i = 0; i < 5; ++i) {
+        m_grid_external_fields[i] = makeFunctionWithParser<4>(field_str[i],
+            m_grid_external_fields_parser[i], {"x", "y", "z", "t"});
+    }
+    DeprecatedInput("hipace", "grid_external_E(x,y,z,t)", "grid_external_fields(x,y,z,t)");
+    DeprecatedInput("hipace", "grid_external_B(x,y,z,t)", "grid_external_fields(x,y,z,t)");
 }
 
 void
@@ -320,12 +311,15 @@ Hipace::InitData ()
 void
 Hipace::MakeGeometry ()
 {
+    using namespace amrex::literals;
+
     m_3D_geom.resize(m_N_level);
     m_3D_dm.resize(m_N_level);
     m_3D_ba.resize(m_N_level);
     m_slice_geom.resize(m_N_level);
     m_slice_dm.resize(m_N_level);
     m_slice_ba.resize(m_N_level);
+    m_plasma_fine_patch.resize(m_N_level);
 
     // make 3D Geometry, BoxArray, DistributionMapping on level 0
     amrex::ParmParse pp_amr("amr");
@@ -358,6 +352,49 @@ Hipace::MakeGeometry ()
         getWithParser(pp_mrlev, "patch_lo", patch_lo_lev);
         getWithParser(pp_mrlev, "patch_hi", patch_hi_lev);
 
+        std::array<amrex::Real, 2> ref_ratio {0, 0}; // relative to level 0
+        const bool rr_specified = queryWithParser(pp_mrlev, "ref_ratio", ref_ratio);
+
+        m_plasma_fine_patch[lev] = {0, 0}; // relative to level lev patch length
+        queryWithParser(pp_mrlev, "plasma_fine_patch", m_plasma_fine_patch[lev]);
+
+        if (rr_specified) {
+            std::array<amrex::Real, 2> patch_center_lev {
+                0.5_rt * (patch_hi_lev[0] + patch_lo_lev[0]),
+                0.5_rt * (patch_hi_lev[1] + patch_lo_lev[1])
+            };
+
+            std::array<amrex::Real, 2> patch_len_lev {
+                n_cells_lev[0] * m_3D_geom[0].CellSize(0) / ref_ratio[0],
+                n_cells_lev[1] * m_3D_geom[0].CellSize(1) / ref_ratio[1],
+            };
+
+            std::array<amrex::Real, 2> old_patch_len {
+                patch_hi_lev[0] - patch_lo_lev[0],
+                patch_hi_lev[1] - patch_lo_lev[1]
+            };
+
+            if (!(old_patch_len[0] > 0._rt && old_patch_len[1] > 0._rt &&
+                (std::abs((patch_len_lev[0] - old_patch_len[0]) / old_patch_len[0]) <= 0.05_rt) &&
+                (std::abs((patch_len_lev[1] - old_patch_len[1]) / old_patch_len[1]) <= 0.05_rt))) {
+
+                amrex::Abort(
+                    "The refined patch would need to be changed by more than 5% "
+                    "to fit the requested refinement ratio! "
+                    "The patch length from patch_lo and patch_hi is " +
+                    std::to_string(old_patch_len[0]) + " and " + std::to_string(old_patch_len[1]) +
+                    " but the ref ratio and number of cells would give " +
+                    std::to_string(patch_len_lev[0]) + " and " + std::to_string(patch_len_lev[1]) +
+                    "!");
+            }
+
+            patch_lo_lev[0] = patch_center_lev[0] - patch_len_lev[0] * 0.5_rt;
+            patch_lo_lev[1] = patch_center_lev[1] - patch_len_lev[1] * 0.5_rt;
+
+            patch_hi_lev[0] = patch_center_lev[0] + patch_len_lev[0] * 0.5_rt;
+            patch_hi_lev[1] = patch_center_lev[1] + patch_len_lev[1] * 0.5_rt;
+        }
+
         const amrex::Real pos_offset_z = GetPosOffset(2, m_3D_geom[0], m_3D_geom[0].Domain());
 
         const int zeta_lo = std::max( m_3D_geom[lev-1].Domain().smallEnd(2),
@@ -368,8 +405,8 @@ Hipace::MakeGeometry ()
             int(amrex::Math::round((patch_hi_lev[2] - pos_offset_z) * m_3D_geom[0].InvCellSize(2)))
         );
 
-        patch_lo_lev[2] = (zeta_lo-0.5)*m_3D_geom[0].CellSize(2) + pos_offset_z;
-        patch_hi_lev[2] = (zeta_hi+0.5)*m_3D_geom[0].CellSize(2) + pos_offset_z;
+        patch_lo_lev[2] = (zeta_lo-0.5_rt)*m_3D_geom[0].CellSize(2) + pos_offset_z;
+        patch_hi_lev[2] = (zeta_hi+0.5_rt)*m_3D_geom[0].CellSize(2) + pos_offset_z;
 
         const amrex::Box domain_3D_lev{amrex::IntVect(0,0,zeta_lo),
             amrex::IntVect(n_cells_lev[0]-1, n_cells_lev[1]-1, zeta_hi)};
@@ -395,6 +432,30 @@ Hipace::MakeGeometry ()
         amrex::Vector<int> procmap_lev{amrex::ParallelDescriptor::MyProc()};
         m_3D_ba[lev].define(bl_lev);
         m_3D_dm[lev].define(procmap_lev);
+    }
+
+    if (m_verbose > 0) {
+        for (int lev=0; lev<m_N_level; ++lev) {
+            amrex::Print()
+                << "Using "
+                << m_3D_geom[lev].Domain().length()
+                << " cells\n    from "
+                << amrex::RealVect{m_3D_geom[lev].ProbLoArray()}
+                << "\n    to "
+                << amrex::RealVect{m_3D_geom[lev].ProbHiArray()};
+            if (lev > 0) {
+                amrex::Print()
+                    << "\n    on MR level "
+                    << lev
+                    << " with refinement ratio "
+                    << amrex::RealVect{
+                        m_3D_geom[0].CellSize(0) / m_3D_geom[lev].CellSize(0),
+                        m_3D_geom[0].CellSize(1) / m_3D_geom[lev].CellSize(1),
+                        m_3D_geom[0].CellSize(2) / m_3D_geom[lev].CellSize(2)
+                    };
+            }
+            amrex::Print() << "\n";
+        }
     }
 
     // make slice Geometry, BoxArray, DistributionMapping every level
@@ -433,7 +494,7 @@ Hipace::Evolve ()
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
 
-        if (m_physical_time == std::numeric_limits<amrex::Real>::infinity()) {
+        if (m_physical_time == std::numeric_limits<amrex::Real>::max()) {
             if (step+1 <= m_max_step && !m_has_last_step) {
                 m_multi_buffer.put_time(m_physical_time);
             }
@@ -448,7 +509,7 @@ Hipace::Evolve ()
         if (m_physical_time == m_max_time) {
             m_has_last_step = true;
             m_dt = 0.;
-            next_time = std::numeric_limits<amrex::Real>::infinity();
+            next_time = std::numeric_limits<amrex::Real>::max();
         } else if ((m_physical_time + m_dt >= m_max_time && m_physical_time < m_max_time) ||
                    (m_physical_time + m_dt <= m_max_time && m_physical_time > m_max_time)) {
             m_dt = m_max_time - m_physical_time;
@@ -1122,20 +1183,29 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
     const amrex::Real dy = m_3D_geom[lev].CellSize(Direction::y);
     const amrex::Real dz = m_3D_geom[lev].CellSize(Direction::z);
 
+    const amrex::Real dx_inv = m_3D_geom[lev].InvCellSize(Direction::x);
+    const amrex::Real dy_inv = m_3D_geom[lev].InvCellSize(Direction::y);
+
     const amrex::Real poff_x = GetPosOffset(0, m_3D_geom[lev], m_3D_geom[lev].Domain());
     const amrex::Real poff_y = GetPosOffset(1, m_3D_geom[lev], m_3D_geom[lev].Domain());
     const amrex::Real poff_z = GetPosOffset(2, m_3D_geom[lev], m_3D_geom[lev].Domain());
 
     auto external_fields = m_grid_external_fields;
 
+<<<<<<< HEAD
     const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
     const int EypBx = Comps[WhichSlice::This]["EypBx"];
     const int Ez = Comps[WhichSlice::This]["Ez"];
+=======
+>>>>>>> development
     const int Bx = Comps[WhichSlice::This]["By"];
     const int By = Comps[WhichSlice::This]["Bx"];
     const int Bz = Comps[WhichSlice::This]["Bz"];
+    const int Psi = Comps[WhichSlice::This]["Psi"];
+    const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
+    const int EypBx = Comps[WhichSlice::This]["EypBx"];
+    const int Ez = Comps[WhichSlice::This]["Ez"];
 
-    const amrex::Real clight = m_phys_const.c;
     const amrex::Real time = m_physical_time;
 
     amrex::MultiFab& slicemf = m_fields.getSlices(lev);
@@ -1154,8 +1224,13 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
             {
                 const amrex::Real x = i * dx + poff_x;
                 const amrex::Real y = j * dy + poff_y;
+                const amrex::Real xlo = (i-1) * dx + poff_x;
+                const amrex::Real ylo = (j-1) * dy + poff_y;
+                const amrex::Real xhi = (i+1) * dx + poff_x;
+                const amrex::Real yhi = (j+1) * dy + poff_y;
                 const amrex::Real z = islice * dz + poff_z;
 
+<<<<<<< HEAD
                 const amrex::Real Exp = external_fields[0](x, y, z, time);
                 const amrex::Real Eyp = external_fields[1](x, y, z, time);
                 const amrex::Real Ezp = external_fields[2](x, y, z, time);
@@ -1166,9 +1241,25 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
                 arr(i, j, ExmBy) += Exp - clight * Byp;
                 arr(i, j, EypBx) += Eyp + clight * Bxp;
                 arr(i, j, Ez) += Ezp;
+=======
+                const amrex::Real Bxp = external_fields[0](x, y, z, time);
+                const amrex::Real Byp = external_fields[1](x, y, z, time);
+                const amrex::Real Bzp = external_fields[2](x, y, z, time);
+                const amrex::Real Psip = external_fields[3](x, y, z, time);
+                const amrex::Real Psipxlo = external_fields[3](xlo, y, z, time);
+                const amrex::Real Psipxhi = external_fields[3](xhi, y, z, time);
+                const amrex::Real Psipylo = external_fields[3](x, ylo, z, time);
+                const amrex::Real Psipyhi = external_fields[3](x, yhi, z, time);
+                const amrex::Real Ezp = external_fields[4](x, y, z, time);
+
+>>>>>>> development
                 arr(i, j, Bx) += Bxp;
                 arr(i, j, By) += Byp;
                 arr(i, j, Bz) += Bzp;
+                arr(i, j, Psi) += Psip;
+                arr(i, j, ExmBy) += - (Psipxhi - Psipxlo) * dx_inv;
+                arr(i, j, EypBx) += - (Psipyhi - Psipylo) * dy_inv;
+                arr(i, j, Ez) += Ezp;
             });
     }
 }

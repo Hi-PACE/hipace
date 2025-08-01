@@ -68,7 +68,7 @@ public:
     /** Allocate data for the beam particles and initialize particles with requested beam profile
     * \param[in] geom Geometry object for the whole domain
      */
-    void InitData (const amrex::Geometry& geom);
+    void InitData (const amrex::Vector<amrex::Geometry>& geom);
 
     /** Initialize 1 xy slice of particles, with fixed number of particles per cell
      *
@@ -187,16 +187,18 @@ public:
     /** maximum weighting factor gamma/(Psi +1) before particle is regarded as violating
      *  the quasi-static approximation and is removed */
     amrex::Real m_max_qsa_weighting_factor {35.};
-    amrex::Real m_radius {std::numeric_limits<amrex::Real>::infinity()}; /**< radius of the plasma */
+    amrex::Real m_radius {std::numeric_limits<amrex::Real>::max()}; /**< radius of the plasma */
     /** radius of the plasma insitu diagnostics */
-    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::infinity()};
+    amrex::Real m_insitu_radius {std::numeric_limits<amrex::Real>::max()};
     amrex::Real m_hollow_core_radius {0.}; /**< hollow core radius of the plasma */
+    bool m_read_fine_patch = false;
     bool m_use_fine_patch = false;
     int m_fine_transition_cells = 5;
     amrex::Parser m_parser_fine_patch; /**< owns data for m_fine_patch_func */
     amrex::ParserExecutor<2> m_fine_patch_func;
     amrex::Array<int, 2> m_ppc {0,0}; /**< Number of particles per cell in each direction */
     amrex::Array<int, 2> m_ppc_fine {0,0}; /**< Number of particles per cell in each direction */
+    amrex::Array<int, 2> m_ppc_fine2 {0,0}; /**< Number of particles per cell in each direction */
     /**< Prevent a particle from being initialized at the domain center */
     bool m_prevent_centered_particle = false;
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */

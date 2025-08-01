@@ -140,7 +140,7 @@ AdaptiveTimeStep::GatherMinUzSlice (MultiBeam& beams, const bool initial)
             [=] AMREX_GPU_DEVICE (unsigned long long ip) noexcept -> ReduceTuple
             {
                 if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0) return {
-                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::infinity()
+                    0._rt, 0._rt, 0._rt, std::numeric_limits<amrex::Real>::max()
                 };
                 return {
                     wp[ip],

@@ -95,24 +95,24 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 const amrex::Real yp = ptd.pos(1, ip);
 
                 amrex::Real Aabssqp = 0._rt;
-                amrex::Real laser_norm_ion = laser_norm;
-                if (can_ionize) {
-                    laser_norm_ion *=
-                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
-                }
                 if (use_laser) {
-                    doLaserGatherShapeN<0>(xp, yp, Aabssqp, arr, cache_idx[0],
-                                                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                    amrex::Real laser_norm_ion = laser_norm;
+                    if (can_ionize) {
+                        laser_norm_ion *=
+                            ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    }
+                    doLaserGatherShapeN<2>(xp, yp, Aabssqp, arr, cache_idx[0],
+                                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                     Aabssqp *= laser_norm_ion;
                 }
 
                 const amrex::Real uxp = ptd.rdata(PlasmaIdx::ux)[ip]*clightinv;
                 const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip]*clightinv;
                 amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
-                const amrex::Real uzp = (1._rt + uxp*uxp + uyp*uyp
-                    + 0.5_rt*Aabssqp*0. - psi*psi)/(2.*psi);
-                // The term with the vector potential 0.5|A|^2 is turned off until the insitu-diagnostics are changed
-                const amrex::Real gamma = (1.0_rt + uxp*uxp + uyp*uyp + psi*psi)/(2.0_rt*psi);
+                const amrex::Real uzp = (1._rt + uxp*uxp + uyp*uyp - psi*psi
+                    + 0.5_rt*Aabssqp)/(2._rt*psi);
+                const amrex::Real gamma = (1._rt + uxp*uxp + uyp*uyp + psi*psi
+                    + 0.5_rt*Aabssqp)/(2._rt*psi);
                 const amrex::Real wp = ptd.rdata(PlasmaIdx::w)[ip] * gamma / psi;
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;

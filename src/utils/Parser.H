@@ -109,11 +109,11 @@ namespace Parser
 
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, int& val) {
-        amrex::IParser parser = pp.makeIParser(str, {});
-        amrex::Long v = parser.compileHost<0>()();
+        amrex::Parser parser = pp.makeParser(str, {});
+        const double v = std::round(parser.compileHost<0>()());
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            v <= std::numeric_limits<int>::max() &&
-            v >= std::numeric_limits<int>::lowest(),
+            v <= static_cast<double>(std::numeric_limits<int>::max()) &&
+            v >= static_cast<double>(std::numeric_limits<int>::lowest()),
             "Error: Overflow detected when casting to int"
         );
         val = static_cast<int>(v);
@@ -121,14 +121,21 @@ namespace Parser
 
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, amrex::Long& val) {
-        amrex::IParser parser = pp.makeIParser(str, {});
-        val = parser.compileHost<0>()();
+        amrex::Parser parser = pp.makeParser(str, {});
+        const double v = std::round(parser.compileHost<0>()());
+        // note that max and lowest are imprecise when casted to double
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            v <= static_cast<double>(std::numeric_limits<amrex::Long>::max()) &&
+            v >= static_cast<double>(std::numeric_limits<amrex::Long>::lowest()),
+            "Error: Overflow detected when casting to Long"
+        );
+        val = static_cast<amrex::Long>(v);
     }
 
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, bool& val) {
-        amrex::IParser parser = pp.makeIParser(str, {});
-        val = static_cast<bool>(parser.compileHost<0>()());
+        amrex::Parser parser = pp.makeParser(str, {});
+        val = (parser.compileHost<0>()() != 0.);
     }
 
     inline void

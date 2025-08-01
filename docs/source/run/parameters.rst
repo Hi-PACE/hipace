@@ -162,17 +162,12 @@ General parameters
     If a parameter is present multiple times then the last occurrence will be used.
     Note that this will include some default AMReX parameters.
 
-* ``hipace.grid_external_E(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
-    External electric field applied to the field grid as a function of x, y, z and t.
+* ``hipace.grid_external_fields(x,y,z,t)`` (5 `float`) optional (default `0. 0. 0. 0. 0.`)
+    External fields applied to the field grid as a function of x, y, z and t.
     This will affect both beam and plasma particles, as well as the field diagnostics.
-    The components represent Ex, Ey and Ez respectively.
-    Note that z refers to the location of the beam particle inside the moving frame of reference
-    (zeta) and t to the physical time of the current time step.
-
-* ``hipace.grid_external_B(x,y,z,t)`` (3 `float`) optional (default `0. 0. 0.`)
-    External magnetic field applied to the field grid as a function of x, y, z and t.
-    This will affect both beam and plasma particles, as well as the field diagnostics.
-    The components represent Bx, By and Bz respectively.
+    The components represent Bx, By, Bz, Psi and Ez respectively.
+    The plasma wake potential :math:`\Psi = \phi - cA_z` must satisfy
+    :math:`\frac{d}{dx} \Psi = - (E_x - c B_y)` and :math:`\frac{d}{dy} \Psi = - (E_y + c B_x)`.
     Note that z refers to the location of the beam particle inside the moving frame of reference
     (zeta) and t to the physical time of the current time step.
 
@@ -234,6 +229,15 @@ Geometry
 * ``mr_lev1.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
+* ``mr_lev1.ref_ratio`` (2 `float`) optional (default `0 0`)
+    The refinement ratio of level 1 compared to level 0 in the x and y directions. If specified,
+    ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
+
+* ``mr_lev1.plasma_fine_patch`` (2 `float`) optional (default `0 0`)
+    Enable a fine patch for all plasmas using the location and refinement ratio of level 1.
+    The two parameters specify how large the diameter of the fine patch should be compared to the
+    length of level 1. It is recommended to use at least ``1.5 1.5`` to include the corners.
+
 * ``mr_lev2.n_cell`` (2 `integer`)
     Number of cells in x and y for level 2.
     The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
@@ -243,6 +247,15 @@ Geometry
 
 * ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
+
+* ``mr_lev2.ref_ratio`` (2 `float`) optional (default `0 0`)
+    The refinement ratio of level 2 compared to level 0 in the x and y directions. If specified,
+    ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
+
+* ``mr_lev2.plasma_fine_patch`` (2 `float`) optional (default `0 0`)
+    Enable a fine patch for all plasmas using the location and refinement ratio of level 2.
+    The two parameters specify how large the diameter of the fine patch should be compared to the
+    length of level 2. It is recommended to use at least ``1.5 1.5`` to include the corners.
 
 * ``lasers.n_cell`` (2 `integer`)
     Number of cells in x and y for the laser grid.
@@ -518,7 +531,9 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name> or plasmas.fine_ppc`` (2 `int`) optional (default `0 0`)
     The number of plasma particles per cell in x and y inside the fine plasma patch. This must be
-    divisible by the ppc outside the fine patch in both directions.
+    divisible by the ppc outside the fine patch in both directions. The ppc number is taken relative
+    to the cell size of mesh refinement level 0 so it typically should be much larger than
+    ``<plasma name> or plasmas.ppc``.
 
 * ``<plasma name> or plasmas.fine_transition_cells`` (`int`) optional (default `5`)
     Number of cells that are used just outside of the fine plasma patch to smoothly transition
@@ -869,7 +884,6 @@ For more information on the algorithm, see the corresponding publication `S. Die
 Laser parameters
 ----------------
 
-The laser profile is defined by :math:`a(x,y,z) = a_0 * \mathrm{exp}[-(x^2/w0_x^2 + y^2/w0_y^2 + z^2/L0^2)]`.
 The model implemented is the one from [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)].
 Unlike for ``beams`` and ``plasmas``, all the laser pulses are currently stored on the same array,
 which you can find in the output openPMD file as a complex array named `laserEnvelope`.
@@ -881,7 +895,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 
 * ``lasers.polarization`` (`linear` or `circular`) optional (default `linear`)
     Polarization of the laser pulse.
-    The ponderomotive force is 2x larger in circular polarization than in linear polarization.
+    For the same peak amplitude, the ponderomotive force is 2x larger in circular polarization than in linear polarization.
     Note that the envelope of the vector potential stored in arrays is independent on the polarization, such that the energy is actually 2x higher in circular polarization than in linear polarization.
 
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
@@ -912,7 +926,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``<laser name>.init_type`` (list of `string`) optional (default `gaussian`)
     The initialisation method of laser. Possible options are:
 
-      Option: ``gaussian`` (default) the laser is initialised with an ideal gaussian pulse.
+      ``gaussian`` (default): the laser is initialised with an ideal Gaussian pulse: :math:`a(x,y,z) = a_0 e^{-(x^2/w_0^2 + y^2/w_0^2 + z^2/L_0^2)}`.
 
       * ``<laser name>.a0`` (`float`) optional (default `0`)
           Peak normalized vector potential of the laser pulse.
@@ -939,7 +953,30 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.propagation_angle_yz`` (`float`) optional (default `0`)
           Propagation angle of the pulse in the yz plane (0 is along the z axis)
 
-      Option: ``from_file`` the laser is loaded from an openPMD file.
+      * ``<laser name>.STC_theta_xy`` (`float`) optional (default `0`)
+          Direction of the linear spatial and angular chirps in the xy plane (in radians; `0` is along x, `π/2` along y).
+          In what follows, all chirps are given as defined in `S. Akturk et al., Optics Express 12, 4399 (2004) <https://doi.org/10.1364/OPEX.12.004399>`__.
+
+      * ``<laser name>.beta`` (`float`) optional (default `0.`)
+          Angular dispersion (or angular chirp) at focus in :math:`second`.
+
+      * ``<laser name>.zeta`` (`float`) optional (default `0.`)
+          Spatial chirp at focus in :math:`second \cdot meter`.
+
+      * ``<laser name>.phi2`` (`float`) optional (default `0`)
+          Temporal chirp :math:`\phi^{(2)}` at focus in :math:`second^2`.
+          Namely, a wave packet centered on frequency :math:`(\omega_0 + \delta \omega)` reaches its peak intensity at :math:`z(\delta \omega) = z_0 - c \phi^{(2)} \, \delta \omega`.
+          Thus, a positive :math:`\phi^{(2)}` corresponds to positive chirp, i.e., red part of the spectrum in the front of the pulse and blue part in the back.
+          More specifically, the electric field in the focal plane is of the form:
+
+          .. math::
+              E(\boldsymbol{x},t) \propto Re\left[ \exp\left(  -\frac{(t-t_{peak})^2}{\tau^2 + 2i\phi^{(2)}} + i\omega_0 (t-t_{peak}) + i\phi_0 \right) \right]
+          where :math:`\tau` is given by ``<laser_name>.tau`` and represents the Fourier-limited duration of the laser pulse. Thus, the actual duration of the chirped laser pulse is:
+
+          .. math::
+               \tau' = \sqrt{ \tau^2 + 4 (\phi^{(2)})^2/\tau^2 }
+
+      ``from_file``: the laser is loaded from an openPMD file.
 
       * ``<laser name>.input_file`` (`string`) optional (default `""`)
           Path to an openPMD file containing a laser envelope.
@@ -954,7 +991,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
       * ``<laser name>.iteration`` (`int`) optional (default `0`)
           Iteration of the openPMD file to be read in.
 
-      Option: ``parser``, the laser is initialized with the expression of the complex envelope function.
+      ``parser``: the laser is initialized with the expression of the complex envelope function.
 
       * ``<laser name>.laser_real(x,y,z)`` optional (`string`) (default `""`)
           Expression for the real part of the laser envelope in `x, y, z`.
