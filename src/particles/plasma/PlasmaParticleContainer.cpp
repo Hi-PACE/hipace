@@ -852,7 +852,7 @@ InjectionCondition ()
 
 void
 PlasmaParticleContainer::
-PlasmaToBeam (const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int islice)
+PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
 {
     if (!m_can_laser_injection) return;
     HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
@@ -914,7 +914,6 @@ PlasmaToBeam (const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, co
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
         const amrex::Real dz = gm[0].CellSize(2);// / m_pdf_ref_ratio;
-        const amrex::Real z_lo = gm[0].ProbLo()[2];
         const amrex::Real dt = Hipace::GetInstance().m_dt;
         //const amrex::Real f = m_injection_weight_factor;
         const int n_subcycles = beam_elec->m_n_subcycles;

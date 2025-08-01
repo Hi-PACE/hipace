@@ -122,11 +122,10 @@ public:
 
     /** Do the transfer of particles from the plasma container to the beam container
      *
-     * \param[in] fields
      * \param[in] gm Geometry object for the whole domain
      * \param[in] islice Slice index corresponding to the current simulation slice
      */
-    void PlasmaToBeam (const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int islice);
+    void PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index

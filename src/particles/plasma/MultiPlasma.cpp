@@ -164,11 +164,11 @@ MultiPlasma::DoLaserIonization (
 
 void
 MultiPlasma::DoLaserInjection (
-    const int lev, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int islice)
+    amrex::Vector<amrex::Geometry> const& gm, const int islice)
 {
     for (auto& plasma : m_all_plasmas) {
         plasma.InjectionCondition();
-        plasma.PlasmaToBeam(fields, gm, islice);
+        plasma.PlasmaToBeam(gm, islice);
     }
 }
 
