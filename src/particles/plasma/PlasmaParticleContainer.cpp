@@ -75,8 +75,6 @@ PlasmaParticleContainer::ReadParameters ()
     m_can_laser_injection = false;
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
     queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
-    queryWithParser(pp, "uz_threshold", m_uz_threshold);
-    queryWithParser(pp, "injection_weight_factor", m_injection_weight_factor);
 
     m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
 
@@ -917,9 +915,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
 
         const amrex::Real dz = gm[0].CellSize(2);// / m_pdf_ref_ratio;
         const amrex::Real dt = Hipace::GetInstance().m_dt;
-        //const amrex::Real f = m_injection_weight_factor;
         const int n_subcycles = beam_elec->m_n_subcycles;
-        const amrex::Real uz_condition = m_uz_threshold;
 
         const amrex::Real poff_z = GetPosOffset(2, gm[0], gm[0].Domain());
 
@@ -949,7 +945,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                         + uy*uy*(clight_inv*clight_inv))
                         + 0.5_rt;
 
-                    amrex::Real frac = extra_gamma_psi / (gamma_psi - uz_condition);
+                    amrex::Real frac = extra_gamma_psi / gamma_psi;
 
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.id(pidx_beam) = pid_beam;

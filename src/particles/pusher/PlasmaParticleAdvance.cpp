@@ -67,7 +67,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
         const auto enforceBC = EnforceBC();
         const amrex::Real dz = gm[0].CellSize(2) / n_subcycles;
-        const amrex::Real uz_condition = plasma.m_uz_threshold;
 
         if (!temp_slice && lev == 0) {
             // only count particles on non-temp slices and only once for all MR levels
@@ -223,7 +222,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         + uy*uy*(clight_inv*clight_inv))
                         + 0.5_rt;
 
-                    ptd.rdata(PlasmaIdx::time_integral)[ip] += dz * (gamma_psi - uz_condition) * clight_inv;
+                    ptd.rdata(PlasmaIdx::time_integral)[ip] += dz * gamma_psi * clight_inv;
 #else
                     amrex::Real ux = ptd.rdata(PlasmaIdx::ux_half_step)[ip];
                     amrex::Real uy = ptd.rdata(PlasmaIdx::uy_half_step)[ip];
