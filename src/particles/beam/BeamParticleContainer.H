@@ -192,10 +192,6 @@ public:
         return m_total_num_particles;
     }
 
-    void updateSize (int n) {
-        m_total_num_particles = n;
-    }
-
     int numRealComponents () const {
         return BeamIdx::real_nattribs + (m_do_spin_tracking ? 3 : 0);
     }
@@ -263,7 +259,7 @@ private:
     amrex::IntVect m_reorder_idx_type = {0, 0, 0};
 
     // fixed_ppc:
-private:
+
     amrex::IntVect m_ppc {1, 1, 1}; /**< Number of particles per cell in each direction */
     amrex::RealVect m_position_mean {0., 0., 0.}; /**< mean position of the beam */
     amrex::Real m_min_density {0.}; /**< minimum density at which beam particles are generated */

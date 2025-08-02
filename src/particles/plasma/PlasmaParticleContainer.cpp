@@ -85,7 +85,6 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial ion level must be specified");
     }
-
     queryWithParserAlt(pp, "neutralize_background", m_neutralize_background, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_can_ionize || !m_neutralize_background,
         "Cannot use neutralize_background when ionization is turned on");
@@ -513,6 +512,7 @@ IonizationModule (const int lev,
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
 
+                // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
                 amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
                 amrex::ParticleCPUWrapper{idcpu_elec[pidx]} = lev; // current level
@@ -794,12 +794,14 @@ LaserIonization (const int islice,
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
                 arrdata_elec[PlasmaIdx::ux     ][pidx] = ux * phys_const.c;
                 arrdata_elec[PlasmaIdx::uy     ][pidx] = uy * phys_const.c;
-                arrdata_elec[PlasmaIdx::psi    ][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A))-uz; //psi = gamma - uz
+                arrdata_elec[PlasmaIdx::psi    ][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
+                                                            + 0.5_rt*amrex::abs(A*A))-uz;
                 arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = ux * phys_const.c;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = uy * phys_const.c;
-                arrdata_elec[PlasmaIdx::psi_half_step][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A)) - uz;
+                arrdata_elec[PlasmaIdx::psi_half_step][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
+                                                            + 0.5_rt*amrex::abs(A*A))-uz;
                 arrdata_elec[PlasmaIdx::time_integral][pidx] = arrdata_ion[PlasmaIdx::time_integral][ip];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU

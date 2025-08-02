@@ -231,6 +231,7 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_adk_prefactor;
     /** to calculate laser ionization momentum width for linear polarization */
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
+    /** to calculate laser ionization momentum width at the second order for linear polarization */
     amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_second_prefactor;
     // laser injection:
     bool m_can_laser_injection = false; /**< whether laser injection is enabled */
