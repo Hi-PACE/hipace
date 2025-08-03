@@ -26,17 +26,16 @@ struct BeamIdx
         x=0, y, z,  // position
         w,          // weight
         ux, uy, uz, // momentum
-        real_nattribs_in_buffer,
-        real_nattribs=real_nattribs_in_buffer
+        nsubcycles, // nsubcycles: by how many subcycles was this particle pushed already
+        real_nattribs,
+        // nsubcycles is not stored or communicated in MultiBuffer
+        real_nattribs_in_buffer = nsubcycles
     };
     enum {
-        // no extra components stored in MultiBuffer, besides 64bit idcpu
-        int_nattribs_in_buffer,
-        // nsubcycles: by how many subcycles was this particle pushed already
-        // nsubcycles is not stored or communicated in MultiBuffer
-        nsubcycles=int_nattribs_in_buffer,
         mr_level,
-        int_nattribs
+        int_nattribs,
+        // no extra components stored in MultiBuffer, besides 64bit idcpu
+        int_nattribs_in_buffer = mr_level
     };
 };
 
@@ -199,11 +198,15 @@ public:
 
     bool communicateIdCpuComponent () const { return true; }
     bool communicateRealComponent (int rcomp) const {
-        // communicate all compile-time and runtime real components
+        // don't communicate nsubcycles
+        if (rcomp == BeamIdx::nsubcycles) {
+            return false;
+        }
+        // otherwise communicate all compile-time and runtime real components
         return rcomp < numRealComponents();
     }
     bool communicateIntComponent (int icomp) const {
-        // don't communicate nsubcycles or mr_level
+        // don't communicate mr_level
         return icomp < BeamIdx::int_nattribs_in_buffer;
     }
 

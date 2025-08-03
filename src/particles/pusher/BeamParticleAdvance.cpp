@@ -27,10 +27,10 @@ AdvanceBeamParticlesSlice (
     const PhysConst phys_const = get_phys_const();
 
     const bool do_z_push = beam.m_do_z_push;
-    const int n_subcycles = beam.m_n_subcycles;
+    const amrex::Real n_subcycles = static_cast<amrex::Real>(beam.m_n_subcycles);
     const bool radiation_reaction = beam.m_do_radiation_reaction;
     const amrex::Real time = Hipace::GetInstance().m_physical_time;
-    const amrex::Real dt = Hipace::GetInstance().m_dt / n_subcycles;
+    const amrex::Real max_dt = Hipace::GetInstance().m_dt / n_subcycles;
     const amrex::Real background_density_SI = Hipace::m_background_density_SI;
     const bool normalized_units = Hipace::m_normalized_units;
     const bool spin_tracking = beam.m_do_spin_tracking;
@@ -146,7 +146,7 @@ AdvanceBeamParticlesSlice (
             amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
             amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
 
-            int i = ptd.idata(BeamIdx::nsubcycles)[ip];
+            amrex::Real i_subcycle = ptd.rdata(BeamIdx::nsubcycles)[ip];
 
             amrex::RealVect spin {0._rt, 0._rt, 0._rt};
             if (spin_tracking) {
@@ -155,12 +155,14 @@ AdvanceBeamParticlesSlice (
                 spin[2] = ptd.m_runtime_rdata[2][ip];
             }
 
-            for (; i < n_subcycles; i++) {
+            for (; i_subcycle < n_subcycles; i_subcycle += 1._rt) {
 
                 if (zp < min_z) {
                     // stop pushing particle if it is not on this slice anymore
                     break;
                 }
+
+                const amrex::Real dt = max_dt * std::min(1._rt, n_subcycles - i_subcycle);
 
                 const amrex::ParticleReal gammap_inv = 1._rt / std::sqrt( 1._rt
                     + (ux*ux + uy*uy + uz*uz)*inv_c2 );
@@ -360,7 +362,7 @@ AdvanceBeamParticlesSlice (
             ptd.pos(0, ip) = xp;
             ptd.pos(1, ip) = yp;
             ptd.pos(2, ip) = zp;
-            ptd.idata(BeamIdx::nsubcycles)[ip] = i;
+            ptd.rdata(BeamIdx::nsubcycles)[ip] = std::min(i_subcycle, n_subcycles);
             ptd.rdata(BeamIdx::ux)[ip] = ux;
             ptd.rdata(BeamIdx::uy)[ip] = uy;
             ptd.rdata(BeamIdx::uz)[ip] = uz;

@@ -960,7 +960,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * dt * clight * dzeta_inv;
                     // conservation of j_x and j_y
                     // don't push beam on this time step
-                    ptd_beam.idata(BeamIdx::nsubcycles)[pidx_beam] = n_subcycles;
+                    ptd_beam.rdata(BeamIdx::nsubcycles)[pidx_beam] = n_subcycles;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                     ptd_plasma.id(ip).make_invalid();
                 }
