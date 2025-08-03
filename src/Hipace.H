@@ -233,6 +233,7 @@ public:
     inline static bool m_do_beam_jz_minus_rho = false;
     /** Whether to deposit rho (plasma) for diagnostics */
     inline static bool m_deposit_rho = false;
+    inline static bool m_deposit_rho_beam = false;
     /** Whether to deposit rho for every individual plasma for diagnostics */
     inline static bool m_deposit_rho_individual = false;
     /** Whether to deposit temperature for every individual plasma for diagnostics */

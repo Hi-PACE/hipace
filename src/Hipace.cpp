@@ -116,6 +116,10 @@ Hipace::Hipace () :
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
     m_deposit_rho = m_diags.needsRho();
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
+    queryWithParser(pph, "deposit_rho_beam", m_deposit_rho_beam);
+    if (m_deposit_rho_beam) {
+        m_deposit_rho = true;
+    }
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
     m_deposit_temp_individual = m_diags.needsTempIndividual();

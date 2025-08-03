@@ -116,10 +116,6 @@ public:
                           const MultiLaser& laser,
                           const amrex::Real background_density_SI);
 
-    /** Mark the plasma particles that has been injected
-     */
-    void InjectionCondition ();
-
     /** Do the transfer of particles from the plasma container to the beam container
      *
      * \param[in] gm Geometry object for the whole domain

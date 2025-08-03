@@ -820,35 +820,6 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
-InjectionCondition ()
-{
-    if (!m_can_laser_injection) return;
-    HIPACE_PROFILE("PlasmaParticleContainer::InjectionCondition()");
-
-    using namespace amrex::literals;
-
-    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
-    {
-        const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
-
-        amrex::Long const num_particles = pti.numParticles();
-
-        const amrex::Real dt = Hipace::GetInstance().m_dt;
-
-        // This kernel marks the plasma particles that has been injected in the wake
-        amrex::ParallelFor(num_particles,
-            [=] AMREX_GPU_DEVICE (int ip) {
-                // condition for injection
-                if (ptd_plasma.id(ip).is_valid() &&
-                    (ptd_plasma.rdata(PlasmaIdx::time_integral)[ip] > dt)){
-                    ptd_plasma.id(ip) = 3; // set the injected electron ID to 3
-                }
-        });
-    }
-}
-
-void
-PlasmaParticleContainer::
 PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
 {
     if (!m_can_laser_injection) return;
@@ -862,6 +833,9 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
     const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
     const amrex::Real dzeta_inv = gm[0].InvCellSize(2);
+    const amrex::Real dzeta = gm[0].CellSize(2);
+
+    const amrex::Real dt = Hipace::GetInstance().m_dt;
 
     // Loop over plasma particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -880,8 +854,26 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
             {
-                if (ptd_plasma.id(ip) == 3) // whether the plasma particle is from ionization
+                if (!ptd_plasma.id(ip).is_valid()) {
+                    return {0};
+                }
+
+                amrex::Real Aabssqp = 0;
+                const amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
+                const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
+                const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
+                amrex::Real gamma_psi = 0.5_rt*(1._rt / psi)*(1._rt / psi)*(
+                    1.0_rt + Aabssqp
+                    + ux*ux*(clight_inv*clight_inv)
+                    + uy*uy*(clight_inv*clight_inv))
+                    + 0.5_rt;
+
+                const amrex::Real next_integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip]
+                                                  + dzeta * gamma_psi * clight_inv;
+
+                if (next_integral > dt)
                 {
+                    ptd_plasma.id(ip) = 3;
                     return {1};
                 } else {
                     return {0};
@@ -910,8 +902,6 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
 
         auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
-        const amrex::Real dz = gm[0].CellSize(2);// / m_pdf_ref_ratio;
-        const amrex::Real dt = Hipace::GetInstance().m_dt;
         const amrex::Real n_subcycles = static_cast<amrex::Real>(beam_elec->m_n_subcycles);
 
         const amrex::Real poff_z = GetPosOffset(2, gm[0], gm[0].Domain());
@@ -932,7 +922,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
                     const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
 
-                    // amrex::Real integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip];
+                    amrex::Real integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip];
                     // amrex::Real extra = integral - dt;
                     // amrex::Real extra_gamma_psi = extra * dzeta_inv * clight;
 
@@ -948,7 +938,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
                     ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
-                    ptd_beam.pos(2, pidx_beam) = poff_z + dz * islice;
+                    ptd_beam.pos(2, pidx_beam) = poff_z + dzeta * islice;
                     ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ux;
                     ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = uy;
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*Aabssqp)/(2.*psi)*phys_const.c;
@@ -957,7 +947,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * dt * clight * dzeta_inv;
                     // conservation of j_x and j_y
                     // don't push beam on this time step
-                    ptd_beam.rdata(BeamIdx::nsubcycles)[pidx_beam] = n_subcycles;
+                    ptd_beam.rdata(BeamIdx::nsubcycles)[pidx_beam] = (integral / dt) * n_subcycles;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                     ptd_plasma.id(ip).make_invalid();
                 }

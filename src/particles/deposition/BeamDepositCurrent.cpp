@@ -58,7 +58,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
     const int     jyb_cmp = do_beam_jx_jy_deposition  ? Comps[which_slice]["jy"    +beam_str] : -1;
     const int     jzb_cmp = do_beam_jz_deposition     ? Comps[which_slice]["jz"    +beam_str] : -1;
     const int rhomjzb_cmp = do_beam_rhomjz_deposition ? Comps[which_slice]["rhomjz"+beam_str] : -1;
-    const int     rho_cmp = (which_slice == WhichSlice::This) && Hipace::m_deposit_rho ? Comps[which_slice]["rho"] : -1;
+    const int     rho_cmp = (which_slice == WhichSlice::This) && Hipace::m_deposit_rho_beam ? Comps[which_slice]["rho"] : -1;
 
     // Offset for converting positions to indexes
     amrex::Real const x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
