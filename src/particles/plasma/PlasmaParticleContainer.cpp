@@ -864,8 +864,8 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                 const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
                 amrex::Real gamma_psi = 0.5_rt*(1._rt / psi)*(1._rt / psi)*(
                     1.0_rt + Aabssqp
-                    + ux*ux*(clight_inv*clight_inv)
-                    + uy*uy*(clight_inv*clight_inv))
+                    + ux*ux
+                    + uy*uy)
                     + 0.5_rt;
 
                 const amrex::Real next_integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip]
@@ -890,7 +890,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
         if (num_new_beam_part == 0) continue;
 
         if(Hipace::m_verbose >= 3) {
-            amrex::Print() << "Number of transfered particles: "
+            amrex::AllPrint() << "Number of transfered particles: "
                         << num_new_beam_part << "\n";
         }
 
@@ -909,6 +909,8 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
 
+        const amrex::Real init_z = poff_z + (islice - 0.5_rt) * dzeta;
+
         // This kernel does the transfer of the ionized electrons from the plasma container
         // to the beam container and make them invalid in the plasma container
         amrex::ParallelFor(num_particles,
@@ -918,9 +920,9 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     const amrex::Long pidx_beam = pid_beam + old_size;
 
                     amrex::Real Aabssqp = 0;
-                    const amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip]*clight_inv;
-                    const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip]*clight_inv;
-                    const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
+                    const amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux_half_step)[ip]*clight_inv;
+                    const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy_half_step)[ip]*clight_inv;
+                    const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi_half_step)[ip];
 
                     amrex::Real integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip];
                     // amrex::Real extra = integral - dt;
@@ -938,15 +940,17 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
                     ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
                     ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
-                    ptd_beam.pos(2, pidx_beam) = poff_z + dzeta * islice;
-                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ux;
-                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = uy;
+                    ptd_beam.pos(2, pidx_beam) = init_z;
+                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux_half_step)[ip];
+                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::uy_half_step)[ip];
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*Aabssqp)/(2.*psi)*phys_const.c;
                     //amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
                     //const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A));
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * dt * clight * dzeta_inv;
                     // conservation of j_x and j_y
                     // don't push beam on this time step
+
+                    AMREX_DEVICE_PRINTF("beam nsubcycles: %f\n", (integral / dt) * n_subcycles);
                     ptd_beam.rdata(BeamIdx::nsubcycles)[pidx_beam] = (integral / dt) * n_subcycles;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                     ptd_plasma.id(ip).make_invalid();

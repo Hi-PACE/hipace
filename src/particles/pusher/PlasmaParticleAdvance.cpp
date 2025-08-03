@@ -161,10 +161,19 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             ux_dual, uy_dual, psi_inv_dual, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
 
+                        const DualNumber gamma_psi = 0.5_rt*psi_inv_dual*psi_inv_dual*(
+                            1.0_rt + Aabssqp
+                            + ux_dual*ux_dual*(clight_inv*clight_inv)
+                            + uy_dual*uy_dual*(clight_inv*clight_inv))
+                            + 0.5_rt;
+
                         ux += sdz*dz_ux + 0.5_rt*sdz*sdz*dz_ux_dual.epsilon;
                         uy += sdz*dz_uy + 0.5_rt*sdz*sdz*dz_uy_dual.epsilon;
                         psi += sdz*dz_psi + 0.5_rt*sdz*sdz*dz_psi_dual.epsilon;
 
+                        ptd.rdata(PlasmaIdx::time_integral)[ip] +=
+                            sdz * gamma_psi.value * clight_inv
+                            + 0.5_rt * sdz * sdz* gamma_psi.epsilon * clight_inv;
                     }
 
                     // full push in position
@@ -215,14 +224,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     ptd.rdata(PlasmaIdx::ux)[ip] = ux;
                     ptd.rdata(PlasmaIdx::uy)[ip] = uy;
                     ptd.rdata(PlasmaIdx::psi)[ip] = psi;
-
-                    const amrex::Real gamma_psi = 0.5_rt*(1._rt / psi)*(1._rt / psi)*(
-                        1.0_rt + Aabssqp
-                        + ux*ux*(clight_inv*clight_inv)
-                        + uy*uy*(clight_inv*clight_inv))
-                        + 0.5_rt;
-
-                    ptd.rdata(PlasmaIdx::time_integral)[ip] += dz * gamma_psi * clight_inv;
 #else
                     amrex::Real ux = ptd.rdata(PlasmaIdx::ux_half_step)[ip];
                     amrex::Real uy = ptd.rdata(PlasmaIdx::uy_half_step)[ip];
