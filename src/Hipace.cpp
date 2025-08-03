@@ -794,15 +794,13 @@ Hipace::SolveOneSlice (int islice, int step)
     // plasma laser ionization
     m_multi_plasma.DoLaserIonization(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
 
-    // injection
-    for (int lev=0; lev<current_N_level; ++lev) {
-        m_multi_plasma.DoLaserInjection(m_3D_geom, islice);
-    }
-
     // Push plasma particles
     for (int lev=0; lev<current_N_level; ++lev) {
         m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
     }
+
+    // injection
+    m_multi_plasma.DoLaserInjection(m_3D_geom, islice);
 
     if (m_depos_order_z == 2) {
         CalculateEzNext(current_N_level, step);
