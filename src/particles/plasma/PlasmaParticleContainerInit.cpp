@@ -93,6 +93,9 @@ InitParticles (const amrex::RealVect& a_u_std,
             tile_box &= amrex::Box(lo_limit, hi_limit, box_nodal);
         }
 
+        const amrex::Real radius_sq = a_radius == std::numeric_limits<amrex::Real>::max() ?
+            std::numeric_limits<amrex::Real>::max() : a_radius * a_radius;
+
         const auto lo = amrex::lbound(tile_box);
         const auto hi = amrex::ubound(tile_box);
 
@@ -171,7 +174,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                     const amrex::Real rsq = x*x + y*y;
                     if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                         y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                        rsq > a_radius*a_radius ||
+                        rsq > radius_sq ||
                         rsq < a_hollow_core_radius*a_hollow_core_radius ||
                         density_func(x, y, c_t) <= min_density) continue;
 
@@ -225,7 +228,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    rsq > a_radius*a_radius ||
+                    rsq > radius_sq ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
                     density_func(x, y, c_t) <= min_density) return;
 
@@ -285,7 +288,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    rsq > a_radius*a_radius ||
+                    rsq > radius_sq ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
                     density_func(x, y, c_t) <= min_density) return;
 
