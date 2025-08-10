@@ -102,17 +102,7 @@ BeamParticleContainer::ReadParameters ()
             // Use 3 real and 0 int runtime components
             beam_tile.define(3, 0);
         }
-        getBeamInitSlice().define(3, 0);
-    }
-    auto& soa = getBeamInitSlice().GetStructOfArrays();
-    soa.GetIdCPUData().setArena(
-        m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    for (int rcomp = 0; rcomp < soa.NumRealComps(); ++rcomp) {
-        soa.GetRealData(rcomp).setArena(
-            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
-    }
-    for (int icomp = 0; icomp < soa.NumIntComps(); ++icomp) {
-        soa.GetIntData(icomp).setArena(
+        getBeamInitSlice().define(3, 0, nullptr, nullptr,
             m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
 }
