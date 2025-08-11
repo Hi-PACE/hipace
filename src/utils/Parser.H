@@ -273,7 +273,7 @@ namespace Parser
         const auto n = str_arr.size();
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             n == size,
-            amrex::ToString(str_arr) + "has wrong length " +
+            amrex::ToString(str_arr) + " has wrong length " +
             amrex::ToString(n) + " should be " + amrex::ToString(size) + "\n"
         );
         for (auto i=0ul ; i != n ; ++i) {
@@ -287,7 +287,7 @@ namespace Parser
         const auto n = str_arr.size();
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             n == AMREX_SPACEDIM,
-            amrex::ToString(str_arr) + "has wrong length " +
+            amrex::ToString(str_arr) + " has wrong length " +
             amrex::ToString(n) + " should be " + amrex::ToString(AMREX_SPACEDIM) + "\n"
         );
         for (auto i=0ul ; i != n ; ++i) {
@@ -301,7 +301,7 @@ namespace Parser
         const auto n = str_arr.size();
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             n == AMREX_SPACEDIM,
-            amrex::ToString(str_arr) + "has wrong length " +
+            amrex::ToString(str_arr) + " has wrong length " +
             amrex::ToString(n) + " should be " + amrex::ToString(AMREX_SPACEDIM) + "\n"
         );
         for (auto i=0ul ; i != n ; ++i) {
