@@ -268,11 +268,11 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
 
     // check that all components are at least used by one of the diagnostics
     for (auto& [key, val] : is_global_comp_used) {
-        if (!val) {
-            amrex::Abort("Unknown or unused component in diagnostic.field_data.\n'" +
-                         key + "' does not belong to any diagnostic.names!\n" +
-                         all_comps_error_str.str());
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(val,
+            "Unknown or unused component in diagnostic.field_data.\n'" +
+            key + "' does not belong to any diagnostic.names!\n" +
+            all_comps_error_str.str()
+        );
     }
 
     // if there are multiple diagnostic objects with the same m_base_geom_type (colliding component
@@ -306,10 +306,12 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 m_output_beam_names.clear();
                 break;
             }
-            if(std::find(all_beam_names.begin(), all_beam_names.end(), beam_name) ==  all_beam_names.end() ) {
-                amrex::Abort("Unknown beam name: " + beam_name + "\nmust be " +
-                "a subset of beams.names or 'none'");
-            }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                std::find(all_beam_names.begin(), all_beam_names.end(), beam_name)
+                    != all_beam_names.end(),
+                "Unknown beam name: " + beam_name + "\nmust be " +
+                "a subset of beams.names: " + amrex::ToString(all_beam_names) + ", 'all' or 'none'"
+            );
         }
     }
 

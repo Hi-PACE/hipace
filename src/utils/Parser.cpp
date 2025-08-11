@@ -30,17 +30,13 @@ namespace Parser {
 
             auto pos = s.find_first_of("=");
 
-            if (pos == std::string::npos) {
-                amrex::Abort(abort_str);
-            }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(pos != std::string::npos, abort_str);
 
             std::string varname = s.substr(0, pos);
             std::string expr = s.substr(pos + 1u);
             std::stringstream expr_ss{expr};
 
-            if (expr.size() < 1ul) {
-                amrex::Abort(abort_str);
-            }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(expr.size() >= 1ul, abort_str);
 
             if (expr_ss.peek() == '[') {
                 double range_begin = 0., range_end = 0., num_points = 0.;
@@ -51,10 +47,11 @@ namespace Parser {
                         >> second_comma >> num_points
                         >> bracked_close;
 
-                if (bracket_open != '[' || first_comma != ',' ||
-                    second_comma != ',' || bracked_close != ']') {
-                    amrex::Abort(abort_str);
-                }
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    bracket_open == '[' && first_comma == ',' &&
+                    second_comma == ',' && bracked_close == ']',
+                    abort_str
+                );
                 local_variables_names.emplace_back(varname);
                 local_variables_bounds.emplace_back(range_begin, range_end,
                     static_cast<int>(std::round(num_points)));
@@ -64,11 +61,12 @@ namespace Parser {
                 pp.add(varname.c_str(), val);
             }
 
-            if (expr_ss.fail() ||
-                (static_cast<long>(expr_ss.tellg()) != static_cast<long>(expr.size()) &&
-                static_cast<long>(expr_ss.tellg()) != -1l)) {
-                amrex::Abort(abort_str);
-            }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                !expr_ss.fail() &&
+                (static_cast<long>(expr_ss.tellg()) == static_cast<long>(expr.size()) ||
+                static_cast<long>(expr_ss.tellg()) == -1l),
+                abort_str
+            );
         }
 
         amrex::Parser func_parser{};

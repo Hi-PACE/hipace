@@ -30,14 +30,11 @@ struct WhichSlice {
 
 struct assert_map : std::map<std::string, int> {
     int operator[] (const std::string& str) const {
-        if (count(str)==0) {
-            amrex::ErrorStream() << "Component '"+str+"' is not allocated\nFields allocated:";
-            for (auto& [alloc_str, num] : *this) {
-                amrex::ErrorStream() << " '" << alloc_str << "' (" << num << "),";
-            }
-            amrex::ErrorStream() << "\n";
-            AMREX_ALWAYS_ASSERT(count(str)!=0);
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            count(str) != 0,
+             "Component '" + str + "' is not allocated\n"
+             "Fields allocated: " + amrex::ToString(*this) + "\n"
+        );
         return at(str);
     }
 

@@ -721,10 +721,11 @@ InitBeamFromFileHelper (const std::string input_file,
         // Check what kind of Datatype is used in beam file
         auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY );
 
-        if(!series.iterations.contains(num_iteration)) {
-            amrex::Abort("Could not find iteration " + std::to_string(num_iteration) +
-                                                        " in file " + input_file + "\n");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            series.iterations.contains(num_iteration),
+            "Could not find iteration " + std::to_string(num_iteration) +
+            " in file " + input_file + "\n"
+        );
         species_known = series.iterations[num_iteration].particles.contains(species_name);
 
         for( auto const& particle_type : series.iterations[num_iteration].particles ) {

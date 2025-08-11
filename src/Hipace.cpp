@@ -373,19 +373,18 @@ Hipace::MakeGeometry ()
                 patch_hi_lev[1] - patch_lo_lev[1]
             };
 
-            if (!(old_patch_len[0] > 0._rt && old_patch_len[1] > 0._rt &&
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                old_patch_len[0] > 0._rt && old_patch_len[1] > 0._rt &&
                 (std::abs((patch_len_lev[0] - old_patch_len[0]) / old_patch_len[0]) <= 0.05_rt) &&
-                (std::abs((patch_len_lev[1] - old_patch_len[1]) / old_patch_len[1]) <= 0.05_rt))) {
-
-                amrex::Abort(
-                    "The refined patch would need to be changed by more than 5% "
-                    "to fit the requested refinement ratio! "
-                    "The patch length from patch_lo and patch_hi is " +
-                    amrex::ToString(old_patch_len) +
-                    " but the ref ratio and number of cells would give " +
-                    amrex::ToString(patch_len_lev) +
-                    "!");
-            }
+                (std::abs((patch_len_lev[1] - old_patch_len[1]) / old_patch_len[1]) <= 0.05_rt),
+                "The refined patch would need to be changed by more than 5% "
+                "to fit the requested refinement ratio! "
+                "The patch length from patch_lo and patch_hi is " +
+                amrex::ToString(old_patch_len) +
+                " but the ref ratio and number of cells would give " +
+                amrex::ToString(patch_len_lev) +
+                "!"
+            );
 
             patch_lo_lev[0] = patch_center_lev[0] - patch_len_lev[0] * 0.5_rt;
             patch_lo_lev[1] = patch_center_lev[1] - patch_len_lev[1] * 0.5_rt;

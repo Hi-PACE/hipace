@@ -123,14 +123,15 @@ void MultiBuffer::initialize (int nslices, MultiBeam& beams, MultiLaser& laser) 
         }
 
         size_estimate /= 1024*1024*1024;
-        if (!((1.05*size_estimate < max_size_GiB*n_ranks)
-            || (Hipace::m_max_step < amrex::ParallelDescriptor::NProcs()))) {
-            amrex::Abort("comms_buffer.max_size_GiB must be large enough to fit "
-                         "all the data needed for all beams and the laser "
-                         "between all ranks if there are more timesteps than ranks!\n"
-                         "Data needed: " + amrex::ToString(1.05*size_estimate) + " GiB\n"
-                         "Space available: " + amrex::ToString(max_size_GiB*n_ranks) + " GiB\n");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            (1.05*size_estimate < max_size_GiB*n_ranks)
+            || (Hipace::m_max_step < amrex::ParallelDescriptor::NProcs()),
+            "comms_buffer.max_size_GiB must be large enough to fit "
+            "all the data needed for all beams and the laser "
+            "between all ranks if there are more timesteps than ranks!\n"
+            "Data needed: " + amrex::ToString(1.05*size_estimate) + " GiB\n"
+            "Space available: " + amrex::ToString(max_size_GiB*n_ranks) + " GiB\n"
+        );
     }
 
     bool do_pre_register = false;
