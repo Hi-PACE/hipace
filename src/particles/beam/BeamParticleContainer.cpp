@@ -102,9 +102,10 @@ BeamParticleContainer::ReadParameters ()
             // Use 3 real and 0 int runtime components
             beam_tile.define(3, 0);
         }
-        getBeamInitSlice().define(3, 0, nullptr, nullptr,
-            m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
     }
+
+    getBeamInitSlice().define(m_do_spin_tracking ? 3 : 0, 0, nullptr, nullptr,
+        m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
 }
 
 amrex::Real
