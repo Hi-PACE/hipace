@@ -448,6 +448,12 @@ if(BUILD_TESTING)
                     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             )
 
+            add_test(NAME mesh_refinement.SI.2Rank
+                    COMMAND bash ${HiPACE_SOURCE_DIR}/tests/mesh_refinement.SI.2Rank.sh
+                            $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            )
+
         else()
 
             add_test(NAME transverse_benchmark.1Rank

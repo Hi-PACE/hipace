@@ -1,0 +1,89 @@
+my_constants.ne = 6e20
+my_constants.wp = sqrt(ne * q_e^2  / (epsilon0 * m_e))
+my_constants.kp = wp / clight
+my_constants.kp_inv = 1. / kp
+
+hipace.depos_order_xy = 2
+hipace.verbose = 3
+
+# Time
+
+hipace.max_time = 12 / clight
+max_step = 25000
+hipace.dt = 2e-12
+
+# Geometry
+
+amr.n_cell = 1023 1023 1000
+boundary.field = Dirichlet
+boundary.particle = Periodic
+geometry.prob_lo = -8*kp_inv -8*kp_inv -7*kp_inv
+geometry.prob_hi =  8*kp_inv  8*kp_inv  3.5*kp_inv
+
+# MR
+
+amr.max_level = 1
+
+mr_lev1.n_cell = 511 511
+mr_lev1.patch_lo = -0.125*kp_inv -0.125*kp_inv -7.*kp_inv
+mr_lev1.patch_hi =  0.125*kp_inv  0.125*kp_inv  3.5*kp_inv
+mr_lev1.ref_ratio = 32 32
+mr_lev1.plasma_fine_patch = 1.5 1.5
+
+# Beams
+
+beams.names = driver witness
+
+driver.injection_type = fixed_weight_pdf
+driver.num_particles = 1e8
+driver.total_charge = -8e-9
+driver.pdf = "50e-6*(sqrt(pi/2)*(1-1821.370881*z)*erf(((1/sqrt(2))*(525e-6-z))/50e-6)
+    +1821.370881*50e-6*exp(-(0.5*(525e-6-z)^2)/50e-6^2))
+    -50e-6*(sqrt(pi/2)*(1-1821.370881*z)*erf(((1/sqrt(2))*(-525e-6-z))/50e-6)
+    +1821.370881*50e-6*exp(-(0.5*(-525e-6-z)^2)/50e-6^2))"
+driver.position_mean = 0 0
+driver.position_std = 14.5952e-6 14.5952e-6
+driver.u_mean = 0 0 10371.84121
+driver.u_std = 4.84474 4.84474 103.7184121
+driver.element = electron
+driver.do_symmetrize = true
+
+witness.injection_type = fixed_weight_pdf
+witness.num_particles = 1e8
+witness.total_charge = -1.602e-9
+witness.pdf = "exp(-0.5*((z+1105e-6)/(42e-6))^2)"
+witness.position_mean = 0 0
+witness.position_std = 1.98576e-6 1.98576e-6
+witness.u_mean = 0 0 113503.1685
+witness.u_std = 2.18053 2.18053 1135.031685
+witness.element = electron
+
+# Plasma
+
+plasmas.names = elec ion
+plasmas.neutralize_background = false
+plasmas.prevent_centered_particle = true
+plasmas.reorder_period = 10
+
+elec.density(x,y,z) = ne
+elec.ppc = 1 1
+elec.element = electron
+
+ion.density(x,y,z) = 0.5*ne
+ion.ppc = 1 1
+ion.element = He
+ion.initial_ion_level = 2
+
+# Diagnostic
+
+diagnostic.diag_type = xz
+diagnostic.output_period = 100
+diagnostic.beam_output_period = 0
+beams.insitu_period = 1
+hipace.deposit_rho = true
+hipace.deposit_rho_individual = true
+
+# GPU
+
+comms_buffer.on_gpu = true
+hipace.do_device_synchronize = true

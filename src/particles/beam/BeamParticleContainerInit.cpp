@@ -143,7 +143,8 @@ InitBeamFixedPPC3D ()
     const amrex::Real y_mean = m_position_mean[1];
     const amrex::Real z_min = m_zmin;
     const amrex::Real z_max = m_zmax;
-    const amrex::Real radius = m_radius;
+    const amrex::Real radius_sq = m_radius == std::numeric_limits<amrex::Real>::max() ?
+        std::numeric_limits<amrex::Real>::max() : m_radius * m_radius;
     const amrex::Real min_density = m_min_density;
     const amrex::GpuArray<int, 3> rand_ppc {m_random_ppc[0], m_random_ppc[1], m_random_ppc[2]};
 
@@ -174,7 +175,7 @@ InitBeamFixedPPC3D ()
                     // If particles are evenly spaced, discard particles
                     // individually if they are out of bounds
                     if (z >= z_max || z < z_min ||
-                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius*radius) {
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius_sq) {
                             continue;
                         }
                 } else {
@@ -184,7 +185,7 @@ InitBeamFixedPPC3D ()
                     amrex::Real yc = plo[1]+j*dx[1];
                     amrex::Real zc = plo[2]+k*dx[2];
                     if (zc >= z_max || zc < z_min ||
-                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius*radius) {
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius_sq) {
                             continue;
                         }
                 }
@@ -226,7 +227,8 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
     const amrex::Real y_mean = m_position_mean[1];
     const amrex::Real z_min = m_zmin;
     const amrex::Real z_max = m_zmax;
-    const amrex::Real radius = m_radius;
+    const amrex::Real radius_sq = m_radius == std::numeric_limits<amrex::Real>::max() ?
+        std::numeric_limits<amrex::Real>::max() : m_radius * m_radius;
     const amrex::Real min_density = m_min_density;
     const amrex::GpuArray<int, 3> rand_ppc {m_random_ppc[0], m_random_ppc[1], m_random_ppc[2]};
 
@@ -262,7 +264,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                     // If particles are evenly spaced, discard particles
                     // individually if they are out of bounds
                     if (z >= z_max || z < z_min ||
-                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius*radius) {
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius_sq) {
                             continue;
                         }
                 } else {
@@ -272,7 +274,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                     amrex::Real yc = plo[1]+j*dx[1];
                     amrex::Real zc = plo[2]+islice*dx[2];
                     if (zc >= z_max || zc < z_min ||
-                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius*radius) {
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius_sq) {
                             continue;
                         }
                 }
@@ -321,7 +323,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                     // If particles are evenly spaced, discard particles
                     // individually if they are out of bounds
                     if (z >= z_max || z < z_min ||
-                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius*radius) {
+                        ((x-x_mean)*(x-x_mean)+(y-y_mean)*(y-y_mean)) > radius_sq) {
                             continue;
                         }
                 } else {
@@ -331,7 +333,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                     amrex::Real yc = plo[1]+j*dx[1];
                     amrex::Real zc = plo[2]+islice*dx[2];
                     if (zc >= z_max || zc < z_min ||
-                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius*radius) {
+                        ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius_sq) {
                             continue;
                         }
                 }
@@ -426,7 +428,8 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
     const amrex::Real z_mean = can ? 0.5_rt * (z_min + z_max) : m_pos_mean_z;
     const amrex::RealVect pos_std = m_position_std;
     const amrex::Real z_foc = m_z_foc;
-    const amrex::Real radius = m_radius;
+    const amrex::Real radius_sq = m_radius == std::numeric_limits<amrex::Real>::max() ?
+        std::numeric_limits<amrex::Real>::max() : m_radius * m_radius;
     auto pos_mean_x = m_pos_mean_x_func;
     auto pos_mean_y = m_pos_mean_y_func;
     const amrex::Real weight = m_total_charge / (m_num_particles * m_charge);
@@ -445,7 +448,7 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
             get_momentum(u[0], u[1], u[2], engine, z_central - z_mean, duz_per_uz0_dzeta);
 
             bool is_valid = true;
-            if (z_central < z_min || z_central > z_max || x*x + y*y > radius*radius) {
+            if (z_central < z_min || z_central > z_max || x*x + y*y > radius_sq) {
                 is_valid = false;
             }
 
@@ -621,7 +624,8 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         const bool do_symmetrize = m_do_symmetrize;
         const bool peak_density_is_specified = m_peak_density_is_specified;
         const amrex::Real z_foc = m_z_foc;
-        const amrex::Real radius = m_radius;
+        const amrex::Real radius_sq = m_radius == std::numeric_limits<amrex::Real>::max() ?
+            std::numeric_limits<amrex::Real>::max() : m_radius * m_radius;
         const amrex::Real weight = m_total_weight / m_num_particles;
         const auto pos_func = m_pdf_pos_func;
         const auto u_func = m_pdf_u_func;
@@ -669,7 +673,7 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
                 do {
                     x = amrex::RandomNormal(0, x_std, engine);
                     y = amrex::RandomNormal(0, y_std, engine);
-                    is_valid = x*x + y*y <= radius*radius;
+                    is_valid = x*x + y*y <= radius_sq;
                 } while (!peak_density_is_specified && !is_valid);
 
                 const amrex::Real ux = amrex::RandomNormal(u_func[0](z), u_func[3](z), engine);

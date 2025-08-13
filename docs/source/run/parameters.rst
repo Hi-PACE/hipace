@@ -229,6 +229,15 @@ Geometry
 * ``mr_lev1.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
 
+* ``mr_lev1.ref_ratio`` (2 `float`) optional (default `0 0`)
+    The refinement ratio of level 1 compared to level 0 in the x and y directions. If specified,
+    ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
+
+* ``mr_lev1.plasma_fine_patch`` (2 `float`) optional (default `0 0`)
+    Enable a fine patch for all plasmas using the location and refinement ratio of level 1.
+    The two parameters specify how large the diameter of the fine patch should be compared to the
+    length of level 1. It is recommended to use at least ``1.5 1.5`` to include the corners.
+
 * ``mr_lev2.n_cell`` (2 `integer`)
     Number of cells in x and y for level 2.
     The number of cells in the zeta direction is calculated from ``patch_lo`` and ``patch_hi``.
@@ -238,6 +247,15 @@ Geometry
 
 * ``mr_lev2.patch_hi`` (3 `float`)
     Upper end of the refined grid in x, y and z.
+
+* ``mr_lev2.ref_ratio`` (2 `float`) optional (default `0 0`)
+    The refinement ratio of level 2 compared to level 0 in the x and y directions. If specified,
+    ``patch_lo`` and ``patch_hi`` will be adjusted by up to 5% to match the requested refinement ratio.
+
+* ``mr_lev2.plasma_fine_patch`` (2 `float`) optional (default `0 0`)
+    Enable a fine patch for all plasmas using the location and refinement ratio of level 2.
+    The two parameters specify how large the diameter of the fine patch should be compared to the
+    length of level 2. It is recommended to use at least ``1.5 1.5`` to include the corners.
 
 * ``lasers.n_cell`` (2 `integer`)
     Number of cells in x and y for the laser grid.
@@ -513,7 +531,9 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name> or plasmas.fine_ppc`` (2 `int`) optional (default `0 0`)
     The number of plasma particles per cell in x and y inside the fine plasma patch. This must be
-    divisible by the ppc outside the fine patch in both directions.
+    divisible by the ppc outside the fine patch in both directions. The ppc number is taken relative
+    to the cell size of mesh refinement level 0 so it typically should be much larger than
+    ``<plasma name> or plasmas.ppc``.
 
 * ``<plasma name> or plasmas.fine_transition_cells`` (`int`) optional (default `5`)
     Number of cells that are used just outside of the fine plasma patch to smoothly transition
