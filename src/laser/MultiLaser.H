@@ -239,7 +239,7 @@ private:
 
     // Data for in-situ diagnostics:
     /** Number of real laser properties for in-situ per-slice reduced diagnostics. */
-    static constexpr int m_insitu_nrp = 6;
+    static constexpr int m_insitu_nrp = 7;
     /** Number of real complex properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_ncp = 1;
     /** How often the insitu laser diagnostics should be computed and written

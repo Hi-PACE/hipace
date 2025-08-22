@@ -952,7 +952,8 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
     const amrex::Real poff_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
     const amrex::Real dx = m_laser_geom_3D.CellSize(0);
     const amrex::Real dy = m_laser_geom_3D.CellSize(1);
-    const amrex::Real dxdydz = dx * dy * m_laser_geom_3D.CellSize(2);
+    const amrex::Real dz = m_laser_geom_3D.CellSize(2);
+    const amrex::Real dxdydz = dx * dy * dz;
 
     const int xmid_lo = m_laser_geom_3D.Domain().smallEnd(0) + (m_laser_geom_3D.Domain().length(0) - 1) / 2;
     const int xmid_hi = m_laser_geom_3D.Domain().smallEnd(0) + (m_laser_geom_3D.Domain().length(0)) / 2;
@@ -975,7 +976,17 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
                 const amrex::Real areal = arr(i,j, n00j00_r);
                 const amrex::Real aimag = arr(i,j, n00j00_i);
                 const amrex::Real aabssq = abssq(areal, aimag);
-
+                const amrex::Real chidzabssq = arr(i,j, chi) * (
+                     - abssq(arr(i,j, n00j00_r), arr(i,j, n00j00_i))
+                     + abssq(arr(i,j, n00jp1_r), arr(i,j, n00jp1_i))
+                    ) / dz;
+                // Should be the following, unfortunately n00jp2 is being used for something
+                // else there and is therefore incorrect. Would be great to use that still.
+                // const amrex::Real chidzabssq = arr(i,j, chi) * (
+                //     - 3._rt * abssq(arr(i,j, n00j00_r), arr(i,j, n00j00_i))
+                //     + 4._rt * abssq(arr(i,j, n00jp1_r), arr(i,j, n00jp1_i))
+                //     -         abssq(arr(i,j, n00jp2_r), arr(i,j, n00jp2_i))
+                //     ) / (2._rt * dz);
                 const amrex::Real x = i * dx + poff_x;
                 const amrex::Real y = j * dy + poff_y;
 
@@ -989,7 +1000,8 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
                     aabssq*x*x,     // 3    [|a|^2*x*x]
                     aabssq*y,       // 4    [|a|^2*y]
                     aabssq*y*y,     // 5    [|a|^2*y*y]
-                    aaxis           // 6    axis(a)
+                    chidzabssq,     // 6    [chi*d_z|a|^2]
+                    aaxis           // 7    axis(a)
                 };
             });
     }
@@ -1055,6 +1067,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::
         {"[|a|^2*x*x]"    , &m_insitu_rdata[3*nslices], nslices},
         {"[|a|^2*y]"      , &m_insitu_rdata[4*nslices], nslices},
         {"[|a|^2*y*y]"    , &m_insitu_rdata[5*nslices], nslices},
+        {"[chi*d_z|a|^2]" , &m_insitu_rdata[6*nslices], nslices},
         {"axis(a)"        , &m_insitu_cdata[0], nslices},
         {"integrated", {
             {"max(|a|^2)"     , &m_insitu_sum_rdata[0]},
@@ -1062,7 +1075,8 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::
             {"[|a|^2*x]"      , &m_insitu_sum_rdata[2]},
             {"[|a|^2*x*x]"    , &m_insitu_sum_rdata[3]},
             {"[|a|^2*y]"      , &m_insitu_sum_rdata[4]},
-            {"[|a|^2*y*y]"    , &m_insitu_sum_rdata[5]}
+            {"[|a|^2*y*y]"    , &m_insitu_sum_rdata[5]},
+            {"[chi*d_z|a|^2]" , &m_insitu_sum_rdata[6]}
         }}
     };
 
