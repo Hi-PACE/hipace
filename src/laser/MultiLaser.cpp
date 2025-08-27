@@ -976,17 +976,11 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
                 const amrex::Real areal = arr(i,j, n00j00_r);
                 const amrex::Real aimag = arr(i,j, n00j00_i);
                 const amrex::Real aabssq = abssq(areal, aimag);
+                // At this point, n00jp2 actually contains the data of n00jm1
                 const amrex::Real chidzabssq = arr(i,j, chi) * (
-                     - abssq(arr(i,j, n00j00_r), arr(i,j, n00j00_i))
+                     - abssq(arr(i,j, n00jp2_r), arr(i,j, n00jp2_i))
                      + abssq(arr(i,j, n00jp1_r), arr(i,j, n00jp1_i))
-                    ) / dz;
-                // Should be the following, unfortunately n00jp2 is being used for something
-                // else there and is therefore incorrect. Would be great to use that still.
-                // const amrex::Real chidzabssq = arr(i,j, chi) * (
-                //     - 3._rt * abssq(arr(i,j, n00j00_r), arr(i,j, n00j00_i))
-                //     + 4._rt * abssq(arr(i,j, n00jp1_r), arr(i,j, n00jp1_i))
-                //     -         abssq(arr(i,j, n00jp2_r), arr(i,j, n00jp2_i))
-                //     ) / (2._rt * dz);
+                    ) / ( 2._rt * dz );
                 const amrex::Real x = i * dx + poff_x;
                 const amrex::Real y = j * dy + poff_y;
 
