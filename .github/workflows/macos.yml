@@ -83,8 +83,10 @@ jobs:
 
         set -e
 
+        brew uninstall cmake
+
         brew tap openpmd/openpmd
-        brew install openpmd-api --only-dependencies
+        brew install openpmd-api --only-dependencies --force
         brew install openpmd-api
         brew link openpmd-api
 
