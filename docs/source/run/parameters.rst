@@ -628,6 +628,12 @@ which are valid only for certain beam types, are introduced further below under
     The ideal index type is different for beam push and beam deposition so some experimentation
     may be required to find the overall fastest setting for a specific simulation.
 
+* ``<beam name> or beams.output_ratio`` (`int`) optional (default `1`)
+    Set the fraction of beam particles that should be written to the openPMD output.
+    For example, an output ratio of 100 will output every 100th beam particle.
+    This is implemented using the particle ID, which is set in ascending order at
+    the beginning of a simulation.
+
 Option: ``fixed_weight_pdf``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

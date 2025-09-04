@@ -244,8 +244,14 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
         std::string name = beams.get_name(ibeam);
         if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
 
+        auto& beam = beams.getBeam(ibeam);
+
         // initialize beam IO on first slice
-        const uint64_t np_total = beams.getBeam(ibeam).getTotalNumParticles();
+        uint64_t np_total = beam.getTotalNumParticles();
+
+        if (beam.m_output_ratio > 1) {
+            np_total = (np_total + beam.m_output_ratio - 1) / beam.m_output_ratio;
+        }
 
         m_uint64_beam_data[ibeam].resize(m_int_names.size());
 
@@ -253,7 +259,7 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
             m_uint64_beam_data[ibeam][idx].resize(np_total);
         }
 
-        if (beams.getBeam(ibeam).m_do_spin_tracking) {
+        if (beam.m_do_spin_tracking) {
             m_real_beam_data[ibeam].resize(m_real_names.size() + m_real_names_spin.size());
         } else {
             m_real_beam_data[ibeam].resize(m_real_names.size());
@@ -347,7 +353,17 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
 
         auto& beam = beams.getBeam(ibeam);
 
-        const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
+        uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
+
+        const int output_ratio = beam.m_output_ratio;
+
+        if (output_ratio > 1) {
+            np = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),
+                [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
+                    return i < int(np) && ptd.idcpu(i) % output_ratio == 0;
+                }
+            );
+        }
 
         if (np != 0) {
             // copy data from GPU to IO buffer

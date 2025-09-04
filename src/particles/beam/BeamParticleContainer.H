@@ -238,6 +238,8 @@ public:
     amrex::RealVect m_initial_spin = {1, 0, 0,};
     /** The anomalous magnetic moment */
     amrex::Real m_spin_anom = 0.00115965218128;
+    /** ratio of beam particles that are written to the openPMD output */
+    int m_output_ratio = 1;
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
