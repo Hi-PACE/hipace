@@ -608,6 +608,9 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         resize(which_slice, num_to_add_full, 0);
     }
 
+    const uint64_t pid = m_id64;
+    m_id64 += m_do_symmetrize ? 4*num_to_add_full : num_to_add_full;
+
     unsigned int loc_index = 0;
     for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
         const unsigned int num_to_add = m_num_particles_slice[slice*m_pdf_ref_ratio+r];
@@ -616,9 +619,6 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         auto& particle_tile = getBeamSlice(which_slice);
         // Access particles' SoA
         const auto ptd = particle_tile.getParticleTileData();
-
-        const uint64_t pid = m_id64;
-        m_id64 += m_do_symmetrize ? 4*num_to_add : num_to_add;
 
         const amrex::Real clight = get_phys_const().c;
         const bool do_symmetrize = m_do_symmetrize;
