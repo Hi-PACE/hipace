@@ -307,6 +307,7 @@ Hipace::InitData ()
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2), m_multi_beam, m_multi_laser);
 
     amrex::ParmParse pph("hipace");
+    queryWithParser(pph, "initial_time", m_initial_time);
     bool do_output_input = false;
     queryWithParser(pph, "output_input", do_output_input);
     if (do_output_input && amrex::ParallelDescriptor::IOProcessor()) {
