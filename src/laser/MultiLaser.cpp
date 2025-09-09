@@ -953,6 +953,7 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
     const amrex::Real dx = m_laser_geom_3D.CellSize(0);
     const amrex::Real dy = m_laser_geom_3D.CellSize(1);
     const amrex::Real dz = m_laser_geom_3D.CellSize(2);
+    const amrex::Real dz2i = 1./(2. * dz);
     const amrex::Real dxdydz = dx * dy * dz;
 
     const int xmid_lo = m_laser_geom_3D.Domain().smallEnd(0) + (m_laser_geom_3D.Domain().length(0) - 1) / 2;
@@ -980,7 +981,7 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
                 const amrex::Real chidzabssq = arr(i,j, chi) * (
                      - abssq(arr(i,j, n00jp2_r), arr(i,j, n00jp2_i))
                      + abssq(arr(i,j, n00jp1_r), arr(i,j, n00jp1_i))
-                    ) / ( 2._rt * dz );
+                    ) * dz2i;
                 const amrex::Real x = i * dx + poff_x;
                 const amrex::Real y = j * dy + poff_y;
 
