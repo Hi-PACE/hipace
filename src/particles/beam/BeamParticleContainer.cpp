@@ -60,6 +60,7 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
     queryWithParserAlt(pp, "do_radiation_reaction", m_do_radiation_reaction, pp_alt);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
+    m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);

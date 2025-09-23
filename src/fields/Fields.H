@@ -484,7 +484,7 @@ private:
     /** Sum of all per-slice real field properties */
     amrex::Vector<amrex::Real> m_insitu_sum_rdata;
     /** Prefix/path for the output files */
-    std::string m_insitu_file_prefix = "diags/field_insitu";
+    std::string m_insitu_file_prefix = "";
 };
 
 /** Helper struct to check whether a point is within a valid domain. */

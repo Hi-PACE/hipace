@@ -41,6 +41,7 @@ Fields::ReadParameters (const int nlev)
 #endif
     queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
     queryWithParser(ppf, "insitu_period", m_insitu_period);
+    m_insitu_file_prefix = Hipace::m_output_folder + "/field_insitu";
     queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
     queryWithParser(ppf, "do_symmetrize", m_do_symmetrize);
     DeprecatedInput("fields", "extended_solve",
