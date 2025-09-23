@@ -123,7 +123,7 @@ private:
     int m_max_trailing_slices = std::numeric_limits<int>::max();
     std::size_t m_current_buffer_size = 0;
     std::size_t m_max_buffer_size = std::numeric_limits<std::size_t>::max();
-    int m_max_open_requests = std::numeric_limits<int>::max();
+    int m_max_open_requests = 1000;
 
     // parameters to send physical time
     amrex::Real m_time_send_buffer = 0.;
