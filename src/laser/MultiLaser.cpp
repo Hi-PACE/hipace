@@ -422,6 +422,8 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
 
     if (!UseLaser(islice)) return;
 
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(dt>0, "Cannot use dt=0 or dt<0 with laser");
+
     Hipace::m_num_laser_cells_updated += m_slice_box.d_numPts();
 
     InterpolateChi(fields, geom_field_lev0);
