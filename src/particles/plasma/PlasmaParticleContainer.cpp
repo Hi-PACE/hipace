@@ -155,7 +155,7 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
-    m_insitu_file_prefix = Hipace::m_output_folder + "/plasma_insitu";
+    m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
     queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
