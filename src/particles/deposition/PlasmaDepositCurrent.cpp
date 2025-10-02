@@ -83,7 +83,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation{};
         int* AMREX_RESTRICT p_n_qsa_violation = nullptr;
 
-        if (Hipace::m_verbose > 3 && Hipace::HeadRank()) {
+        if (Hipace::m_verbose >= 3 && Hipace::HeadRank()) {
             p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
             const int n_qsa_violation = 0;
             amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
@@ -255,7 +255,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 }
             });
 
-        if (Hipace::m_verbose > 3 && Hipace::HeadRank()) {
+        if (Hipace::m_verbose >= 3 && Hipace::HeadRank()) {
             const int n_qsa_violation = gpu_n_qsa_violation.dataValue();
             if (n_qsa_violation > 0) {
                 amrex::AllPrint() << "number of QSA violating particles on this slice: "
