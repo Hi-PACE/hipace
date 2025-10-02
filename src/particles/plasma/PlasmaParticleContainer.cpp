@@ -889,10 +889,10 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
 
         if (num_new_beam_part == 0) continue;
 
-        if(Hipace::m_verbose >= 3) {
-            amrex::AllPrint() << "Number of transfered particles: "
-                        << num_new_beam_part << "\n";
-        }
+        // if(Hipace::m_verbose >= 3) {
+        //     amrex::AllPrint() << "Number of transfered particles: "
+        //                 << num_new_beam_part << "\n";
+        // }
 
         // Resize the beam container
         auto old_size_non_slip = beam_elec->getNumParticles(WhichBeamSlice::This);
@@ -950,7 +950,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     // conservation of j_x and j_y
                     // don't push beam on this time step
 
-                    AMREX_DEVICE_PRINTF("beam nsubcycles: %f\n", (integral / dt) * n_subcycles);
+                    // AMREX_DEVICE_PRINTF("beam nsubcycles: %f\n", (integral / dt) * n_subcycles);
                     ptd_beam.rdata(BeamIdx::nsubcycles)[pidx_beam] = (integral / dt) * n_subcycles;
                     ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
                     ptd_plasma.id(ip).make_invalid();
