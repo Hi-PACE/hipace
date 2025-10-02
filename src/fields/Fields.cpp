@@ -26,9 +26,11 @@
 
 using namespace amrex::literals;
 
-Fields::Fields (const int nlev)
-    : m_slices(nlev)
+void
+Fields::ReadParameters (const int nlev)
 {
+    m_slices = decltype(m_slices)(nlev);
+
     amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
     // set default Poisson solver based on the platform

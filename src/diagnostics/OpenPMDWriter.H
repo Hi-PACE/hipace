@@ -110,6 +110,9 @@ public:
 
     ~OpenPMDWriter ();
 
+    /** Read parameters from the input file */
+    void ReadParameters ();
+
     /** \brief Initialize diagnostics (collective operation)
      */
     void InitDiagnostics ();

@@ -1396,24 +1396,22 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
                                    << norminf << ", " << norminf/max_norm << "\n";
                 }
                 break;
-            } else if (norminf > Real(1.e20)*max_norm) {
-                if (verbose > 0) {
-                    amrex::Print() << "hpmg: Failing to converge after " << iter+1 << " iterations."
-                                   << " resid, resid/" << norm_name << " = "
-                                   << norminf << ", " << norminf/max_norm << "\n";
-                  }
-                  amrex::Abort("hpmg failing so lets stop here");
             }
+
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                converged || (norminf <= Real(1.e20)*max_norm),
+                "hpmg: Failing to converge after " + amrex::ToString(iter+1)  + " iterations."
+                " resid, resid/" + norm_name + " = " + amrex::ToString(norminf) + ", " +
+                amrex::ToString(norminf/max_norm) + "\n"
+            );
         }
 
-        if (!converged) {
-            if (verbose > 0) {
-                amrex::Print() << "hpmg: Failed to converge after " << nummaxiter << " iterations."
-                               << " resid, resid/" << norm_name << " = "
-                               << norminf << ", " << norminf/max_norm << "\n";
-            }
-            amrex::Abort("hpmg failed");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            converged,
+             "hpmg: Failed to converge after " + amrex::ToString(nummaxiter) + " iterations."
+             " resid, resid/" + norm_name + " = " + amrex::ToString(norminf) + ", " +
+             amrex::ToString(norminf/max_norm) + "\n"
+        );
     }
 
     // copy the cor array into the sol array used for the final output

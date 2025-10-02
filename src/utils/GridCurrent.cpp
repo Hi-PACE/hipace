@@ -11,7 +11,8 @@
 #include "GPUUtil.H"
 #include "Constants.H"
 
-GridCurrent::GridCurrent ()
+void
+GridCurrent::ReadParameters ()
 {
     amrex::ParmParse pp("grid_current");
 

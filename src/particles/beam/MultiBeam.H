@@ -16,13 +16,8 @@ class MultiBeam
 
 public:
 
-    /** Constructor
-     */
-    MultiBeam ();
-
-    /** Destructor
-     */
-    ~MultiBeam () {}
+    /** Read parameters from the input file */
+    void ReadParameters ();
 
     /** Loop over all beam species and deposit their current on the 2D XY slice
      * \param[in] fields Field object, with 2D slice MultiFabs

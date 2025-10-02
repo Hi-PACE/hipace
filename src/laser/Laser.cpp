@@ -19,9 +19,14 @@
 #include <openPMD/openPMD.hpp>
 #endif
 
-Laser::Laser (std::string name,  amrex::Geometry laser_geom_3D)
+Laser::Laser (std::string name)
 {
     m_name = name;
+}
+
+void
+Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
+{
     amrex::ParmParse pp(m_name);
     queryWithParser(pp, "init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") {
@@ -77,34 +82,38 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
         // Check what kind of Datatype is used in the Laser file
         auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
 
-        if(!series.iterations.contains(m_file_num_iteration)) {
-            amrex::Abort("Could not find iteration " + std::to_string(m_file_num_iteration) +
-                         " in file " + m_input_file_path + "\n");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            series.iterations.contains(m_file_num_iteration),
+            "Could not find iteration " + std::to_string(m_file_num_iteration) +
+            " in file " + m_input_file_path + "\n"
+        );
 
         auto iteration = series.iterations[m_file_num_iteration];
 
-        if(!iteration.meshes.contains(m_file_envelope_name)) {
-            amrex::Abort("Could not find mesh '" + m_file_envelope_name + "' in file "
-                + m_input_file_path + "\n");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            iteration.meshes.contains(m_file_envelope_name),
+            "Could not find mesh '" + m_file_envelope_name + "' in file "
+            + m_input_file_path + "\n"
+        );
 
         auto mesh = iteration.meshes[m_file_envelope_name];
 
-        if (!mesh.containsAttribute("angularFrequency")) {
-            amrex::Abort("Could not find Attribute 'angularFrequency' of iteration "
-                + std::to_string(m_file_num_iteration) + " in file "
-                + m_input_file_path + "\n");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            mesh.containsAttribute("angularFrequency"),
+            "Could not find Attribute 'angularFrequency' of iteration "
+            + std::to_string(m_file_num_iteration) + " in file "
+            + m_input_file_path + "\n"
+        );
 
         m_lambda0_from_file = 2.*MathConst::pi*PhysConstSI::c
             / mesh.getAttribute("angularFrequency").get<double>();
 
-        if(!mesh.contains(openPMD::RecordComponent::SCALAR)) {
-            amrex::Abort("Could not find component '" +
-                std::string(openPMD::RecordComponent::SCALAR) +
-                "' in file " + m_input_file_path + "\n");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            mesh.contains(openPMD::RecordComponent::SCALAR),
+            "Could not find component '" +
+            std::string(openPMD::RecordComponent::SCALAR) +
+            "' in file " + m_input_file_path + "\n"
+        );
 
         input_type = mesh[openPMD::RecordComponent::SCALAR].getDatatype();
     }

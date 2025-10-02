@@ -56,8 +56,8 @@ class Diagnostic
 
 public:
 
-    /** \brief Constructor */
-    explicit Diagnostic (int nlev, bool use_laser);
+    /** Read parameters from the input file */
+    void ReadParameters (int nlev, bool use_laser);
 
     /** \brief Determine which data to output */
     void Initialize (int nlev, bool use_laser);

@@ -63,9 +63,9 @@ std::string rocfftErrorToString (const rocfft_status& err) {
 }
 
 void assert_rocfft_status (std::string const& name, const rocfft_status& status) {
-    if (status != rocfft_status_success) {
-        amrex::Abort(name + " failed! Error: " + rocfftErrorToString(status));
-    }
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(status == rocfft_status_success,
+        name + " failed! Error: " + rocfftErrorToString(status)
+    );
 }
 
 std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {

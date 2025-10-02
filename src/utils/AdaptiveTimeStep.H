@@ -49,8 +49,9 @@ public:
     /** Whether to Gather Ez to take into account the deceleration of a particle
         when calculating the time step for parallel jobs. */
     bool m_adaptive_gather_ez = false;
-    /** Constructor */
-    explicit AdaptiveTimeStep (const int nbeams);
+
+    /** Read parameters from the input file */
+    void ReadParameters (const int nbeams);
 
     /** Head rank initial time step
      * \param[in,out] dt initial time step

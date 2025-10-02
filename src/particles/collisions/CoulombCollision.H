@@ -21,8 +21,8 @@ public:
     bool m_isSameSpecies {false};
     amrex::Real m_CoulombLog {-1.};
 
-    /** Constructor */
-    CoulombCollision(
+    /** Read parameters from the input file */
+    void ReadParameters (
         const std::vector<std::string>& plasma_species_names,
         const std::vector<std::string>& beam_species_names,
         std::string const collision_name);

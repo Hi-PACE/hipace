@@ -156,12 +156,10 @@ namespace Parser
         static std::set<std::string> recursive_symbols{};
         while ( (pos=loc_str.rfind("{")) != std::string::npos) {
             const auto pos_end = loc_str.find("}", pos);
-            if (pos_end == std::string::npos) {
-                amrex::ErrorStream() << "Bad format for input '"
-                                     << str
-                                     << "', unclosed brace!\n";
-                AMREX_ALWAYS_ASSERT(pos_end != std::string::npos);
-            }
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                pos_end != std::string::npos,
+                "Bad format for input '" + str +  "', unclosed brace!\n"
+            );
             auto pos_start_trim = pos + 1;
             auto pos_count_trim = pos_end - pos - 1;
             // remove leading and trailing spaces
@@ -182,14 +180,10 @@ namespace Parser
                        pp_my_constants.contains(parse_string.c_str())) {
                 // use my_constants directly (with recursive string parsing) if available
                 // also check in local and global namespaces, same as the amrex parser
-                if (recursive_symbols.count(parse_string) != 0) {
-                    amrex::ErrorStream() << "Expression '"
-                                         << str
-                                         << "' contains recursive symbol '"
-                                         << parse_string
-                                         << "'!\n";
-                    AMREX_ALWAYS_ASSERT(recursive_symbols.count(parse_string) == 0);
-                }
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    recursive_symbols.count(parse_string) == 0,
+                    "Expression '" + str + "' contains recursive symbol '" + parse_string + "'!\n"
+                );
                 std::string replacer;
                 if (amrex::ParmParse{}.contains(parse_string.c_str())) {
                     amrex::ParmParse{}.get(parse_string.c_str(), replacer);
@@ -209,6 +203,7 @@ namespace Parser
                 double parse_val = 0.;
                 fillWithParser(pp, parse_string, parse_val);
                 std::stringstream ss{};
+                ss.precision(16);
                 ss << parse_val;
                 loc_str.replace(pos, pos_end-pos+1, ss.str());
             }
@@ -276,13 +271,11 @@ namespace Parser
     fillWithParserArr (const amrex::ParmParse& pp, std::vector<std::string> const& str_arr,
                        std::array<T,size>& val_arr) {
         const auto n = str_arr.size();
-        if (n != size) {
-            for( auto const& str : str_arr) {
-                amrex::ErrorStream() << str << ' ';
-            }
-            amrex::ErrorStream() << "has wrong length " << n << " should be " << size << '\n';
-        }
-        AMREX_ALWAYS_ASSERT( n == size );
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            n == size,
+            amrex::ToString(str_arr) + " has wrong length " +
+            amrex::ToString(n) + " should be " + amrex::ToString(size) + "\n"
+        );
         for (auto i=0ul ; i != n ; ++i) {
             fillWithParser(pp, str_arr[i], val_arr[i]);
         }
@@ -292,14 +285,11 @@ namespace Parser
     fillWithParserArr (const amrex::ParmParse& pp, std::vector<std::string> const& str_arr,
                        amrex::RealVect& val_arr) {
         const auto n = str_arr.size();
-        if (n != AMREX_SPACEDIM) {
-            for( auto const& str : str_arr) {
-                amrex::ErrorStream() << str << ' ';
-            }
-            amrex::ErrorStream() << "has wrong length " << n
-                                 << " should be " << AMREX_SPACEDIM << '\n';
-        }
-        AMREX_ALWAYS_ASSERT( n == AMREX_SPACEDIM );
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            n == AMREX_SPACEDIM,
+            amrex::ToString(str_arr) + " has wrong length " +
+            amrex::ToString(n) + " should be " + amrex::ToString(AMREX_SPACEDIM) + "\n"
+        );
         for (auto i=0ul ; i != n ; ++i) {
             fillWithParser(pp, str_arr[i], val_arr[i]);
         }
@@ -309,14 +299,11 @@ namespace Parser
     fillWithParserArr (const amrex::ParmParse& pp, std::vector<std::string> const& str_arr,
                        amrex::IntVect& val_arr) {
         const auto n = str_arr.size();
-        if (n != AMREX_SPACEDIM) {
-            for( auto const& str : str_arr) {
-                amrex::ErrorStream() << str << ' ';
-            }
-            amrex::ErrorStream() << "has wrong length " << n
-                                 << " should be " << AMREX_SPACEDIM << '\n';
-        }
-        AMREX_ALWAYS_ASSERT( n == AMREX_SPACEDIM );
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            n == AMREX_SPACEDIM,
+            amrex::ToString(str_arr) + " has wrong length " +
+            amrex::ToString(n) + " should be " + amrex::ToString(AMREX_SPACEDIM) + "\n"
+        );
         for (auto i=0ul ; i != n ; ++i) {
             fillWithParser(pp, str_arr[i], val_arr[i]);
         }

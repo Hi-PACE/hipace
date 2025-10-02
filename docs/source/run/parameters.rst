@@ -104,6 +104,13 @@ General parameters
     laser slice to avoid a deadlock, i.e.
     ``comms_buffer.max_size_GiB * nranks > beam_size + laser_size``.
 
+* ``comms_buffer.max_open_requests`` (`int`) optional (default `1000`)
+    How many MPI requests may be open at the same time. Note that this is counted separately
+    for each of the four different kinds of requests used. Must be set to at least two.
+    Limiting the number of open requests is useful for simulations with many zeta slices
+    (`>10000`) to reduce work for the MPI implementation.
+    Note that setting the limit too low may result in a deadlock.
+
 * ``comms_buffer.max_leading_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be received and stored in advance.
 
@@ -161,6 +168,9 @@ General parameters
     Print all input parameters before running the simulation.
     If a parameter is present multiple times then the last occurrence will be used.
     Note that this will include some default AMReX parameters.
+
+* ``hipace.initial_time`` (`float`) optional (default `0.`)
+    Initial time of the simulation. Can be used to start at a chosen location in a custom density profile or to overwrite the initial time set e.g. with the ``from_file`` option of beam initialization.
 
 * ``hipace.grid_external_fields(x,y,z,t)`` (5 `float`) optional (default `0. 0. 0. 0. 0.`)
     External fields applied to the field grid as a function of x, y, z and t.
@@ -634,6 +644,12 @@ which are valid only for certain beam types, are introduced further below under
 * ``<plasma name>.injection_product`` (`string`) optional (default "")
     Name of the beam species that contains the new electrons that are produced
     when this plasma gets ionized. Only needed if this plasma is ionizable and the laser injection is unabled.
+
+* ``<beam name> or beams.output_ratio`` (`int`) optional (default `1`)
+    Set the fraction of beam particles that should be written to the openPMD output.
+    For example, an output ratio of 100 will output every 100th beam particle.
+    This is implemented using the particle ID, which is set in ascending order at
+    the beginning of a simulation.
 
 Option: ``fixed_weight_pdf``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1124,7 +1140,7 @@ For the field in-situ diagnostics, the following quantities are calculated per s
 These quantities can be used to calculate the energy stored in the fields.
 
 For the laser in-situ diagnostics, the following quantities are calculated per slice and stored:
-``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a)``.
+``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a), [chi*d_z|a|^2]``.
 Thereby, ``max(|a|^2)`` is the highest value of ``|a|^2`` in the current slice
 and ``axis(a)`` gives the complex value of the laser envelope, in the center of every slice.
 

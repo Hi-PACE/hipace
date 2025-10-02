@@ -57,9 +57,9 @@ std::string cufftErrorToString (const cufftResult& err) {
 }
 
 void assert_cufft_status (std::string const& name, const cufftResult& status) {
-    if (status != CUFFT_SUCCESS) {
-        amrex::Abort(name + " failed! Error: " + cufftErrorToString(status));
-    }
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(status == CUFFT_SUCCESS,
+        name + " failed! Error: " + cufftErrorToString(status)
+    );
 }
 
 std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
