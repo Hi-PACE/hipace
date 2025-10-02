@@ -689,10 +689,10 @@ LaserIonization (const int islice,
 
         if (num_new_electrons.dataValue() == 0) continue;
 
-        if(Hipace::m_verbose >= 3) {
-            amrex::Print() << "Number of ionized Plasma Particles (laser): "
-            << num_new_electrons.dataValue() << "\n";
-        }
+        // if(Hipace::m_verbose >= 3) {
+        //     amrex::Print() << "Number of ionized Plasma Particles (laser): "
+        //     << num_new_electrons.dataValue() << "\n";
+        // }
 
 
         // Resize electron particle tile
@@ -854,7 +854,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
             {
-                if (!ptd_plasma.id(ip).is_valid()) {
+                if (!ptd_plasma.id(ip).is_valid() || ptd_plasma.id(ip) != 2) {
                     return {0};
                 }
 
