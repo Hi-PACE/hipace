@@ -14,6 +14,7 @@
 #include <AMReX_Parser.H>
 #include <AMReX_RealVect.H>
 #include <AMReX_IntVect.H>
+#include <AMReX_PODVector.H>
 
 #include <algorithm>
 #include <array>
