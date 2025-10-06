@@ -104,7 +104,11 @@ OpenPMDWriter::ReadParameters ()
         m_file_prefix = Hipace::m_output_folder + "/json";
     }
     // overwrite output path by choice of the user
-    queryWithParser(pp, "file_prefix", m_file_prefix);
+    const bool set_file_prefix = queryWithParser(pp, "file_prefix", m_file_prefix);
+    if (set_file_prefix) {
+        amrex::Print() <<
+            "It is recommended to use hipace.output_folder instead of hipace.file_prefix\n";
+    }
 
     // temporary workaround until openPMD-viewer gets fixed
     amrex::ParmParse ppd("diagnostic");

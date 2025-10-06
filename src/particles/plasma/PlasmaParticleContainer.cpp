@@ -156,7 +156,12 @@ PlasmaParticleContainer::ReadParameters ()
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
-    queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
+    const bool set_file_prefix =
+        queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
+    if (set_file_prefix) {
+        amrex::Print() <<
+            "It is recommended to use hipace.output_folder instead of plasmas.insitu_file_prefix\n";
+    }
     queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
 }
