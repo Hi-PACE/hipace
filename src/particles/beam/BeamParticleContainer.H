@@ -122,6 +122,9 @@ public:
                                   const bool species_specified);
 #endif
 
+    /** Initialize a beam from a list in the input script */
+    void InitBeamFromList3D ();
+
     /** Compute reduced beam diagnostics of current slice, store in member variable
      * \param[in] islice current slice, on which diags are computed.
      */
@@ -317,6 +320,10 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name; /**< the name of the particle species in the beam file */
+
+    // from list
+
+    amrex::Long m_num_particles_list; /**< Number of particles in input list */
 
     // insitu:
 

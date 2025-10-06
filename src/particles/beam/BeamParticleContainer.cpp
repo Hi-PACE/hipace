@@ -271,6 +271,15 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
 #endif  // HIPACE_USE_OPENPMD
+    } else if (m_injection_type == "from_list") {
+        getWithParser(pp, "num_particles", m_num_particles_list);
+        m_total_num_particles = m_num_particles_list;
+        InitBeamFromList3D();
+        if (Hipace::HeadRank()) {
+            m_init_sorter.sortParticlesByBox(
+                getBeamInitSlice().GetStructOfArrays().GetRealData(BeamIdx::z).dataPtr(),
+                getBeamInitSlice().size(), m_initialize_on_cpu, geom);
+        }
     } else {
 
         amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
@@ -354,7 +363,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         InitBeamFixedWeightSlice(slice, which_slice);
     } else if (m_injection_type == "fixed_weight_pdf") {
         InitBeamFixedWeightPDFSlice(slice, which_slice);
-    } else {
+    } else { // from_file and from_list
         HIPACE_PROFILE("BeamParticleContainer::initializeSlice()");
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
@@ -389,7 +398,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         );
     }
 
-    if (m_do_spin_tracking && m_injection_type != "from_file") {
+    if (m_do_spin_tracking && m_injection_type != "from_file" && m_injection_type != "from_list" ) {
         HIPACE_PROFILE("BeamParticleContainer::initializeSpin()");
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 

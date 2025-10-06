@@ -266,6 +266,17 @@ namespace Parser
         }
     }
 
+    template<class T, class Allocator>
+    inline void
+    fillWithParserArr (const amrex::ParmParse& pp, std::vector<std::string> const& str_arr,
+                       amrex::PODVector<T, Allocator>& val_arr) {
+        auto const n = str_arr.size();
+        val_arr.resize(n);
+        for (auto i=0ul ; i != n ; ++i) {
+            fillWithParser(pp, str_arr[i], val_arr[i]);
+        }
+    }
+
     template<class T, std::size_t size>
     inline void
     fillWithParserArr (const amrex::ParmParse& pp, std::vector<std::string> const& str_arr,
