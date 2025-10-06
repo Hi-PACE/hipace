@@ -731,17 +731,17 @@ InitBeamFromList3D ()
         getWithParser(pp, "init_sz", init_sz);
     }
 
-    AMREX_ALWAYS_ASSERT(amrex::Long{init_x.size()} == m_num_particles_list);
-    AMREX_ALWAYS_ASSERT(amrex::Long{init_y.size()} == m_num_particles_list);
-    AMREX_ALWAYS_ASSERT(amrex::Long{init_z.size()} == m_num_particles_list);
-    AMREX_ALWAYS_ASSERT(amrex::Long{init_ux.size()} == m_num_particles_list);
-    AMREX_ALWAYS_ASSERT(amrex::Long{init_uy.size()} == m_num_particles_list);
-    AMREX_ALWAYS_ASSERT(amrex::Long{init_uz.size()} == m_num_particles_list);
-    AMREX_ALWAYS_ASSERT(amrex::Long{init_w.size()} == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_x.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_y.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_z.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_ux.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_uy.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_uz.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_w.size()) == m_num_particles_list);
     if (do_spin_tracking) {
-        AMREX_ALWAYS_ASSERT(amrex::Long{init_sx.size()} == m_num_particles_list);
-        AMREX_ALWAYS_ASSERT(amrex::Long{init_sy.size()} == m_num_particles_list);
-        AMREX_ALWAYS_ASSERT(amrex::Long{init_sz.size()} == m_num_particles_list);
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sx.size()) == m_num_particles_list);
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sy.size()) == m_num_particles_list);
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sz.size()) == m_num_particles_list);
     }
 
     const amrex::Real *p_x = init_x.dataPtr(), *p_y = init_x.dataPtr(), *p_z = init_x.dataPtr();
