@@ -60,7 +60,13 @@ BeamParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
     queryWithParserAlt(pp, "do_radiation_reaction", m_do_radiation_reaction, pp_alt);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
-    queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
+    m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
+    const bool set_file_prefix =
+        queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
+    if (set_file_prefix) {
+        amrex::Print() <<
+            "It is recommended to use hipace.output_folder instead of beams.insitu_file_prefix\n";
+    }
     queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
     queryWithParser(pp, "n_subcycles", m_n_subcycles);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_n_subcycles >= 1, "n_subcycles must be >= 1");
