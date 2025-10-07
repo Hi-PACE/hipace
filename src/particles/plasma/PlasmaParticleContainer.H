@@ -205,17 +205,17 @@ public:
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
     /** to calculate Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_adk_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_adk_prefactor;
     /** to calculate Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_adk_exp_prefactor;
     /** to calculate Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
+    amrex::Gpu::Buffer<amrex::Real> m_adk_power;
     /** to calculate laser Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_laser_adk_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_laser_adk_prefactor;
     /** to calculate laser ionization momentum width for linear polarization */
-    amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_laser_dp_prefactor;
     /** to calculate laser ionization momentum width at the second order for linear polarization */
-    amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_second_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_laser_dp_second_prefactor;
 
     // plasma sorting/reordering:
 

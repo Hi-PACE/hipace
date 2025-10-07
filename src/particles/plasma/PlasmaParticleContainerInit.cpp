@@ -454,38 +454,25 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_laser_dp_prefactor.resize(ion_atomic_number);
     m_laser_dp_second_prefactor.resize(ion_atomic_number);
 
-    amrex::Gpu::PinnedVector<amrex::Real> h_adk_power(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_adk_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_adk_exp_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_laser_adk_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_laser_dp_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_laser_dp_second_prefactor(ion_atomic_number);
-
     for (int i=0; i<ion_atomic_number; ++i)
     {
         const amrex::Real n_eff = (i+1) * std::sqrt(UH/h_ionization_energies[i]);
         const amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
                          * std::tgamma(n_eff-l_eff));
-        h_adk_power[i] = -(2 * n_eff - 1.);
+        m_adk_power[i] = -(2 * n_eff - 1.);
         const amrex::Real Uion = h_ionization_energies[i];
-        h_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2.*UH) )
+        m_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2.*UH) )
             * std::pow(2*std::pow((Uion/UH),3./2.)*Ea,2*n_eff - 1);
-        h_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
-        h_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
-        h_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
-        h_laser_dp_second_prefactor[i] = 2.*ion_atomic_number * std::sqrt(UH/Uion) - 1.;
+        m_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
+        m_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
+        m_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
+        m_laser_dp_second_prefactor[i] = 2.*ion_atomic_number * std::sqrt(UH/Uion) - 1.;
     }
 
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_adk_power.begin(), h_adk_power.end(), m_adk_power.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_adk_prefactor.begin(), h_adk_prefactor.end(), m_adk_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_adk_exp_prefactor.begin(), h_adk_exp_prefactor.end(), m_adk_exp_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_laser_adk_prefactor.begin(), h_laser_adk_prefactor.end(), m_laser_adk_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-         h_laser_dp_prefactor.begin(), h_laser_dp_prefactor.end(), m_laser_dp_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-         h_laser_dp_second_prefactor.begin(), h_laser_dp_second_prefactor.end(), m_laser_dp_second_prefactor.begin());
+    m_adk_power.copyToDeviceAsync();
+    m_adk_prefactor.copyToDeviceAsync();
+    m_adk_exp_prefactor.copyToDeviceAsync();
+    m_laser_adk_prefactor.copyToDeviceAsync();
+    m_laser_dp_prefactor.copyToDeviceAsync();
+    m_laser_dp_second_prefactor.copyToDeviceAsync();
 }
