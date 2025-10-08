@@ -7,6 +7,11 @@
  */
 #include "GetInitialDensity.H"
 #include "utils/Parser.H"
+#include "fields/Fields.H"
+
+#ifdef HIPACE_USE_OPENPMD
+#include <openPMD/openPMD.hpp>
+#endif
 
 GetInitialDensity::GetInitialDensity (const std::string& name, amrex::Parser& parser)
 {
@@ -32,4 +37,164 @@ GetInitialDensity::GetInitialDensity (const std::string& name, amrex::Parser& pa
     } else {
         amrex::Abort("Unknown beam profile!");
     }
+}
+
+void
+PlasmaDensityAccessor::define_parser (const amrex::ParserExecutor<3>& exe) {
+    m_density_func = exe;
+    m_profile_type = 0;
+}
+
+void
+PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_ptr<float>& f_data,
+                                         std::shared_ptr<double>& d_data) {
+#ifdef HIPACE_USE_OPENPMD
+
+    auto series = openPMD::Series(path, openPMD::Access::READ_ONLY);
+    auto iteration = series.iterations.begin()->second;
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        iteration.meshes.contains("density"),
+        "Could not find mesh 'density' in file " + path + "\n"
+    );
+
+    auto mesh = iteration.meshes["density"];
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        mesh.contains(openPMD::RecordComponent::SCALAR),
+        "Could not find component '" +
+        std::string(openPMD::RecordComponent::SCALAR) +
+        "' in file " + path + "\n"
+    );
+
+    auto comp = mesh[openPMD::RecordComponent::SCALAR];
+
+    auto extent = comp.getExtent();
+    auto strides = extent;
+    if (mesh.dataOrder() == openPMD::Mesh::DataOrder::C) {
+        for (int i=static_cast<int>(strides.size())-1; i>=0; --i) {
+            if (i == static_cast<int>(strides.size())-1) {
+                strides[i] = 1;
+            } else {
+                strides[i] = strides[i+1] * extent[i+1];
+            }
+        }
+    } else {
+        for (int i=0; i<static_cast<int>(strides.size()); ++i) {
+            if (i == 0) {
+                strides[i] = 1;
+            } else {
+                strides[i] = strides[i-1] * extent[i-1];
+            }
+        }
+    }
+
+    const std::vector<std::string> axis_labels = mesh.axisLabels();
+    std::map<std::string, int> axis_labels_map;
+
+    for (int i=0; i<static_cast<int>(axis_labels.size()); ++i) {
+        axis_labels_map[axis_labels[i]] = i;
+    }
+
+    std::vector<double> offset = mesh.gridGlobalOffset();
+    std::vector<double> position = comp.position<double>();
+    std::vector<double> spacing = mesh.gridSpacing<double>();
+
+    std::vector<amrex::Real> domain_lo(offset.size());
+    std::vector<amrex::Real> spacing2(offset.size());
+
+    for (int i=0; i<static_cast<int>(offset.size()); ++i) {
+        domain_lo[i] = static_cast<amrex::Real>(offset[i] + spacing[i] * position[i]);
+        spacing2[i] = static_cast<amrex::Real>(spacing[i]);
+    }
+
+    amrex::IntVect idx_perm;
+
+    if (mesh.geometry() == openPMD::Mesh::Geometry::cartesian) {
+        m_profile_type = 1;
+
+        idx_perm[0] = axis_labels_map.count("x") > 0 ? axis_labels_map["x"] : -1;
+        idx_perm[1] = axis_labels_map.count("y") > 0 ? axis_labels_map["y"] : -1;
+        idx_perm[2] = axis_labels_map.count("z") > 0 ? axis_labels_map["z"] : -1;
+
+        axis_labels_map.erase("x");
+        axis_labels_map.erase("y");
+        axis_labels_map.erase("z");
+    } else if (mesh.geometry() == openPMD::Mesh::Geometry::thetaMode ||
+               mesh.geometry() == openPMD::Mesh::Geometry::cylindrical) {
+        m_profile_type = 3;
+
+        if (axis_labels_map.size() + 1 == extent.size()) {
+            axis_labels_map["m"] = extent.size() - 1;
+        }
+
+        if (domain_lo.size() + 1 == extent.size()) {
+            domain_lo.push_back(0);
+        }
+
+        if (spacing2.size() + 1 == extent.size()) {
+            spacing2.push_back(1);
+        }
+
+        idx_perm[0] = axis_labels_map.count("r") > 0 ? axis_labels_map["r"] : -1;
+        idx_perm[1] = axis_labels_map.count("z") > 0 ? axis_labels_map["z"] : -1;
+        idx_perm[2] = axis_labels_map.count("m") > 0 ? axis_labels_map["m"] : -1;
+
+        axis_labels_map.erase("r");
+        axis_labels_map.erase("z");
+        axis_labels_map.erase("m");
+    } else {
+        amrex::Abort("Unknown geometry file " + path + "\n");
+    }
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        axis_labels_map.size() == 0,
+        "Unknown Axis label, must be subset of xyz or rzm in file " + path + "\n"
+    );
+
+    for (int i=0; i<3; ++i) {
+        m_strides[i] = idx_perm[i] != -1 ? strides[idx_perm[i]] : 1;
+        m_bigend[i] = idx_perm[i] != -1 ? extent[idx_perm[i]] - 1 : 0;
+        m_pos_offset[i] = idx_perm[i] != -1 ?
+            domain_lo[idx_perm[i]] + amrex::Real(0.5) * spacing2[idx_perm[i]] : 0;
+        m_dx_inv[i] = idx_perm[i] != -1 ? amrex::Real(1.) / spacing2[idx_perm[i]] : 0;
+    }
+
+    m_unitSi = static_cast<amrex::Real>(comp.unitSI());
+
+    uint64_t num_cells = 1;
+    for (int i=0; i<3; ++i) {
+        num_cells *= (m_bigend[i] + 1);
+    }
+
+    auto input_type = comp.getDatatype();
+
+    if (input_type == openPMD::Datatype::FLOAT) {
+
+        f_data.reset(
+            reinterpret_cast<float*>(amrex::The_Managed_Arena()->alloc(num_cells*sizeof(float))),
+            [](float *p){ amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
+
+        comp.loadChunk(f_data, {0u}, {-1u});
+
+    } else if (input_type == openPMD::Datatype::DOUBLE) {
+
+        m_profile_type += 1;
+
+        d_data.reset(
+            reinterpret_cast<double*>(amrex::The_Managed_Arena()->alloc(num_cells*sizeof(double))),
+            [](double *p){ amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
+
+        comp.loadChunk(d_data, {0u}, {-1u});
+
+    } else {
+        amrex::Abort("Unknown data type in file " + path + "\n");
+    }
+
+    series.flush();
+
+#else
+    amrex::Abort("loading a plasma density from an external file requires openPMD support: "
+                 "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+#endif
 }
