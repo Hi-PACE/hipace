@@ -82,6 +82,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
             }
         }
     } else {
+        std::reverse(extent.begin(), extent.end());
         for (int i=0; i<static_cast<int>(strides.size()); ++i) {
             if (i == 0) {
                 strides[i] = 1;
