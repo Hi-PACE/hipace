@@ -119,7 +119,6 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
         m_profile_type = 3;
 
         if (axis_labels_map.size() + 1 == extent.size()) {
-            // mode is used
             use_mode = true;
             mode_stride = strides[0];
             mode_bigend = extent[0] - 1;
@@ -134,7 +133,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
         axis_labels_map.erase("r");
         axis_labels_map.erase("z");
     } else {
-        amrex::Abort("Unknown geometry file " + path + "\n");
+        amrex::Abort("Unknown geometry in file " + path + "\n");
     }
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
@@ -143,7 +142,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
     );
 
     for (int i=0; i<3; ++i) {
-        m_strides[i] = idx_perm[i] != -1 ? strides[idx_perm[i]] : 1;
+        m_strides[i] = idx_perm[i] != -1 ? strides[idx_perm[i]] : 0;
         m_bigend[i] = idx_perm[i] != -1 ? extent[idx_perm[i]] - 1 : 0;
         m_pos_offset[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(
             offset[idx_perm[i]] + spacing[idx_perm[i]] * position[idx_perm[i]]) : 0;
