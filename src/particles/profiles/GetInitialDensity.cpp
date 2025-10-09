@@ -100,6 +100,10 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
 
     amrex::IntVect idx_perm;
 
+    bool use_mode = false;
+    std::uint64_t mode_stride = 0;
+    std::uint64_t mode_bigend = 0;
+
     if (mesh.geometry() == openPMD::Mesh::Geometry::cartesian) {
         m_profile_type = 1;
 
@@ -115,35 +119,27 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
         m_profile_type = 3;
 
         if (axis_labels_map.size() + 1 == extent.size()) {
-            axis_labels_map["m"] = extent.size() - 1;
-        }
-
-        if (offset.size() + 1 == extent.size()) {
-            offset.push_back(0.);
-        }
-
-        if (position.size() + 1 == extent.size()) {
-            position.push_back(0.);
-        }
-
-        if (spacing.size() + 1 == extent.size()) {
-            spacing.push_back(1.);
+            // mode is used
+            use_mode = true;
+            mode_stride = strides[0];
+            mode_bigend = extent[0] - 1;
+            extent.erase(extent.begin());
+            strides.erase(strides.begin());
         }
 
         idx_perm[0] = axis_labels_map.count("r") > 0 ? axis_labels_map["r"] : -1;
         idx_perm[1] = axis_labels_map.count("z") > 0 ? axis_labels_map["z"] : -1;
-        idx_perm[2] = axis_labels_map.count("m") > 0 ? axis_labels_map["m"] : -1;
+        idx_perm[2] = -1;
 
         axis_labels_map.erase("r");
         axis_labels_map.erase("z");
-        axis_labels_map.erase("m");
     } else {
         amrex::Abort("Unknown geometry file " + path + "\n");
     }
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         axis_labels_map.size() == 0,
-        "Unknown Axis label, must be subset of xyz or rzm in file " + path + "\n"
+        "Unknown Axis label, must be subset of xyz or rz in file " + path + "\n"
     );
 
     for (int i=0; i<3; ++i) {
@@ -152,6 +148,11 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
         m_pos_offset[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(
             offset[idx_perm[i]] + spacing[idx_perm[i]] * position[idx_perm[i]]) : 0;
         m_dx_inv[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(1. / spacing[idx_perm[i]]) : 0;
+    }
+
+    if (use_mode) {
+        m_strides[2] = mode_stride;
+        m_bigend[2] = mode_bigend;
     }
 
     m_unitSi = static_cast<amrex::Real>(comp.unitSI());
