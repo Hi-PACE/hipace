@@ -50,6 +50,8 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
                                          std::shared_ptr<double>& d_data) {
 #ifdef HIPACE_USE_OPENPMD
 
+    HIPACE_PROFILE("PlasmaParticleContainer::ReadDensityFile()");
+
     auto series = openPMD::Series(path, openPMD::Access::READ_ONLY);
     auto iteration = series.iterations.begin()->second;
 
@@ -177,6 +179,8 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
 
         comp.loadChunk(f_data, {0u}, {-1u});
 
+        m_f_ptr = f_data.get();
+
     } else if (input_type == openPMD::Datatype::DOUBLE) {
 
         m_profile_type += 1;
@@ -186,6 +190,8 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
             [](double *p){ amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
 
         comp.loadChunk(d_data, {0u}, {-1u});
+
+        m_d_ptr = d_data.get();
 
     } else {
         amrex::Abort("Unknown data type in file " + path + "\n");
