@@ -73,22 +73,17 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
 
     auto extent = comp.getExtent();
     auto strides = extent;
-    if (mesh.dataOrder() == openPMD::Mesh::DataOrder::C) {
-        for (int i=static_cast<int>(strides.size())-1; i>=0; --i) {
-            if (i == static_cast<int>(strides.size())-1) {
-                strides[i] = 1;
-            } else {
-                strides[i] = strides[i+1] * extent[i+1];
-            }
-        }
-    } else {
-        std::reverse(extent.begin(), extent.end());
-        for (int i=0; i<static_cast<int>(strides.size()); ++i) {
-            if (i == 0) {
-                strides[i] = 1;
-            } else {
-                strides[i] = strides[i-1] * extent[i-1];
-            }
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        mesh.dataOrder() == openPMD::Mesh::DataOrder::C,
+        "Must use DataOrder::C in file " + path + "\n"
+    );
+
+    for (int i=static_cast<int>(strides.size())-1; i>=0; --i) {
+        if (i == static_cast<int>(strides.size())-1) {
+            strides[i] = 1;
+        } else {
+            strides[i] = strides[i+1] * extent[i+1];
         }
     }
 
