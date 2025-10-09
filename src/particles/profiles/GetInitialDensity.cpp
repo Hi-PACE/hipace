@@ -102,14 +102,6 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
     std::vector<double> position = comp.position<double>();
     std::vector<double> spacing = mesh.gridSpacing<double>();
 
-    std::vector<amrex::Real> domain_lo(offset.size());
-    std::vector<amrex::Real> spacing2(offset.size());
-
-    for (int i=0; i<static_cast<int>(offset.size()); ++i) {
-        domain_lo[i] = static_cast<amrex::Real>(offset[i] + spacing[i] * position[i]);
-        spacing2[i] = static_cast<amrex::Real>(spacing[i]);
-    }
-
     amrex::IntVect idx_perm;
 
     if (mesh.geometry() == openPMD::Mesh::Geometry::cartesian) {
@@ -130,12 +122,16 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
             axis_labels_map["m"] = extent.size() - 1;
         }
 
-        if (domain_lo.size() + 1 == extent.size()) {
-            domain_lo.push_back(0);
+        if (offset.size() + 1 == extent.size()) {
+            offset.push_back(0.);
         }
 
-        if (spacing2.size() + 1 == extent.size()) {
-            spacing2.push_back(1);
+        if (position.size() + 1 == extent.size()) {
+            position.push_back(0.);
+        }
+
+        if (spacing.size() + 1 == extent.size()) {
+            spacing.push_back(1.);
         }
 
         idx_perm[0] = axis_labels_map.count("r") > 0 ? axis_labels_map["r"] : -1;
@@ -157,9 +153,9 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
     for (int i=0; i<3; ++i) {
         m_strides[i] = idx_perm[i] != -1 ? strides[idx_perm[i]] : 1;
         m_bigend[i] = idx_perm[i] != -1 ? extent[idx_perm[i]] - 1 : 0;
-        m_pos_offset[i] = idx_perm[i] != -1 ?
-            domain_lo[idx_perm[i]] + amrex::Real(0.5) * spacing2[idx_perm[i]] : 0;
-        m_dx_inv[i] = idx_perm[i] != -1 ? amrex::Real(1.) / spacing2[idx_perm[i]] : 0;
+        m_pos_offset[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(
+            offset[idx_perm[i]] + spacing[idx_perm[i]] * position[idx_perm[i]]) : 0;
+        m_dx_inv[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(1. / spacing[idx_perm[i]]) : 0;
     }
 
     m_unitSi = static_cast<amrex::Real>(comp.unitSI());
