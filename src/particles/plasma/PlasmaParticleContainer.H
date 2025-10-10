@@ -245,7 +245,7 @@ private:
     /** Sum of all per-slice int plasma properties */
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
-    std::string m_insitu_file_prefix = "diags/plasma_insitu";
+    std::string m_insitu_file_prefix = "";
 };
 
 /** \brief Iterator over boxes in a particle container */
