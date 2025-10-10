@@ -89,14 +89,14 @@ BeamParticleContainer::ReadParameters ()
         {"x", "y", "z", "t"});
     m_external_fields[5] = makeFunctionWithParser<4>(field_str[2], m_external_fields_parser[5],
         {"x", "y", "z", "t"});
-    if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
+    if (m_injection_type != "fixed_weight"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
     queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
     if (m_do_spin_tracking) {
-        if (m_injection_type != "from_file") {
+        if (m_injection_type != "from_file" && m_injection_type != "from_list") {
             getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
         }
         queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
@@ -282,7 +282,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         }
     } else {
 
-        amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
+        amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight, from_file"
+            " or from_list\n");
 
     }
 
