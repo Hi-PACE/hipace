@@ -252,7 +252,7 @@ private:
     /** All per-slice complex laser properties */
     amrex::Vector<amrex::GpuComplex<amrex::Real>> m_insitu_cdata;
     /** Prefix/path for the output files */
-    std::string m_insitu_file_prefix = "diags/laser_insitu";
+    std::string m_insitu_file_prefix = "";
 };
 
 #endif // MULTILASER_H_

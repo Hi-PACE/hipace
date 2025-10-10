@@ -41,7 +41,12 @@ Fields::ReadParameters (const int nlev)
 #endif
     queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
     queryWithParser(ppf, "insitu_period", m_insitu_period);
-    queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
+    m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
+    const bool set_file_prefix = queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
+    if (set_file_prefix) {
+        amrex::Print() <<
+            "It is recommended to use hipace.output_folder instead of fields.insitu_file_prefix\n";
+    }
     queryWithParser(ppf, "do_symmetrize", m_do_symmetrize);
     DeprecatedInput("fields", "extended_solve",
                     "boundary.particle_lo and boundary.particle_hi", "", true);

@@ -55,7 +55,12 @@ MultiLaser::ReadParameters ()
     }
 
     queryWithParser(pp, "insitu_period", m_insitu_period);
-    queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
+    m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
+    const bool set_file_prefix = queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
+    if (set_file_prefix) {
+        amrex::Print() <<
+            "It is recommended to use hipace.output_folder instead of lasers.insitu_file_prefix\n";
+    }
 }
 
 
