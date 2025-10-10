@@ -1021,7 +1021,11 @@ in-situ diagnostics allow for fast analysis of large beams or the plasma particl
     Output period for standard beam and field diagnostics. Field or beam specific diagnostics can overwrite this parameter.
     No output is given for ``diagnostic.output_period = 0``.
 
-* ``hipace.file_prefix`` (`string`) optional (default `diags/hdf5/`)
+* ``hipace.output_folder`` (`string`) optional (default ``"diags"``)
+    Set the output path of diagnostic data. By default all types of diagnostics will output
+    into subfolders of this folder.
+
+* ``hipace.file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/hdf5/"``)
     Path of the output.
 
 * ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
@@ -1161,7 +1165,7 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``0``)
     Period of the beam in-situ diagnostics. `0` means no beam in-situ diagnostics.
 
-* ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"diags/insitu"``)
+* ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the beam in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``<beam name> or beams.insitu_radius`` (`float`) optional (default ``infinity``)
@@ -1171,7 +1175,7 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``<plasma name> or plasmas.insitu_period`` (`int`) optional (default ``0``)
     Period of the plasma in-situ diagnostics. `0` means no plasma in-situ diagnostics.
 
-* ``<plasma name> or plasmas.insitu_file_prefix`` (`string`) optional (default ``"plasma_diags/insitu"``)
+* ``<plasma name> or plasmas.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the plasma in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``<plasma name> or plasmas.insitu_radius`` (`float`) optional (default ``infinity``)
@@ -1181,13 +1185,13 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``fields.insitu_period`` (`int`) optional (default ``0``)
     Period of the field in-situ diagnostics. `0` means no field in-situ diagnostics.
 
-* ``fields.insitu_file_prefix`` (`string`) optional (default ``"diags/field_insitu"``)
+* ``fields.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the field in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``lasers.insitu_period`` (`int`) optional (default ``0``)
     Period of the laser in-situ diagnostics. `0` means no laser in-situ diagnostics.
 
-* ``lasers.insitu_file_prefix`` (`string`) optional (default ``"diags/laser_insitu"``)
+* ``lasers.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the laser in-situ output. Must not be the same as `hipace.file_prefix`.
 
 Additional physics

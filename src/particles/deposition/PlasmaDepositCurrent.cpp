@@ -80,9 +80,15 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real laser_norm = (charge/pc.q_e) * (pc.m_e/mass)
                                      * (charge/pc.q_e) * (pc.m_e/mass);
 
-        int n_qsa_violation = 0;
-        amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
-        int* const AMREX_RESTRICT p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
+        amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation{};
+        int* AMREX_RESTRICT p_n_qsa_violation = nullptr;
+
+        if (Hipace::m_verbose >= 3 && Hipace::HeadRank()) {
+            p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
+            const int n_qsa_violation = 0;
+            amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                &n_qsa_violation, &n_qsa_violation + 1, p_n_qsa_violation);
+        }
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
             "jx, jy, jz, and rho must be cell centered in all directions.");
@@ -199,7 +205,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 if (gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor || psi_inv < 0.0_rt)
                 {
                     // This particle violates the QSA, discard it and do not deposit its current
-                    amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
+                    if (p_n_qsa_violation) {
+                        amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
+                    }
                     ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
                     ptd.id(ip).make_invalid();
                     return;
@@ -247,10 +255,13 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 }
             });
 
-        n_qsa_violation = gpu_n_qsa_violation.dataValue();
-        if (n_qsa_violation > 0 && (Hipace::m_verbose >= 3))
-            amrex::Print()<< "number of QSA violating particles on this slice: " \
-                        << n_qsa_violation << "\n";
+        if (Hipace::m_verbose >= 3 && Hipace::HeadRank()) {
+            const int n_qsa_violation = gpu_n_qsa_violation.dataValue();
+            if (n_qsa_violation > 0) {
+                amrex::AllPrint() << "number of QSA violating particles on this slice: "
+                                  << n_qsa_violation << "\n";
+            }
+        }
     }
 
     if (deposit_rho && deposit_rho_individual && Hipace::m_deposit_rho) {

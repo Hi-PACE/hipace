@@ -334,7 +334,7 @@ private:
     /** Sum of all per-slice int beam properties */
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
-    std::string m_insitu_file_prefix = "diags/insitu";
+    std::string m_insitu_file_prefix = "";
 
     // spin insitu:
 
