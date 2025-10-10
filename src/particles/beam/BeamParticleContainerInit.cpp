@@ -744,10 +744,10 @@ InitBeamFromList3D ()
         AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sz.size()) == m_num_particles_list);
     }
 
-    const amrex::Real *p_x = init_x.dataPtr(), *p_y = init_x.dataPtr(), *p_z = init_x.dataPtr();
-    const amrex::Real *p_ux = init_x.dataPtr(), *p_uy = init_x.dataPtr(), *p_uz = init_x.dataPtr();
-    const amrex::Real *p_w = init_x.dataPtr();
-    const amrex::Real *p_sx = init_x.dataPtr(), *p_sy = init_x.dataPtr(), *p_sz = init_x.dataPtr();
+    const amrex::Real *p_x=init_x.dataPtr(), *p_y=init_y.dataPtr(), *p_z=init_z.dataPtr();
+    const amrex::Real *p_ux=init_ux.dataPtr(), *p_uy=init_uy.dataPtr(), *p_uz=init_uz.dataPtr();
+    const amrex::Real *p_w=init_w.dataPtr();
+    const amrex::Real *p_sx=init_sx.dataPtr(), *p_sy=init_sy.dataPtr(), *p_sz=init_sz.dataPtr();
 
     auto& particle_tile = getBeamInitSlice();
     auto old_size = particle_tile.size();
