@@ -112,6 +112,82 @@ struct shape_factor_result {
     int cell;
 };
 
+namespace {
+
+static constexpr
+amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 2> depos_prefactor_c1 = {{
+    {-1., 1.},
+    { 1., 0.}
+}};
+
+static constexpr
+amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 3> depos_prefactor_c2 = {{
+    {0.5, -1., 0.5},
+    {-1.,  1., 0.5},
+    {0.5,  0.,  0.}
+}};
+
+static constexpr
+amrex::GpuArray<amrex::GpuArray<amrex::Real, 4>, 4> depos_prefactor_c3 = {{
+    {-1./6., 0.5, -0.5, 1./6.},
+    {   0.5, -1.,   0., 2./3.},
+    {  -0.5, 0.5,  0.5,  1./6},
+    { 1./6.,  0.,   0.,    0.}
+}};
+
+AMREX_GPU_CONSTANT constexpr static
+amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 2> depos_prefactor_g1 = depos_prefactor_c1;
+
+AMREX_GPU_CONSTANT constexpr static
+amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 3> depos_prefactor_g2 = depos_prefactor_c2;
+
+AMREX_GPU_CONSTANT constexpr static
+amrex::GpuArray<amrex::GpuArray<amrex::Real, 4>, 4> depos_prefactor_g3 = depos_prefactor_c3;
+
+}
+
+template<int depos_order> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+shape_factor_result shape_factor (amrex::Real xmid, int ix) noexcept {
+
+    if constexpr (depos_order==0) {
+        return {1., static_cast<int>(std::floor(xmid+0.5))};
+    } else if constexpr (depos_order==1) {
+        const amrex::Real xfloor = std::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
+        const int xbegin = static_cast<int>(xfloor);
+
+        amrex::GpuArray<amrex::Real, 2> s;
+        AMREX_IF_ON_DEVICE((s = depos_prefactor_g1[ix];))
+        AMREX_IF_ON_HOST((s = depos_prefactor_c1[ix];))
+        const amrex::Real res = s[0] * xint + s[1];
+        return {res, xbegin+ix};
+    } else if constexpr (depos_order==2) {
+        xmid += 0.5;
+        const amrex::Real xfloor = std::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
+        const int xbegin = static_cast<int>(xfloor)-1;
+
+        amrex::GpuArray<amrex::Real, 3> s;
+        AMREX_IF_ON_DEVICE((s = depos_prefactor_g2[ix];))
+        AMREX_IF_ON_HOST((s = depos_prefactor_c2[ix];))
+        const amrex::Real res = (s[0] * xint + s[1]) * xint + s[2];
+        return {res, xbegin+ix};
+    } else if constexpr (depos_order==3) {
+        const amrex::Real xfloor = std::floor(xmid);
+        const amrex::Real xint = xmid-xfloor;
+        const int xbegin = static_cast<int>(xfloor)-1;
+
+        amrex::GpuArray<amrex::Real, 4> s;
+        AMREX_IF_ON_DEVICE((s = depos_prefactor_g3[ix];))
+        AMREX_IF_ON_HOST((s = depos_prefactor_c3[ix];))
+        const amrex::Real res = ((s[0] * xint + s[1]) * xint + s[2]) * xint + s[3];
+        return {res, xbegin+ix};
+    }
+
+    static_assert(0 <= depos_order && depos_order <= 3);
+    return {};
+}
+
 /** \brief Compute a single shape factor and return the index of the cell where the particle writes.
  *
  * \tparam branchless whether to use a branchless calculation or one with branches depending in ix
