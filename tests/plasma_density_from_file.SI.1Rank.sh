@@ -32,9 +32,6 @@ $HIPACE_EXECUTABLE \
         my_constants.ne = 1e24 \
         my_constants.channel_radius = 40e-6 \
         my_constants.ramp_length = 60e-6 \
-        my_constants.wp = "sqrt(ne * q_e^2  / (epsilon0 * m_e))" \
-        my_constants.kp = wp / clight \
-        my_constants.kp_inv = 1. / kp \
         amr.max_level = 0 \
         max_step = 1 \
         hipace.dt = "500e-6 / clight / 20" \
