@@ -55,9 +55,9 @@ $HIPACE_EXECUTABLE \
         elec2.element = electron \
         diagnostic.output_period = 1 \
         diagnostic.diag_type = xyz \
-        diagnostic.field_data = rho_elec \
-        diagnostic.patch_lo = "-6*kp_inv"  "-6*kp_inv"  0 \
-        diagnostic.patch_hi =  "6*kp_inv"   "6*kp_inv"  0 \
+        diagnostic.field_data = rho_elec1 rho_elec2 \
+        diagnostic.patch_lo = -50e-6 -50e-6  0 \
+        diagnostic.patch_hi =  50e-6  50e-6  0 \
 
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
