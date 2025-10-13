@@ -46,8 +46,8 @@ $HIPACE_EXECUTABLE \
         geometry.prob_hi =  50e-6   50e-6   50e-6 \
         plasmas.names = elec1 elec2 \
         plasmas.neutralize_background = true \
-        'elec1.density(x,y,z)' = '"ne * (1 + (x^2 + y^2) / channel_radius^2) \
-                                  * if(z < ramp_length, z / ramp_length, 1)"' \
+        'elec1.density(x,y,z)' = '"ne * (1 + (x^2 + y^2) / channel_radius^2)
+            * if(z < ramp_length, z / ramp_length, 1)"' \
         elec2.read_density_from_path = "example-density.h5" \
         elec1.ppc = 1 1 \
         elec1.element = electron \
