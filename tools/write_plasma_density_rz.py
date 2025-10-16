@@ -19,7 +19,7 @@ channel_radius = 40e-6  # m
 ramp_length = 60e-6  # m
 nmodes = 1
 # - Define the grid
-r_1d = np.linspace(-1e-6, 50e-6, 200)
+r_1d = np.linspace(-10e-6, 100e-6, 200)
 z_1d = np.linspace(0, 500e-6, 200)
 m_1d = np.array(list(range(2*nmodes-1)))
 
