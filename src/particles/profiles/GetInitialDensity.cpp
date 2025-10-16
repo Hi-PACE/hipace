@@ -154,7 +154,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
         m_bigend[2] = mode_bigend;
     }
 
-    m_unitSi = static_cast<amrex::Real>(comp.unitSI());
+    m_unitSI = static_cast<amrex::Real>(comp.unitSI());
 
     uint64_t num_cells = 1;
     for (int i=0; i<3; ++i) {

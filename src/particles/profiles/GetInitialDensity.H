@@ -60,6 +60,14 @@ struct GetInitialDensity
 
 struct PlasmaDensityAccessor {
 
+    /**
+     * @brief Describes how the profile is computed. Possible values:
+     * 0: from amrex::Parser
+     * 1: from file, cartesian single precision
+     * 2: from file, cartesian double precision
+     * 3: from file, thetaMode single precision
+     * 4: from file, thetaMode double precision
+     */
     int m_profile_type = 0;
     amrex::ParserExecutor<3> m_density_func;
     double * m_d_ptr = nullptr;
@@ -68,7 +76,7 @@ struct PlasmaDensityAccessor {
     amrex::IntVect m_bigend;
     amrex::RealVect m_pos_offset;
     amrex::RealVect m_dx_inv;
-    amrex::Real m_unitSi = 1;
+    amrex::Real m_unitSI = 1;
 
     AMREX_GPU_HOST_DEVICE
     amrex::Real array (int i, int j, int k) const {
@@ -103,7 +111,7 @@ struct PlasmaDensityAccessor {
                 auto [sx, i] = compute_single_shape_factor<false, interp_order>(mid[0], ix);
                 result += sz * sy * sx * array(i, j, k);
             }}}
-            return m_unitSi * result;
+            return m_unitSI * result;
         } else if (m_profile_type == 3 || m_profile_type == 4) {
             constexpr int interp_order = 2;
 
@@ -122,7 +130,7 @@ struct PlasmaDensityAccessor {
                 result += sz * sr * array(i, j, 2*im-1) * std::cos(im*theta);
                 result += sz * sr * array(i, j, 2*im) * std::sin(im*theta);
             }}}
-            return m_unitSi * result;
+            return m_unitSI * result;
         }
         return 0;
     }

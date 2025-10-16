@@ -130,7 +130,7 @@ PlasmaParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         (int(density_func_specified) + int(density_file_specified) + int(m_use_density_table)) == 1,
         "Plasma: Must specify exactly one of either 'density(x,y,z)', "
-        "'read_density_from_path' or 'desity_table_file'");
+        "'read_density_from_path' or 'density_table_file'");
 
     queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);

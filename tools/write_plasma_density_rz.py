@@ -12,39 +12,40 @@ the HiPACE++ plasma particles should be initialized
 import numpy as np
 import openpmd_api as io
 
-# Define density as a function of x, y, z, using numpy syntax
-# parabolic channel in x, y, with a ramp and plateau in z
+# Define density as a function of r, z, modes using numpy syntax
+# parabolic channel in r, with a ramp and plateau in z
 on_axis_density = 1e24  # m^-3
 channel_radius = 40e-6  # m
 ramp_length = 60e-6  # m
+nmodes = 1
 # - Define the grid
-x_1d = np.linspace(-50e-6, 50e-6, 200)
-y_1d = np.linspace(-50e-6, 50e-6, 200)
+r_1d = np.linspace(-1e-6, 50e-6, 200)
 z_1d = np.linspace(0, 500e-6, 200)
+m_1d = np.array(list(range(2*nmodes-1)))
 
-z, y, x = np.meshgrid(z_1d, y_1d, x_1d, indexing="ij")
+m, z, r = np.meshgrid(m_1d, z_1d, r_1d, indexing="ij")
 
 # - Define density as a function of x, y, z
 density_data = (
     on_axis_density
-    * (1 + (x**2 + y**2) / channel_radius**2)
+    * (1 + r**2 / channel_radius**2)
     * np.where(z < ramp_length, z / ramp_length, 1)
+    * np.where((m == 0), 1, 0)
 )
 
 # create openpmd file
-series = io.Series("example-density-xyz.h5", io.Access.create)
+series = io.Series("example-density-rz.h5", io.Access.create)
 # only 1 iteration needed
 it = series.iterations[0]
 # set meta information
 density = it.meshes["density"]
 density.grid_spacing = np.array(
     [(z_1d[-1] - z_1d[0]) / (len(z_1d) - 1),
-     (y_1d[-1] - y_1d[0]) / (len(y_1d) - 1),
-     (x_1d[-1] - x_1d[0]) / (len(x_1d) - 1)]
+     (r_1d[-1] - r_1d[0]) / (len(r_1d) - 1)]
 )
-density.grid_global_offset = [z_1d[0], y_1d[0], x_1d[0]]
-density.axis_labels = ["z", "y", "x"]
-density.geometry = io.Geometry.cartesian
+density.grid_global_offset = [z_1d[0], r_1d[0]]
+density.axis_labels = ["z", "r"]
+density.geometry = io.Geometry.thetaMode
 density.unit_dimension = {
     io.Unit_Dimension.L: -3,
 }
