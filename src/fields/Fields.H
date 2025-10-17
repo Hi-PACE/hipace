@@ -30,14 +30,11 @@ struct WhichSlice {
 
 struct assert_map : std::map<std::string, int> {
     int operator[] (const std::string& str) const {
-        if (count(str)==0) {
-            amrex::ErrorStream() << "Component '"+str+"' is not allocated\nFields allocated:";
-            for (auto& [alloc_str, num] : *this) {
-                amrex::ErrorStream() << " '" << alloc_str << "' (" << num << "),";
-            }
-            amrex::ErrorStream() << "\n";
-            AMREX_ALWAYS_ASSERT(count(str)!=0);
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            count(str) != 0,
+             "Component '" + str + "' is not allocated\n"
+             "Fields allocated: " + amrex::ToString(*this) + "\n"
+        );
         return at(str);
     }
 
@@ -84,8 +81,8 @@ GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box)
 class Fields
 {
 public:
-    /** Constructor */
-    explicit Fields (const int nlev);
+    /** Read parameters from the input file */
+    void ReadParameters (const int nlev);
 
     /** Allocate MultiFabs for the 3D array and the 2D slices
      * and define the BoxArrays and DistributionMappings.
@@ -468,9 +465,7 @@ private:
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** Stores temporary values for z interpolation in Fields::Copy */
-    amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
-    /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
-    amrex::Gpu::PinnedVector<amrex::Real> m_rel_z_vec_cpu;
+    amrex::Gpu::Buffer<amrex::Real> m_rel_z_vec;
     /** If the explicit solver is being used */
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */
@@ -487,7 +482,7 @@ private:
     /** Sum of all per-slice real field properties */
     amrex::Vector<amrex::Real> m_insitu_sum_rdata;
     /** Prefix/path for the output files */
-    std::string m_insitu_file_prefix = "diags/field_insitu";
+    std::string m_insitu_file_prefix = "";
 };
 
 /** Helper struct to check whether a point is within a valid domain. */

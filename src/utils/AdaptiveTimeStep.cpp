@@ -18,8 +18,11 @@ struct WhichDouble {
     enum Comp { MinUz=0, MinAcc, SumWeights, SumWeightsTimesUz, SumWeightsTimesUzSquared, N };
 };
 
-AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
+void
+AdaptiveTimeStep::ReadParameters (const int nbeams)
 {
+    m_nbeams = nbeams;
+
     amrex::ParmParse ppa("hipace");
     std::string str_dt = "";
     queryWithParser(ppa, "dt", str_dt);
@@ -41,8 +44,8 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
     }
 
     // create time step data container per beam
-    m_timestep_data.resize(nbeams);
-    for (int ibeam = 0; ibeam < nbeams; ibeam++) {
+    m_timestep_data.resize(m_nbeams);
+    for (int ibeam = 0; ibeam < m_nbeams; ibeam++) {
         m_timestep_data[ibeam].resize(WhichDouble::N);
         m_timestep_data[ibeam][WhichDouble::MinUz] = 1e30;
         m_timestep_data[ibeam][WhichDouble::MinAcc] = 0.;
@@ -50,8 +53,6 @@ AdaptiveTimeStep::AdaptiveTimeStep (const int nbeams)
         m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz] = 0.;
         m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] = 0.;
     }
-
-    m_nbeams = nbeams;
 }
 
 

@@ -104,6 +104,13 @@ General parameters
     laser slice to avoid a deadlock, i.e.
     ``comms_buffer.max_size_GiB * nranks > beam_size + laser_size``.
 
+* ``comms_buffer.max_open_requests`` (`int`) optional (default `1000`)
+    How many MPI requests may be open at the same time. Note that this is counted separately
+    for each of the four different kinds of requests used. Must be set to at least two.
+    Limiting the number of open requests is useful for simulations with many zeta slices
+    (`>10000`) to reduce work for the MPI implementation.
+    Note that setting the limit too low may result in a deadlock.
+
 * ``comms_buffer.max_leading_slices`` (`int`) optional (default `inf`)
     How many slices of beam particles can be received and stored in advance.
 
@@ -161,6 +168,9 @@ General parameters
     Print all input parameters before running the simulation.
     If a parameter is present multiple times then the last occurrence will be used.
     Note that this will include some default AMReX parameters.
+
+* ``hipace.initial_time`` (`float`) optional (default `0.`)
+    Initial time of the simulation. Can be used to start at a chosen location in a custom density profile or to overwrite the initial time set e.g. with the ``from_file`` option of beam initialization.
 
 * ``hipace.grid_external_fields(x,y,z,t)`` (5 `float`) optional (default `0. 0. 0. 0. 0.`)
     External fields applied to the field grid as a function of x, y, z and t.
@@ -571,7 +581,7 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight``, ``fixed_ppc``,
-    and ``from_file``.
+    ``from_file`` and ``from_list``.
     ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
     the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
     user-specified probability density function. It is more general and faster, and uses
@@ -580,6 +590,7 @@ which are valid only for certain beam types, are introduced further below under
     ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
     varying weights. It can be either a Gaussian or a flattop beam.
     ``from_file`` reads a beam from openPMD files.
+    ``from_list`` reads a beam from arrays provided directly in the input script.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -627,6 +638,12 @@ which are valid only for certain beam types, are introduced further below under
     for both x and y direction as part of the reordering.
     The ideal index type is different for beam push and beam deposition so some experimentation
     may be required to find the overall fastest setting for a specific simulation.
+
+* ``<beam name> or beams.output_ratio`` (`int`) optional (default `1`)
+    Set the fraction of beam particles that should be written to the openPMD output.
+    For example, an output ratio of 100 will output every 100th beam particle.
+    This is implemented using the particle ID, which is set in ascending order at
+    the beginning of a simulation.
 
 Option: ``fixed_weight_pdf``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -840,6 +857,27 @@ Option: ``from_file``
     Whether to initialize the beam on the CPU instead of the GPU.
     Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
 
+Option: ``from_list``
+^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.num_particles`` (`int`)
+    Number of particles to generate the beam. If this is equal to zero,
+    then the other parameters can be omitted.
+
+* ``<beam name>.init_pos_x``, ``<beam name>.init_pos_y`` and ``<beam name>.init_pos_z`` (`float`)
+    List of initial x-, y- and z-positions for all beam particles.
+
+* ``<beam name>.init_ux``, ``<beam name>.init_uy`` and ``<beam name>.init_uz`` (`float`)
+    List of initial normalized momentum (:math:`= \gamma \beta = \frac{p}{m c}`)
+    in x, y and z for all beam particles.
+
+* ``<beam name>.init_weight`` (`float`)
+    List of macro-particle weight for all beam particles.
+    A value of one corresponds to one physical particle.
+
+* ``<beam name>.init_sx``, ``<beam name>.init_sy`` and ``<beam name>.init_sz`` (`float`)
+    If spin-tracking is enabled, list of initial x-, y- and z-spin for all beam particles.
+
 SALAME algorithm
 ^^^^^^^^^^^^^^^^
 
@@ -1005,7 +1043,11 @@ in-situ diagnostics allow for fast analysis of large beams or the plasma particl
     Output period for standard beam and field diagnostics. Field or beam specific diagnostics can overwrite this parameter.
     No output is given for ``diagnostic.output_period = 0``.
 
-* ``hipace.file_prefix`` (`string`) optional (default `diags/hdf5/`)
+* ``hipace.output_folder`` (`string`) optional (default ``"diags"``)
+    Set the output path of diagnostic data. By default all types of diagnostics will output
+    into subfolders of this folder.
+
+* ``hipace.file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/hdf5/"``)
     Path of the output.
 
 * ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
@@ -1117,7 +1159,7 @@ For the field in-situ diagnostics, the following quantities are calculated per s
 These quantities can be used to calculate the energy stored in the fields.
 
 For the laser in-situ diagnostics, the following quantities are calculated per slice and stored:
-``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a)``.
+``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a), [chi*d_z|a|^2]``.
 Thereby, ``max(|a|^2)`` is the highest value of ``|a|^2`` in the current slice
 and ``axis(a)`` gives the complex value of the laser envelope, in the center of every slice.
 
@@ -1145,7 +1187,7 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``0``)
     Period of the beam in-situ diagnostics. `0` means no beam in-situ diagnostics.
 
-* ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"diags/insitu"``)
+* ``<beam name> or beams.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the beam in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``<beam name> or beams.insitu_radius`` (`float`) optional (default ``infinity``)
@@ -1155,7 +1197,7 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``<plasma name> or plasmas.insitu_period`` (`int`) optional (default ``0``)
     Period of the plasma in-situ diagnostics. `0` means no plasma in-situ diagnostics.
 
-* ``<plasma name> or plasmas.insitu_file_prefix`` (`string`) optional (default ``"plasma_diags/insitu"``)
+* ``<plasma name> or plasmas.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the plasma in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``<plasma name> or plasmas.insitu_radius`` (`float`) optional (default ``infinity``)
@@ -1165,13 +1207,13 @@ Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this for
 * ``fields.insitu_period`` (`int`) optional (default ``0``)
     Period of the field in-situ diagnostics. `0` means no field in-situ diagnostics.
 
-* ``fields.insitu_file_prefix`` (`string`) optional (default ``"diags/field_insitu"``)
+* ``fields.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the field in-situ output. Must not be the same as `hipace.file_prefix`.
 
 * ``lasers.insitu_period`` (`int`) optional (default ``0``)
     Period of the laser in-situ diagnostics. `0` means no laser in-situ diagnostics.
 
-* ``lasers.insitu_file_prefix`` (`string`) optional (default ``"diags/laser_insitu"``)
+* ``lasers.insitu_file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/insitu"``)
     Path of the laser in-situ output. Must not be the same as `hipace.file_prefix`.
 
 Additional physics

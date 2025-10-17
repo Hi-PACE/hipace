@@ -85,6 +85,9 @@ public:
      * and initialize longitudinal and transverse MPI communicators */
     Hipace ();
 
+    /** Read parameters from the input file */
+    void ReadParameters ();
+
     /** Get singleton instance */
     static Hipace& GetInstance ();
 
@@ -189,6 +192,8 @@ public:
     inline static Hipace* m_instance = nullptr;
     /** Whether to use normalized units */
     inline static bool m_normalized_units = false;
+    /** Default location for diagnostics output */
+    inline static std::string m_output_folder = "diags";
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
     /** Contains all beam species */

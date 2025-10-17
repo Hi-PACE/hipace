@@ -79,8 +79,8 @@ namespace utils {
     }
 }
 
-
-OpenPMDWriter::OpenPMDWriter ()
+void
+OpenPMDWriter::ReadParameters ()
 {
     amrex::ParmParse pp("hipace");
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
@@ -97,19 +97,25 @@ OpenPMDWriter::OpenPMDWriter ()
 
     // set default output path according to backend
     if (m_openpmd_backend == "h5") {
-        m_file_prefix = "diags/hdf5";
+        m_file_prefix = Hipace::m_output_folder + "/hdf5";
     } else if (m_openpmd_backend == "bp") {
-        m_file_prefix = "diags/adios2";
+        m_file_prefix = Hipace::m_output_folder + "/adios2";
     } else if (m_openpmd_backend == "json") {
-        m_file_prefix = "diags/json";
+        m_file_prefix = Hipace::m_output_folder + "/json";
     }
     // overwrite output path by choice of the user
-    queryWithParser(pp, "file_prefix", m_file_prefix);
+    const bool set_file_prefix = queryWithParser(pp, "file_prefix", m_file_prefix);
+    if (set_file_prefix) {
+        amrex::Print() <<
+            "It is recommended to use hipace.output_folder instead of hipace.file_prefix\n";
+    }
 
     // temporary workaround until openPMD-viewer gets fixed
     amrex::ParmParse ppd("diagnostic");
     queryWithParser(ppd, "openpmd_viewer_u_workaround", m_openpmd_viewer_workaround);
 }
+
+OpenPMDWriter::OpenPMDWriter () {}
 
 OpenPMDWriter::~OpenPMDWriter() {}
 
@@ -242,8 +248,14 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
         std::string name = beams.get_name(ibeam);
         if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
 
+        auto& beam = beams.getBeam(ibeam);
+
         // initialize beam IO on first slice
-        const uint64_t np_total = beams.getBeam(ibeam).getTotalNumParticles();
+        uint64_t np_total = beam.getTotalNumParticles();
+
+        if (beam.m_output_ratio > 1) {
+            np_total = (np_total + beam.m_output_ratio - 1) / beam.m_output_ratio;
+        }
 
         m_uint64_beam_data[ibeam].resize(m_int_names.size());
 
@@ -251,7 +263,7 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
             m_uint64_beam_data[ibeam][idx].resize(np_total);
         }
 
-        if (beams.getBeam(ibeam).m_do_spin_tracking) {
+        if (beam.m_do_spin_tracking) {
             m_real_beam_data[ibeam].resize(m_real_names.size() + m_real_names_spin.size());
         } else {
             m_real_beam_data[ibeam].resize(m_real_names.size());
@@ -345,7 +357,17 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
 
         auto& beam = beams.getBeam(ibeam);
 
-        const uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
+        uint64_t np = beam.getNumParticles(WhichBeamSlice::This);
+
+        const int output_ratio = beam.m_output_ratio;
+
+        if (output_ratio > 1) {
+            np = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),
+                [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
+                    return i < int(np) && ptd.idcpu(i) % output_ratio == 0;
+                }
+            );
+        }
 
         if (np != 0) {
             // copy data from GPU to IO buffer

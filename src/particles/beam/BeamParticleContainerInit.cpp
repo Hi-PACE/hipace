@@ -24,7 +24,6 @@
 
 namespace
 {
-#ifdef HIPACE_USE_OPENPMD
     /** \brief Adds a single beam particle
      *
      * \param[in,out] ptd real and int beam data
@@ -71,7 +70,6 @@ namespace
         ptd.idcpu(ip) = pid + ip;
         ptd.id(ip).make_valid();
     }
-#endif // HIPACE_USE_OPENPMD
 
     /** \brief Adds a single beam particle into the per-slice BeamTile
      *
@@ -608,6 +606,9 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         resize(which_slice, num_to_add_full, 0);
     }
 
+    const uint64_t pid = m_id64;
+    m_id64 += m_do_symmetrize ? 4*num_to_add_full : num_to_add_full;
+
     unsigned int loc_index = 0;
     for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
         const unsigned int num_to_add = m_num_particles_slice[slice*m_pdf_ref_ratio+r];
@@ -616,9 +617,6 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         auto& particle_tile = getBeamSlice(which_slice);
         // Access particles' SoA
         const auto ptd = particle_tile.getParticleTileData();
-
-        const uint64_t pid = m_id64;
-        m_id64 += m_do_symmetrize ? 4*num_to_add : num_to_add;
 
         const amrex::Real clight = get_phys_const().c;
         const bool do_symmetrize = m_do_symmetrize;
@@ -705,6 +703,79 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
     }
 }
 
+void
+BeamParticleContainer::
+InitBeamFromList3D ()
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFromList3D()");
+    using namespace amrex::literals;
+
+    if (!Hipace::HeadRank() || m_num_particles_list == 0) { return; }
+
+    const bool do_spin_tracking = m_do_spin_tracking;
+
+    amrex::Gpu::PinnedVector<amrex::Real> init_x, init_y, init_z, init_ux, init_uy, init_uz, init_w;
+    amrex::Gpu::PinnedVector<amrex::Real> init_sx, init_sy, init_sz;
+
+    amrex::ParmParse pp(m_name);
+    getWithParser(pp, "init_pos_x", init_x);
+    getWithParser(pp, "init_pos_y", init_y);
+    getWithParser(pp, "init_pos_z", init_z);
+    getWithParser(pp, "init_ux", init_ux);
+    getWithParser(pp, "init_uy", init_uy);
+    getWithParser(pp, "init_uz", init_uz);
+    getWithParser(pp, "init_weight", init_w);
+    if (do_spin_tracking) {
+        getWithParser(pp, "init_sx", init_sx);
+        getWithParser(pp, "init_sy", init_sy);
+        getWithParser(pp, "init_sz", init_sz);
+    }
+
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_x.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_y.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_z.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_ux.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_uy.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_uz.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_w.size()) == m_num_particles_list);
+    if (do_spin_tracking) {
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sx.size()) == m_num_particles_list);
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sy.size()) == m_num_particles_list);
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sz.size()) == m_num_particles_list);
+    }
+
+    const amrex::Real *p_x=init_x.dataPtr(), *p_y=init_y.dataPtr(), *p_z=init_z.dataPtr();
+    const amrex::Real *p_ux=init_ux.dataPtr(), *p_uy=init_uy.dataPtr(), *p_uz=init_uz.dataPtr();
+    const amrex::Real *p_w=init_w.dataPtr();
+    const amrex::Real *p_sx=init_sx.dataPtr(), *p_sy=init_sy.dataPtr(), *p_sz=init_sz.dataPtr();
+
+    auto& particle_tile = getBeamInitSlice();
+    auto old_size = particle_tile.size();
+    auto new_size = old_size + m_num_particles_list;
+    particle_tile.resize(new_size);
+
+    const auto ptd = particle_tile.getParticleTileData();
+    const auto enforceBC = EnforceBC();
+    const amrex::Real clight = get_phys_const().c;
+
+    const uint64_t pid = m_id64;
+    m_id64 += m_num_particles_list;
+
+    amrex::ParallelFor(amrex::Long(m_num_particles_list),
+        [=] AMREX_GPU_DEVICE (const amrex::Long i) {
+            AddOneBeamParticle(ptd,
+                p_x[i], p_y[i], p_z[i],
+                p_ux[i], p_uy[i], p_uz[i],
+                do_spin_tracking ? p_sx[i] : 0.,
+                do_spin_tracking ? p_sy[i] : 0.,
+                do_spin_tracking ? p_sz[i] : 0.,
+                p_w[i],
+                pid, i, clight, enforceBC, do_spin_tracking);
+        });
+
+    amrex::Gpu::streamSynchronize();
+}
+
 #ifdef HIPACE_USE_OPENPMD
 amrex::Real
 BeamParticleContainer::
@@ -725,10 +796,11 @@ InitBeamFromFileHelper (const std::string input_file,
         // Check what kind of Datatype is used in beam file
         auto series = openPMD::Series( input_file , openPMD::Access::READ_ONLY );
 
-        if(!series.iterations.contains(num_iteration)) {
-            amrex::Abort("Could not find iteration " + std::to_string(num_iteration) +
-                                                        " in file " + input_file + "\n");
-        }
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            series.iterations.contains(num_iteration),
+            "Could not find iteration " + std::to_string(num_iteration) +
+            " in file " + input_file + "\n"
+        );
         species_known = series.iterations[num_iteration].particles.contains(species_name);
 
         for( auto const& particle_type : series.iterations[num_iteration].particles ) {

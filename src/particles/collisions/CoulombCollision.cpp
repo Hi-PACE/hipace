@@ -5,7 +5,8 @@
 #include "ElasticCollisionPerez.H"
 #include "utils/HipaceProfilerWrapper.H"
 
-CoulombCollision::CoulombCollision(
+void
+CoulombCollision::ReadParameters(
     const std::vector<std::string>& plasma_species_names,
     const std::vector<std::string>& beam_species_names,
     std::string const collision_name)

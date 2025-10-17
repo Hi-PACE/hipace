@@ -64,13 +64,13 @@ private:
         nprogress,
     };
 
-    // to specify the input for get_buffer_offset
-    enum struct offset_type {
-        beam_idcpu,
-        beam_real,
-        beam_int,
-        laser,
-        total
+    // to get the location in the buffer of the individual data
+    struct BufferOffset {
+        std::vector<std::optional<std::size_t>> m_beam_idcpu;
+        std::vector<std::map<int, std::size_t>> m_beam_real;
+        std::vector<std::map<int, std::size_t>> m_beam_int;
+        std::map<int, std::size_t> m_laser;
+        std::size_t m_total;
     };
 
     // struct to store per-slice data
@@ -123,6 +123,7 @@ private:
     int m_max_trailing_slices = std::numeric_limits<int>::max();
     std::size_t m_current_buffer_size = 0;
     std::size_t m_max_buffer_size = std::numeric_limits<std::size_t>::max();
+    int m_max_open_requests = 1000;
 
     // parameters to send physical time
     amrex::Real m_time_send_buffer = 0.;
@@ -132,6 +133,14 @@ private:
     // slice index of where to continue making async progress
     std::array<int, comm_progress::nprogress> m_async_metadata_slice {};
     std::array<int, comm_progress::nprogress> m_async_data_slice {};
+
+    // calculate distance of a and b in the periodic range [0,m_nslices) with
+    // a barrier at current_slice
+    int periodic_distance (int current_slice, int a, int b) const;
+
+    // calculate min of a and b in the periodic range [0,m_nslices) with
+    // a barrier at current_slice
+    int periodic_min (int current_slice, int a, int b) const;
 
     // send some dummy messages so MPI can pre-register the memory
     void pre_register_memory ();
@@ -145,14 +154,16 @@ private:
     void free_buffer (int slice);
 
     // function containing main progress loop to deal with asynchronous MPI requests
-    void make_progress (int slice, bool is_blocking, int current_slice);
+    void make_progress (int slice, bool is_blocking_recv, int current_slice);
+
+    // call make_progress asynchronously on strategic slices
+    void async_progress (int slice);
 
     // write MultiBeam sizes into the metadata array
     void write_metadata (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
 
     // helper function to get location of individual arrays inside a buffer
-    std::size_t get_buffer_offset (int slice, offset_type type, MultiBeam& beams, MultiLaser& laser,
-                                   int ibeam, int comp);
+    BufferOffset get_buffer_offset (int slice, MultiBeam& beams, MultiLaser& laser);
 
     // copy gpu array into buffer at buffer_offset, either dtoh or dtod
     void memcpy_to_buffer (int slice, std::size_t buffer_offset,

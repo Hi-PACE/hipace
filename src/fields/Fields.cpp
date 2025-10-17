@@ -26,9 +26,11 @@
 
 using namespace amrex::literals;
 
-Fields::Fields (const int nlev)
-    : m_slices(nlev)
+void
+Fields::ReadParameters (const int nlev)
 {
+    m_slices = decltype(m_slices)(nlev);
+
     amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
     // set default Poisson solver based on the platform
@@ -39,7 +41,12 @@ Fields::Fields (const int nlev)
 #endif
     queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
     queryWithParser(ppf, "insitu_period", m_insitu_period);
-    queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
+    m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
+    const bool set_file_prefix = queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
+    if (set_file_prefix) {
+        amrex::Print() <<
+            "It is recommended to use hipace.output_folder instead of fields.insitu_file_prefix\n";
+    }
     queryWithParser(ppf, "do_symmetrize", m_do_symmetrize);
     DeprecatedInput("fields", "extended_solve",
                     "boundary.particle_lo and boundary.particle_hi", "", true);
@@ -462,16 +469,15 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
     if (fd.m_slice_dir != 2) {
         // Put contributions from i_slice to different diag_fab slices in GPU vector
         m_rel_z_vec.resize(k_max+1-k_min);
-        m_rel_z_vec_cpu.resize(k_max+1-k_min);
         for (int k=k_min; k<=k_max; ++k) {
             const amrex::Real pos = k * fd.m_geom_io.CellSize(2) + poff_diag_z;
             const amrex::Real mid_i_slice = (pos - poff_calc_z)*field_geom[0].InvCellSize(2);
             amrex::Real sz_cell[depos_order_z + 1];
             const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
-            m_rel_z_vec_cpu[k-k_min] = 0;
+            m_rel_z_vec[k-k_min] = 0;
             for (int i=0; i<=depos_order_z; ++i) {
                 if (k_cell+i == i_slice) {
-                    m_rel_z_vec_cpu[k-k_min] = sz_cell[i];
+                    m_rel_z_vec[k-k_min] = sz_cell[i];
                 }
             }
         }
@@ -480,21 +486,20 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         int k_start = k_min;
         int k_stop = k_max;
         for (int k=k_min; k<=k_max; ++k) {
-            if (m_rel_z_vec_cpu[k-k_min] == 0) ++k_start;
+            if (m_rel_z_vec[k-k_min] == 0) ++k_start;
             else break;
         }
         for (int k=k_max; k>=k_min; --k) {
-            if (m_rel_z_vec_cpu[k-k_min] == 0) --k_stop;
+            if (m_rel_z_vec[k-k_min] == 0) --k_stop;
             else break;
         }
         diag_box.setSmall(2, amrex::max(diag_box.smallEnd(2), k_start));
         diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     } else {
         m_rel_z_vec.resize(1);
-        m_rel_z_vec_cpu.resize(1);
         const amrex::Real pos_z = i_slice * field_geom[0].CellSize(2) + poff_calc_z;
         if (fd.m_geom_io.ProbLo(2) <= pos_z && pos_z <= fd.m_geom_io.ProbHi(2)) {
-            m_rel_z_vec_cpu[0] = field_geom[0].CellSize(2);
+            m_rel_z_vec[0] = field_geom[0].CellSize(2);
             k_min = 0;
         } else {
             return;
@@ -508,15 +513,7 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
     auto laser_func = interpolated_field_xy<depos_order_xy,
         guarded_field_xy>{{laser_mf}, multi_laser.GetLaserGeom()};
 
-#ifdef AMREX_USE_GPU
-    // This async copy happens on the same stream as the ParallelFor below, which uses the copied array.
-    // Therefore, it is safe to do it async.
-    amrex::Gpu::htod_memcpy_async(m_rel_z_vec.dataPtr(), m_rel_z_vec_cpu.dataPtr(),
-                                  m_rel_z_vec_cpu.size() * sizeof(amrex::Real));
-#else
-    std::memcpy(m_rel_z_vec.dataPtr(), m_rel_z_vec_cpu.dataPtr(),
-                m_rel_z_vec_cpu.size() * sizeof(amrex::Real));
-#endif
+    m_rel_z_vec.copyToDeviceAsync();
 
     // Finally actual kernel: Interpolation in x, y, z of zero-extended fields
     for (amrex::MFIter mfi(slice_mf, DfltMfi); mfi.isValid(); ++mfi) {
