@@ -19,6 +19,7 @@ concurrency:
   group: ${{ github.ref }}-${{ github.head_ref }}-cudaLocal
   cancel-in-progress: true
 
+
 jobs:
   build_nvcc:
     name: local V100 NVCC 11.1 DP
