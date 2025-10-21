@@ -1038,6 +1038,7 @@ Diagnostic parameters
 
 There are different types of diagnostics in HiPACE++. The standard diagnostics are compliant with the openPMD standard. The
 in-situ diagnostics allow for fast analysis of large beams or the plasma particles.
+Please make sure to always clear or rename the output folder before running a new simulation to avoid mixing data from different runs.
 
 * ``diagnostic.output_period`` (`integer`) optional (default `0`)
     Output period for standard beam and field diagnostics. Field or beam specific diagnostics can overwrite this parameter.

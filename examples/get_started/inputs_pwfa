@@ -1,5 +1,5 @@
 max_step = 300
-amr.n_cell = 1024 1024 1024
+amr.n_cell = 512 512 512
 
 amr.max_level = 0
 
@@ -48,5 +48,8 @@ ion.density(x,y,z) = 2.e22
 ion.ppc = 1 1
 ion.u_mean = 0.0 0.0 0.
 ion.element = H
+
+fields.insitu_period = 1
+beams.insitu_period = 1
 
 diagnostic.diag_type = xz
