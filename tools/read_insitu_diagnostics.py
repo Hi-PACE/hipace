@@ -56,7 +56,7 @@ class InSituReader:
         self._avg_comps = {}
         self._slice_comps = {}
 
-        # read quantities from file
+        # read quantities from structured array
         for comp in self._all_data.dtype.names:
             if comp in ["time", "step"]:
                 self.__dict__[comp] = self._all_data[comp]
@@ -154,7 +154,7 @@ class InSituReader:
         type: None | "avg" | "slice" | "meta"
             None: Print all available quantities.
             "avg" | "slice" | "meta": Return a list of strings of quantities for,
-                average, per-slice or metadatam respectievly.
+                average, per-slice or metadata respectievly.
 
         """
         assert type in [None, "avg", "slice", "meta"]
@@ -176,15 +176,15 @@ class InSituReader:
         """
         Retruns averaged data.
         This function exposes both quantities from the file as well as derived quantities
-        that are computed lazily if the requred inputs are available.
+        that are computed lazily if the required inputs are available.
 
-        emittance_<dir> referes to the normalized projected emittance in direction <dir>.
+        emittance_<dir> refers to the normalized projected emittance in direction <dir>.
 
         Parameters
         ----------
 
         quantity: str | tuple[str] | list[str]
-            The quantity to get. If a list or tuple of strings in input, a list of arrays
+            The quantity to get. If a list or tuple of strings is input, a list of arrays
             will be output accordingly.
 
         Returns
@@ -206,15 +206,15 @@ class InSituReader:
         """
         Retruns per-slice data.
         This function exposes both quantities from the file as well as derived quantities
-        that are computed lazily if the requred inputs are available.
+        that are computed lazily if the required inputs are available.
 
-        emittance_<dir> referes to the normalized per-slice emittance in direction <dir>.
+        emittance_<dir> refers to the normalized per-slice emittance in direction <dir>.
 
         Parameters
         ----------
 
         quantity: str | tuple[str] | list[str]
-            The quantity to get. If a list or tuple of strings in input, a list of arrays
+            The quantity to get. If a list or tuple of strings is input, a list of arrays
             will be output accordingly.
 
         Returns
