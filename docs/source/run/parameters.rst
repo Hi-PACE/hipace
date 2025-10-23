@@ -1182,7 +1182,20 @@ When this is parsed into Python it can be converted to a NumPy structured dataty
 The rest of the file, following immediately after the closing ``}``, is in binary format and
 contains all of the in-situ diagnostics along with some metadata. This part can be read using the
 structured datatype of the first section.
-Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format. Functions to calculate the most useful properties are also provided in that file.
+Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
+It can be installed using the command ``pip install -U -e ./path_to_hipace/hipace/tools``.
+Functions to calculate the most useful properties are also provided in that file.
+Usage example:
+
+.. code-block:: python
+
+    import read_insitu_diagnostics as diag
+    ir = diag.InSituReader("diags/insitu/reduced_beam.*.txt")
+    ir.avail() # print available quantities
+    ir.avg_data("[x]") # get 1D array over time steps
+    ir.slice_data("emittance_x") # get 2D array over time steps and slices
+    ir.time, it.zeta # get metadata needed for plotting
+
 
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``0``)
     Period of the beam in-situ diagnostics. `0` means no beam in-situ diagnostics.
