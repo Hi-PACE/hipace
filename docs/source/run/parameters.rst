@@ -1194,7 +1194,7 @@ Usage example:
     ir.avail() # print available quantities
     ir.avg_data("[x]") # get 1D array over time steps
     ir.slice_data("emittance_x") # get 2D array over time steps and slices
-    ir.time, it.zeta # get metadata needed for plotting
+    ir.time, ir.zeta # get metadata needed for plotting
 
 
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``0``)
