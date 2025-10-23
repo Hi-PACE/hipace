@@ -36,7 +36,7 @@ parser.add_argument('--output-dir',
                     help='Path to the directory containing output files')
 args = parser.parse_args()
 
-# Load data with yt
+# Load data with OpenPMD
 ts = OpenPMDTimeSeries(args.output_dir)
 
 if args.norm_units:
