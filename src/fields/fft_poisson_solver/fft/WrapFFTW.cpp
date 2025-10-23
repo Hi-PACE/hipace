@@ -17,13 +17,9 @@
 namespace AnyFFT
 {
 #ifdef AMREX_USE_FLOAT
-    const auto VendorCreatePlanR2C3D = fftwf_plan_dft_r2c_3d;
-    const auto VendorCreatePlanC2R3D = fftwf_plan_dft_c2r_3d;
     const auto VendorCreatePlanR2C2D = fftwf_plan_dft_r2c_2d;
     const auto VendorCreatePlanC2R2D = fftwf_plan_dft_c2r_2d;
 #else
-    const auto VendorCreatePlanR2C3D = fftw_plan_dft_r2c_3d;
-    const auto VendorCreatePlanC2R3D = fftw_plan_dft_c2r_3d;
     const auto VendorCreatePlanR2C2D = fftw_plan_dft_r2c_2d;
     const auto VendorCreatePlanC2R2D = fftw_plan_dft_c2r_2d;
 #endif
