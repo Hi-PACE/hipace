@@ -31,7 +31,7 @@ public:
     FFTPoissonSolver () = default;
 
     /** Abstract class needs a virtual destructor */
-    virtual ~FFTPoissonSolver () = 0;
+    virtual ~FFTPoissonSolver () = default;
 
     /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
