@@ -11,6 +11,7 @@
 #include "fft_poisson_solver/FFTPoissonSolverDirichletDirect.H"
 #include "fft_poisson_solver/FFTPoissonSolverDirichletExpanded.H"
 #include "fft_poisson_solver/FFTPoissonSolverDirichletFast.H"
+#include "fft_poisson_solver/FFTPoissonSolverDirichletQuick.H"
 #include "fft_poisson_solver/MGPoissonSolverDirichlet.H"
 #include "Hipace.H"
 #include "OpenBoundary.H"
@@ -221,6 +222,11 @@ Fields::AllocData (
             new FFTPoissonSolverDirichletFast(getSlices(lev).boxArray(),
                                               getSlices(lev).DistributionMap(),
                                               geom)) );
+    } else if (m_poisson_solver_str == "FFTDirichletQuick"){
+        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletQuick>(
+            new FFTPoissonSolverDirichletQuick(getSlices(lev).boxArray(),
+                                               getSlices(lev).DistributionMap(),
+                                               geom)) );
     } else if (m_poisson_solver_str == "FFTPeriodic") {
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
             new FFTPoissonSolverPeriodic(getSlices(lev).boxArray(),
