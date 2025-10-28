@@ -25,7 +25,7 @@ echo "Your current source directory is: ${REPO_DIR}"
 echo "_____________________________________________"
 
 # Set number of jobs to use for compilation
-PARALLEL="${WARPX_TOOLS_LINTER_PARALLEL:-4}"
+PARALLEL="${HIPACE_TOOLS_LINTER_PARALLEL:-4}"
 echo
 echo "${PARALLEL} jobs will be used for compilation."
 echo "This can be overridden by setting the environment"
