@@ -185,8 +185,9 @@ public:
                 return 2;
             case 3:
                 return 1;
+            default:
+                return 0;
         }
-        return 0;
     }
 
     /** \brief Return the number of acf components used for a given system type
@@ -200,9 +201,9 @@ public:
             case 2:
                 return 2;
             case 3:
+            default:
                 return 0;
         }
-        return 0;
     }
 
     /** When applying Dirichlet boundary conditions, shift boundary value by offset number of cells */
