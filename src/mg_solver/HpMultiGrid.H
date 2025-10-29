@@ -186,8 +186,9 @@ public:
             case 3:
                 return 1;
             default:
-                return 0;
+                amrex::Abort(std::to_string(system_type) + " is not a valid system_type!");
         }
+        return 0; //unreachable
     }
 
     /** \brief Return the number of acf components used for a given system type
@@ -201,9 +202,11 @@ public:
             case 2:
                 return 2;
             case 3:
-            default:
                 return 0;
+            default:
+                amrex::Abort(std::to_string(system_type) + " is not a valid system_type!");
         }
+        return 0; //unreachable
     }
 
     /** When applying Dirichlet boundary conditions, shift boundary value by offset number of cells */
