@@ -63,8 +63,6 @@ private:
     amrex::FArrayBox m_eigenvalue_matrix;
     /** Real array for the FFTs */
     amrex::Gpu::DeviceVector<amrex::Real> m_position_array;
-    /** Real array for the FFTs */
-    amrex::Gpu::DeviceVector<amrex::Real> m_position_array2;
     /** Complex array for the FFTs */
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_fourier_array;
     /** FFT plan in x direction */
@@ -81,6 +79,8 @@ private:
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_omega_x;
     /** y prefactor for ToSine */
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_omega_y;
+
+    amrex::Geometry m_gm;
 };
 
 #endif
