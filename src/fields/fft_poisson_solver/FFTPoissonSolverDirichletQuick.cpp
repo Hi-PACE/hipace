@@ -32,7 +32,7 @@ template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real dst2_out (T&& in, int i, int j, int n, const amrex::GpuComplex<amrex::Real>* omega) {
     if (i == n-1) {
         return in(0, j).real();
-    } else if (2*i < n) {
+    } else if (2*i+1 < n) {
         return - (in(i+1, j) * omega[i+1]).imag();
     } else {
         return (in(n-i-1, j) * omega[n-i-1]).real();
