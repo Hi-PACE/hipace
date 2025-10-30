@@ -36,7 +36,7 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
 
     Parser::addConstantsToParser();
 
-    amrex::ParmParse pph("hipace");
+    const amrex::ParmParse pph("hipace");
     queryWithParser(pph ,"normalized_units", Hipace::m_normalized_units);
     if (Hipace::m_normalized_units) {
         m_phys_const = make_constants_normalized();
@@ -54,7 +54,7 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
                             "Analytic derivative with depos_order=0 would vanish");
     queryWithParser(pph, "output_folder", Hipace::m_output_folder);
 
-    amrex::ParmParse pp_amr("amr");
+    const amrex::ParmParse pp_amr("amr");
     int max_level = 0;
     queryWithParser(pp_amr, "max_level", max_level);
     m_N_level = max_level + 1;
@@ -92,7 +92,7 @@ Hipace::Hipace () :
 void
 Hipace::ReadParameters ()
 {
-    amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
+    const amrex::ParmParse pp;// Traditionally, max_step and stop_time do not have prefix.
     queryWithParser(pp, "max_step", m_max_step);
 
     bool use_previous_rng = false;
@@ -106,7 +106,7 @@ Hipace::ReadParameters ()
     int seed;
     if (queryWithParser(pp, "random_seed", seed)) amrex::ResetRandomSeed(seed, seed);
 
-    amrex::ParmParse pph("hipace");
+    const amrex::ParmParse pph("hipace");
 
     std::string str_dt {""};
     queryWithParser(pph, "dt", str_dt);
@@ -199,7 +199,7 @@ Hipace::ReadParameters ()
         "boundary.field = Dirichlet\n"
         "boundary.particle = Absorbing\n", true);
 
-    amrex::ParmParse ppb("boundary");
+    const amrex::ParmParse ppb("boundary");
     std::string field_boundary = "";
     getWithParser(ppb, "field", field_boundary);
     if (field_boundary == "Dirichlet") {
@@ -307,7 +307,7 @@ Hipace::InitData ()
 
     m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2), m_multi_beam, m_multi_laser);
 
-    amrex::ParmParse pph("hipace");
+    const amrex::ParmParse pph("hipace");
     queryWithParser(pph, "initial_time", m_initial_time);
     bool do_output_input = false;
     queryWithParser(pph, "output_input", do_output_input);
@@ -334,7 +334,7 @@ Hipace::MakeGeometry ()
     m_plasma_fine_patch.resize(m_N_level);
 
     // make 3D Geometry, BoxArray, DistributionMapping on level 0
-    amrex::ParmParse pp_amr("amr");
+    const amrex::ParmParse pp_amr("amr");
     std::array<int, 3> n_cells {0, 0, 0};
     getWithParser(pp_amr, "n_cell", n_cells);
     const amrex::Box domain_3D{amrex::IntVect(0,0,0), n_cells.data()};
@@ -347,14 +347,14 @@ Hipace::MakeGeometry ()
     // this will get prob_lo and prob_hi from the input file
     m_3D_geom[0].define(domain_3D, nullptr, amrex::CoordSys::cartesian, is_periodic);
 
-    amrex::BoxList bl{domain_3D};
-    amrex::Vector<int> procmap{amrex::ParallelDescriptor::MyProc()};
+    const amrex::BoxList bl{domain_3D};
+    const amrex::Vector<int> procmap{amrex::ParallelDescriptor::MyProc()};
     m_3D_ba[0].define(bl);
     m_3D_dm[0].define(procmap);
 
     // make 3D Geometry, BoxArray, DistributionMapping on level >= 1
     for (int lev=1; lev<m_N_level; ++lev) {
-        amrex::ParmParse pp_mrlev("mr_lev" + std::to_string(lev));
+        const amrex::ParmParse pp_mrlev("mr_lev" + std::to_string(lev));
 
         // get n_cell in x and y direction, z direction is calculated from the patch size
         std::array<int, 2> n_cells_lev {0, 0};
@@ -439,8 +439,8 @@ Hipace::MakeGeometry ()
             "(with a few cells to spare)"
         );
 
-        amrex::BoxList bl_lev{domain_3D_lev};
-        amrex::Vector<int> procmap_lev{amrex::ParallelDescriptor::MyProc()};
+        const amrex::BoxList bl_lev{domain_3D_lev};
+        const amrex::Vector<int> procmap_lev{amrex::ParallelDescriptor::MyProc()};
         m_3D_ba[lev].define(bl_lev);
         m_3D_dm[lev].define(procmap_lev);
     }
@@ -613,7 +613,7 @@ Hipace::Evolve ()
         if (HeadRank()) {
             const double total_time_s = (amrex::second() - start_time);
 
-            amrex::IOFormatSaver iofmtsaver(std::cout);
+            const amrex::IOFormatSaver iofmtsaver(std::cout);
             std::cout << std::setprecision(4);
 
             std::cout << '\n' << "Finished Evolve after " << total_time_s << " seconds using "
@@ -820,7 +820,7 @@ Hipace::SolveOneSlice (int islice, int step)
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
-    bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
+    const bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This, is_last_step);
 
     // shift all levels
@@ -948,7 +948,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     AMREX_ALWAYS_ASSERT(Comps[which_slice]["Bx"] + 1 == Comps[which_slice]["By"]);
     AMREX_ALWAYS_ASSERT(Comps[which_slice]["Sy"] + 1 == Comps[which_slice]["Sx"]);
 
-    amrex::MultiFab& slicemf = m_fields.getSlices(lev);
+    const amrex::MultiFab& slicemf = m_fields.getSlices(lev);
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[which_slice]["Bx"], 2);
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);

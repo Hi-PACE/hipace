@@ -23,7 +23,7 @@ MGPoissonSolverDirichlet::MGPoissonSolverDirichlet (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ba.size() == 1, "Parallel MG not supported");
     m_mg = std::make_unique<hpmg::MultiGrid>(gm.CellSize(0), gm.CellSize(1), ba[0], 3);
 
-    amrex::ParmParse pp("MGDirichlet");
+    const amrex::ParmParse pp("MGDirichlet");
     queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
     queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
     queryWithParser(pp, "MG_verbose", m_MG_verbose);

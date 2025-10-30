@@ -23,7 +23,7 @@ namespace utils {
     {
         std::string record_name = fullName;
         std::string component_name = openPMD::RecordComponent::SCALAR;
-        std::size_t startComp = fullName.find_last_of("_");
+        const std::size_t startComp = fullName.find_last_of("_");
 
         if( startComp != std::string::npos ) {  // non-scalar
             record_name = fullName.substr(0, startComp);
@@ -80,7 +80,7 @@ namespace utils {
 void
 OpenPMDWriter::ReadParameters ()
 {
-    amrex::ParmParse pp("hipace");
+    const amrex::ParmParse pp("hipace");
     queryWithParser(pp, "openpmd_backend", m_openpmd_backend);
     // pick first available backend if default is chosen
     if( m_openpmd_backend == "default" ) {
@@ -109,7 +109,7 @@ OpenPMDWriter::ReadParameters ()
     }
 
     // temporary workaround until openPMD-viewer gets fixed
-    amrex::ParmParse ppd("diagnostic");
+    const amrex::ParmParse ppd("diagnostic");
     queryWithParser(ppd, "openpmd_viewer_u_workaround", m_openpmd_viewer_workaround);
 }
 
@@ -122,7 +122,7 @@ OpenPMDWriter::InitDiagnostics ()
 {
     HIPACE_PROFILE("OpenPMDWriter::InitDiagnostics()");
 
-    std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
+    const std::string filename = m_file_prefix + "/openpmd_%06T." + m_openpmd_backend;
 
     m_outputSeries = std::make_unique< openPMD::Series >(
         filename, openPMD::Access::CREATE);
@@ -209,11 +209,11 @@ OpenPMDWriter::WriteFieldData (
         field.setGridSpacing(dCells);
         field.setGridGlobalOffset(offWindow);
 
-        openPMD::Datatype datatype = is_laser_comp ?
+        const openPMD::Datatype datatype = is_laser_comp ?
             openPMD::determineDatatype< std::complex<amrex::Real> >() :
             openPMD::determineDatatype< amrex::Real >();
         // set data type and global size of the simulation
-        openPMD::Dataset dataset(datatype, global_size);
+        const openPMD::Dataset dataset(datatype, global_size);
         field_comp.resetDataset(dataset);
 
         if (is_laser_comp) {
@@ -221,7 +221,7 @@ OpenPMDWriter::WriteFieldData (
             field.setAttribute("envelopeField", "normalized_vector_potential");
             field.setAttribute("angularFrequency",
                 double(2.) * MathConst::pi * PhysConstSI::c / a_multi_laser.GetLambda0());
-            std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
+            const auto polarization = std::vector< std::complex<double> >{{1., 0.}, {0., 0.}};
             field.setAttribute("polarization", polarization);
             field_comp.storeChunkRaw(
                 reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr()),
@@ -243,7 +243,7 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
     m_real_beam_data.resize(nbeams);
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
-        std::string name = beams.get_name(ibeam);
+        const std::string name = beams.get_name(ibeam);
         if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
 
         auto& beam = beams.getBeam(ibeam);
@@ -289,7 +289,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration& iter
     const int nbeams = beams.get_nbeams();
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
-        std::string name = beams.get_name(ibeam);
+        const std::string name = beams.get_name(ibeam);
         if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
 
         openPMD::ParticleSpecies beam_species = iteration.particles[name];
@@ -350,7 +350,7 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
     const int nbeams = beams.get_nbeams();
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
-        std::string name = beams.get_name(ibeam);
+        const std::string name = beams.get_name(ibeam);
         if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
 
         auto& beam = beams.getBeam(ibeam);

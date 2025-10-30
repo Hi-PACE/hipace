@@ -32,8 +32,8 @@ namespace Parser {
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(pos != std::string::npos, abort_str);
 
-            std::string varname = s.substr(0, pos);
-            std::string expr = s.substr(pos + 1u);
+            const std::string varname = s.substr(0, pos);
+            const std::string expr = s.substr(pos + 1u);
             std::stringstream expr_ss{expr};
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(expr.size() >= 1ul, abort_str);
@@ -81,7 +81,7 @@ namespace Parser {
             auto [lo, hi, n] = local_variables_bounds[0];
             const double dx = (hi-lo)/(n-1);
             for (int i=0; i<n; ++i) {
-                double x = lo + i * dx;
+                const double x = lo + i * dx;
                 const double val = exe(x);
                 if (i > 0) {
                     std::cout << ", ";

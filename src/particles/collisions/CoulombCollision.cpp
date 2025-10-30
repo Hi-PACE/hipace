@@ -17,7 +17,7 @@ CoulombCollision::ReadParameters(
 
     // read collision species
     std::vector<std::string> collision_species;
-    amrex::ParmParse pp(collision_name);
+    const amrex::ParmParse pp(collision_name);
     pp.getarr("species", collision_species);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         collision_species.size() == 2,
@@ -71,7 +71,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
 
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
-    bool normalized_units = Hipace::m_normalized_units;
+    const bool normalized_units = Hipace::m_normalized_units;
 
     const amrex::Real clight = cst.c;
     const amrex::Real inv_c = 1.0_rt / cst.c;
@@ -98,8 +98,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             const int* const ion_lev1 = soa1.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
-            amrex::Real q1 = species1.GetCharge();
-            amrex::Real m1 = species1.GetMass();
+            const amrex::Real q1 = species1.GetCharge();
+            const amrex::Real m1 = species1.GetMass();
             const bool can_ionize1 = species1.m_can_ionize;
 
             // volume is used to calculate density, but weights already represent density in normalized units
@@ -164,8 +164,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             const int* const ion_lev1 = soa1.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
-            amrex::Real q1 = species1.GetCharge();
-            amrex::Real m1 = species1.GetMass();
+            const amrex::Real q1 = species1.GetCharge();
+            const amrex::Real m1 = species1.GetMass();
             const bool can_ionize1 = species1.m_can_ionize;
 
             // Get particles SoA data for species 2
@@ -178,8 +178,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             const int* const ion_lev2 = soa2.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
             PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
-            amrex::Real q2 = species2.GetCharge();
-            amrex::Real m2 = species2.GetMass();
+            const amrex::Real q2 = species2.GetCharge();
+            const amrex::Real m2 = species2.GetMass();
             const bool can_ionize2 = species2.m_can_ionize;
 
             // volume is used to calculate density, but weights already represent density in normalized units
@@ -250,7 +250,7 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
 
     using namespace amrex::literals;
     const PhysConst cst = get_phys_const();
-    bool normalized_units = Hipace::m_normalized_units;
+    const bool normalized_units = Hipace::m_normalized_units;
 
     const amrex::Real clight = cst.c;
     const amrex::Real inv_c = 1.0_rt / cst.c;
@@ -276,8 +276,8 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
         const amrex::Real* const w1 = soa1.GetRealData(BeamIdx::w).data();
         BeamBins::index_type * const indices1 = bins1.permutationPtr();
         BeamBins::index_type const * const offsets1 = bins1.offsetsPtr();
-        amrex::Real q1 = species1.GetCharge();
-        amrex::Real m1 = species1.GetMass();
+        const amrex::Real q1 = species1.GetCharge();
+        const amrex::Real m1 = species1.GetMass();
         constexpr bool can_ionize1 = false;
 
         // Get particles SoA data for species 2
@@ -290,8 +290,8 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
         const int* const ion_lev2 = soa2.GetIntData(PlasmaIdx::ion_lev).data();
         PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
         PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
-        amrex::Real q2 = species2.GetCharge();
-        amrex::Real m2 = species2.GetMass();
+        const amrex::Real q2 = species2.GetCharge();
+        const amrex::Real m2 = species2.GetMass();
         const bool can_ionize2 = species2.m_can_ionize;
 
         // volume is used to calculate density, but weights already represent density in normalized units

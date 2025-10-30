@@ -165,9 +165,9 @@ InitBeamFixedPPC3D ()
 
                 ParticleUtil::get_position_unit_cell(r, ppc, i_part);
 
-                amrex::Real x = plo[0] + (i + r[0])*dx[0];
-                amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (k + r[2])*dx[2];
+                const amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                const amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                const amrex::Real z = plo[2] + (k + r[2])*dx[2];
 
                 if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false ) {
                     // If particles are evenly spaced, discard particles
@@ -179,9 +179,9 @@ InitBeamFixedPPC3D ()
                 } else {
                     // If particles are randomly spaced, discard particles
                     // if the cell is outside the domain
-                    amrex::Real xc = plo[0]+i*dx[0];
-                    amrex::Real yc = plo[1]+j*dx[1];
-                    amrex::Real zc = plo[2]+k*dx[2];
+                    const amrex::Real xc = plo[0]+i*dx[0];
+                    const amrex::Real yc = plo[1]+j*dx[1];
+                    const amrex::Real zc = plo[2]+k*dx[2];
                     if (zc >= z_max || zc < z_min ||
                         ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius_sq) {
                             continue;
@@ -254,9 +254,9 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
 
                 ParticleUtil::get_position_unit_cell(r, ppc, i_part, engine, rand_ppc);
 
-                amrex::Real x = plo[0] + (i + r[0])*dx[0];
-                amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (islice + r[2])*dx[2];
+                const amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                const amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                const amrex::Real z = plo[2] + (islice + r[2])*dx[2];
 
                 if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false ) {
                     // If particles are evenly spaced, discard particles
@@ -268,9 +268,9 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                 } else {
                     // If particles are randomly spaced, discard particles
                     // if the cell is outside the domain
-                    amrex::Real xc = plo[0]+i*dx[0];
-                    amrex::Real yc = plo[1]+j*dx[1];
-                    amrex::Real zc = plo[2]+islice*dx[2];
+                    const amrex::Real xc = plo[0]+i*dx[0];
+                    const amrex::Real yc = plo[1]+j*dx[1];
+                    const amrex::Real zc = plo[2]+islice*dx[2];
                     if (zc >= z_max || zc < z_min ||
                         ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius_sq) {
                             continue;
@@ -286,7 +286,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
             count_arr(i, j) = count;
         });
 
-    int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
+    const int num_to_add = amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
     // Second: allocate the memory for these particles
     resize(which_beam_slice, num_to_add, 0);
@@ -313,9 +313,9 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
 
                 ParticleUtil::get_position_unit_cell(r, ppc, i_part, engine, rand_ppc);
 
-                amrex::Real x = plo[0] + (i + r[0])*dx[0];
-                amrex::Real y = plo[1] + (j + r[1])*dx[1];
-                amrex::Real z = plo[2] + (islice + r[2])*dx[2];
+                const amrex::Real x = plo[0] + (i + r[0])*dx[0];
+                const amrex::Real y = plo[1] + (j + r[1])*dx[1];
+                const amrex::Real z = plo[2] + (islice + r[2])*dx[2];
 
                 if (rand_ppc[0] + rand_ppc[1] + rand_ppc[2] == false) {
                     // If particles are evenly spaced, discard particles
@@ -327,9 +327,9 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                 } else {
                     // If particles are randomly spaced, discard particles
                     // if the cell is outside the domain
-                    amrex::Real xc = plo[0]+i*dx[0];
-                    amrex::Real yc = plo[1]+j*dx[1];
-                    amrex::Real zc = plo[2]+islice*dx[2];
+                    const amrex::Real xc = plo[0]+i*dx[0];
+                    const amrex::Real yc = plo[1]+j*dx[1];
+                    const amrex::Real zc = plo[2]+islice*dx[2];
                     if (zc >= z_max || zc < z_min ||
                         ((xc-x_mean)*(xc-x_mean)+(yc-y_mean)*(yc-y_mean)) > radius_sq) {
                             continue;
@@ -526,8 +526,8 @@ InitBeamFixedWeightPDF3D ()
         }
 
         // calculate uz and uz_std for AdaptiveTimeStep
-        amrex::Real uz_mean_local = m_pdf_u_func[2](zmid);
-        amrex::Real uz_std_local = m_pdf_u_func[5](zmid);
+        const amrex::Real uz_mean_local = m_pdf_u_func[2](zmid);
+        const amrex::Real uz_std_local = m_pdf_u_func[5](zmid);
         avg_uz += local_weight * uz_mean_local;
         avg_uz_sq += local_weight * (uz_mean_local*uz_mean_local + uz_std_local*uz_std_local);
 
@@ -717,7 +717,7 @@ InitBeamFromList3D ()
     amrex::Gpu::PinnedVector<amrex::Real> init_x, init_y, init_z, init_ux, init_uy, init_uz, init_w;
     amrex::Gpu::PinnedVector<amrex::Real> init_sx, init_sy, init_sz;
 
-    amrex::ParmParse pp(m_name);
+    const amrex::ParmParse pp(m_name);
     getWithParser(pp, "init_pos_x", init_x);
     getWithParser(pp, "init_pos_y", init_y);
     getWithParser(pp, "init_pos_z", init_z);
@@ -886,7 +886,7 @@ InitBeamFromFile (const std::string input_file,
             name_particle = particle_type.first;
             for( auto const& physical_quantity : particle_type.second ) {
 
-                std::array<double,7> units = physical_quantity.second.unitDimension();
+                const std::array<double,7> units = physical_quantity.second.unitDimension();
 
                 if(units == std::array<double,7> {1., 0., 0., 0., 0., 0., 0.}) {
                     if( (!particle_type.second.contains("position")) ||
@@ -1042,13 +1042,13 @@ InitBeamFromFile (const std::string input_file,
         amrex::Abort("Coud not find z coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
     }
 
-    for(std::string name_r_c : {name_rx, name_ry, name_rz}) {
+    for(const std::string& name_r_c : {name_rx, name_ry, name_rz}) {
         if(!series.iterations[num_iteration].particles[name_particle][name_r].contains(name_r_c)) {
             amrex::Abort("Beam input file does not contain " + name_r_c + " coordinate in " +
             name_r + " (position)\n");
         }
     }
-    for(std::string name_u_c : {name_ux, name_uy, name_uz}) {
+    for(const std::string& name_u_c : {name_ux, name_uy, name_uz}) {
         if(!series.iterations[num_iteration].particles[name_particle][name_u].contains(name_u_c)) {
             amrex::Abort("Beam input file does not contain " + name_u_c + " coordinate in " +
             name_u + " (momentum)\n");
@@ -1056,7 +1056,7 @@ InitBeamFromFile (const std::string input_file,
     }
 
     if (m_do_spin_tracking) {
-        for(std::string name_s_c : {name_sx, name_sy, name_sz}) {
+        for(const std::string& name_s_c : {name_sx, name_sy, name_sz}) {
             if(!series.iterations[num_iteration].particles[name_particle][name_s].contains(name_s_c)) {
                 amrex::Abort("Beam input file does not contain " + name_s_c + " coordinate in " +
                              name_s + " (spin). An attempt to read these was done because " +
@@ -1090,28 +1090,28 @@ InitBeamFromFile (const std::string input_file,
     auto del = [](input_type *p){ amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p)); };
 
     // copy Data to pinned memory
-    std::shared_ptr<input_type> r_x_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> r_x_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
-    std::shared_ptr<input_type> r_y_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> r_y_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
-    std::shared_ptr<input_type> r_z_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> r_z_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
-    std::shared_ptr<input_type> u_x_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> u_x_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
-    std::shared_ptr<input_type> u_y_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> u_y_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
-    std::shared_ptr<input_type> u_z_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> u_z_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
-    std::shared_ptr<input_type> s_x_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> s_x_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(m_do_spin_tracking ?
                                          sizeof(input_type)*num_to_add : 0) ), del};
-    std::shared_ptr<input_type> s_y_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> s_y_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(m_do_spin_tracking ?
                                          sizeof(input_type)*num_to_add : 0) ), del};
-    std::shared_ptr<input_type> s_z_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> s_z_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(m_do_spin_tracking ?
                                          sizeof(input_type)*num_to_add: 0 ) ), del};
-    std::shared_ptr<input_type> w_w_data{ reinterpret_cast<input_type*>(
+    const std::shared_ptr<input_type> w_w_data{ reinterpret_cast<input_type*>(
         amrex::The_Pinned_Arena()->alloc(sizeof(input_type)*num_to_add) ), del};
 
     electrons[name_r][name_rx].loadChunk<input_type>(r_x_data, {0u}, {num_to_add});

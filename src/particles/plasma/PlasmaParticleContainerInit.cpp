@@ -80,12 +80,12 @@ InitParticles (const amrex::RealVect& a_u_std,
         amrex::Box tile_box  = mfi.tilebox(box_nodal, box_grow);
 
         if (a_radius != std::numeric_limits<amrex::Real>::max()) {
-            amrex::IntVect lo_limit {
+            const amrex::IntVect lo_limit {
                 static_cast<int>(std::round((-a_radius - plo[0])/dx[0] - 2)),
                 static_cast<int>(std::round((-a_radius - plo[1])/dx[1] - 2)),
                 tile_box.smallEnd(2)
             };
-            amrex::IntVect hi_limit {
+            const amrex::IntVect hi_limit {
                 static_cast<int>(std::round(( a_radius - plo[0])/dx[0] + 2)),
                 static_cast<int>(std::round(( a_radius - plo[1])/dx[1] + 2)),
                 tile_box.bigEnd(2)
@@ -168,8 +168,8 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                     if (!do_init) continue;
 
-                    amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-                    amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
+                    const amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
+                    const amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
                     const amrex::Real rsq = x*x + y*y;
                     if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
@@ -222,8 +222,8 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 if (!do_init) return;
 
-                amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-                amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
+                const amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
+                const amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
                 const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
@@ -232,27 +232,27 @@ InitParticles (const amrex::RealVect& a_u_std,
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
                     density_func(x, y, c_t) <= min_density) return;
 
-                int ix = i - lo.x;
-                int iy = j - lo.y;
-                int iz = k - lo.z;
-                int nx = hi.x-lo.x+1;
-                int ny = hi.y-lo.y+1;
-                int nz = hi.z-lo.z+1;
-                unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
-                unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
-                unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
+                const int ix = i - lo.x;
+                const int iy = j - lo.y;
+                const int iz = k - lo.z;
+                const int nx = hi.x-lo.x+1;
+                const int ny = hi.y-lo.y+1;
+                const int nz = hi.z-lo.z+1;
+                const unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
+                const unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
+                const unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
 
                 // Ordering of axes from fastest to slowest:
                 // x
                 // y
                 // z (not used)
                 // ppc
-                unsigned int cellid = (uiz * ny + uiy) * nx + uix;
+                const unsigned int cellid = (uiz * ny + uiy) * nx + uix;
 
                 pcount[cellid] = 1;
             });
 
-            unsigned int num_to_add =
+            const unsigned int num_to_add =
                 amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
 
             if (num_to_add == 0) continue;
@@ -260,17 +260,17 @@ InitParticles (const amrex::RealVect& a_u_std,
             amrex::ParallelForRNG(tile_box,
             [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
             {
-                int ix = i - lo.x;
-                int iy = j - lo.y;
-                int iz = k - lo.z;
-                int nx = hi.x-lo.x+1;
-                int ny = hi.y-lo.y+1;
-                int nz = hi.z-lo.z+1;
-                unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
-                unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
-                unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
+                const int ix = i - lo.x;
+                const int iy = j - lo.y;
+                const int iz = k - lo.z;
+                const int nx = hi.x-lo.x+1;
+                const int ny = hi.y-lo.y+1;
+                const int nz = hi.z-lo.z+1;
+                const unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
+                const unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
+                const unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
 
-                unsigned int cellid = (uiz * ny + uiy) * nx + uix;
+                const unsigned int cellid = (uiz * ny + uiy) * nx + uix;
 
                 const amrex::Long pidx = poffset[cellid] - poffset[0] + old_size;
 
@@ -282,8 +282,8 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 if (!do_init) return;
 
-                amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-                amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
+                const amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
+                const amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
                 const amrex::Real density = density_func(x, y, c_t);
 
@@ -414,7 +414,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
             "be specified via 'hipace.background_density_SI'");
     }
 
-    amrex::ParmParse pp(m_name);
+    const amrex::ParmParse pp(m_name);
     std::string physical_element;
     getWithParser(pp, "element", physical_element);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0,

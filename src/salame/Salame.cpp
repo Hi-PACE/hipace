@@ -401,7 +401,7 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
                         zeta,  hipace->m_salame_zeta_initial, sum_Ez_target);
 
     // + 1 because sum_Ez_no_salame already includes the SALAME beam with a weight of 1
-    amrex::Real W = (sum_Ez_target - sum_Ez_no_salame)/sum_Ez_only_salame + 1._rt;
+    const amrex::Real W = (sum_Ez_target - sum_Ez_no_salame)/sum_Ez_only_salame + 1._rt;
     return {W,  W * sum_jz};
 }
 

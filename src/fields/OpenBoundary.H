@@ -112,10 +112,10 @@ AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 amrex::Real GetFieldMultipole (MultipoleTuple m_c, amrex::Real x_domain, amrex::Real y_domain)
 {
     using namespace amrex::literals;
-    amrex::Real radius_2 = pow<2>(x_domain) + pow<2>(y_domain);
+    const amrex::Real radius_2 = pow<2>(x_domain) + pow<2>(y_domain);
     // the coordinate normalization cancels out here
-    amrex::Real x = x_domain / radius_2;
-    amrex::Real y = y_domain / radius_2;
+    const amrex::Real x = x_domain / radius_2;
+    const amrex::Real y = y_domain / radius_2;
     return
       amrex::get<0>(m_c) * (std::log(radius_2))
     + amrex::get<1>(m_c) * (-2*x)

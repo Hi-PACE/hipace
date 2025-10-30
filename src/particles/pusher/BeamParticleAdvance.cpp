@@ -102,7 +102,7 @@ AdvanceBeamParticlesSlice (
     const amrex::Real inv_c2 = 1.0_rt/(phys_const.c*phys_const.c);
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
     const amrex::Real min_z = gm[0].ProbLo(2) + (slice-gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
-    bool use_external_fields = beam.m_use_external_fields;
+    const bool use_external_fields = beam.m_use_external_fields;
     auto external_fields = beam.m_external_fields;
 
     // Radiation reaction constant

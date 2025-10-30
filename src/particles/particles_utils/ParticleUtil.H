@@ -31,15 +31,15 @@ namespace ParticleUtil
      * \param[in] rand whether to randomize position in each cell, per dimension
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void get_position_unit_cell (amrex::Real* r, const amrex::IntVect& nppc, int i_part, const amrex::RandomEngine& engine, const amrex::GpuArray<int, 3> rand)
+    void get_position_unit_cell (amrex::Real* r, const amrex::IntVect& nppc, const int i_part, const amrex::RandomEngine& engine, const amrex::GpuArray<int, 3> rand)
     {
-        int nx = nppc[0];
-        int ny = nppc[1];
-        int nz = nppc[2];
+        const int nx = nppc[0];
+        const int ny = nppc[1];
+        const int nz = nppc[2];
 
-        int ix_part = i_part/(ny * nz);
-        int iy_part = (i_part % (ny * nz)) % ny;
-        int iz_part = (i_part % (ny * nz)) / ny;
+        const int ix_part = i_part/(ny * nz);
+        const int iy_part = (i_part % (ny * nz)) % ny;
+        const int iz_part = (i_part % (ny * nz)) / ny;
 
         r[0] = rand[0] ? amrex::Random(engine) : (0.5_rt + ix_part)/nx;
         r[1] = rand[1] ? amrex::Random(engine) : (0.5_rt + iy_part)/ny;
@@ -47,15 +47,15 @@ namespace ParticleUtil
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void get_position_unit_cell (amrex::Real* r, const amrex::IntVect& nppc, int i_part)
+    void get_position_unit_cell (amrex::Real* r, const amrex::IntVect& nppc, const int i_part)
     {
-        int nx = nppc[0];
-        int ny = nppc[1];
-        int nz = nppc[2];
+        const int nx = nppc[0];
+        const int ny = nppc[1];
+        const int nz = nppc[2];
 
-        int ix_part = i_part/(ny * nz);
-        int iy_part = (i_part % (ny * nz)) % ny;
-        int iz_part = (i_part % (ny * nz)) / ny;
+        const int ix_part = i_part/(ny * nz);
+        const int iy_part = (i_part % (ny * nz)) % ny;
+        const int iz_part = (i_part % (ny * nz)) / ny;
 
         r[0] = (0.5_rt + ix_part)/nx;
         r[1] = (0.5_rt + iy_part)/ny;
@@ -64,7 +64,7 @@ namespace ParticleUtil
 
     template<std::size_t n_level>
     AMREX_GPU_HOST_DEVICE
-    void get_position_unit_cell_fine (amrex::Real* r, bool& do_init, int i_part,
+    void get_position_unit_cell_fine (amrex::Real* r, bool& do_init, const int i_part,
         const amrex::Array<amrex::Array<int, std::size_t{2}>, n_level>& nppc,
         const int n_fine_transition_cells,
         const int i_fine_transition_cells)
@@ -72,12 +72,12 @@ namespace ParticleUtil
         for (int lev = 0; lev < int(n_level); ++lev) {
             if (i_fine_transition_cells == lev * (n_fine_transition_cells + 1)) {
                 // no interpolation needed
-                int nx = nppc[lev][0];
-                int ny = nppc[lev][1];
+                const int nx = nppc[lev][0];
+                const int ny = nppc[lev][1];
                 if (i_part < nx * ny) {
                     do_init = true;
-                    int ix_part = i_part % nx;
-                    int iy_part = i_part / nx;
+                    const int ix_part = i_part % nx;
+                    const int iy_part = i_part / nx;
                     r[0] = (0.5_rt + ix_part)/nx;
                     r[1] = (0.5_rt + iy_part)/ny;
                 } else {
@@ -88,17 +88,17 @@ namespace ParticleUtil
                 i_fine_transition_cells > lev * (n_fine_transition_cells + 1) &&
                 i_fine_transition_cells < (lev + 1) * (n_fine_transition_cells + 1)) {
                 // interpolation between lev and lev + 1
-                int nx_fine = nppc[lev+1][0];
-                int ny_fine = nppc[lev+1][1];
+                const int nx_fine = nppc[lev+1][0];
+                const int ny_fine = nppc[lev+1][1];
                 if (i_part < nx_fine * ny_fine) {
                     do_init = true;
-                    int ix_part_fine = i_part % nx_fine;
-                    int iy_part_fine = i_part / nx_fine;
+                    const int ix_part_fine = i_part % nx_fine;
+                    const int iy_part_fine = i_part / nx_fine;
 
-                    int nx_coarse = nppc[lev][0];
-                    int ny_coarse = nppc[lev][1];
-                    int ix_part_coarse = (ix_part_fine * nx_coarse) / nx_fine;
-                    int iy_part_coarse = (iy_part_fine * ny_coarse) / ny_fine;
+                    const int nx_coarse = nppc[lev][0];
+                    const int ny_coarse = nppc[lev][1];
+                    const int ix_part_coarse = (ix_part_fine * nx_coarse) / nx_fine;
+                    const int iy_part_coarse = (iy_part_fine * ny_coarse) / ny_fine;
 
                     amrex::Real s =
                         amrex::Real(i_fine_transition_cells - lev * (n_fine_transition_cells + 1))
@@ -128,9 +128,9 @@ namespace ParticleUtil
                                        const amrex::RealVect u_std,
                                        const amrex::RandomEngine& engine)
     {
-        amrex::Real ux_th = amrex::RandomNormal(0.0, u_std[0], engine);
-        amrex::Real uy_th = amrex::RandomNormal(0.0, u_std[1], engine);
-        amrex::Real uz_th = amrex::RandomNormal(0.0, u_std[2], engine);
+        const amrex::Real ux_th = amrex::RandomNormal(0.0, u_std[0], engine);
+        const amrex::Real uy_th = amrex::RandomNormal(0.0, u_std[1], engine);
+        const amrex::Real uz_th = amrex::RandomNormal(0.0, u_std[2], engine);
 
         u[0] = u_mean[0] + ux_th;
         u[1] = u_mean[1] + uy_th;

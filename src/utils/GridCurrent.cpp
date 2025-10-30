@@ -14,7 +14,7 @@
 void
 GridCurrent::ReadParameters ()
 {
-    amrex::ParmParse pp("grid_current");
+    const amrex::ParmParse pp("grid_current");
 
     if (queryWithParser(pp, "use_grid_current", m_use_grid_current) ) {
         getWithParser(pp, "peak_current_density", m_peak_current_density);

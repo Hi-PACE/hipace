@@ -19,7 +19,7 @@ void BoxSorter::sortParticlesByBox (const amrex::Real * z_array, const index_typ
     m_box_permutations.setArena(
         init_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
 
-    int num_boxes = a_geom.Domain().length(2);
+    const int num_boxes = a_geom.Domain().length(2);
     m_box_counts_cpu.resize(num_boxes+1);
     m_box_offsets_cpu.resize(num_boxes+1);
     m_box_permutations.resize(num_particles);

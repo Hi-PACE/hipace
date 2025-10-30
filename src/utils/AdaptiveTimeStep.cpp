@@ -23,7 +23,7 @@ AdaptiveTimeStep::ReadParameters (const int nbeams)
 {
     m_nbeams = nbeams;
 
-    amrex::ParmParse ppa("hipace");
+    const amrex::ParmParse ppa("hipace");
     std::string str_dt = "";
     queryWithParser(ppa, "dt", str_dt);
     if (str_dt == "adaptive"){
@@ -234,7 +234,7 @@ AdaptiveTimeStep::CalculateFromMinUz (
         const int niter = m_adaptive_predict_step ? numprocs : 1;
         for (int i = 0; i < niter; i++)
         {
-            amrex::Real plasma_charge_density = plasmas.maxChargeDensity(c * new_time);
+            const amrex::Real plasma_charge_density = plasmas.maxChargeDensity(c * new_time);
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE( plasma_charge_density > 0.,
                 "A >0 plasma density must be specified to use an adaptive time step.");
             if (m_adaptive_gather_ez) {
@@ -242,7 +242,7 @@ AdaptiveTimeStep::CalculateFromMinUz (
             }
             // Just make sure min_uz is >0, to avoid nans below.
             min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
-            amrex::Real omega_b = std::sqrt(plasma_charge_density /
+            const amrex::Real omega_b = std::sqrt(plasma_charge_density /
                                             (2. * std::abs(min_uz * mass_charge_ratio) * ep0));
             new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
             new_time += new_dt;
@@ -342,7 +342,7 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
 
     const PhysConst pc = get_phys_const();
 
-    amrex::Real dt_sub = dt / m_adaptive_phase_substeps;
+    const amrex::Real dt_sub = dt / m_adaptive_phase_substeps;
     amrex::Real phase_advance = 0.;
     amrex::Real phase_advance0 = 0.;
 

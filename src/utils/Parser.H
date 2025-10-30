@@ -62,7 +62,7 @@ namespace Parser
             amrex::RealVect val{};
             if(queryWithParser(pp_geom, str, val)) {
                 pp_geom.remove(str);
-                std::vector<double> vect{val[0], val[1], val[2]};
+                const auto vect = std::vector<double>{val[0], val[1], val[2]};
                 pp_geom.addarr(str, vect);
             }
         }
@@ -92,14 +92,14 @@ namespace Parser
      */
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, double& val) {
-        amrex::Parser parser = pp.makeParser(str, {});
+        const amrex::Parser parser = pp.makeParser(str, {});
         val = parser.compileHost<0>()();
     }
 
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, float& val) {
-        amrex::Parser parser = pp.makeParser(str, {});
-        double v = parser.compileHost<0>()();
+        const amrex::Parser parser = pp.makeParser(str, {});
+        const double v = parser.compileHost<0>()();
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             v <= std::numeric_limits<float>::max() &&
             v >= std::numeric_limits<float>::lowest(),
@@ -110,7 +110,7 @@ namespace Parser
 
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, int& val) {
-        amrex::Parser parser = pp.makeParser(str, {});
+        const amrex::Parser parser = pp.makeParser(str, {});
         const double v = std::round(parser.compileHost<0>()());
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             v <= static_cast<double>(std::numeric_limits<int>::max()) &&
@@ -122,7 +122,7 @@ namespace Parser
 
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, amrex::Long& val) {
-        amrex::Parser parser = pp.makeParser(str, {});
+        const amrex::Parser parser = pp.makeParser(str, {});
         const double v = std::round(parser.compileHost<0>()());
         // note that max and lowest are imprecise when casted to double
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
@@ -135,7 +135,7 @@ namespace Parser
 
     inline void
     fillWithParser (const amrex::ParmParse& pp, std::string const& str, bool& val) {
-        amrex::Parser parser = pp.makeParser(str, {});
+        const amrex::Parser parser = pp.makeParser(str, {});
         val = (parser.compileHost<0>()() != 0.);
     }
 
@@ -173,7 +173,7 @@ namespace Parser
             }
             const std::string parse_string = loc_str.substr(pos_start_trim, pos_count_trim);
 
-            amrex::ParmParse pp_my_constants("my_constants");
+            const amrex::ParmParse pp_my_constants("my_constants");
             if (pos_count_trim == 0) {
                 loc_str.replace(pos, pos_end-pos+1, "");
             } else if (amrex::ParmParse{}.contains(parse_string.c_str()) ||

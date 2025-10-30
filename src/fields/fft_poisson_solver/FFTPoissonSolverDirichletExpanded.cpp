@@ -165,15 +165,15 @@ FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
-        amrex::IntVect lo = fft_box.smallEnd();
+        const Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        const amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
             to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
+                    const amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
                     /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
+                    const amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
                         eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
@@ -198,11 +198,11 @@ FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba
     m_expanded_position_array.setVal<amrex::RunOn::Device>(0._rt);
 
     // Allocate and initialize the FFT plan
-    std::size_t wrok_size = m_fft.Initialize(FFTType::R2C_2D, expanded_position_box.length(0),
+    const std::size_t work_size = m_fft.Initialize(FFTType::R2C_2D, expanded_position_box.length(0),
                                              expanded_position_box.length(1));
 
     // Allocate work area for the FFT
-    m_fft_work_area.resize(wrok_size);
+    m_fft_work_area.resize(work_size);
 
     m_fft.SetBuffers(m_expanded_position_array.dataPtr(), m_expanded_fourier_array.dataPtr(),
                      m_fft_work_area.dataPtr());

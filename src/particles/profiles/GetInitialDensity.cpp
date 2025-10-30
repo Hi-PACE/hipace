@@ -15,7 +15,7 @@
 
 GetInitialDensity::GetInitialDensity (const std::string& name, amrex::Parser& parser)
 {
-    amrex::ParmParse pp(name);
+    const amrex::ParmParse pp(name);
     std::string profile;
     getWithParser(pp, "profile", profile);
 

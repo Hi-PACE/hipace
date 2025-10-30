@@ -27,7 +27,7 @@ Laser::Laser (std::string name)
 void
 Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
 {
-    amrex::ParmParse pp(m_name);
+    const amrex::ParmParse pp(m_name);
     queryWithParser(pp, "init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") {
         queryWithParser(pp, "input_file", m_input_file_path);
@@ -45,8 +45,8 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
         queryWithParser(pp, "CEP", m_CEP);
         queryWithParser(pp, "propagation_angle_yz", m_propagation_angle_yz);
         queryWithParser(pp, "STC_theta_xy", m_STC_theta_xy);
-        int length_is_specified = queryWithParser(pp, "L0", m_L0);
-        int duration_is_specified = queryWithParser(pp, "tau", m_tau);
+        const int length_is_specified = queryWithParser(pp, "L0", m_L0);
+        const int duration_is_specified = queryWithParser(pp, "tau", m_tau);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( length_is_specified + duration_is_specified == 1,
         "Please specify exclusively either the pulse length L0 or the duration tau of Gaussian lasers");
         if (duration_is_specified) m_L0 = m_tau * get_phys_const().c;
@@ -161,7 +161,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
     const std::shared_ptr<input_type> data = laser_comp.loadChunk<input_type>();
     auto extent = laser_comp.getExtent();
-    double unitSI = laser_comp.unitSI();
+    const double unitSI = laser_comp.unitSI();
 
     // Extract grid offset and grid spacing from laser file
     std::vector<double> offset = laser.gridGlobalOffset();
@@ -169,13 +169,13 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     std::vector<double> spacing = laser.gridSpacing<double>();
 
     //lasy: tyx in C order, tr in C order
-    amrex::Dim3 arr_begin = {0, 0, 0};
-    amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
+    const amrex::Dim3 arr_begin = {0, 0, 0};
+    const amrex::Dim3 arr_end = {static_cast<int>(extent[2]), static_cast<int>(extent[1]),
                             static_cast<int>(extent[0])};
-    amrex::Array4<input_type> input_file_arr(data.get(), arr_begin, arr_end, 1);
+    const auto input_file_arr = amrex::Array4<input_type>{data.get(), arr_begin, arr_end, 1};
 
     //hipace: xyt in Fortran order
-    amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
+    const amrex::Array4<amrex::Real> laser_arr = m_F_input_file.array();
 
     series.flush();
 
@@ -193,8 +193,8 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
     if (m_file_geometry == "xyt") {
         // Calculate the min and max of the grid from laser file
-        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
-        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
+        const amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
+        const amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
 
 
@@ -242,9 +242,9 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
         } // End of 3 loops (1 per dimension) over laser array from simulation
     } else if (m_file_geometry == "xyz") {
         // Calculate the min and max of the grid from laser file
-        amrex::Real zmin_laser = offset[0] + position[0]*spacing[0];
-        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
-        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
+        const amrex::Real zmin_laser = offset[0] + position[0]*spacing[0];
+        const amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
+        const amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
 
         for (int k = kmin; k <= domain.bigEnd(2); ++k) {
             for (int j = jmin; j <= domain.bigEnd(1); ++j) {
@@ -293,7 +293,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
         // extent = {nmodes, nt, nr}
 
         // Calculate the min and max of the grid from laser file
-        amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
+        const amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
 
         for (int k = kmin; k <= domain.bigEnd(2); ++k) {
