@@ -1,5 +1,5 @@
 max_step = 300
-amr.n_cell = 512 512 512
+amr.n_cell = 1024 1024 1024
 
 amr.max_level = 0
 
