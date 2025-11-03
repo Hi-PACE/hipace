@@ -27,7 +27,7 @@ Then you can use the `openPMD-viewer <https://github.com/openPMD/openPMD-viewer>
    import numpy as np
    import matplotlib.pyplot as plt
    from openpmd_viewer import OpenPMDTimeSeries
-   # from hipace tools
+   # from tools/
    import read_insitu_diagnostics as diag
    # Read the simulation data
    ts = OpenPMDTimeSeries('./diags/hdf5/')
