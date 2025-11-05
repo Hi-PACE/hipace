@@ -21,25 +21,18 @@ concurrency:
 
 jobs:
   build_nvcc:
-    name: local V100 NVCC 12.6 DP
+    name: local V100 NVCC 12.3 DP
     runs-on: desy-gpu-runner
     if: github.repository_owner == 'Hi-PACE'
     env:
       CXXFLAGS: "-Werror"
     container:
-      image: nvcr.io/nvidia/cuda:12.6.3-devel-ubuntu22.04
+      image: nvcr.io/nvidia/cuda:12.3.2-devel-ubuntu22.04
     steps:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
-        # adduser --disabled-password --gecos "" ci_runner
-        # adduser ci_runner sudo
-
-        pwd
-
-        ls -la
-
         # Print OS version
         cat /etc/*-release
         # Print CPU information
@@ -54,20 +47,13 @@ jobs:
           libhdf5-openmpi-dev \
           python3.10-venv \
           python3-pip
-        # sudo -u ci_runner \
         python3 -m pip install --upgrade pip --user
-        # sudo -u ci_runner \
         python3 -m pip install --upgrade \
           pipx matplotlib numpy scipy openpmd-viewer openpmd-api --user
-        # sudo -u ci_runner \
         python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
-        # sudo -u ci_runner \
         python3 -m pipx install cmake
     - name: Compile
       run: |
-        # cp -a ../hipace /home/ci_runner/
-        # chown -R ci_runner /home/ci_runner/hipace
-        # cd /home/ci_runner/hipace
         export PATH="$HOME/.local/bin:$PATH"
         cmake -S . -B build     \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
@@ -80,8 +66,6 @@ jobs:
     - name: Run Tests
       run: |
         export PATH="$HOME/.local/bin:$PATH"
-        # cd /home/ci_runner/hipace
-        # sudo -u ci_runner \
         export OMPI_ALLOW_RUN_AS_ROOT=1
         export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
         ctest --test-dir build --output-on-failure
