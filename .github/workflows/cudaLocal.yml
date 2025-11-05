@@ -50,7 +50,7 @@ jobs:
         python3 -m pip install --upgrade pipx --user
         python3 -m pipx install cmake
         python3 -m pipx ensurepath
-        source ~/.bashrc
+        export PATH="$HOME/.local/bin:$PATH"
         which cmake || echo "cmake not in PATH!"
         cmake --version
 
