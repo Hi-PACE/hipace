@@ -75,7 +75,7 @@ jobs:
         /home/ci_runner/.local/bin/cmake --build build -j 30
     - name: Run Tests
       run: |
-        cp . /home/ci_runner/testing
-        cd /home/ci_runner/testing
+        cp -a ../hipace /home/ci_runner/
+        cd /home/ci_runner/hipace
         sudo -u ci_runner \
         /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure
