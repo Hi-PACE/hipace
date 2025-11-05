@@ -75,6 +75,8 @@ jobs:
         /home/ci_runner/.local/bin/cmake --build build -j 30
     - name: Run Tests
       run: |
+        export HIPACE_PATH=$( pwd )
         mkdir /home/ci_runner/testing
+        cd /home/ci_runner/testing
         sudo -u ci_runner \
-        /home/ci_runner/.local/bin/ctest --test-dir /home/ci_runner/testing --output-on-failure
+        /home/ci_runner/.local/bin/ctest --test-dir $HIPACE_PATH/buld --output-on-failure
