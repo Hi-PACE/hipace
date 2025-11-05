@@ -92,22 +92,26 @@ PlasmaParticleContainer::ReadParameters ()
     }
     queryWithParser(pp, "ionization_product", m_product_name);
 
-    std::string density_func_str = "0.";
     DeprecatedInput(m_name, "density", "density(x,y,z)");
     DeprecatedInput(m_name, "parabolic_curvature", "density(x,y,z)",
                     "The same functionality can be obtained with the parser using "
                     "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
+    std::string density_func_str = "0.";
     bool density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
-    m_density_func = makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"});
+    if (density_func_specified) {
+        m_density_func.define_parser(
+            makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"}));
+    }
 
-    queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
+    std::string density_path = "";
+    bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", density_path, pp_alt);
+    if (density_file_specified) {
+        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data);
+    }
 
     std::string density_table_file_name{};
     m_use_density_table = queryWithParser(pp, "density_table_file", density_table_file_name);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!(density_func_specified && m_use_density_table),
-                                     "Can only use one plasma density from either 'density(x,y,z)'"
-                                     " or 'desity_table_file', not both");
     if (m_use_density_table) {
         std::ifstream file(density_table_file_name);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(file.is_open(), "Unable to open 'density_table_file'");
@@ -123,7 +127,12 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_density_table.empty(),
                                          "Unable to get any data out of 'density_table_file'");
     }
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        (int(density_func_specified) + int(density_file_specified) + int(m_use_density_table)) == 1,
+        "Plasma: Must specify exactly one of either 'density(x,y,z)', "
+        "'read_density_from_path' or 'density_table_file'");
 
+    queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
     queryWithParserAlt(pp, "radius", m_radius, pp_alt);
     queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
     queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
@@ -303,7 +312,8 @@ PlasmaParticleContainer::UpdateDensityFunction (const amrex::Real pos_z)
     if (!m_use_density_table) return;
     auto iter = m_density_table.lower_bound(pos_z);
     if (iter == m_density_table.end()) --iter;
-    m_density_func = makeFunctionWithParser<3>(iter->second, m_parser, {"x", "y", "z"});
+    m_density_func.define_parser(
+        makeFunctionWithParser<3>(iter->second, m_parser, {"x", "y", "z"}));
 }
 
 void

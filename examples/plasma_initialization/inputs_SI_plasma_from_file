@@ -1,0 +1,35 @@
+amr.n_cell = 31 31 31
+
+my_constants.ne = 1e24
+my_constants.channel_radius = 40e-6
+my_constants.ramp_length = 60e-6
+
+amr.max_level = 0
+max_step = 1
+hipace.dt = 500e-6 / clight / 20
+hipace.verbose = 3
+hipace.depos_order_xy = 2
+
+boundary.field = Dirichlet
+boundary.particle = Absorbing
+geometry.prob_lo = -50e-6  -50e-6  -50e-6
+geometry.prob_hi =  50e-6   50e-6   50e-6
+
+plasmas.names = elec_parser elec_file_xyz elec_file_rz
+plasmas.neutralize_background = true
+plasmas.ppc = 1 1
+
+elec_parser.density(x,y,z) = "ne * (1 + (x^2 + y^2) / channel_radius^2)
+    * if(z < ramp_length, z / ramp_length, 1)"
+elec_file_xyz.read_density_from_path = "example-density-xyz.h5"
+elec_file_rz.read_density_from_path = "example-density-rz.h5"
+
+elec_parser.element = electron
+elec_file_xyz.element = electron
+elec_file_rz.element = electron
+
+diagnostic.output_period = 1
+diagnostic.diag_type = xyz
+diagnostic.field_data = rho_elec_parser rho_elec_file_xyz rho_elec_file_rz
+diagnostic.patch_lo = -50e-6 -50e-6  0
+diagnostic.patch_hi =  50e-6  50e-6  0

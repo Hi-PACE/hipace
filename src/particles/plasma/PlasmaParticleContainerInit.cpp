@@ -285,12 +285,14 @@ InitParticles (const amrex::RealVect& a_u_std,
                 amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
                 amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
+                const amrex::Real density = density_func(x, y, c_t);
+
                 const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > radius_sq ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                    density_func(x, y, c_t) <= min_density) return;
+                    density <= min_density) return;
 
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
@@ -303,14 +305,14 @@ InitParticles (const amrex::RealVect& a_u_std,
                 if (use_fine_patch) {
                     const int fine_loc = arr_fine(i, j, comp_a);
                     if (fine_loc == 0) {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[0];
+                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
                     } else if (fine_loc <= fine_transition_cells + 1) {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[1];
+                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[1];
                     } else {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[2];
+                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[2];
                     }
                 } else {
-                    ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[0];
+                    ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
                 }
 
                 ptd.rdata(PlasmaIdx::ux)[pidx] = u[0] * c_light;

@@ -49,4 +49,7 @@ ion.ppc = 1 1
 ion.u_mean = 0.0 0.0 0.
 ion.element = H
 
+fields.insitu_period = 1
+beams.insitu_period = 1
+
 diagnostic.diag_type = xz
