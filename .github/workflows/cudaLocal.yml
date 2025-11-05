@@ -65,6 +65,8 @@ jobs:
         python3 -m pipx install cmake
     - name: Compile
       run: |
+        cp -a ../hipace /home/ci_runner/
+        cd /home/ci_runner/hipace
         /home/ci_runner/.local/bin/cmake -S . -B build     \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
           -DAMReX_CUDA_ARCH=7.0                            \
@@ -75,7 +77,6 @@ jobs:
         /home/ci_runner/.local/bin/cmake --build build -j 30
     - name: Run Tests
       run: |
-        cp -a ../hipace /home/ci_runner/
         cd /home/ci_runner/hipace
         sudo -u ci_runner \
         /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure
