@@ -51,7 +51,7 @@ jobs:
           openmpi-bin \
           libhdf5-openmpi-dev \
           python3.10-venv \
-          python3-pip \
+          python3-pip
         python3 -m pip install --upgrade pip --user
         python3 -m pip install --upgrade pipx --user
         python3 -m pipx install cmake
