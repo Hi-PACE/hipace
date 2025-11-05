@@ -32,6 +32,11 @@ jobs:
 
     - name: Build & Install
       run: |
+        module ()
+        {
+        eval `modulecmd bash $*`
+        }
+
         module load maxwell gcc/12 cuda/12.6 openmpi/4 hdf5/1.10.6
         export AMREX_CUDA_ARCH=7.0
         which nvcc || echo "nvcc not in PATH!"
