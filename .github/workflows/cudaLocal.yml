@@ -80,5 +80,6 @@ jobs:
     - name: Run Tests
       run: |
         su - ci_runner
+        whoami
         export PATH="$HOME/.local/bin:$PATH"
         ctest --test-dir build --output-on-failure
