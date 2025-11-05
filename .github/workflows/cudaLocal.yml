@@ -23,7 +23,7 @@ jobs:
   build_nvcc:
     name: local V100 NVCC 12.6 DP
     runs-on: desy-gpu-runner
-    if: github.repository_owner == 'Hi-PACE'
+    if: github.repository_owner == 'Hi-PACEE'
     env:
       CXXFLAGS: "-Werror"
     container:
@@ -34,6 +34,11 @@ jobs:
     - name: Install Dependencies
       run: |
         adduser --disabled-password --gecos "" ci_runner
+        adduser ci_runner sudo
+
+        pwd
+
+        ls -la
 
         # Print OS version
         cat /etc/*-release
