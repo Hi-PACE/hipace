@@ -35,9 +35,6 @@ jobs:
       run: |
         adduser --disabled-password --gecos "" ci_runner
 
-        # Print users
-        cat /etc/passwd
-
         # Print OS version
         cat /etc/*-release
         # Print CPU information
@@ -63,15 +60,11 @@ jobs:
         python3 -m pipx install cmake
         sudo -u ci_runner \
         python3 -m pipx ensurepath
+        sudo -u ci_runner \
         export PATH="$HOME/.local/bin:$PATH"
-
-        which nvcc || echo "nvcc not in PATH!"
-        nvcc --version
-
-        which cmake || echo "cmake not in PATH!"
-        cmake --version
     - name: Compile
       run: |
+        sudo -u ci_runner \
         export PATH="$HOME/.local/bin:$PATH"
         sudo -u ci_runner \
         cmake -S . -B build                                \
@@ -84,6 +77,7 @@ jobs:
         cmake --build build -j 30
     - name: Run Tests
       run: |
+        sudo -u ci_runner \
         export PATH="$HOME/.local/bin:$PATH"
         sudo -u ci_runner \
         ctest --test-dir build --output-on-failure
