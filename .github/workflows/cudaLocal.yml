@@ -27,6 +27,8 @@ jobs:
     if: github.event.pull_request.draft == false
     env:
       CXXFLAGS: "-Werror"
+    container:
+      image: nvidia/cuda
     steps:
     - uses: actions/checkout@v4
 
