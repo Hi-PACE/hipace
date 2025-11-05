@@ -27,8 +27,8 @@ jobs:
     if: github.event.pull_request.draft == false
     env:
       CXXFLAGS: "-Werror"
-    # container:
-    #   image: nvcr.io/nvidia/cuda:12.6.3-devel-ubuntu24.04
+    container:
+      image: nvcr.io/nvidia/cuda:12.6.3-devel-ubuntu22.04
     steps:
     - uses: actions/checkout@v4
 
@@ -36,6 +36,7 @@ jobs:
       run: |
         cat /etc/*-release
         which nvcc || echo "nvcc not in PATH!"
+        which cmake || echo "cmake not in PATH!"
 
         cmake -S . -B build                                \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
