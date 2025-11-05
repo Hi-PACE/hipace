@@ -44,8 +44,8 @@ jobs:
         # apt-get update -y
         # apt-get install cmake -y
 
-        apt-get update -y
-        apt-get install python3.10-venv python3-pip -y
+        apt-get update -y --no-install-recommends
+        apt-get install -y --no-install-recommends git python3.10-venv python3-pip
         python3 -m pip install --upgrade pip --user
         python3 -m pip install --upgrade pipx --user
         python3 -m pipx install cmake
