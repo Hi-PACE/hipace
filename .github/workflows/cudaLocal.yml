@@ -60,12 +60,10 @@ jobs:
         python3 -m pipx install cmake
         sudo -u ci_runner \
         python3 -m pipx ensurepath
-        sudo -u ci_runner \
-        export PATH="$HOME/.local/bin:$PATH"
+        export PATH="/home/ci_runner/.local/bin:$PATH"
     - name: Compile
       run: |
-        sudo -u ci_runner \
-        export PATH="$HOME/.local/bin:$PATH"
+        export PATH="/home/ci_runner/.local/bin:$PATH"
         sudo -u ci_runner \
         cmake -S . -B build                                \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
@@ -78,7 +76,6 @@ jobs:
         cmake --build build -j 30
     - name: Run Tests
       run: |
-        sudo -u ci_runner \
-        export PATH="$HOME/.local/bin:$PATH"
+        export PATH="/home/ci_runner/.local/bin:$PATH"
         sudo -u ci_runner \
         ctest --test-dir build --output-on-failure
