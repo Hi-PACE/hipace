@@ -23,7 +23,7 @@ jobs:
   build_nvcc:
     name: local V100 NVCC 12.6 DP
     runs-on: desy-gpu-runner
-    if: github.repository_owner == 'Hi-PACEE'
+    if: github.repository_owner == 'Hi-PACE'
     env:
       CXXFLAGS: "-Werror"
     container:
