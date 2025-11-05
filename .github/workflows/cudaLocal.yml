@@ -33,8 +33,8 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        adduser --disabled-password --gecos "" ci_runner
-        adduser ci_runner sudo
+        # adduser --disabled-password --gecos "" ci_runner
+        # adduser ci_runner sudo
 
         pwd
 
@@ -54,30 +54,34 @@ jobs:
           libhdf5-openmpi-dev \
           python3.10-venv \
           python3-pip
-        sudo -u ci_runner \
+        # sudo -u ci_runner \
         python3 -m pip install --upgrade pip --user
-        sudo -u ci_runner \
+        # sudo -u ci_runner \
         python3 -m pip install --upgrade \
           pipx matplotlib numpy scipy openpmd-viewer openpmd-api --user
-        sudo -u ci_runner \
+        # sudo -u ci_runner \
         python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
-        sudo -u ci_runner \
+        # sudo -u ci_runner \
         python3 -m pipx install cmake
     - name: Compile
       run: |
-        cp -a ../hipace /home/ci_runner/
-        chown -R ci_runner /home/ci_runner/hipace
-        cd /home/ci_runner/hipace
-        /home/ci_runner/.local/bin/cmake -S . -B build     \
+        # cp -a ../hipace /home/ci_runner/
+        # chown -R ci_runner /home/ci_runner/hipace
+        # cd /home/ci_runner/hipace
+        export PATH="$HOME/.local/bin:$PATH"
+        cmake -S . -B build     \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
           -DAMReX_CUDA_ARCH=7.0                            \
           -DHiPACE_COMPUTE=CUDA                            \
           -DHiPACE_PRECISION=DOUBLE                        \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        /home/ci_runner/.local/bin/cmake --build build -j 30
+        cmake --build build -j 30
     - name: Run Tests
       run: |
-        cd /home/ci_runner/hipace
-        sudo -u ci_runner \
-        /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure --output-log ../LastTest.log
+        export PATH="$HOME/.local/bin:$PATH"
+        # cd /home/ci_runner/hipace
+        # sudo -u ci_runner \
+        export OMPI_ALLOW_RUN_AS_ROOT=1
+        export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+        ctest --test-dir build --output-on-failure
