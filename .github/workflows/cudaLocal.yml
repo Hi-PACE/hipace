@@ -45,7 +45,7 @@ jobs:
         # apt-get install cmake -y
 
         apt-get update -y
-        apt-get install python3.12-venv python3-pip -y
+        apt-get install python3.10-venv python3-pip -y
         python3 -m pip install --upgrade pip --user
         python3 -m pip install --upgrade pipx --user
         python3 -m pipx install cmake
