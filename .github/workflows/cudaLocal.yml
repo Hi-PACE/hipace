@@ -33,6 +33,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        nvidia-smi
         # Print OS version
         cat /etc/*-release
         # Print CPU information
