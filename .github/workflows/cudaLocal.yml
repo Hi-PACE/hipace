@@ -49,6 +49,7 @@ jobs:
         python3 -m pip install --upgrade pip --user
         python3 -m pip install --upgrade pipx --user
         python3 -m pipx install cmake
+        python3 -m pipx ensurepath
         which cmake || echo "cmake not in PATH!"
         cmake --version
 
