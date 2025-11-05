@@ -75,5 +75,6 @@ jobs:
         /home/ci_runner/.local/bin/cmake --build build -j 30
     - name: Run Tests
       run: |
+        chmod 777 ./*
         sudo -u ci_runner \
         /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure
