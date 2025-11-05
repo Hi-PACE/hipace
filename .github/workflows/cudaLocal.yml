@@ -44,7 +44,7 @@ jobs:
           libopenmpi-dev \
           openmpi-bin \
           libhdf5-openmpi-dev \
-          python3.10-venv \
+          python3-venv \
           python3-pip
         python3 -m pip install --upgrade pip --user
         python3 -m pip install --upgrade \
