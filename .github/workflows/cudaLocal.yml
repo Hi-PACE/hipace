@@ -38,8 +38,8 @@ jobs:
         which nvcc || echo "nvcc not in PATH!"
 
         apt-get update -y
-        apt-get upgrade -y
-        apt-get install -y cmake
+        # apt-get upgrade -y
+        apt-get install -y cmake-3.24.0
 
         which cmake || echo "cmake not in PATH!"
 
