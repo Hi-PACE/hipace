@@ -34,7 +34,6 @@ jobs:
     - name: Install Dependencies
       run: |
         adduser --disabled-password --gecos "" ci_runner
-        su - ci_runner
 
         # Print users
         cat /etc/passwd
@@ -46,17 +45,23 @@ jobs:
 
         apt-get -qqq update -y --no-install-recommends
         apt-get install -y --no-install-recommends \
+          sudo \
           git \
           libopenmpi-dev \
           openmpi-bin \
           libhdf5-openmpi-dev \
           python3.10-venv \
           python3-pip
+        sudo -u ci_runner \
         python3 -m pip install --upgrade pip --user
-        python3 -m pip install --upgrade pipx --user
-        python3 -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api --user
+        sudo -u ci_runner \
+        python3 -m pip install --upgrade \
+          pipx matplotlib numpy scipy openpmd-viewer openpmd-api --user
+        sudo -u ci_runner \
         python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
+        sudo -u ci_runner \
         python3 -m pipx install cmake
+        sudo -u ci_runner \
         python3 -m pipx ensurepath
         export PATH="$HOME/.local/bin:$PATH"
 
@@ -67,8 +72,8 @@ jobs:
         cmake --version
     - name: Compile
       run: |
-        su - ci_runner
         export PATH="$HOME/.local/bin:$PATH"
+        sudo -u ci_runner \
         cmake -S . -B build                                \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
           -DAMReX_CUDA_ARCH=7.0                            \
@@ -79,7 +84,6 @@ jobs:
         cmake --build build -j 30
     - name: Run Tests
       run: |
-        su - ci_runner
-        whoami
         export PATH="$HOME/.local/bin:$PATH"
+        sudo -u ci_runner \
         ctest --test-dir build --output-on-failure
