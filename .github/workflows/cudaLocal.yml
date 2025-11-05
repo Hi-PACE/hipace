@@ -19,12 +19,11 @@ concurrency:
   group: ${{ github.ref }}-${{ github.head_ref }}-cudaLocal
   cancel-in-progress: true
 
-
 jobs:
   build_nvcc:
     name: local V100 NVCC 12.6 DP
     runs-on: desy-gpu-runner
-    if: github.event.pull_request.draft == false
+    if: github.repository_owner == 'Hi-PACE'
     env:
       CXXFLAGS: "-Werror"
     container:
@@ -34,6 +33,9 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        # Print users
+        cat /etc/passwd
+
         # Print OS version
         cat /etc/*-release
         # Print CPU information
@@ -70,7 +72,7 @@ jobs:
           -DHiPACE_PRECISION=DOUBLE                        \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        cmake --build build -j 8
+        cmake --build build -j 30
     - name: Run Tests
       run: |
         export PATH="$HOME/.local/bin:$PATH"
