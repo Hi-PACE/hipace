@@ -58,13 +58,8 @@ jobs:
         python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
         sudo -u ci_runner \
         python3 -m pipx install cmake
-        sudo -u ci_runner \
-        python3 -m pipx ensurepath
-        export PATH="/home/ci_runner/.local/bin:$PATH"
     - name: Compile
       run: |
-        export PATH="/home/ci_runner/.local/bin:$PATH"
-        sudo -u ci_runner \
         /home/ci_runner/.local/bin/cmake -S . -B build     \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
           -DAMReX_CUDA_ARCH=7.0                            \
@@ -72,10 +67,8 @@ jobs:
           -DHiPACE_PRECISION=DOUBLE                        \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        sudo -u ci_runner \
         /home/ci_runner/.local/bin/cmake --build build -j 30
     - name: Run Tests
       run: |
-        export PATH="/home/ci_runner/.local/bin:$PATH"
         sudo -u ci_runner \
         /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure
