@@ -65,7 +65,7 @@ jobs:
       run: |
         export PATH="/home/ci_runner/.local/bin:$PATH"
         sudo -u ci_runner \
-        cmake -S . -B build                                \
+        /home/ci_runner/.local/bin/cmake -S . -B build     \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
           -DAMReX_CUDA_ARCH=7.0                            \
           -DHiPACE_COMPUTE=CUDA                            \
@@ -73,9 +73,9 @@ jobs:
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
         sudo -u ci_runner \
-        cmake --build build -j 30
+        /home/ci_runner/.local/bin/cmake --build build -j 30
     - name: Run Tests
       run: |
         export PATH="/home/ci_runner/.local/bin:$PATH"
         sudo -u ci_runner \
-        ctest --test-dir build --output-on-failure
+        /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure
