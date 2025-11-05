@@ -37,11 +37,14 @@ jobs:
         cat /etc/*-release
         which nvcc || echo "nvcc not in PATH!"
 
+        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
+          gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+        echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' \
+          | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
         apt-get update -y
-        # apt-get upgrade -y
-        apt-get install -y cmake-3.24.0
-
+        apt-get install cmake -y
         which cmake || echo "cmake not in PATH!"
+        cmake --version
 
         cmake -S . -B build                                \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
