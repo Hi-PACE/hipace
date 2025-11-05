@@ -21,19 +21,18 @@ concurrency:
 
 jobs:
   build_nvcc:
-    name: local V100 NVCC 12.3 DP
+    name: local V100 NVCC 11.8 DP
     runs-on: desy-gpu-runner
     if: github.repository_owner == 'Hi-PACE'
     env:
       CXXFLAGS: "-Werror"
     container:
-      image: nvcr.io/nvidia/cuda:12.3.2-devel-ubuntu22.04
+      image: nvcr.io/nvidia/cuda:11.8.0-devel-ubuntu22.04
     steps:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
       run: |
-        nvidia-smi
         # Print OS version
         cat /etc/*-release
         # Print CPU information
