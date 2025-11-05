@@ -24,7 +24,6 @@ jobs:
   build_nvcc:
     name: local V100 NVCC 11.1 DP
     runs-on: desy-gpu-runner
-    container: node:18
     if: github.event.pull_request.draft == false
     env:
       CXXFLAGS: "-Werror"
