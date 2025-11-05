@@ -79,4 +79,4 @@ jobs:
       run: |
         cd /home/ci_runner/hipace
         sudo -u ci_runner \
-        /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure
+        /home/ci_runner/.local/bin/ctest --test-dir build --output-on-failure --output-log ../LastTest.log
