@@ -68,7 +68,6 @@ jobs:
         cp -a ../hipace /home/ci_runner/
         chown -R ci_runner /home/ci_runner/hipace
         cd /home/ci_runner/hipace
-        sudo -u ci_runner \
         /home/ci_runner/.local/bin/cmake -S . -B build     \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
           -DAMReX_CUDA_ARCH=7.0                            \
@@ -76,7 +75,6 @@ jobs:
           -DHiPACE_PRECISION=DOUBLE                        \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        sudo -u ci_runner \
         /home/ci_runner/.local/bin/cmake --build build -j 30
     - name: Run Tests
       run: |
