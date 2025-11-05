@@ -28,7 +28,7 @@ jobs:
     env:
       CXXFLAGS: "-Werror"
     container:
-      image: nvidia/cuda
+      image: nvcr.io/nvidia/cuda:12.6.3-devel-ubuntu24.04
     steps:
     - uses: actions/checkout@v4
 
