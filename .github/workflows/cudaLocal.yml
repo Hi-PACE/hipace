@@ -33,7 +33,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        adduser ci_runner
+        adduser --disabled-password --gecos "" ci_runner
         su - ci_runner
 
         # Print users
@@ -67,6 +67,7 @@ jobs:
         cmake --version
     - name: Compile
       run: |
+        su - ci_runner
         export PATH="$HOME/.local/bin:$PATH"
         cmake -S . -B build                                \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
@@ -78,5 +79,6 @@ jobs:
         cmake --build build -j 30
     - name: Run Tests
       run: |
+        su - ci_runner
         export PATH="$HOME/.local/bin:$PATH"
         ctest --test-dir build --output-on-failure
