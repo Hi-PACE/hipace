@@ -37,8 +37,8 @@ jobs:
         cat /etc/*-release
         which nvcc || echo "nvcc not in PATH!"
 
-        sudo apt update
-        sudo apt install cmake
+        apt-get update
+        apt-get install cmake
 
         which cmake || echo "cmake not in PATH!"
 
