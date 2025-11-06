@@ -33,6 +33,9 @@ jobs:
 
     - name: Install Dependencies
       run: |
+        echo "am I root?"
+        whoami
+
         # Print OS version
         cat /etc/*-release
         # Print CPU information
