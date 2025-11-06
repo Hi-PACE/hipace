@@ -21,13 +21,13 @@ concurrency:
 
 jobs:
   build_nvcc:
-    name: local V100 NVCC 11.4 DP
+    name: local V100 NVCC 12.6 DP
     runs-on: desy-gpu-runner
     if: github.repository_owner == 'Hi-PACE'
     env:
       CXXFLAGS: "-Werror"
     container:
-      image: nvcr.io/nvidia/cuda:11.4.3-devel-ubuntu20.04
+      image: nvcr.io/nvidia/cuda:12.6.3-devel-ubuntu22.04
     steps:
     - uses: actions/checkout@v4
 
