@@ -28,6 +28,7 @@ jobs:
       CXXFLAGS: "-Werror"
     container:
       image: nvcr.io/nvidia/cuda:12.6.3-devel-ubuntu22.04
+      gpus: all
     steps:
     - uses: actions/checkout@v4
 
@@ -36,8 +37,8 @@ jobs:
         # Print user name
         echo "I Am G$(whoami)"
 
-        echo "Check nvidia-smi"
-        nvidia-smi
+        # echo "Check nvidia-smi"
+        # nvidia-smi
 
         # Print OS version
         cat /etc/*-release
