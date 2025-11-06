@@ -35,6 +35,8 @@ jobs:
       run: |
         # Print user name
         echo "I Am G$(whoami)"
+        whoami
+        id
 
         # echo "Check nvidia-smi"
         # nvidia-smi
