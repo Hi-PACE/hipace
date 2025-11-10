@@ -12,6 +12,7 @@
 #include "fields/Fields.H"
 #include "utils/Parser.H"
 #include "utils/GPUUtil.H"
+#include "particles/profiles/GetInitialDensity.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
@@ -160,7 +161,9 @@ public:
     // init:
 
     amrex::Parser m_parser; /**< owns data for m_density_func */
-    amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
+    std::shared_ptr<float> m_f_density_data; /**< owns data for m_density_func */
+    std::shared_ptr<double> m_d_density_data; /**< owns data for m_density_func */
+    PlasmaDensityAccessor m_density_func; /**< Density function for the plasma */
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */

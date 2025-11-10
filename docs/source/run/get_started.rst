@@ -27,12 +27,22 @@ Then you can use the `openPMD-viewer <https://github.com/openPMD/openPMD-viewer>
    import numpy as np
    import matplotlib.pyplot as plt
    from openpmd_viewer import OpenPMDTimeSeries
+   # from tools/
+   import read_insitu_diagnostics as diag
    # Read the simulation data
    ts = OpenPMDTimeSeries('./diags/hdf5/')
    # Get beam and field data at iteration 20
    iteration = 20
    x, z = ts.get_particle(species='beam', iteration=iteration, var_list=['x', 'z'])
    F, m = ts.get_field(field='Ez', iteration=iteration)
+   # Read in-situ diagnostics
+   all_data = diag.read_file('./diags/insitu/reduced_beam.*.txt')
+   print('Available beam diagnostics:', all_data.dtype.names)
+   # Example plot
+   plt.figure(figsize=(7,7), dpi=150)
+   plt.plot(all_data["time"], all_data["average"]["[x]"])
+   plt.savefig('./avg_x.png')
+
 
 Also please have a look at the production runs for beam-driven and laser-driven wakefield:
 
