@@ -59,8 +59,6 @@ public:
     virtual amrex::Real BoundaryFactor() override final { return 1.; }
 
 private:
-    /** FArrayBox eigenvalues, to solve Poisson equation with Dirichlet BC. */
-    amrex::FArrayBox m_eigenvalue_matrix;
     /** Real array for the FFTs */
     amrex::Gpu::DeviceVector<amrex::Real> m_position_array;
     /** Complex array for the FFTs */
@@ -79,8 +77,10 @@ private:
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_omega_x;
     /** y prefactor for ToSine */
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_omega_y;
-
-    amrex::Geometry m_gm;
+    /** x prefactor for ToSine */
+    amrex::Gpu::DeviceVector<amrex::Real> m_eig_x;
+    /** y prefactor for ToSine */
+    amrex::Gpu::DeviceVector<amrex::Real> m_eig_y;
 };
 
 #endif

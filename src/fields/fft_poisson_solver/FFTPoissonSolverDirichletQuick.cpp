@@ -55,26 +55,41 @@ amrex::Real dst3_out (T&& in, int i, int j, int n) {
     return i%2 == 0 ? in(i/2, j) : -in(n-1-i/2, j);
 }
 
-template<class T, class U> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void dst2_out_mult_dst3_in (
-    T&& inout, U&& mult, int i, int j, int n, const amrex::GpuComplex<amrex::Real>* omega) {
+inline void
+dst2_out_mult_dst3_in (Array2<amrex::GpuComplex<amrex::Real>> const& inout, int nx, int ny,
+                       const amrex::GpuComplex<amrex::Real>* omega,
+                       const amrex::Real * eig_x, const amrex::Real * eig_y) {
 
-    auto c = inout(i, j);
+    auto mult = [=] AMREX_GPU_DEVICE (int i, int j) {
+        const amrex::Real k = eig_x[i] + eig_y[j];
+        if (k != 0) {
+            return 1 / k;
+        } else {
+            return amrex::Real(0);
+        }
+    };
 
-    if (i == 0) {
-        c.m_real *= mult(n-1, j);
-        c.m_imag = 0;
-    } else {
-        auto o = omega[i];
-        c *= o;
-        o.m_imag = - o.m_imag;
-        c = o * amrex::GpuComplex<amrex::Real>{
-            c.real() * mult(n-i-1, j),
-            c.imag() * mult(i-1, j)
-        };
-    }
+    amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {ny/2, nx-1}},
+        [=] AMREX_GPU_DEVICE (int j, int i){
+            auto c = inout(j, i);
 
-    inout(i, j) = c;
+            if (j == 0) {
+                c.m_real *= mult(i, ny-1);
+                c.m_imag = 0;
+            } else {
+                auto o = omega[j];
+                auto m1 = mult(i, ny-j-1);
+                auto m2 = mult(i, j-1);
+                c *= o;
+                o.m_imag = - o.m_imag;
+                c = o * amrex::GpuComplex<amrex::Real>{
+                    c.real() * m1,
+                    c.imag() * m2
+                };
+            }
+
+            inout(j, i) = c;
+        });
 }
 
 inline void
@@ -82,7 +97,6 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
                int nx, int ny, const amrex::GpuComplex<amrex::Real>* omega) {
 
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
-
     constexpr int tile_dim_x = 16;
     constexpr int tile_dim_y = 64;
     constexpr int elem_per_thread = 2;
@@ -99,8 +113,8 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
         {
             __shared__ amrex::GpuComplex<amrex::Real> tile_ptr[tile_dim_x][tile_dim_y+1];
 
-            const int block_y = blockIdx.x / num_blocks_x;
-            const int block_x = blockIdx.x - block_y*num_blocks_x;
+            const int block_x = blockIdx.x / num_blocks_y;
+            const int block_y = blockIdx.x - block_x*num_blocks_y;
 
             const int tile_start_x = tile_begin_x + block_x* tile_dim_x;
             const int tile_start_y = block_y * tile_dim_y;
@@ -248,8 +262,6 @@ dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Re
 #endif
 }
 
-
-
 void
 FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
                                        amrex::DistributionMapping const& dm,
@@ -272,36 +284,33 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_stagingArea.local_size() == 1,
                                      "There should be only one box locally.");
 
-    m_gm = gm;
     const amrex::Box fft_box = m_stagingArea[0].box();
     const amrex::IntVect fft_size = fft_box.length();
     const int nx = fft_size[0];
     const int ny = fft_size[1];
-    const auto dx = gm.CellSizeArray();
-    const amrex::Real dxsquared = dx[0]*dx[0];
-    const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( nx + 1 ));
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( ny + 1 ));
 
-    const amrex::Real norm_fac = 1. / ((nx + 1.) * (ny + 1.));
+    // Calculate eigenvalue factors
+    m_eig_x.resize(nx);
+    m_eig_y.resize(ny);
+    amrex::Real * const eig_x_ptr = m_eig_x.dataPtr();
+    amrex::Real * const eig_y_ptr = m_eig_y.dataPtr();
 
-    // Calculate the array of m_eigenvalue_matrix
-    m_eigenvalue_matrix.resize({{0,0,0}, {ny-1,nx-1,0}});
-    Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array();
-    amrex::ParallelFor(amrex::BoxND<2>{{0,0}, {ny-1,nx-1}},
-        [=] AMREX_GPU_DEVICE (int j, int i) noexcept
-        {
-            /* fast poisson solver diagonal x coeffs */
-            amrex::Real sinex_sq = std::sin(( i + 1 ) * sine_x_factor) * std::sin(( i + 1 ) * sine_x_factor);
-            /* fast poisson solver diagonal y coeffs */
-            amrex::Real siney_sq = std::sin(( j + 1 ) * sine_y_factor) * std::sin(( j + 1 ) * sine_y_factor);
+    const amrex::Real sine_x_factor = 1._rt / ( 2._rt * ( nx + 1._rt ));
+    const amrex::Real sine_y_factor = 1._rt / ( 2._rt * ( ny + 1._rt ));
+    const amrex::Real norm_fac = -4._rt * (nx + 1._rt) * (ny + 1._rt);
+    const amrex::Real invdxsq = gm.InvCellSize(0)*gm.InvCellSize(0)*norm_fac;
+    const amrex::Real invdysq = gm.InvCellSize(1)*gm.InvCellSize(1)*norm_fac;
 
-            if ((sinex_sq!=0) && (siney_sq!=0)) {
-                eigenvalue_matrix(j,i) = norm_fac / ( -4.0_rt * ( sinex_sq / dxsquared + siney_sq / dysquared ));
-            } else {
-                // Avoid division by 0
-                eigenvalue_matrix(j,i) = 0._rt;
-            }
+    amrex::ParallelFor(nx,
+        [=] AMREX_GPU_DEVICE (int i) noexcept {
+            const amrex::Real x_fac = amrex::Math::sinpi(sine_x_factor * (i+1));
+            eig_x_ptr[i] = x_fac*x_fac*invdxsq;
+        });
+
+    amrex::ParallelFor(ny,
+        [=] AMREX_GPU_DEVICE (int i) noexcept {
+            const amrex::Real y_fac = amrex::Math::sinpi(sine_y_factor * (i+1));
+            eig_y_ptr[i] = y_fac*y_fac*invdysq;
         });
 
     // Allocate 1d Array for 2d data or 2d transpose data
@@ -331,7 +340,7 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
     amrex::GpuComplex<amrex::Real>* const omega_x_ptr = m_omega_x.dataPtr();
     amrex::ParallelFor(nx/2+1,
         [=] AMREX_GPU_DEVICE (int i) {
-            auto [imag, real] = amrex::Math::sincospi(-i/amrex::Real(2*nx));
+            auto [imag, real] = amrex::Math::sincospi(-i/amrex::Real(2._rt*nx));
             omega_x_ptr[i] = {real, imag};
         });
 
@@ -339,7 +348,7 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
     amrex::GpuComplex<amrex::Real>* const omega_y_ptr = m_omega_y.dataPtr();
     amrex::ParallelFor(ny/2+1,
         [=] AMREX_GPU_DEVICE (int i) {
-            auto [imag, real] = amrex::Math::sincospi(-i/amrex::Real(2*ny));
+            auto [imag, real] = amrex::Math::sincospi(-i/amrex::Real(2._rt*ny));
             omega_y_ptr[i] = {real, imag};
         });
 }
@@ -358,17 +367,13 @@ FFTPoissonSolverDirichletQuick::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     Array2<amrex::Real> real_arr {{m_position_array.dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
     Array2<amrex::Real> real_arr_t {{m_position_array.dataPtr(), {0,0,0}, {ny,nx,1}, 1}};
 
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr {{ m_fourier_array.dataPtr(), {0,0,0}, {nx/2+1,ny,1}, 1}};
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {{ m_fourier_array.dataPtr(), {0,0,0}, {ny/2+1,nx,1}, 1}};
+    Array2<amrex::GpuComplex<amrex::Real>> comp_arr {{m_fourier_array.dataPtr(), {0,0,0}, {nx/2+1,ny,1}, 1}};
+    Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {{m_fourier_array.dataPtr(), {0,0,0}, {ny/2+1,nx,1}, 1}};
 
     amrex::Box lhs_bx = lhs_mf[0].box();
     // shift box to handle ghost cells properly
     lhs_bx -= m_stagingArea[0].box().smallEnd();
     Array2<amrex::Real> lhs_arr {{lhs_mf[0].dataPtr(), amrex::begin(lhs_bx), amrex::end(lhs_bx), 1}};
-
-    Array2<amrex::Real> mult_t {m_eigenvalue_matrix.array()};
-    const amrex::GpuComplex<amrex::Real>* omega_x_ptr = m_omega_x.dataPtr();
-    const amrex::GpuComplex<amrex::Real>* omega_y_ptr = m_omega_y.dataPtr();
 
     amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {nx-1, ny-1}},
         [=] AMREX_GPU_DEVICE (int i, int j){
@@ -377,39 +382,15 @@ FFTPoissonSolverDirichletQuick::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
     m_x_r2cfft.Execute();
 
-    dst2_out_t_in(comp_arr, real_arr_t, nx, ny, omega_x_ptr);
+    dst2_out_t_in(comp_arr, real_arr_t, nx, ny, m_omega_x.dataPtr());
 
     m_y_r2cfft.Execute();
 
-
-    const amrex::Real sine_x_factor = 1. / ( 2. * ( nx + 1 ));
-    const amrex::Real sine_y_factor = 1. / ( 2. * ( ny + 1 ));
-
-    const amrex::Real norm_fac = -4. * (nx + 1.) * (ny + 1.);
-    const amrex::Real invdxsq = m_gm.InvCellSize(0)*m_gm.InvCellSize(0)*norm_fac;
-    const amrex::Real invdysq = m_gm.InvCellSize(1)*m_gm.InvCellSize(1)*norm_fac;
-
-    auto mult_t_func = [=] AMREX_GPU_DEVICE (int i, int j) {
-        amrex::Real x_fac = amrex::Math::sinpi(sine_x_factor * (j+1));
-        amrex::Real y_fac = amrex::Math::sinpi(sine_y_factor * (i+1));
-
-        amrex::Real k = x_fac*x_fac*invdxsq + y_fac*y_fac*invdysq;
-
-        if (k != 0) {
-            return 1 / k;
-        } else {
-            return amrex::Real(0);
-        }
-    };
-
-    amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {ny/2, nx-1}},
-        [=] AMREX_GPU_DEVICE (int i, int j){
-            dst2_out_mult_dst3_in(comp_arr_t, mult_t_func, i, j, ny, omega_y_ptr);
-        });
+    dst2_out_mult_dst3_in(comp_arr_t, nx, ny, m_omega_y.dataPtr(), m_eig_x.dataPtr(), m_eig_y.dataPtr());
 
     m_y_c2rfft.Execute();
 
-    dst3_out_t_in(real_arr_t, comp_arr, nx, ny, omega_x_ptr);
+    dst3_out_t_in(real_arr_t, comp_arr, nx, ny, m_omega_x.dataPtr());
 
     m_x_c2rfft.Execute();
 
