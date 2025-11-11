@@ -1,4 +1,4 @@
-/* Copyright 2020-2021
+/* Copyright 2025
  *
  * This file is part of HiPACE++.
  *

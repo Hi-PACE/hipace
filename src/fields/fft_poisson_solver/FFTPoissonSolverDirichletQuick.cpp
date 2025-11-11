@@ -1,4 +1,4 @@
-/* Copyright 2020-2022
+/* Copyright 2025
  *
  * This file is part of HiPACE++.
  *
@@ -82,92 +82,71 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
                int nx, int ny, const amrex::GpuComplex<amrex::Real>* omega) {
 
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
-    // constexpr int tile_dim_x = 16;
-    // constexpr int tile_dim_y = 32;
-    // constexpr int block_rows_x = 8;
-    // constexpr int block_rows_y = 16;
 
-    // const int tile_begin_x = (nx-1)/2;
+    constexpr int tile_dim_x = 16;
+    constexpr int tile_dim_y = 64;
+    constexpr int elem_per_thread = 2;
+    constexpr int block_rows_x = tile_dim_x / elem_per_thread;
+    constexpr int block_rows_y = tile_dim_y / elem_per_thread;
 
-    // const int num_blocks_x = (nx - tile_begin_x + tile_dim_x - 1)/tile_dim_x;
-    // const int num_blocks_y = (ny + tile_dim_y - 1)/tile_dim_y;
+    const int tile_begin_x = (nx-1)/2;
 
-    // amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-    //     [=] AMREX_GPU_DEVICE() noexcept
-    //     {
-    //         __shared__ amrex::GpuComplex<amrex::Real> tile_ptr[tile_dim_x * tile_dim_y];
+    const int num_blocks_x = (nx - tile_begin_x + tile_dim_x - 1)/tile_dim_x;
+    const int num_blocks_y = (ny + tile_dim_y - 1)/tile_dim_y;
 
-    //         const int block_y = blockIdx.x / num_blocks_x;
-    //         const int block_x = blockIdx.x - block_y*num_blocks_x;
+    amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
+        [=] AMREX_GPU_DEVICE() noexcept
+        {
+            __shared__ amrex::GpuComplex<amrex::Real> tile_ptr[tile_dim_x][tile_dim_y+1];
 
-    //         const int tile_start_x = tile_begin_x + block_x* tile_dim_x;
-    //         const int tile_start_y = block_y * tile_dim_y;
+            const int block_y = blockIdx.x / num_blocks_x;
+            const int block_x = blockIdx.x - block_y*num_blocks_x;
 
-    //         int thread_y = threadIdx.x / tile_dim_x;
-    //         int thread_x = threadIdx.x - thread_y*tile_dim_x;
+            const int tile_start_x = tile_begin_x + block_x* tile_dim_x;
+            const int tile_start_y = block_y * tile_dim_y;
 
-    //         #pragma unroll(2)
-    //         for (; thread_y < tile_dim_y; thread_y += block_rows_y)
-    //         {
-    //             const int iout = tile_start_x + thread_x;
-    //             const int jout = tile_start_y + thread_y;
-    //             const int iin = nx-iout-1;
-    //             const int jin = 2*jout < ny ? 2*jout : 2*(ny-jout)-1;
+            int thread_y = threadIdx.x / tile_dim_x;
+            int thread_x = threadIdx.x - thread_y*tile_dim_x;
 
-    //             if (iout < nx && jout < ny) {
-    //                 auto val = in(iin, jin) * omega[iin];
-    //                 if (2*jout < ny) {
-    //                     val = -val;
-    //                 }
-    //                 tile_ptr[thread_x + thread_y * tile_dim_x] = val;
-    //             }
-    //         }
+            #pragma unroll(elem_per_thread)
+            for (; thread_y < tile_dim_y; thread_y += block_rows_y)
+            {
+                const int thread_xr = tile_dim_x - thread_x - 1;
+                const int iout = tile_start_x + thread_xr;
+                const int jout = tile_start_y + thread_y;
+                const int iin = nx-iout-1;
+                const int jin = 2*jout < ny ? 2*jout : 2*(ny-jout)-1;
 
-    //         __syncthreads();
-
-    //         thread_x = threadIdx.x / tile_dim_y;
-    //         thread_y = threadIdx.x - thread_x*tile_dim_y;
-
-    //         #pragma unroll(2)
-    //         for (; thread_x < tile_dim_x; thread_x += block_rows_x)
-    //         {
-    //             const int iout = tile_start_x + thread_x;
-    //             const int jout = tile_start_y + thread_y;
-    //             const int iin = nx-iout-1;
-    //             const int iout2 = iin-1;
-    //             const bool do_iout2 = iout2 >= 0 && iout2 != iout;
-
-    //             if (iout < nx && jout < ny) {
-    //                 auto val = tile_ptr[thread_x + thread_y * tile_dim_x];
-    //                 out(jout, iout) = -val.real();
-    //                 if (do_iout2) {
-    //                     out(jout, iout2) = val.imag();
-    //                 }
-    //             }
-    //         }
-    //     });
-
-    amrex::ParallelFor(amrex::BoxND<2>{{0, (nx-1)/2}, {ny-1, nx-1}},
-        [=] AMREX_GPU_DEVICE (int j, int i){
-
-            int iout = i;
-            int jout = j;
-
-            int iin = nx-iout-1;
-            int iout2 = iin-1;
-            bool do_iout2 = iout2 >= 0 && iout2 != iout;
-
-            int jin = 2*jout < ny ? 2*jout : 2*(ny-jout)-1;
-
-            auto val = in(iin, jin) * omega[iin];
-
-            if (2*jout < ny) {
-                val = -val;
+                if (iout < nx && jout < ny) {
+                    auto val = in(iin, jin) * omega[iin];
+                    if (2*jout < ny) {
+                        val = -val;
+                    }
+                    tile_ptr[thread_xr][thread_y] = val;
+                }
             }
 
-            out(jout, iout) = -val.real();
-            if (do_iout2) {
-                out(jout, iout2) = val.imag();
+            __syncthreads();
+
+            thread_x = threadIdx.x / tile_dim_y;
+            thread_y = threadIdx.x - thread_x*tile_dim_y;
+
+            #pragma unroll(elem_per_thread)
+            for (; thread_x < tile_dim_x; thread_x += block_rows_x)
+            {
+                const int iout = tile_start_x + thread_x;
+                const int jout = tile_start_y + thread_y;
+                const int iin = nx-iout-1;
+                const int iout2 = iin-1;
+                const bool do_iout2 = iout2 >= 0 && iout2 != iout;
+
+                if (iout < nx && jout < ny) {
+                    auto val = tile_ptr[thread_x][thread_y];
+                    out(jout, iout) = -val.real();
+                    if (do_iout2) {
+                        out(jout, iout2) = val.imag();
+                    }
+                }
             }
         });
 
@@ -187,42 +166,86 @@ inline void
 dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Real>> const& out,
                int nx, int ny, const amrex::GpuComplex<amrex::Real>* omega) {
 
+#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+    constexpr int tile_dim_x = 16;
+    constexpr int tile_dim_y = 64;
+    constexpr int elem_per_thread = 2;
+    constexpr int block_rows_x = tile_dim_x / elem_per_thread;
+    constexpr int block_rows_y = tile_dim_y / elem_per_thread;
+
+    const int tile_end_x = nx/2 + 1;
+
+    const int num_blocks_x = (tile_end_x + tile_dim_x - 1)/tile_dim_x;
+    const int num_blocks_y = (ny + tile_dim_y - 1)/tile_dim_y;
+
+    amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
+        [=] AMREX_GPU_DEVICE() noexcept
+        {
+            __shared__ amrex::GpuComplex<amrex::Real> tile_ptr[tile_dim_y][tile_dim_x+1];
+
+            const int block_y = blockIdx.x / num_blocks_x;
+            const int block_x = blockIdx.x - block_y*num_blocks_x;
+
+            const int tile_start_x = block_x * tile_dim_x;
+            const int tile_start_y = block_y * tile_dim_y;
+
+            int thread_x = threadIdx.x / tile_dim_y;
+            int thread_y = threadIdx.x - thread_x*tile_dim_y;
+
+            #pragma unroll(elem_per_thread)
+            for (; thread_x < tile_dim_x; thread_x += block_rows_x)
+            {
+                const int thread_yp = (thread_y*2) % tile_dim_y + (thread_y*2) / tile_dim_y;
+                const int iout = tile_start_x + thread_x;
+                const int jout = tile_start_y + thread_yp;
+                const int jin = jout%2 == 0 ? jout/2 : ny-1-jout/2;
+                const int iin1 = nx-iout-1;
+                const int iin2 = iout - 1;
+
+                if (iout < tile_end_x && jout < ny) {
+                    amrex::GpuComplex<amrex::Real> val {
+                        in(jin, iin1),
+                        iout != 0 ? -in(jin, iin2) : 0
+                    };
+
+                    auto o = omega[iout];
+                    o.m_imag = - o.m_imag;
+
+                    if (jout%2 != 0) {
+                        val = -val;
+                    }
+
+                    tile_ptr[thread_yp][thread_x] = val * o;
+                }
+            }
+
+            __syncthreads();
+
+            thread_y = threadIdx.x / tile_dim_x;
+            thread_x = threadIdx.x - thread_y*tile_dim_x;
+
+            #pragma unroll(elem_per_thread)
+            for (; thread_y < tile_dim_y; thread_y += block_rows_y)
+            {
+                const int iout = tile_start_x + thread_x;
+                const int jout = tile_start_y + thread_y;
+
+                if (iout < tile_end_x && jout < ny) {
+                    out(iout, jout) = tile_ptr[thread_y][thread_x];
+                }
+            }
+        });
+
+#else
+    auto fuse_out_t = [=] AMREX_GPU_DEVICE (int i, int j) {
+        return dst3_out(in, j, i, ny);
+    };
 
     amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {nx/2, ny-1}},
         [=] AMREX_GPU_DEVICE (int i, int j){
-
-            int iout = i; // [0, nx/2]
-            int jout = j; // [0, ny-1]
-
-            int jin = jout%2 == 0 ? jout/2 : ny-1-jout/2;
-
-            int iin1 = nx-iout-1;
-            amrex::Real val1 = in(jin, iin1);
-            amrex::Real val2 = 0;
-            if (iout != 0) {
-                int iin2 = iout - 1;
-                val2 = in(jin, iin2);
-            }
-
-            if (jout%2 != 0) {
-                val1 = - val1;
-                val2 = - val2;
-            }
-
-            auto o = omega[iout];
-            o.m_imag = - o.m_imag;
-            out(iout, jout) = o * amrex::GpuComplex<amrex::Real>{val1, -val2};
+            out(i, j) = dst3_in(fuse_out_t, i, j, nx, omega);
         });
-
-
-    // auto fuse_out_t = [=] AMREX_GPU_DEVICE (int i, int j) {
-    //     return dst3_out(in, j, i, ny);
-    // };
-
-    // amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {nx/2, ny-1}},
-    //     [=] AMREX_GPU_DEVICE (int i, int j){
-    //         out(i, j) = dst3_in(fuse_out_t, i, j, nx, omega);
-    //     });
+#endif
 }
 
 
@@ -387,15 +410,6 @@ FFTPoissonSolverDirichletQuick::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     m_y_c2rfft.Execute();
 
     dst3_out_t_in(real_arr_t, comp_arr, nx, ny, omega_x_ptr);
-
-    // auto real_arr_t_dst3_out_t = [=] AMREX_GPU_DEVICE (int i, int j) {
-    //     return dst3_out(real_arr_t, j, i, ny);
-    // };
-
-    // amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {nx/2, ny-1}},
-    //     [=] AMREX_GPU_DEVICE (int i, int j){
-    //         comp_arr(i, j) = dst3_in(real_arr_t_dst3_out_t, i, j, nx, omega_x_ptr);
-    //     });
 
     m_x_c2rfft.Execute();
 
