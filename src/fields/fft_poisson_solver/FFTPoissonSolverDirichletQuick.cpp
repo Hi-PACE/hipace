@@ -23,6 +23,8 @@ FFTPoissonSolverDirichletQuick::FFTPoissonSolverDirichletQuick (
     define(realspace_ba, dm, gm);
 }
 
+namespace {
+
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real dst2_in (T&& in, int i, int j, int n) {
     return 2*i < n ? in(2*i, j) : -in(2*(n-i)-1, j);
@@ -59,7 +61,6 @@ inline void
 dst2_out_mult_dst3_in (Array2<amrex::GpuComplex<amrex::Real>> const& inout, int nx, int ny,
                        const amrex::GpuComplex<amrex::Real>* omega,
                        const amrex::Real * eig_x, const amrex::Real * eig_y) {
-
     auto mult = [=] AMREX_GPU_DEVICE (int i, int j) {
         const amrex::Real k = eig_x[i] + eig_y[j];
         if (k != 0) {
@@ -95,13 +96,12 @@ dst2_out_mult_dst3_in (Array2<amrex::GpuComplex<amrex::Real>> const& inout, int 
 inline void
 dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::Real> const& out,
                int nx, int ny, const amrex::GpuComplex<amrex::Real>* omega) {
-
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
-    constexpr int tile_dim_x = 16;
-    constexpr int tile_dim_y = 64;
-    constexpr int elem_per_thread = 2;
-    constexpr int block_rows_x = tile_dim_x / elem_per_thread;
-    constexpr int block_rows_y = tile_dim_y / elem_per_thread;
+    static constexpr int tile_dim_x = 16;
+    static constexpr int tile_dim_y = 64;
+    static constexpr int elem_per_thread = 2;
+    static constexpr int block_rows_x = tile_dim_x / elem_per_thread;
+    static constexpr int block_rows_y = tile_dim_y / elem_per_thread;
 
     const int tile_begin_x = (nx-1)/2;
 
@@ -111,7 +111,8 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
     amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
         [=] AMREX_GPU_DEVICE() noexcept
         {
-            __shared__ amrex::GpuComplex<amrex::Real> tile_ptr[tile_dim_x][tile_dim_y+1];
+            __shared__ amrex::Real tile_real[tile_dim_x][tile_dim_y+1];
+            __shared__ amrex::Real tile_imag[tile_dim_x][tile_dim_y+1];
 
             const int block_x = blockIdx.x / num_blocks_y;
             const int block_y = blockIdx.x - block_x*num_blocks_y;
@@ -122,7 +123,7 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
             int thread_y = threadIdx.x / tile_dim_x;
             int thread_x = threadIdx.x - thread_y*tile_dim_x;
 
-            #pragma unroll(elem_per_thread)
+            #pragma unroll elem_per_thread
             for (; thread_y < tile_dim_y; thread_y += block_rows_y)
             {
                 const int thread_xr = tile_dim_x - thread_x - 1;
@@ -136,7 +137,8 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
                     if (2*jout < ny) {
                         val = -val;
                     }
-                    tile_ptr[thread_xr][thread_y] = val;
+                    tile_real[thread_xr][thread_y] = val.real();
+                    tile_imag[thread_xr][thread_y] = val.imag();
                 }
             }
 
@@ -145,7 +147,7 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
             thread_x = threadIdx.x / tile_dim_y;
             thread_y = threadIdx.x - thread_x*tile_dim_y;
 
-            #pragma unroll(elem_per_thread)
+            #pragma unroll elem_per_thread
             for (; thread_x < tile_dim_x; thread_x += block_rows_x)
             {
                 const int iout = tile_start_x + thread_x;
@@ -155,10 +157,9 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
                 const bool do_iout2 = iout2 >= 0 && iout2 != iout;
 
                 if (iout < nx && jout < ny) {
-                    auto val = tile_ptr[thread_x][thread_y];
-                    out(jout, iout) = -val.real();
+                    out(jout, iout) = -tile_real[thread_x][thread_y];
                     if (do_iout2) {
-                        out(jout, iout2) = val.imag();
+                        out(jout, iout2) = tile_imag[thread_x][thread_y];
                     }
                 }
             }
@@ -179,13 +180,12 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
 inline void
 dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Real>> const& out,
                int nx, int ny, const amrex::GpuComplex<amrex::Real>* omega) {
-
 #if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
-    constexpr int tile_dim_x = 16;
-    constexpr int tile_dim_y = 64;
-    constexpr int elem_per_thread = 2;
-    constexpr int block_rows_x = tile_dim_x / elem_per_thread;
-    constexpr int block_rows_y = tile_dim_y / elem_per_thread;
+    static constexpr int tile_dim_x = 16;
+    static constexpr int tile_dim_y = 64;
+    static constexpr int elem_per_thread = 2;
+    static constexpr int block_rows_x = tile_dim_x / elem_per_thread;
+    static constexpr int block_rows_y = tile_dim_y / elem_per_thread;
 
     const int tile_end_x = nx/2 + 1;
 
@@ -195,7 +195,8 @@ dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Re
     amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
         [=] AMREX_GPU_DEVICE() noexcept
         {
-            __shared__ amrex::GpuComplex<amrex::Real> tile_ptr[tile_dim_y][tile_dim_x+1];
+            __shared__ amrex::Real tile_real[tile_dim_y][tile_dim_x+1];
+            __shared__ amrex::Real tile_imag[tile_dim_y][tile_dim_x+1];
 
             const int block_y = blockIdx.x / num_blocks_x;
             const int block_x = blockIdx.x - block_y*num_blocks_x;
@@ -206,7 +207,7 @@ dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Re
             int thread_x = threadIdx.x / tile_dim_y;
             int thread_y = threadIdx.x - thread_x*tile_dim_y;
 
-            #pragma unroll(elem_per_thread)
+            #pragma unroll elem_per_thread
             for (; thread_x < tile_dim_x; thread_x += block_rows_x)
             {
                 const int thread_yp = (thread_y*2) % tile_dim_y + (thread_y*2) / tile_dim_y;
@@ -221,15 +222,14 @@ dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Re
                         in(jin, iin1),
                         iout != 0 ? -in(jin, iin2) : 0
                     };
-
                     auto o = omega[iout];
                     o.m_imag = - o.m_imag;
-
                     if (jout%2 != 0) {
                         val = -val;
                     }
-
-                    tile_ptr[thread_yp][thread_x] = val * o;
+                    val *= o;
+                    tile_real[thread_yp][thread_x] = val.real();
+                    tile_imag[thread_yp][thread_x] = val.imag();
                 }
             }
 
@@ -238,14 +238,17 @@ dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Re
             thread_y = threadIdx.x / tile_dim_x;
             thread_x = threadIdx.x - thread_y*tile_dim_x;
 
-            #pragma unroll(elem_per_thread)
+            #pragma unroll elem_per_thread
             for (; thread_y < tile_dim_y; thread_y += block_rows_y)
             {
                 const int iout = tile_start_x + thread_x;
                 const int jout = tile_start_y + thread_y;
 
                 if (iout < tile_end_x && jout < ny) {
-                    out(iout, jout) = tile_ptr[thread_y][thread_x];
+                    out(iout, jout) = {
+                        tile_real[thread_y][thread_x],
+                        tile_imag[thread_y][thread_x]
+                    };
                 }
             }
         });
@@ -260,6 +263,8 @@ dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Re
             out(i, j) = dst3_in(fuse_out_t, i, j, nx, omega);
         });
 #endif
+}
+
 }
 
 void
@@ -314,8 +319,8 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
         });
 
     // Allocate 1d Array for 2d data or 2d transpose data
-    m_position_array.resize(nx*ny);
-    m_fourier_array.resize(std::max((nx/2+1)*ny, (ny/2+1)*nx));
+    m_real_array.resize(nx*ny);
+    m_comp_array.resize(std::max((nx/2+1)*ny, (ny/2+1)*nx));
 
     // Allocate and initialize the FFT plans
     std::size_t fft1_area = m_x_r2cfft.Initialize(FFTType::R2C_1D_batched, nx, ny);
@@ -326,16 +331,16 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
     // Allocate work area for both FFTs
     m_fft_work_area.resize(std::max({fft1_area, fft2_area, fft3_area, fft4_area}));
 
-    m_x_r2cfft.SetBuffers(m_position_array.dataPtr(), m_fourier_array.dataPtr(),
+    m_x_r2cfft.SetBuffers(m_real_array.dataPtr(), m_comp_array.dataPtr(),
                           m_fft_work_area.dataPtr());
-    m_y_r2cfft.SetBuffers(m_position_array.dataPtr(), m_fourier_array.dataPtr(),
+    m_y_r2cfft.SetBuffers(m_real_array.dataPtr(), m_comp_array.dataPtr(),
                           m_fft_work_area.dataPtr());
-    m_x_c2rfft.SetBuffers(m_fourier_array.dataPtr(), m_position_array.dataPtr(),
+    m_x_c2rfft.SetBuffers(m_comp_array.dataPtr(), m_real_array.dataPtr(),
                           m_fft_work_area.dataPtr());
-    m_y_c2rfft.SetBuffers(m_fourier_array.dataPtr(), m_position_array.dataPtr(),
+    m_y_c2rfft.SetBuffers(m_comp_array.dataPtr(), m_real_array.dataPtr(),
                           m_fft_work_area.dataPtr());
 
-    // set up prefactors for ToSine
+    // Set up prefactors for dst2_out and dst3_in
     m_omega_x.resize(nx/2+1);
     amrex::GpuComplex<amrex::Real>* const omega_x_ptr = m_omega_x.dataPtr();
     amrex::ParallelFor(nx/2+1,
@@ -353,7 +358,6 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
         });
 }
 
-
 void
 FFTPoissonSolverDirichletQuick::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 {
@@ -362,13 +366,13 @@ FFTPoissonSolverDirichletQuick::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     const int nx = m_stagingArea[0].box().length(0); // initially contiguous
     const int ny = m_stagingArea[0].box().length(1); // contiguous after transpose
 
-    Array2<amrex::Real> pos_arr {{m_stagingArea[0].dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
+    Array2<amrex::Real> input_arr {{m_stagingArea[0].dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
 
-    Array2<amrex::Real> real_arr {{m_position_array.dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
-    Array2<amrex::Real> real_arr_t {{m_position_array.dataPtr(), {0,0,0}, {ny,nx,1}, 1}};
+    Array2<amrex::Real> real_arr {{m_real_array.dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
+    Array2<amrex::Real> real_arr_t {{m_real_array.dataPtr(), {0,0,0}, {ny,nx,1}, 1}};
 
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr {{m_fourier_array.dataPtr(), {0,0,0}, {nx/2+1,ny,1}, 1}};
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {{m_fourier_array.dataPtr(), {0,0,0}, {ny/2+1,nx,1}, 1}};
+    Array2<amrex::GpuComplex<amrex::Real>> comp_arr {{m_comp_array.dataPtr(), {0,0,0}, {nx/2+1,ny,1}, 1}};
+    Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {{m_comp_array.dataPtr(), {0,0,0}, {ny/2+1,nx,1}, 1}};
 
     amrex::Box lhs_bx = lhs_mf[0].box();
     // shift box to handle ghost cells properly
@@ -377,7 +381,7 @@ FFTPoissonSolverDirichletQuick::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 
     amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {nx-1, ny-1}},
         [=] AMREX_GPU_DEVICE (int i, int j){
-            real_arr(i, j) = dst2_in(pos_arr, i, j, nx);
+            real_arr(i, j) = dst2_in(input_arr, i, j, nx);
         });
 
     m_x_r2cfft.Execute();

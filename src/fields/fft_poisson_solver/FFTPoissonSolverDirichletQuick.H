@@ -35,10 +35,6 @@ public:
     virtual ~FFTPoissonSolverDirichletQuick () override final {}
 
     /**
-     * \brief Define real space and spectral space boxes and multifabs, Dirichlet
-     * eigenvalue matrix m_eigenvalue_matrix to solve Poisson equation and FFT plans.
-     * Currently only works with a single box, i.e., serial FFT.
-     *
      * \param[in] realspace_ba BoxArray on which the FFT is executed.
      * \param[in] dm DistributionMapping for the BoxArray.
      * \param[in] gm Geometry, contains the box dimensions.
@@ -60,9 +56,9 @@ public:
 
 private:
     /** Real array for the FFTs */
-    amrex::Gpu::DeviceVector<amrex::Real> m_position_array;
+    amrex::Gpu::DeviceVector<amrex::Real> m_real_array;
     /** Complex array for the FFTs */
-    amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_fourier_array;
+    amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_comp_array;
     /** FFT plan in x direction */
     AnyFFT m_x_r2cfft;
     /** FFT plan in y direction */
@@ -71,15 +67,15 @@ private:
     AnyFFT m_x_c2rfft;
     /** FFT plan in y direction */
     AnyFFT m_y_c2rfft;
-    /** work area for both DST plans */
+    /** work area for all DST plans */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
-    /** x prefactor for ToSine */
+    /** x prefactor for dst2_out and dst3_in */
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_omega_x;
-    /** y prefactor for ToSine */
+    /** y prefactor for dst2_out and dst3_in */
     amrex::Gpu::DeviceVector<amrex::GpuComplex<amrex::Real>> m_omega_y;
-    /** x prefactor for ToSine */
+    /** x prefactor for eigenvalue */
     amrex::Gpu::DeviceVector<amrex::Real> m_eig_x;
-    /** y prefactor for ToSine */
+    /** y prefactor for eigenvalue */
     amrex::Gpu::DeviceVector<amrex::Real> m_eig_y;
 };
 
