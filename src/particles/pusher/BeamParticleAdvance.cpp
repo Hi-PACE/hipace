@@ -106,7 +106,7 @@ AdvanceBeamParticlesSlice (
     // Radiation reaction constant
     const amrex::ParticleReal RRcoeff_c2 = (2.0_rt/3.0_rt)*PhysConstSI::r_e*
                                            charge_mass_ratio*charge_mass_ratio;
-    amrex::Real rr_factor = 1.1_rt * RRcoeff_c2 / PhysConstSI::c;
+    amrex::Real rr_factor = 0.9_rt * RRcoeff_c2 / PhysConstSI::c;
 
     if (Hipace::m_normalized_units && radiation_reaction) {
         const amrex::Real wp_inv = std::sqrt(PhysConstSI::ep0 * PhysConstSI::m_e /
