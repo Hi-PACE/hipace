@@ -81,8 +81,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
         }
     }
 
-    const amrex::Real clightinv = 1.0_rt/(phys_const.c);
-    const amrex::Real clightsq = 1.0_rt/(phys_const.c*phys_const.c);
+    const amrex::Real clight = phys_const.c;
     const amrex::Real q = beam.m_charge;
 
     amrex::AnyCTO(
@@ -143,19 +142,17 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             const amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
             const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
 
-            const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + ux*ux*clightsq
-                                                         + uy*uy*clightsq
-                                                         + uz*uz*clightsq);
+            const amrex::Real gaminv = 1.0_rt/std::sqrt(1.0_rt + ux*ux + uy*uy + uz*uz);
             const amrex::Real wq = q*ptd.rdata(BeamIdx::w)[ip]*invvol;
 
-            const amrex::Real vx = ux*gaminv;
-            const amrex::Real vy = uy*gaminv;
-            const amrex::Real vz = uz*gaminv;
+            const amrex::Real betax = ux*gaminv;
+            const amrex::Real betay = uy*gaminv;
+            const amrex::Real betaz = uz*gaminv;
             // wqx, wqy wqz are particle current in each direction
-            const amrex::Real wqx = wq*vx;
-            const amrex::Real wqy = wq*vy;
-            const amrex::Real wqz = wq*vz;
-            const amrex::Real wqrhomjz = wq*(1._rt-vz*clightinv);
+            const amrex::Real wqx = clight*wq*betax;
+            const amrex::Real wqy = clight*wq*betay;
+            const amrex::Real wqz = clight*wq*betaz;
+            const amrex::Real wqrhomjz = wq*(1._rt-betaz);
 
             // --- Compute shape factors
             // x direction

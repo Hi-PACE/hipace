@@ -75,7 +75,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
         const amrex::Real laser_norm = (plasma.m_charge/phys_const.q_e) * (phys_const.m_e/plasma.m_mass)
             * (plasma.m_charge/phys_const.q_e) * (phys_const.m_e/plasma.m_mass);
-        const amrex::Real clight = phys_const.c;
         const amrex::Real clight_inv = 1._rt/phys_const.c;
         const amrex::Real charge_mass_clight_ratio = plasma.m_charge/(plasma.m_mass * phys_const.c);
 
@@ -126,11 +125,12 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                                 dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                         }
 
-                        Bxp *= clight;
-                        Byp *= clight;
+                        ExmByp *= clight_inv;
+                        EypBxp *= clight_inv;
+                        Ezp *= clight_inv;
                         Aabssqp *= 0.5_rt * laser_norm_ion;
-                        AabssqDxp *= 0.25_rt * clight * laser_norm_ion;
-                        AabssqDyp *= 0.25_rt * clight * laser_norm_ion;
+                        AabssqDxp *= 0.25_rt * laser_norm_ion;
+                        AabssqDyp *= 0.25_rt * laser_norm_ion;
                     }
 
 #ifndef HIPACE_USE_AB5_PUSH
@@ -151,7 +151,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                         auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
                             ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                            Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
+                            Aabssqp, AabssqDxp, AabssqDyp, q_mass_clight_ratio);
 
                         const DualNumber ux_dual{ux, dz_ux};
                         const DualNumber uy_dual{uy, dz_uy};
@@ -159,7 +159,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                         auto [dz_ux_dual, dz_uy_dual, dz_psi_dual] = PlasmaMomentumPush(
                             ux_dual, uy_dual, psi_inv_dual, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                            Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
+                            Aabssqp, AabssqDxp, AabssqDyp, q_mass_clight_ratio);
 
                         ux += sdz*dz_ux + 0.5_rt*sdz*sdz*dz_ux_dual.epsilon;
                         uy += sdz*dz_uy + 0.5_rt*sdz*sdz*dz_uy_dual.epsilon;
@@ -170,8 +170,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     // full push in position
                     // from t to t+1
                     // using the momentum at t+1/2
-                    xp += dz*clight_inv*(ux * (1._rt/psi));
-                    yp += dz*clight_inv*(uy * (1._rt/psi));
+                    xp += dz*(ux * (1._rt/psi));
+                    yp += dz*(uy * (1._rt/psi));
 
                     if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
                     ptd.pos(0, ip) = xp;
@@ -197,7 +197,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                         auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
                             ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                            Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
+                            Aabssqp, AabssqDxp, AabssqDyp, q_mass_clight_ratio);
 
                         const DualNumber ux_dual{ux, dz_ux};
                         const DualNumber uy_dual{uy, dz_uy};
@@ -205,7 +205,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                         auto [dz_ux_dual, dz_uy_dual, dz_psi_dual] = PlasmaMomentumPush(
                             ux_dual, uy_dual, psi_inv_dual, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                            Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
+                            Aabssqp, AabssqDxp, AabssqDyp, q_mass_clight_ratio);
 
                         ux += sdz*dz_ux + 0.5_rt*sdz*sdz*dz_ux_dual.epsilon;
                         uy += sdz*dz_uy + 0.5_rt*sdz*sdz*dz_uy_dual.epsilon;
@@ -223,10 +223,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                     auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
                         ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
-                        Aabssqp, AabssqDxp, AabssqDyp, clight_inv, q_mass_clight_ratio);
+                        Aabssqp, AabssqDxp, AabssqDyp, q_mass_clight_ratio);
 
-                    ptd.rdata(PlasmaIdx::Fx1)[ip] = clight_inv*(ux * psi_inv);
-                    ptd.rdata(PlasmaIdx::Fy1)[ip] = clight_inv*(uy * psi_inv);
+                    ptd.rdata(PlasmaIdx::Fx1)[ip] = ux * psi_inv;
+                    ptd.rdata(PlasmaIdx::Fy1)[ip] = uy * psi_inv;
                     ptd.rdata(PlasmaIdx::Fux1)[ip] = dz_ux;
                     ptd.rdata(PlasmaIdx::Fuy1)[ip] = dz_uy;
                     ptd.rdata(PlasmaIdx::Fpsi1)[ip] = dz_psi;

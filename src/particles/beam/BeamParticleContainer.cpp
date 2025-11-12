@@ -505,7 +505,6 @@ BeamParticleContainer::InSituComputeDiags (int islice)
 
     const amrex::Real insitu_radius_sq = m_insitu_radius * m_insitu_radius;
     const PhysConst phys_const = get_phys_const();
-    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const auto ptd = getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
     amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
@@ -518,9 +517,9 @@ BeamParticleContainer::InSituComputeDiags (int islice)
             const amrex::Real x = ptd.pos(0, ip);
             const amrex::Real y = ptd.pos(1, ip);
             const amrex::Real z = ptd.pos(2, ip);
-            const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip] * clight_inv; // proper velocity to u
-            const amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip] * clight_inv;
-            const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip] * clight_inv;
+            const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip];
+            const amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
+            const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
             const amrex::Real w = ptd.rdata(BeamIdx::w)[ip];
 
             const amrex::Real uz_inv = uz == 0._rt ? 0._rt : 1._rt / uz;
