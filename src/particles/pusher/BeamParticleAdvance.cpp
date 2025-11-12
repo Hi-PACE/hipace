@@ -328,8 +328,8 @@ AdvanceBeamParticlesSlice (
                  * first-order (i.e. without the intermediary half-step) using
                  * a simple Galilean transformation
                  */
-                xp += dt * 0.5_rt * clight * gamma_next_inv * ux_next;
-                yp += dt * 0.5_rt * clight * gamma_next_inv * uy_next;
+                xp += dt * clight * 0.5_rt * gamma_next_inv * ux_next;
+                yp += dt * clight * 0.5_rt * gamma_next_inv * uy_next;
                 if (do_z_push) zp += dt * clight * ( uz_next * gamma_next_inv - 1._rt );
                 ux = ux_next;
                 uy = uy_next;
