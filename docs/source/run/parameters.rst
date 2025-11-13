@@ -1110,12 +1110,26 @@ Field diagnostics
 
     * ``all``: Includes all available fields.
     * ``none``: Excludes all fields.
-    * A subset of the following: ``ExmBy``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
-    * Specific to the Predictor-Corrector solver: ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam (``rhomjz`` is defined as :math:`\rho-j_z/c`).
-    * Specific to the Explicit solver: separate current and charge densities for the beam (``jx_beam``, ``jy_beam``, ``jz_beam``) and plasma (``jx``, ``jy``, and ``rhomjz``).
-    * Plasma diagnostics: ``rho`` (total charge density) is always available. Per-species diagnostics are also available: ``rho_<plasma name>`` (charge density of the species); ``w_<plasma name>`` (particle weights of the species); and momentum components ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
-    * Laser diagnostics, when a laser pulse is used: ``laserEnvelope`` (the complex envelope of the laser in the ``laser`` base geometry) and ``chi`` (plasma proper density :math:`n/\gamma`).
-    * Fields can be added or removed from the list dynamically: to remove a field after including ``all``, use ``remove_<field name>``. If a field is added and removed multiple times, the last occurrence takes precedence.
+    * A subset of the following:
+        ``Ex``, ``ExmBy``, ``Ey``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
+    * Specific to the Predictor-Corrector solver: ``jx``, ``jy``, ``jz``, and ``rhomjz``,
+        which correspond to the current and charge densities of the plasma and beam (``rhomjz`` is
+        defined as :math:`\rho-j_z/c`).
+    * Specific to the Explicit solver: separate current and charge densities for the beam
+        (``jx_beam``, ``jy_beam``, ``jz_beam``) and plasma (``jx``, ``jy``, and ``rhomjz``).
+    * Plasma diagnostics: ``rho`` (total charge density) is always available. Per-species
+        diagnostics are also available: ``rho_<plasma name>`` (charge density of the species);
+            ``w_<plasma name>`` (particle weights of the species); and momentum components
+            ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``,
+            ``ux^2_<plasma name>``, etc.
+    * Laser diagnostics, when a laser pulse is used: ``laserEnvelope`` (the complex envelope of the
+        laser in the ``laser`` base geometry) and ``chi`` (plasma proper density :math:`n/\gamma`).
+        ``laserChi`` can be used to access chi on the laser grid, with the imaginary component
+        containing chi of the initial unperturbed plasma. ``|a^2|`` contains the absolute value
+        squared of the laser envelope in the real component and zero in the imaginary component.
+    * Fields can be added or removed from the list dynamically: to remove a field after including
+        ``all``, use ``remove_<field name>``. If a field is added and removed multiple times, the
+        last occurrence takes precedence.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
     Lower limit for the diagnostic grid.
