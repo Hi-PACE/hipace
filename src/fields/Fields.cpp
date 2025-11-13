@@ -558,13 +558,13 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
                     const amrex::Real y = j * dy + poff_diag_y;
                     const int m = n[diag_comps];
                     if (m == -1) { // real=|a^2|, imag=0
-                        diag_array_laser(i,j,k) += amrex::GpuComplex<amrex::Real>{
+                        diag_array_laser(i,j,k,n) += amrex::GpuComplex<amrex::Real>{
                             rel_z_data[k-k_min] * abssq(
                                 laser_array(x,y,WhichLaserSlice::n00j00_r),
                                 laser_array(x,y,WhichLaserSlice::n00j00_i)),
                             amrex::Real(0)};
                     } else {
-                        diag_array_laser(i,j,k) += amrex::GpuComplex<amrex::Real>{
+                        diag_array_laser(i,j,k,n) += amrex::GpuComplex<amrex::Real>{
                             rel_z_data[k-k_min] * laser_array(x,y,m),
                             rel_z_data[k-k_min] * laser_array(x,y,m+1)
                         };
