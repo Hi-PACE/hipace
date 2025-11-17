@@ -180,9 +180,11 @@ public:
      */
     static constexpr int get_num_comps (int system_type) {
         switch (system_type) {
-            case 1: return 2;
-            case 2: return 2;
-            case 3: return 1;
+            case 1:
+            case 2:
+                return 2;
+            case 3:
+                return 1;
         }
         return 0;
     }
@@ -193,9 +195,12 @@ public:
      */
     static constexpr int get_num_comps_acf (int system_type) {
         switch (system_type) {
-            case 1: return 1;
-            case 2: return 2;
-            case 3: return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+            case 3:
+                return 0;
         }
         return 0;
     }

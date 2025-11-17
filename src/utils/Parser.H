@@ -155,8 +155,8 @@ namespace Parser
 
         // replace {expression} with to_string(parser(expression))
         static std::set<std::string> recursive_symbols{};
-        while ( (pos=loc_str.rfind("{")) != std::string::npos) {
-            const auto pos_end = loc_str.find("}", pos);
+        while ( (pos=loc_str.rfind('{')) != std::string::npos) {
+            const auto pos_end = loc_str.find('}', pos);
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                 pos_end != std::string::npos,
                 "Bad format for input '" + str +  "', unclosed brace!\n"

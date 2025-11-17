@@ -526,27 +526,49 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
             current_N_level > fd.m_level) {
             auto slice_array = slice_func.array(mfi);
             amrex::Array4<amrex::Real> diag_array = fd.m_F.array();
+            const int comp_ExmBy = Comps[WhichSlice::This]["ExmBy"];
+            const int comp_EypBx = Comps[WhichSlice::This]["EypBx"];
+            const int comp_Bx = Comps[WhichSlice::This]["Bx"];
+            const int comp_By = Comps[WhichSlice::This]["By"];
+            const amrex::Real clight = get_phys_const().c;
             amrex::ParallelFor(diag_box, fd.m_nfields,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
                 {
                     const amrex::Real x = i * dx + poff_diag_x;
                     const amrex::Real y = j * dy + poff_diag_y;
                     const int m = n[diag_comps];
-                    diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
+                    if (m == -1) { // Ex
+                        diag_array(i,j,k,n) += rel_z_data[k-k_min] * (
+                            slice_array(x,y,comp_ExmBy) + clight * slice_array(x,y,comp_By));
+                    } else if (m == -2) { // Ey
+                        diag_array(i,j,k,n) += rel_z_data[k-k_min] * (
+                            slice_array(x,y,comp_EypBx) - clight * slice_array(x,y,comp_Bx));
+                    } else {
+                        diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
+                    }
                 });
         } else if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::laser &&
                    multi_laser.UseLaser(i_slice)) {
             auto laser_array = laser_func.array(mfi);
             amrex::Array4<amrex::GpuComplex<amrex::Real>> diag_array_laser = fd.m_F_laser.array();
-            amrex::ParallelFor(diag_box,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k) noexcept
+            amrex::ParallelFor(diag_box, fd.m_nfields,
+                [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
                 {
                     const amrex::Real x = i * dx + poff_diag_x;
                     const amrex::Real y = j * dy + poff_diag_y;
-                    diag_array_laser(i,j,k) += amrex::GpuComplex<amrex::Real> {
-                        rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_r),
-                        rel_z_data[k-k_min] * laser_array(x,y,WhichLaserSlice::n00j00_i)
-                    };
+                    const int m = n[diag_comps];
+                    if (m == -1) { // real=|a^2|, imag=0
+                        diag_array_laser(i,j,k,n) += amrex::GpuComplex<amrex::Real>{
+                            rel_z_data[k-k_min] * abssq(
+                                laser_array(x,y,WhichLaserSlice::n00j00_r),
+                                laser_array(x,y,WhichLaserSlice::n00j00_i)),
+                            amrex::Real(0)};
+                    } else {
+                        diag_array_laser(i,j,k,n) += amrex::GpuComplex<amrex::Real>{
+                            rel_z_data[k-k_min] * laser_array(x,y,m),
+                            rel_z_data[k-k_min] * laser_array(x,y,m+1)
+                        };
+                    }
                 });
         }
     }
