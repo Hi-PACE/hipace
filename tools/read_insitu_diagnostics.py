@@ -174,7 +174,7 @@ class InSituReader:
 
     def avg_data(self, quantity=None):
         """
-        Retruns averaged data.
+        Returns averaged data.
         This function exposes both quantities from the file as well as derived quantities
         that are computed lazily if the required inputs are available.
 
@@ -204,7 +204,7 @@ class InSituReader:
 
     def slice_data(self, quantity=None):
         """
-        Retruns per-slice data.
+        Returns per-slice data.
         This function exposes both quantities from the file as well as derived quantities
         that are computed lazily if the required inputs are available.
 

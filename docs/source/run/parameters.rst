@@ -1189,7 +1189,7 @@ The rest of the file, following immediately after the closing ``}``, is in binar
 contains all of the in-situ diagnostics along with some metadata. This part can be read using the
 structured datatype of the first section.
 Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
-It can be installed using the command ``pip install -U -e ./path_to_hipace/hipace/tools``.
+It can be installed using the command ``pip install -U -e /path_to_hipace/hipace/tools``.
 Functions to calculate the most useful properties are also provided in that file.
 Usage example:
 
