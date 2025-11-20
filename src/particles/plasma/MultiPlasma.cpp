@@ -18,7 +18,7 @@
 void
 MultiPlasma::ReadParameters ()
 {
-    amrex::ParmParse pp("plasmas");
+    const amrex::ParmParse pp("plasmas");
     queryWithParser(pp, "names", m_names);
     queryWithParser(pp, "adaptive_density", m_adaptive_density);
     DeprecatedInput("plasmas", "sort_bin_size", "hipace.tile_size", "", true);

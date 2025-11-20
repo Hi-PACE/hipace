@@ -64,15 +64,15 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
-        amrex::IntVect lo = fft_box.smallEnd();
+        const Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        const amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
             to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
+                    const amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
                     /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
+                    const amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
                         eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
@@ -84,8 +84,8 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    std::size_t fwd_area = m_forward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
-    std::size_t bkw_area = m_backward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
+    const std::size_t fwd_area = m_forward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
+    const std::size_t bkw_area = m_backward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
 
     // Allocate work area for both FFTs
     m_fft_work_area.resize(std::max(fwd_area, bkw_area));
@@ -110,8 +110,8 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by eigenvalue_matrix
-        Array2<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        const Array2<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
+        const Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
 
         amrex::ParallelFor( to2D(mfi.growntilebox()),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
@@ -126,8 +126,8 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 #endif
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Copy from the staging area to output array (and normalize)
-        Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
-        Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
+        const Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
+        const Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
                                          "Slice MFs must be defined on one box only");
         amrex::ParallelFor( to2D(lhs_mf[mfi].box() & mfi.growntilebox()),

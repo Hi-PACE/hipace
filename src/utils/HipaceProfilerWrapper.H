@@ -38,11 +38,11 @@ struct synchronizeOnDestruct {
     }
 };
 
-#define HIPACE_PROFILE(fname) doStreamSynchronize<1>(); BL_PROFILE(fname); synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__){}
-#define HIPACE_PROFILE_VAR(fname, vname) doStreamSynchronize<1>(); BL_PROFILE_VAR(fname, vname); synchronizeOnDestruct<1> SYNC_V_##vname{}
-#define HIPACE_PROFILE_VAR_NS(fname, vname) BL_PROFILE_VAR_NS(fname, vname); synchronizeOnDestruct<1> SYNC_V_##vname{}
+#define HIPACE_PROFILE(fname) doStreamSynchronize<1>(); BL_PROFILE(fname); const synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__){}
+#define HIPACE_PROFILE_VAR(fname, vname) doStreamSynchronize<1>(); BL_PROFILE_VAR(fname, vname); const synchronizeOnDestruct<1> SYNC_V_##vname{}
+#define HIPACE_PROFILE_VAR_NS(fname, vname) BL_PROFILE_VAR_NS(fname, vname); const synchronizeOnDestruct<1> SYNC_V_##vname{}
 #define HIPACE_PROFILE_VAR_START(vname) doStreamSynchronize<1>(); BL_PROFILE_VAR_START(vname)
 #define HIPACE_PROFILE_VAR_STOP(vname) doStreamSynchronize<1>(); BL_PROFILE_VAR_STOP(vname)
-#define HIPACE_PROFILE_REGION(rname) doStreamSynchronize<1>(); BL_PROFILE_REGION(rname); synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_R_, __COUNTER__){}
+#define HIPACE_PROFILE_REGION(rname) doStreamSynchronize<1>(); BL_PROFILE_REGION(rname); const synchronizeOnDestruct<1> BL_PROFILE_PASTE(SYNC_R_, __COUNTER__){}
 
 #endif // HIPACE_PROFILERWRAPPER_H_

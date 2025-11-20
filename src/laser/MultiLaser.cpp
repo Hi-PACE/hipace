@@ -26,7 +26,7 @@
 void
 MultiLaser::ReadParameters ()
 {
-    amrex::ParmParse pp("lasers");
+    const amrex::ParmParse pp("lasers");
     queryWithParser(pp, "names", m_names);
 
     m_use_laser = m_names[0] != "no_laser";
@@ -68,7 +68,7 @@ void
 MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 {
     if (!m_use_laser) return;
-    amrex::ParmParse pp("lasers");
+    const amrex::ParmParse pp("lasers");
 
     // use field_geom_3D as the default
     std::array<int, 2> n_cells_laser {field_geom_3D.Domain().length(0),
@@ -136,7 +136,7 @@ MultiLaser::InitData ()
 
     // Alloc 2D slices
     // Need at least 1 guard cell transversally for transverse derivative
-    int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+    const int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
     m_slices_nguards = {nguards_xy, nguards_xy, 0};
     m_slices.define(
         m_laser_slice_ba, m_laser_slice_dm, WhichLaserSlice::N, m_slices_nguards,
@@ -151,8 +151,8 @@ MultiLaser::InitData ()
         // Create FFT plans
         amrex::IntVect fft_size = m_slice_box.length();
 
-        std::size_t fwd_area = m_forward_fft.Initialize(FFTType::C2C_2D_fwd, fft_size[0], fft_size[1]);
-        std::size_t bkw_area = m_backward_fft.Initialize(FFTType::C2C_2D_bkw, fft_size[0], fft_size[1]);
+        const std::size_t fwd_area = m_forward_fft.Initialize(FFTType::C2C_2D_fwd, fft_size[0], fft_size[1]);
+        const std::size_t bkw_area = m_backward_fft.Initialize(FFTType::C2C_2D_bkw, fft_size[0], fft_size[1]);
 
         // Allocate work area for both FFTs
         m_fft_work_area.resize(std::max(fwd_area, bkw_area));
@@ -196,7 +196,7 @@ MultiLaser::ShiftLaserSlices (const int islice)
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box bx = mfi.tilebox();
-        Array3<amrex::Real> arr = m_slices.array(mfi);
+        const Array3<amrex::Real> arr = m_slices.array(mfi);
         amrex::ParallelFor(
         to2D(bx), 2,
         [=] AMREX_GPU_DEVICE(int i, int j, int n) noexcept
@@ -312,7 +312,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
     HIPACE_PROFILE("MultiLaser::SetInitialChi()");
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
+        const Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
 
         // put chi from the plasma density function on the laser grid as if it were deposited there,
         // this works even outside the field grid
@@ -351,8 +351,8 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
     HIPACE_PROFILE("MultiLaser::InterpolateChi()");
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
-        Array3<amrex::Real> laser_arr = m_slices.array(mfi);
-        Array2<const amrex::Real> field_arr_chi =
+        const Array3<amrex::Real> laser_arr = m_slices.array(mfi);
+        const Array2<const amrex::Real> field_arr_chi =
             fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["chi"]);
 
         const amrex::Real poff_laser_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
@@ -471,9 +471,9 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        Array3<amrex::Real> arr = m_slices.array(mfi);
-        Array3<amrex::Real> rhs_mg_arr = m_rhs_mg.array();
-        Array3<amrex::Real> acoeff_real_arr = m_mg_acoeff_real.array();
+        const Array3<amrex::Real> arr = m_slices.array(mfi);
+        const Array3<amrex::Real> rhs_mg_arr = m_rhs_mg.array();
+        const Array3<amrex::Real> acoeff_real_arr = m_mg_acoeff_real.array();
 
         // Calculate phase terms. 0 if !m_use_phase
         amrex::Real tj00 = 0.;
@@ -532,8 +532,8 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
         if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
         if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
         if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
-        Complex exp1 = amrex::exp(I*(tj00-tjp1));
-        Complex exp2 = amrex::exp(I*(tj00-tjp2));
+        const Complex exp1 = amrex::exp(I*(tj00-tjp1));
+        const Complex exp2 = amrex::exp(I*(tj00-tjp2));
 
         // D_j^n as defined in Benedetti's 2017 paper
         djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
@@ -649,11 +649,11 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         // The right-hand side is computed and stored in rhs
         // Then rhs is Fourier-transformed into rhs_fourier, then multiplied by -1/(k**2+a)
         // rhs_fourier is FFT-back-transformed to sol, and sol is normalized and copied into np1j00.
-        Array3<Complex> sol_arr = m_sol.array();
-        Array3<Complex> rhs_arr = m_rhs.array();
-        Array2<Complex> rhs_fourier_arr = m_rhs_fourier.array();
+        const Array3<Complex> sol_arr = m_sol.array();
+        const Array3<Complex> rhs_arr = m_rhs.array();
+        const Array2<Complex> rhs_fourier_arr = m_rhs_fourier.array();
 
-        Array3<amrex::Real> arr = m_slices.array(mfi);
+        const Array3<amrex::Real> arr = m_slices.array(mfi);
 
         int const Nx = bx.length(0);
         int const Ny = bx.length(1);
@@ -712,11 +712,11 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         if (dt1 > 1.5_rt*MathConst::pi) dt1 -= 2._rt*MathConst::pi;
         if (dt2 <-1.5_rt*MathConst::pi) dt2 += 2._rt*MathConst::pi;
         if (dt2 > 1.5_rt*MathConst::pi) dt2 -= 2._rt*MathConst::pi;
-        Complex exp1 = amrex::exp(I*(tj00-tjp1));
-        Complex exp2 = amrex::exp(I*(tj00-tjp2));
+        const Complex exp1 = amrex::exp(I*(tj00-tjp1));
+        const Complex exp2 = amrex::exp(I*(tj00-tjp2));
 
         // D_j^n as defined in Benedetti's 2017 paper
-        amrex::Real djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
+        const amrex::Real djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
         amrex::ParallelFor(
             to2D(bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept
@@ -774,8 +774,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         m_forward_fft.Execute();
 
         // Multiply by appropriate factors in Fourier space
-        amrex::Real dkx = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(0);
-        amrex::Real dky = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(1);
+        const amrex::Real dkx = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(0);
+        const amrex::Real dky = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(1);
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
@@ -785,8 +785,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
             to2D(bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 // divide rhs_fourier by -(k^2+a)
-                amrex::Real kx = (i<imid) ? dkx*i : dkx*(i-Nx);
-                amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
+                const amrex::Real kx = (i<imid) ? dkx*i : dkx*(i-Nx);
+                const amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
                 const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
                     1._rt/(kx*kx + ky*ky + acoeff) : 0.;
                 rhs_fourier_arr(i,j) *= -inv_k2a;
@@ -823,7 +823,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     using Complex = amrex::GpuComplex<amrex::Real>;
 
     // Basic laser parameters and constants
-    Complex I(0,1);
+    constexpr Complex I(0,1);
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
 
     // Get grid properties
@@ -914,22 +914,22 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         arr(i, j, k, comp + 1 ) = 0._rt;
                     }
                     // Compute envelope for time step 0
-                    Complex diffract_factor = 1._rt + I * (zp - zfoc + z0 * std::cos(propagation_angle_yz)) \
+                    const Complex diffract_factor = 1._rt + I * (zp - zfoc + z0 * std::cos(propagation_angle_yz)) \
                        * 2._rt/(k0 * w0_2);
-                    Complex inv_complex_waist_2 = 1._rt /(w0_2 * diffract_factor);
+                    const Complex inv_complex_waist_2 = 1._rt /(w0_2 * diffract_factor);
                     // Time stretching due to STCs and phi2 complex envelope
                     // (1 if zeta=0, beta=0, phi2=0)
-                    Complex stretch_factor = 1._rt \
+                    const Complex stretch_factor = 1._rt \
                         + 4._rt * (zeta - beta * zfoc) * inv_tau2 * (zeta - beta * zfoc) * inv_complex_waist_2 \
                         + 2._rt * I * (-phi2 - beta * beta * k0 * zfoc) * inv_tau2;
-                    Complex prefactor = a0 / diffract_factor;
-                    Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
+                    const Complex prefactor = a0 / diffract_factor;
+                    const Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
                         amrex::pow(zp + beta * k0 * (x * std::cos(theta_xy) + yp * std::sin(theta_xy)) * clight \
                         -2._rt * I * (x * std::cos(theta_xy) + yp * std::sin(theta_xy))\
                         * (zeta + beta * zfoc) * clight * inv_complex_waist_2, 2);
-                    Complex stcfactor = prefactor * amrex::exp( - time_exponent);
-                    Complex exp_argument = - (x * x + yp * yp) * inv_complex_waist_2;
-                    Complex envelope = stcfactor * amrex::exp(exp_argument) * \
+                    const Complex stcfactor = prefactor * amrex::exp( - time_exponent);
+                    const Complex exp_argument = - (x * x + yp * yp) * inv_complex_waist_2;
+                    const Complex envelope = stcfactor * amrex::exp(exp_argument) * \
                        amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
                     arr(i, j, k, comp ) += envelope.real();
                     arr(i, j, k, comp + 1 ) += envelope.imag();
@@ -1043,9 +1043,9 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::
 #endif
 
     // zero pad the rank number;
-    std::string::size_type n_zeros = 4;
-    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
-    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+    const std::string::size_type n_zeros = 4;
+    const std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    const std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
 
     // open file
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_laser." + pad_rank_num + ".txt",

@@ -67,7 +67,7 @@ void MultiBuffer::free_buffer (int slice) {
 
 void MultiBuffer::initialize (int nslices, MultiBeam& beams, MultiLaser& laser) {
 
-    amrex::ParmParse pp("comms_buffer");
+    const amrex::ParmParse pp("comms_buffer");
 
     m_comm = amrex::ParallelDescriptor::Communicator();
     const int rank_id = amrex::ParallelDescriptor::MyProc();
@@ -673,7 +673,7 @@ void MultiBuffer::write_metadata (int slice, MultiBeam& beams, MultiLaser& laser
         // write number of beam particles (per beam)
         get_metadata_location(slice)[b + 1] = beams.getBeam(b).getNumParticles(beam_slice);
     }
-    std::size_t offset = get_buffer_offset(slice, beams, laser).m_total;
+    const std::size_t offset = get_buffer_offset(slice, beams, laser).m_total;
     // write total buffer size
     get_metadata_location(slice)[0] = (offset+sizeof(storage_type)-1) / sizeof(storage_type);
     m_datanodes[slice].m_buffer_size = get_metadata_location(slice)[0];
@@ -765,7 +765,7 @@ void MultiBuffer::memcpy_from_buffer (int slice, std::size_t buffer_offset,
 }
 
 void MultiBuffer::async_memcpy_to_buffer (int slice) {
-    std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
+    const std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
 
     amrex::Gpu::Device::setStreamIndex(1);
     amrex::Gpu::dtoh_memcpy_async(
@@ -774,7 +774,7 @@ void MultiBuffer::async_memcpy_to_buffer (int slice) {
 }
 
 void MultiBuffer::async_memcpy_from_buffer (int slice) {
-    std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
+    const std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
     m_leading_gpu_buffer.resize(0);
     m_leading_gpu_buffer.resize(num_bytes);
 

@@ -108,7 +108,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
 
                 const amrex::Real uxp = ptd.rdata(PlasmaIdx::ux)[ip]*clightinv;
                 const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip]*clightinv;
-                amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real uzp = (1._rt + uxp*uxp + uyp*uyp - psi*psi
                     + 0.5_rt*Aabssqp)/(2._rt*psi);
                 const amrex::Real gamma = (1._rt + uxp*uxp + uyp*uyp + psi*psi
@@ -137,7 +137,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             amrex::GpuArray<int, 1>{aabs},
             amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq}
         );
-        Array3<amrex::Real> field_arr = isl_fab.array();
+        const Array3<amrex::Real> field_arr = isl_fab.array();
 
         // Normalize the components of momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)
         // by dividing them by the total weight (w) in each cell. If the weight is zero, no division is performed.
@@ -145,7 +145,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             to2D(isl_fab.box()),
             [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
-                    amrex::Real wp_inv = field_arr(i, j, w) == amrex::Real{0} ? amrex::Real{0} : amrex::Real{1} / field_arr(i, j, w);
+                    const amrex::Real wp_inv = field_arr(i, j, w) == amrex::Real{0} ? amrex::Real{0} : amrex::Real{1} / field_arr(i, j, w);
                     field_arr(i, j, ux) *= wp_inv;
                     field_arr(i, j, uy) *= wp_inv;
                     field_arr(i, j, uz) *= wp_inv;

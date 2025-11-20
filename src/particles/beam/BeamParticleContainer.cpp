@@ -20,7 +20,7 @@ namespace
 {
     void QueryElementSetChargeMass (amrex::ParmParse& pp, amrex::Real& charge, amrex::Real& mass)
     {
-        PhysConst phys_const = get_phys_const();
+        const PhysConst phys_const = get_phys_const();
 
         std::string element = "electron";
         queryWithParser(pp, "element", element);
@@ -42,7 +42,7 @@ void
 BeamParticleContainer::ReadParameters ()
 {
     amrex::ParmParse pp(m_name);
-    amrex::ParmParse pp_alt("beams");
+    const amrex::ParmParse pp_alt("beams");
     QueryElementSetChargeMass(pp, m_charge, m_mass);
     // Overwrite element's charge and mass if user specifies them explicitly
     queryWithParser(pp, "charge", m_charge);
@@ -120,8 +120,8 @@ amrex::Real
 BeamParticleContainer::InitData (const amrex::Geometry& geom)
 {
     using namespace amrex::literals;
-    amrex::ParmParse pp(m_name);
-    amrex::ParmParse pp_alt("beams");
+    const amrex::ParmParse pp(m_name);
+    const amrex::ParmParse pp_alt("beams");
     amrex::Real ptime {0.};
     if (m_injection_type == "fixed_ppc") {
 
@@ -167,8 +167,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
 
         getWithParser(pp, "position_std", m_position_std);
         getWithParser(pp, "num_particles", m_num_particles);
-        bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
-        bool peak_density_is_specified = queryWithParser(pp, "density", m_density);
+        const bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
+        const bool peak_density_is_specified = queryWithParser(pp, "density", m_density);
         if (charge_is_specified) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( Hipace::m_normalized_units == 0,
             "The option 'beam.total_charge' is only valid in SI units."
             "Please either specify the peak density with '<beam name>.density', "
@@ -239,7 +239,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                 "To symmetrize the beam, please specify a beam particle number divisible by 4.");
         }
 
-        bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
+        const bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
         m_peak_density_is_specified = queryWithParser(pp, "density", m_density);
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !charge_is_specified || !Hipace::m_normalized_units,
@@ -255,11 +255,11 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     } else if (m_injection_type == "from_file") {
 #ifdef HIPACE_USE_OPENPMD
         getWithParserAlt(pp, "input_file", m_input_file, pp_alt);
-        bool coordinates_specified = queryWithParserAlt(pp, "file_coordinates_xyz",
+        const bool coordinates_specified = queryWithParserAlt(pp, "file_coordinates_xyz",
                                                         m_file_coordinates_xyz, pp_alt);
         queryWithParserAlt(pp, "plasma_density", m_plasma_density, pp_alt);
         queryWithParserAlt(pp, "iteration", m_num_iteration, pp_alt);
-        bool species_specified = queryWithParser(pp, "openPMD_species_name", m_species_name);
+        const bool species_specified = queryWithParser(pp, "openPMD_species_name", m_species_name);
         if(!species_specified) {
             m_species_name = m_name;
         }
@@ -626,9 +626,9 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
 #endif
 
     // zero pad the rank number;
-    std::string::size_type n_zeros = 4;
-    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
-    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+    const std::string::size_type n_zeros = 4;
+    const std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    const std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
 
     // open file
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",

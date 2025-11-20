@@ -20,17 +20,17 @@
 void
 Diagnostic::ReadParameters (int nlev, bool use_laser)
 {
-    amrex::ParmParse ppd("diagnostic");
-    amrex::ParmParse pph("hipace");
+    const amrex::ParmParse ppd("diagnostic");
+    const amrex::ParmParse pph("hipace");
 
     // Make the default diagnostic objects, subset of: lev0, lev1, lev2, laser_diag
     amrex::Vector<std::string> field_diag_names{};
     for (int lev = 0; lev<nlev; ++lev) {
-        std::string diag_name = "lev" + std::to_string(lev);
+        const std::string diag_name = "lev" + std::to_string(lev);
         field_diag_names.emplace_back(diag_name);
     }
     if (use_laser) {
-        std::string diag_name = "laser_diag";
+        const std::string diag_name = "laser_diag";
         field_diag_names.emplace_back(diag_name);
     }
 
@@ -46,7 +46,7 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
 
         fd.m_diag_name = field_diag_names[i];
 
-        amrex::ParmParse pp(fd.m_diag_name);
+        const amrex::ParmParse pp(fd.m_diag_name);
 
         std::string str_type;
         getWithParserAlt(pp, "diag_type", str_type, ppd);
@@ -90,9 +90,9 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
 
 bool
 Diagnostic::needsRho () const {
-    amrex::ParmParse ppd("diagnostic");
+    const amrex::ParmParse ppd("diagnostic");
     for (auto& fd : m_field_data) {
-        amrex::ParmParse pp(fd.m_diag_name);
+        const amrex::ParmParse pp(fd.m_diag_name);
         amrex::Vector<std::string> comps{};
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
@@ -106,9 +106,9 @@ Diagnostic::needsRho () const {
 
 bool
 Diagnostic::needsRhoIndividual () const {
-    amrex::ParmParse ppd("diagnostic");
+    const amrex::ParmParse ppd("diagnostic");
     for (auto& fd : m_field_data) {
-        amrex::ParmParse pp(fd.m_diag_name);
+        const amrex::ParmParse pp(fd.m_diag_name);
         amrex::Vector<std::string> comps{};
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
@@ -123,9 +123,9 @@ Diagnostic::needsRhoIndividual () const {
 
 bool
 Diagnostic::needsTempIndividual () const {
-    amrex::ParmParse ppd("diagnostic");
+    const amrex::ParmParse ppd("diagnostic");
     for (auto& fd : m_field_data) {
-        amrex::ParmParse pp(fd.m_diag_name);
+        const amrex::ParmParse pp(fd.m_diag_name);
         amrex::Vector<std::string> comps{};
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
@@ -142,7 +142,7 @@ Diagnostic::needsTempIndividual () const {
 
 void
 Diagnostic::Initialize (int nlev, bool use_laser) {
-    amrex::ParmParse ppd("diagnostic");
+    const amrex::ParmParse ppd("diagnostic");
 
     // for each diagnostic object, choose a geometry and assign field_data
 
@@ -171,7 +171,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         geometry_name_to_output_comps_map[geom_name]["Ey"] = -2;
     }
     if (use_laser) {
-        std::string diag_name = "laser_diag";
+        const std::string diag_name = "laser_diag";
         std::string geom_name = "laser";
         diag_name_to_default_geometry.emplace(diag_name, geom_name);
         geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::laser);
@@ -198,7 +198,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
     std::map<std::string, bool> is_global_comp_used{};
 
     for (auto& fd : m_field_data) {
-        amrex::ParmParse pp(fd.m_diag_name);
+        const amrex::ParmParse pp(fd.m_diag_name);
 
         std::string base_geom_name = "level_0";
 
@@ -298,7 +298,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         }
     }
 
-    amrex::ParmParse ppb("beams");
+    const amrex::ParmParse ppb("beams");
     // read in all beam names
     amrex::Vector<std::string> all_beam_names;
     queryWithParser(ppb, "names", all_beam_names);
@@ -308,7 +308,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
     if(m_output_beam_names.empty()) {
         m_output_beam_names = all_beam_names;
     } else {
-        for(std::string beam_name : m_output_beam_names) {
+        for(const std::string& beam_name : m_output_beam_names) {
             if(beam_name == "all" || beam_name == "All") {
                 m_output_beam_names = all_beam_names;
                 break;

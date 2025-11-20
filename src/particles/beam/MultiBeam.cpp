@@ -16,7 +16,7 @@
 void
 MultiBeam::ReadParameters ()
 {
-    amrex::ParmParse pp("beams");
+    const amrex::ParmParse pp("beams");
     queryWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
     DeprecatedInput("beams", "insitu_freq", "insitu_period");

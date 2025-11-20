@@ -27,10 +27,10 @@
 void
 PlasmaParticleContainer::ReadParameters ()
 {
-    PhysConst phys_const = get_phys_const();
+    const PhysConst phys_const = get_phys_const();
 
-    amrex::ParmParse pp(m_name);
-    amrex::ParmParse pp_alt("plasmas");
+    const amrex::ParmParse pp(m_name);
+    const amrex::ParmParse pp_alt("plasmas");
     std::string element = "";
     amrex::Real mass_Da = 0;
     queryWithParser(pp, "element", element);
@@ -64,7 +64,7 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "mass", m_mass);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
 
-    bool ion_lev_specified = queryWithParser(pp, "initial_ion_level", m_init_ion_lev);
+    const bool ion_lev_specified = queryWithParser(pp, "initial_ion_level", m_init_ion_lev);
     m_can_field_ionize = pp.contains("ionization_product");
 
     queryWithParser(pp, "can_ionize", m_can_field_ionize);
@@ -98,14 +98,14 @@ PlasmaParticleContainer::ReadParameters ()
                     "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
     std::string density_func_str = "0.";
-    bool density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
+    const bool density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
     if (density_func_specified) {
         m_density_func.define_parser(
             makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"}));
     }
 
     std::string density_path = "";
-    bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", density_path, pp_alt);
+    const bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", density_path, pp_alt);
     if (density_file_specified) {
         m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data);
     }
@@ -143,8 +143,8 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
     getWithParserAlt(pp, "ppc", m_ppc, pp_alt);
     queryWithParser(pp, "u_mean", m_u_mean);
-    bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
-    bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
+    const bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
+    const bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(temperature_is_specified && thermal_momentum_is_specified),
          "Please specify exlusively either a temperature or the thermal momentum");
@@ -184,8 +184,8 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
     if (!m_read_fine_patch) {
         m_read_fine_patch = true;
 
-        amrex::ParmParse pp(m_name);
-        amrex::ParmParse pp_alt("plasmas");
+        const amrex::ParmParse pp(m_name);
+        const amrex::ParmParse pp_alt("plasmas");
 
         queryWithParserAlt(pp, "fine_transition_cells", m_fine_transition_cells, pp_alt);
 
@@ -473,12 +473,12 @@ IonizationModule (const int lev,
                                                + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
             const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
-            amrex::Real w_dtau = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
+            const amrex::Real w_dtau = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
                 std::pow(Ep, adk_power[ion_lev_loc]) *
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
-            amrex::Real p = 1._rt - std::exp( - w_dtau );
+            const amrex::Real p = 1._rt - std::exp( - w_dtau );
 
-            amrex::Real random_draw = amrex::Random(engine);
+            const amrex::Real random_draw = amrex::Random(engine);
             if (random_draw < p)
             {
                 ion_lev[ip] += 1;
@@ -677,16 +677,16 @@ LaserIonization (const int islice,
                                                + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
             const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
-            amrex::Real w_dtau_dc = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
+            const amrex::Real w_dtau_dc = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
                 std::pow(Ep, adk_power[ion_lev_loc]) *
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
 
-            amrex::Real const w_dtau_ac = w_dtau_dc *
+            const amrex::Real w_dtau_ac = w_dtau_dc *
                 (linear_polarization ? std::sqrt(Ep * laser_adk_prefactor[ion_lev_loc]) : 1._rt);
 
-            amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
+            const amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
 
-            amrex::Real random_draw = amrex::Random(engine);
+            const amrex::Real random_draw = amrex::Random(engine);
             if (random_draw < p)
             {
                 ion_lev[ip] += 1;
@@ -774,7 +774,7 @@ LaserIonization (const int islice,
                     const amrex::Real s1 = - (7._rt/4._rt) + alpha / 2._rt;
                     const amrex::Real s2 = (1._rt/16._rt) * ( 8._rt * (alpha*alpha) - 68._rt*alpha + 131._rt );
                     const amrex::Real width_p = amrex::abs(A) * delta * (1._rt + s1*delta2 + s2*delta4);
-                    amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
+                    const amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
                     ux = p_pol; // linear polarization is assumed along x.
                     uz = (amrex::abs(A * A) * 0.25_rt + p_pol * p_pol * 0.5_rt);
                 } else {
@@ -853,7 +853,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
         const amrex::Geometry& gm = Hipace::GetInstance().m_3D_geom[0];
         const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
         amrex::FArrayBox& isl_fab = Hipace::GetInstance().m_fields.getSlices(0)[pti];
-        Array3<amrex::Real> arr = isl_fab.array();
+        const Array3<amrex::Real> arr = isl_fab.array();
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
         const amrex::Real dx_inv = gm.InvCellSize(0);
@@ -954,9 +954,9 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
 #endif
 
     // Zero pad the rank number;
-    std::string::size_type n_zeros = 4;
-    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
-    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+    const std::string::size_type n_zeros = 4;
+    const std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    const std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
 
     // Open file
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",

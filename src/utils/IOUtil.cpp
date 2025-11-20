@@ -90,10 +90,10 @@ std::ostream& operator<<(std::ostream& os, utils::format_time ft) {
     long long hours = minutes / 60;
     minutes %= 60;
 
-    long long days = hours / 24;
+    const long long days = hours / 24;
     hours %= 24;
 
-    amrex::IOFormatSaver iofmtsaver(os);
+    const amrex::IOFormatSaver iofmtsaver(os);
 
     if (days > 0) {
         os << days << "-";

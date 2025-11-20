@@ -16,7 +16,7 @@ inline void
 DeprecatedInput (std::string const& pp_name, char const * const str,
                 std::string const& replacement, std::string const& msg="", bool new_prefix=false)
 {
-    amrex::ParmParse pp(pp_name);
+    const amrex::ParmParse pp(pp_name);
     std::string tmp_str = "";
     if (queryWithParser(pp, str, tmp_str)) {
         amrex::Abort(

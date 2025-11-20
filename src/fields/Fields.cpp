@@ -31,7 +31,7 @@ Fields::ReadParameters (const int nlev)
 {
     m_slices = decltype(m_slices)(nlev);
 
-    amrex::ParmParse ppf("fields");
+    const amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
     // set default Poisson solver based on the platform
 #ifdef AMREX_USE_GPU
@@ -67,7 +67,7 @@ Fields::AllocData (
         m_lev0_periodicity = geom.periodicity();
 
         // Need 1 extra guard cell transversally for transverse derivative
-        int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+        const int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
         m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
 
         m_explicit = Hipace::m_explicit;
@@ -525,7 +525,7 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::field &&
             current_N_level > fd.m_level) {
             auto slice_array = slice_func.array(mfi);
-            amrex::Array4<amrex::Real> diag_array = fd.m_F.array();
+            const amrex::Array4<amrex::Real> diag_array = fd.m_F.array();
             const int comp_ExmBy = Comps[WhichSlice::This]["ExmBy"];
             const int comp_EypBx = Comps[WhichSlice::This]["EypBx"];
             const int comp_Bx = Comps[WhichSlice::This]["Bx"];
@@ -550,7 +550,7 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         } else if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::laser &&
                    multi_laser.UseLaser(i_slice)) {
             auto laser_array = laser_func.array(mfi);
-            amrex::Array4<amrex::GpuComplex<amrex::Real>> diag_array_laser = fd.m_F_laser.array();
+            const amrex::Array4<amrex::GpuComplex<amrex::Real>> diag_array_laser = fd.m_F_laser.array();
             amrex::ParallelFor(diag_box, fd.m_nfields,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
                 {
@@ -779,7 +779,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                 if (x*x + y*y > cutoff_sq)  {
                     return amrex::IdentityTuple(MultipoleTuple{}, MultipoleReduceOpList{});
                 }
-                amrex::Real s_v = arr_staging_area(i, j);
+                const amrex::Real s_v = arr_staging_area(i, j);
                 return GetMultipoleCoeffs(s_v, x, y);
             }
         );
@@ -853,8 +853,8 @@ Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int l
                 // set interpolated values near edge of fine field between outer_edge and inner_edge
                 // to compensate for incomplete charge/current deposition in those cells
                 if(i<narrow_i_lo || i>narrow_i_hi || j<narrow_j_lo || j>narrow_j_hi) {
-                    amrex::Real x = i * dx + offset0;
-                    amrex::Real y = j * dy + offset1;
+                    const amrex::Real x = i * dx + offset0;
+                    const amrex::Real y = j * dy + offset1;
                     arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
                 }
             });
@@ -905,7 +905,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
      */
     HIPACE_PROFILE("Fields::SolvePoissonPsiExmByEypBxEzBz()");
 
-    PhysConst phys_const = get_phys_const();
+    const PhysConst phys_const = get_phys_const();
 
     if (m_explicit && Hipace::m_do_beam_jz_minus_rho) {
         for (int lev=0; lev<current_N_level; ++lev) {
@@ -1020,7 +1020,7 @@ Fields::SolvePoissonEz (amrex::Vector<amrex::Geometry> const& geom,
     /* Solves Laplacian(Ez) =  1/(episilon0 *c0 )*(d_x(jx) + d_y(jy)) */
     HIPACE_PROFILE("Fields::SolvePoissonEz()");
 
-    PhysConst phys_const = get_phys_const();
+    const PhysConst phys_const = get_phys_const();
 
     EnforcePeriodic(true, {Comps[which_slice]["jx"],
                            Comps[which_slice]["jy"]});
@@ -1072,7 +1072,7 @@ Fields::SolvePoissonBxBy (amrex::Vector<amrex::Geometry> const& geom,
      */
     HIPACE_PROFILE("Fields::SolvePoissonBxBy()");
 
-    PhysConst phys_const = get_phys_const();
+    const PhysConst phys_const = get_phys_const();
 
     EnforcePeriodic(true, {Comps[WhichSlice::Next]["jx"],
                            Comps[WhichSlice::Next]["jy"],
@@ -1254,7 +1254,6 @@ Fields::MixAndShiftBfields (const amrex::Real relative_Bfield_error,
         weight_B_iter = 0.5_rt;
         weight_B_prev_iter = 0.5_rt;
     }
-
     amrex::MultiFab& slicemf = getSlices(lev);
 
     AMREX_ALWAYS_ASSERT(Comps[WhichSlice::This]["Bx"]+1==Comps[WhichSlice::This]["By"]);
@@ -1301,7 +1300,7 @@ Fields::ComputeRelBFieldError (const int which_slice, const int which_slice_iter
 
     for (int lev=0; lev<current_N_level; ++lev) {
 
-        amrex::MultiFab& slicemf = getSlices(lev);
+        const amrex::MultiFab& slicemf = getSlices(lev);
 
         for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
             const amrex::Box& bx = mfi.tilebox();
@@ -1368,7 +1367,7 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
         "Must use explicit solver for field insitu diagnostic");
     const int jz_beam = Comps[WhichSlice::This]["jz_beam"];
 
-    amrex::MultiFab& slicemf = getSlices(lev);
+    const amrex::MultiFab& slicemf = getSlices(lev);
 
     amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp]> reduce_op;
     amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp]> reduce_data(reduce_op);
@@ -1416,9 +1415,9 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
 #endif
 
     // zero pad the rank number;
-    std::string::size_type n_zeros = 4;
-    std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
-    std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
+    const std::string::size_type n_zeros = 4;
+    const std::string rank_num = std::to_string(amrex::ParallelDescriptor::MyProc());
+    const std::string pad_rank_num = std::string(n_zeros-std::min(rank_num.size(), n_zeros),'0')+rank_num;
 
     // open file
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_fields." + pad_rank_num + ".txt",

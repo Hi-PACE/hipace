@@ -230,14 +230,14 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
 
     // Calculate the array of m_eigenvalue_matrix
     m_eigenvalue_matrix.resize({{0,0,0}, {ny-1,nx-1,0}});
-    Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array();
+    const Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array();
     amrex::ParallelFor(amrex::BoxND<2>{{0,0}, {ny-1,nx-1}},
         [=] AMREX_GPU_DEVICE (int j, int i) noexcept
         {
             /* fast poisson solver diagonal x coeffs */
-            amrex::Real sinex_sq = std::sin(( i + 1 ) * sine_x_factor) * std::sin(( i + 1 ) * sine_x_factor);
+            const amrex::Real sinex_sq = std::sin(( i + 1 ) * sine_x_factor) * std::sin(( i + 1 ) * sine_x_factor);
             /* fast poisson solver diagonal y coeffs */
-            amrex::Real siney_sq = std::sin(( j + 1 ) * sine_y_factor) * std::sin(( j + 1 ) * sine_y_factor);
+            const amrex::Real siney_sq = std::sin(( j + 1 ) * sine_y_factor) * std::sin(( j + 1 ) * sine_y_factor);
 
             if ((sinex_sq!=0) && (siney_sq!=0)) {
                 eigenvalue_matrix(j,i) = norm_fac / ( -4.0_rt * ( sinex_sq / dxsquared + siney_sq / dysquared ));
@@ -254,8 +254,8 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     m_fourier_array.resize(complex_1d_size);
 
     // Allocate and initialize the FFT plans
-    std::size_t fft_x_area = m_x_fft.Initialize(FFTType::C2R_1D_batched, nx+1, ny);
-    std::size_t fft_y_area = m_y_fft.Initialize(FFTType::C2R_1D_batched, ny+1, nx);
+    const std::size_t fft_x_area = m_x_fft.Initialize(FFTType::C2R_1D_batched, nx+1, ny);
+    const std::size_t fft_y_area = m_y_fft.Initialize(FFTType::C2R_1D_batched, ny+1, nx);
 
     // Allocate work area for both FFTs
     m_fft_work_area.resize(std::max(fft_x_area, fft_y_area));
@@ -290,13 +290,13 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     const int nx = m_stagingArea[0].box().length(0); // initially contiguous
     const int ny = m_stagingArea[0].box().length(1); // contiguous after transpose
 
-    Array2<amrex::Real> pos_arr {{m_stagingArea[0].dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
+    const Array2<amrex::Real> pos_arr {{m_stagingArea[0].dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
 
-    Array2<amrex::Real> real_arr {{m_position_array.dataPtr(), {0,0,0}, {nx+1,ny,1}, 1}};
-    Array2<amrex::Real> real_arr_t {{m_position_array.dataPtr(), {0,0,0}, {ny+1,nx,1}, 1}};
+    const Array2<amrex::Real> real_arr {{m_position_array.dataPtr(), {0,0,0}, {nx+1,ny,1}, 1}};
+    const Array2<amrex::Real> real_arr_t {{m_position_array.dataPtr(), {0,0,0}, {ny+1,nx,1}, 1}};
 
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr {{ m_fourier_array.dataPtr(), {0,0,0}, {(nx+1)/2+1,ny,1}, 1}};
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {{ m_fourier_array.dataPtr(), {0,0,0}, {(ny+1)/2+1,nx,1}, 1}};
+    const Array2<amrex::GpuComplex<amrex::Real>> comp_arr {{ m_fourier_array.dataPtr(), {0,0,0}, {(nx+1)/2+1,ny,1}, 1}};
+    const Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {{ m_fourier_array.dataPtr(), {0,0,0}, {(ny+1)/2+1,nx,1}, 1}};
 
     // 1D DST in x
     ToComplex(pos_arr, comp_arr, nx, ny);
@@ -322,7 +322,7 @@ FFTPoissonSolverDirichletFast::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     amrex::Box lhs_bx = lhs_mf[0].box();
     // shift box to handle ghost cells properly
     lhs_bx -= m_stagingArea[0].box().smallEnd();
-    Array2<amrex::Real> lhs_arr {{lhs_mf[0].dataPtr(), amrex::begin(lhs_bx), amrex::end(lhs_bx), 1}};
+    const Array2<amrex::Real> lhs_arr {{lhs_mf[0].dataPtr(), amrex::begin(lhs_bx), amrex::end(lhs_bx), 1}};
 
     ToSine(real_arr, lhs_arr, m_sine_x_factor.dataPtr(), nx, ny);
 }
