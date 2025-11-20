@@ -738,7 +738,6 @@ MultiBuffer::BufferOffset MultiBuffer::get_buffer_offset (int slice, MultiBeam& 
 
 void MultiBuffer::memcpy_to_buffer (int slice, std::size_t buffer_offset,
                                     const void* src_ptr, std::size_t num_bytes) {
-#ifdef AMREX_USE_GPU
     if (m_async_memcpy) {
         amrex::Gpu::dtod_memcpy_async(
             m_trailing_gpu_buffer.dataPtr() + buffer_offset, src_ptr, num_bytes);
@@ -749,14 +748,10 @@ void MultiBuffer::memcpy_to_buffer (int slice, std::size_t buffer_offset,
         amrex::Gpu::dtod_memcpy_async(
             m_datanodes[slice].m_buffer + buffer_offset, src_ptr, num_bytes);
     }
-#else
-    std::memcpy(m_datanodes[slice].m_buffer + buffer_offset, src_ptr, num_bytes);
-#endif
 }
 
 void MultiBuffer::memcpy_from_buffer (int slice, std::size_t buffer_offset,
                                       void* dst_ptr, std::size_t num_bytes) {
-#ifdef AMREX_USE_GPU
     if (m_async_memcpy) {
         amrex::Gpu::dtod_memcpy_async(
             dst_ptr, m_leading_gpu_buffer.dataPtr() + buffer_offset, num_bytes);
@@ -767,21 +762,14 @@ void MultiBuffer::memcpy_from_buffer (int slice, std::size_t buffer_offset,
         amrex::Gpu::dtod_memcpy_async(
             dst_ptr, m_datanodes[slice].m_buffer + buffer_offset, num_bytes);
     }
-#else
-    std::memcpy(dst_ptr, m_datanodes[slice].m_buffer + buffer_offset, num_bytes);
-#endif
 }
 
 void MultiBuffer::async_memcpy_to_buffer (int slice) {
     std::size_t num_bytes = m_datanodes[slice].m_buffer_size * sizeof(storage_type);
 
     amrex::Gpu::Device::setStreamIndex(1);
-#ifdef AMREX_USE_GPU
     amrex::Gpu::dtoh_memcpy_async(
         m_datanodes[slice].m_buffer, m_trailing_gpu_buffer.dataPtr(), num_bytes);
-#else
-    std::memcpy(m_datanodes[slice].m_buffer, m_trailing_gpu_buffer.dataPtr(), num_bytes);
-#endif
     amrex::Gpu::Device::resetStreamIndex();
 }
 
@@ -791,12 +779,8 @@ void MultiBuffer::async_memcpy_from_buffer (int slice) {
     m_leading_gpu_buffer.resize(num_bytes);
 
     amrex::Gpu::Device::setStreamIndex(2);
-#ifdef AMREX_USE_GPU
     amrex::Gpu::htod_memcpy_async(
         m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
-#else
-    std::memcpy(m_leading_gpu_buffer.dataPtr(), m_datanodes[slice].m_buffer, num_bytes);
-#endif
     amrex::Gpu::Device::resetStreamIndex();
 }
 

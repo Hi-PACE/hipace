@@ -1002,6 +1002,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 
           .. math::
               E(\boldsymbol{x},t) \propto Re\left[ \exp\left(  -\frac{(t-t_{peak})^2}{\tau^2 + 2i\phi^{(2)}} + i\omega_0 (t-t_{peak}) + i\phi_0 \right) \right]
+
           where :math:`\tau` is given by ``<laser_name>.tau`` and represents the Fourier-limited duration of the laser pulse. Thus, the actual duration of the chirped laser pulse is:
 
           .. math::
@@ -1038,6 +1039,7 @@ Diagnostic parameters
 
 There are different types of diagnostics in HiPACE++. The standard diagnostics are compliant with the openPMD standard. The
 in-situ diagnostics allow for fast analysis of large beams or the plasma particles.
+Please make sure to always clear or rename the output folder before running a new simulation to avoid mixing data from different runs.
 
 * ``diagnostic.output_period`` (`integer`) optional (default `0`)
     Output period for standard beam and field diagnostics. Field or beam specific diagnostics can overwrite this parameter.
@@ -1081,7 +1083,7 @@ Field diagnostics
     Available geometries are `level_0`, `level_1`, `level_2` and `laser`,
     depending on if MR or a laser is used.
     If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
-    becomes ``level_0 level_1 level_2 laser``respectively.
+    becomes ``level_0 level_1 level_2 laser`` respectively.
 
 * ``<diag name>.output_period`` (`integer`) optional (default `0`)
     Output period for fields. No output is given for ``<diag name>.output_period = 0``.
@@ -1109,11 +1111,15 @@ Field diagnostics
 
     * ``all``: Includes all available fields.
     * ``none``: Excludes all fields.
-    * A subset of the following: ``ExmBy``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
+    * A subset of the following: ``Ex``, ``ExmBy``, ``Ey``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
     * Specific to the Predictor-Corrector solver: ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam (``rhomjz`` is defined as :math:`\rho-j_z/c`).
     * Specific to the Explicit solver: separate current and charge densities for the beam (``jx_beam``, ``jy_beam``, ``jz_beam``) and plasma (``jx``, ``jy``, and ``rhomjz``).
     * Plasma diagnostics: ``rho`` (total charge density) is always available. Per-species diagnostics are also available: ``rho_<plasma name>`` (charge density of the species); ``w_<plasma name>`` (particle weights of the species); and momentum components ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
-    * Laser diagnostics, when a laser pulse is used: ``laserEnvelope`` (the complex envelope of the laser in the ``laser`` base geometry) and ``chi`` (plasma proper density :math:`n/\gamma`).
+    * Laser diagnostics, when a laser pulse is used: ``laserEnvelope`` (the complex envelope of the
+      laser in the ``laser`` base geometry) and ``chi`` (plasma proper density :math:`n/\gamma`).
+      ``laserChi`` can be used to access chi on the laser grid, with the imaginary component
+      containing chi of the initial unperturbed plasma. ``|a^2|`` contains the absolute value
+      squared of the laser envelope in the real component and zero in the imaginary component.
     * Fields can be added or removed from the list dynamically: to remove a field after including ``all``, use ``remove_<field name>``. If a field is added and removed multiple times, the last occurrence takes precedence.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
@@ -1182,7 +1188,20 @@ When this is parsed into Python it can be converted to a NumPy structured dataty
 The rest of the file, following immediately after the closing ``}``, is in binary format and
 contains all of the in-situ diagnostics along with some metadata. This part can be read using the
 structured datatype of the first section.
-Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format. Functions to calculate the most useful properties are also provided in that file.
+Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
+It can be installed using the command ``pip install -U -e /path_to_hipace/hipace/tools``.
+Functions to calculate the most useful properties are also provided in that file.
+Usage example:
+
+.. code-block:: python
+
+    import read_insitu_diagnostics as diag
+    ir = diag.InSituReader("diags/insitu/reduced_beam.*.txt")
+    ir.avail() # print available quantities
+    ir.avg_data("[x]") # get 1D array over time steps
+    ir.slice_data("emittance_x") # get 2D array over time steps and slices
+    ir.time, ir.zeta # get metadata needed for plotting
+
 
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``0``)
     Period of the beam in-situ diagnostics. `0` means no beam in-situ diagnostics.
