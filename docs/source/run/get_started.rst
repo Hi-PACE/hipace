@@ -36,11 +36,11 @@ Then you can use the `openPMD-viewer <https://github.com/openPMD/openPMD-viewer>
    x, z = ts.get_particle(species='beam', iteration=iteration, var_list=['x', 'z'])
    F, m = ts.get_field(field='Ez', iteration=iteration)
    # Read in-situ diagnostics
-   all_data = diag.read_file('./diags/insitu/reduced_beam.*.txt')
-   print('Available beam diagnostics:', all_data.dtype.names)
+   ir = diag.InSituReader('./diags/insitu/reduced_beam.*.txt')
+   ir.avail()
    # Example plot
    plt.figure(figsize=(7,7), dpi=150)
-   plt.plot(all_data["time"], all_data["average"]["[x]"])
+   plt.plot(ir.time, ir.avg_data("[x]"))
    plt.savefig('./avg_x.png')
 
 

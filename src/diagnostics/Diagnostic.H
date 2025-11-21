@@ -37,7 +37,7 @@ struct FieldDiagnosticData
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
     /** Component indexes to Write to output file */
-    amrex::Gpu::DeviceVector<int> m_comps_output_idx;
+    amrex::Gpu::Buffer<int> m_comps_output_idx;
     /** Vector over levels, all fields */
     amrex::FArrayBox m_F;
     /** FAB for laser */

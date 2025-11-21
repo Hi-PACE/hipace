@@ -218,13 +218,15 @@ OpenPMDWriter::WriteFieldData (
 
         if (is_laser_comp) {
             // set laser attributes and store laser
-            field.setAttribute("envelopeField", "normalized_vector_potential");
-            field.setAttribute("angularFrequency",
-                double(2.) * MathConst::pi * PhysConstSI::c / a_multi_laser.GetLambda0());
-            std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
-            field.setAttribute("polarization", polarization);
+            if (fd.m_comps_output[icomp] == "laserEnvelope") {
+                field.setAttribute("envelopeField", "normalized_vector_potential");
+                field.setAttribute("angularFrequency",
+                    double(2.) * MathConst::pi * PhysConstSI::c / a_multi_laser.GetLambda0());
+                std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
+                field.setAttribute("polarization", polarization);
+            }
             field_comp.storeChunkRaw(
-                reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr()),
+                reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr(icomp)),
                 chunk_offset, chunk_size);
         } else {
             field_comp.storeChunkRaw(fd.m_F.dataPtr(icomp), chunk_offset, chunk_size);
