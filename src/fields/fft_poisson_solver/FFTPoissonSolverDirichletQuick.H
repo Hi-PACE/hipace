@@ -51,8 +51,8 @@ public:
     virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
 
     /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
-    virtual amrex::Real BoundaryOffset() override final { return 1.; }
-    virtual amrex::Real BoundaryFactor() override final { return 1.; }
+    virtual amrex::Real BoundaryOffset() override final { return 0.5; }
+    virtual amrex::Real BoundaryFactor() override final { return 2.; }
 
 private:
     /** Real array for the FFTs */

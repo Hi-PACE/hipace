@@ -34,13 +34,6 @@ Fields::ReadParameters (const int nlev)
 
     amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
-    // set default Poisson solver based on the platform
-#ifdef AMREX_USE_GPU
-    m_poisson_solver_str = "FFTDirichletFast";
-#else
-    m_poisson_solver_str = "FFTDirichletDirect";
-#endif
-    queryWithParser(ppf, "poisson_solver", m_poisson_solver_str);
     queryWithParser(ppf, "insitu_period", m_insitu_period);
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     const bool set_file_prefix = queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
@@ -204,43 +197,54 @@ Fields::AllocData (
         m_slices[lev].setVal(0._rt);
     }
 
+    // set default Poisson solver based on the platform and resolution
+#ifdef AMREX_USE_GPU
+    // Bx and By MG solver will abort if nx%2 != ny%2
+    const bool is_even = slice_ba[0].length(0) % 2 == 0;
+    std::string poisson_solver_str = is_even ? "FFTDirichletQuick" : "FFTDirichletFast";
+#else
+    std::string poisson_solver_str = "FFTDirichletDirect";
+#endif
+    amrex::ParmParse ppf("fields");
+    queryWithParser(ppf, "poisson_solver", poisson_solver_str);
+
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
-    if (m_poisson_solver_str == "FFTDirichletDirect"){
+    if (poisson_solver_str == "FFTDirichletDirect"){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletDirect>(
             new FFTPoissonSolverDirichletDirect(getSlices(lev).boxArray(),
                                                 getSlices(lev).DistributionMap(),
                                                 geom)) );
-    } else if (m_poisson_solver_str == "FFTDirichletExpanded"){
+    } else if (poisson_solver_str == "FFTDirichletExpanded"){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletExpanded>(
             new FFTPoissonSolverDirichletExpanded(getSlices(lev).boxArray(),
                                                   getSlices(lev).DistributionMap(),
                                                   geom)) );
-    } else if (m_poisson_solver_str == "FFTDirichletFast"){
+    } else if (poisson_solver_str == "FFTDirichletFast"){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletFast>(
             new FFTPoissonSolverDirichletFast(getSlices(lev).boxArray(),
                                               getSlices(lev).DistributionMap(),
                                               geom)) );
-    } else if (m_poisson_solver_str == "FFTDirichletQuick"){
+    } else if (poisson_solver_str == "FFTDirichletQuick"){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletQuick>(
             new FFTPoissonSolverDirichletQuick(getSlices(lev).boxArray(),
                                                getSlices(lev).DistributionMap(),
                                                geom)) );
-    } else if (m_poisson_solver_str == "FFTPeriodic") {
+    } else if (poisson_solver_str == "FFTPeriodic") {
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
             new FFTPoissonSolverPeriodic(getSlices(lev).boxArray(),
                                          getSlices(lev).DistributionMap(),
                                          geom))  );
-    } else if (m_poisson_solver_str == "MGDirichlet") {
+    } else if (poisson_solver_str == "MGDirichlet") {
         m_poisson_solver.push_back(std::unique_ptr<MGPoissonSolverDirichlet>(
             new MGPoissonSolverDirichlet(getSlices(lev).boxArray(),
                                          getSlices(lev).DistributionMap(),
                                          geom))  );
     } else {
-        amrex::Abort("Unknown poisson solver '" + m_poisson_solver_str +
+        amrex::Abort("Unknown poisson solver '" + poisson_solver_str +
             "', must be 'FFTDirichletDirect', 'FFTDirichletExpanded', 'FFTDirichletFast', " +
-            "'FFTPeriodic' or 'MGDirichlet'");
+            "'FFTDirichletQuick', 'FFTPeriodic' or 'MGDirichlet'");
     }
 
     if (lev == 0 && m_insitu_period > 0) {
