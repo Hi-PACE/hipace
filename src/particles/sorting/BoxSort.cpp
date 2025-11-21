@@ -60,19 +60,11 @@ void BoxSorter::sortParticlesByBox (const amrex::Real * z_array, const index_typ
             p_permutations[local_offset + p_box_offsets[dst_box]] = i;
         });
 
-#ifdef AMREX_USE_GPU
-    amrex::Gpu::dtoh_memcpy_async(m_box_counts_cpu.dataPtr(), box_counts.dataPtr(),
-                                  box_counts.size() * sizeof(index_type));
+    amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, box_counts.begin(), box_counts.end(),
+        m_box_counts_cpu.begin());
 
-    amrex::Gpu::dtoh_memcpy_async(m_box_offsets_cpu.dataPtr(), box_offsets.dataPtr(),
-                                  box_offsets.size() * sizeof(index_type));
+    amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, box_offsets.begin(), box_offsets.end(),
+        m_box_offsets_cpu.begin());
 
     amrex::Gpu::streamSynchronize();
-#else
-    std::memcpy(m_box_counts_cpu.dataPtr(), box_counts.dataPtr(),
-                box_counts.size() * sizeof(index_type));
-
-    std::memcpy(m_box_offsets_cpu.dataPtr(), box_offsets.dataPtr(),
-                box_offsets.size() * sizeof(index_type));
-#endif
 }
