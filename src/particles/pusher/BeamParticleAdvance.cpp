@@ -31,16 +31,8 @@ AdvanceBeamParticlesSlice (
     const bool radiation_reaction = beam.m_do_radiation_reaction;
     const amrex::Real time = Hipace::GetInstance().m_physical_time;
     const amrex::Real dt = Hipace::GetInstance().m_dt / n_subcycles;
-    const amrex::Real background_density_SI = Hipace::m_background_density_SI;
-    const bool normalized_units = Hipace::m_normalized_units;
     const bool spin_tracking = beam.m_do_spin_tracking;
     const amrex::Real spin_anom = beam.m_spin_anom;
-
-    if (normalized_units && radiation_reaction) {
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(background_density_SI!=0,
-            "For radiation reactions with normalized units, a background plasma density != 0 must "
-            "be specified via 'hipace.background_density_SI'");
-    }
 
     const int psi_comp = Comps[WhichSlice::This]["Psi"];
     const int ez_comp = Comps[WhichSlice::This]["Ez"];
@@ -104,16 +96,14 @@ AdvanceBeamParticlesSlice (
     auto external_fields = beam.m_external_fields;
 
     // Radiation reaction constant
-    const amrex::ParticleReal RRcoeff_c2 = (2.0_rt/3.0_rt)*PhysConstSI::r_e*
-                                           charge_mass_ratio*charge_mass_ratio;
-    amrex::Real rr_factor = RRcoeff_c2 / PhysConstSI::c;
-
+    amrex::Real rr_factor = (2.0_rt/3.0_rt) * PhysConstSI::r_e
+        * charge_mass_ratio * charge_mass_ratio / PhysConstSI::c;
     if (Hipace::m_normalized_units && radiation_reaction) {
-        const amrex::Real wp_inv = std::sqrt(PhysConstSI::ep0 * PhysConstSI::m_e /
-                (static_cast<double>(background_density_SI) * PhysConstSI::q_e*PhysConstSI::q_e));
-
-        rr_factor *= PhysConstSI::m_e / (PhysConstSI::q_e * wp_inv) *
-                     PhysConstSI::m_e / PhysConstSI::q_e;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_background_density_SI != 0,
+            "For radiation reactions with normalized units, a background plasma density != 0 must "
+            "be specified via 'hipace.background_density_SI'");
+        rr_factor *= std::sqrt(static_cast<double>(Hipace::m_background_density_SI)
+                / (PhysConstSI::ep0 * PhysConstSI::m_e)) * PhysConstSI::q_e;
     }
 
     // don't include slipped particles in count as they were already pushed
@@ -310,9 +300,9 @@ AdvanceBeamParticlesSlice (
                     const amrex::ParticleReal frz = flx_q*Byp - fly_q*Bxp + bdotE*Ezp - coeff*bz_n;
 
                     // Update momentum using the RR force
-                    ux_next += dt * frx * rr_factor;
-                    uy_next += dt * fry * rr_factor;
-                    uz_next += dt * frz * rr_factor;
+                    ux_next += dt * rr_factor * frx;
+                    uy_next += dt * rr_factor * fry;
+                    uz_next += dt * rr_factor * frz;
                 }
 
                 /* computing next gamma value */
