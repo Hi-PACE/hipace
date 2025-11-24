@@ -199,8 +199,7 @@ Fields::AllocData (
 
     // set default Poisson solver based on the platform and resolution
 #ifdef AMREX_USE_GPU
-    // Bx and By MG solver will abort if nx%2 != ny%2
-    const bool is_even = slice_ba[0].length(0) % 2 == 0;
+    const bool is_even = std::max(slice_ba[0].length(0), slice_ba[0].length(1)) % 2 == 0;
     std::string poisson_solver_str = is_even ? "FFTDirichletQuick" : "FFTDirichletFast";
 #else
     std::string poisson_solver_str = "FFTDirichletDirect";
