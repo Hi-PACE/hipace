@@ -23,4 +23,5 @@ sudo apt-get install -y --no-install-recommends \
     clang-tidy          \
     libomp-dev          \
     libopenmpi-dev      \
+    fftw-dev            \
     openmpi-bin
