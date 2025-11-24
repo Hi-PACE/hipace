@@ -19,6 +19,7 @@ sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
     ccache              \
-    clang-7             \
+    clang               \
+    clang-tidy          \
     libopenmpi-dev      \
     openmpi-bin
