@@ -1,6 +1,9 @@
 Checks: '
     -*,
-    cert-err58-cpp,
+    bugprone-*,
+        -bugprone-easily-swappable-parameters,
+        -bugprone-implicit-widening-of-multiplication-result,
+        -bugprone-misplaced-widening-cast,
     cppcoreguidelines-avoid-goto
     '
 
