@@ -22,3 +22,4 @@ jobs:
     - name: Build & Install
       run: |
         ./tools/runClangTidy.sh
+
