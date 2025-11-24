@@ -62,6 +62,7 @@ jobs:
           pipx matplotlib numpy scipy openpmd-viewer openpmd-api --user
         python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
         python3 -m pipx install cmake
+        python3 -m pip install -U -e ./tools
     - name: Compile
       run: |
         export PATH="$HOME/.local/bin:$PATH"

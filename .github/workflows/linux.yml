@@ -38,6 +38,7 @@ jobs:
           ccache-linux-gccompompi-
     - name: Build & Install
       run: |
+        pip install -U -e ./tools
         cmake -S . -B build                        \
             -DHiPACE_COMPUTE=OMP                   \
             -DCMAKE_CXX_STANDARD=17                \
@@ -69,6 +70,7 @@ jobs:
           ccache-linux-gccnompi-
     - name: Build & Install
       run: |
+        pip install -U -e ./tools
         cmake -S . -B build             \
             -DHiPACE_MPI=OFF            \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
