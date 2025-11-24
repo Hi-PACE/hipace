@@ -21,5 +21,6 @@ sudo apt-get install -y --no-install-recommends \
     ccache              \
     clang               \
     clang-tidy          \
+    libomp-dev          \
     libopenmpi-dev      \
     openmpi-bin
