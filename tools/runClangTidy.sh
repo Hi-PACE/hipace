@@ -104,7 +104,13 @@ cmake -S ${REPO_DIR} -B ${REPO_DIR}/build_clang_tidy \
 
 cmake --build ${REPO_DIR}/build_clang_tidy -j ${PARALLEL} 2> ${REPO_DIR}/build_clang_tidy/clang-tidy.log
 
-if [ -f ${REPO_DIR}/build_clang_tidy/clang-tidy.log ]; then
+if [ -s ${REPO_DIR}/build_clang_tidy/clang-tidy.log ]; then
+    echo
+    echo "clang-tidy has not found any issue."
+    echo
+    echo "============================================="
+    exit 0
+else
     echo
     echo "clang-tidy found the following issues:"
     echo
@@ -112,12 +118,4 @@ if [ -f ${REPO_DIR}/build_clang_tidy/clang-tidy.log ]; then
     echo
     echo "============================================="
     exit 1
-else
-    echo
-    echo "clang-tidy has not found any issue."
-    echo
-    echo "============================================="
-    exit 0
 fi
-
-
