@@ -23,5 +23,6 @@ sudo apt-get install -y --no-install-recommends \
     clang-tidy          \
     libomp-dev          \
     libopenmpi-dev      \
-    fftw-dev            \
-    openmpi-bin
+    openmpi-bin         \
+    libfftw3-dev        \
+    libfftw3-single3
