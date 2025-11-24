@@ -1,5 +1,6 @@
 Checks: '
     -*,
+    cert-*,
     cppcoreguidelines-avoid-goto
     '
 
