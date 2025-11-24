@@ -12,6 +12,8 @@
 #
 # Note: this script is only tested on Linux
 
+set -eu -o pipefail
+
 echo "============================================="
 echo
 echo "This script is a developer's tool to perform"
