@@ -230,8 +230,11 @@ private:
     int m_num_mg_levels;
     /** Number of single-block-kernel levels */
     int m_num_single_block_levels;
+
+#if defined(AMREX_USE_GPU)
     /** If the single block kernel should be used */
     bool m_use_single_block_kernel = true;
+#endif
 
     /** Alias to the solution argument passed in solve() */
     amrex::FArrayBox m_sol;
