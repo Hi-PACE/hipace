@@ -891,7 +891,6 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 // Particle's Lorentz factor
                 const amrex::Real gamma = (1._rt + ux*ux + uy*uy + psi*psi
                     + 0.5_rt*Aabssqp)/(2._rt*psi);
-                // The *c from uz cancels with the /c from the proper velocity conversion
                 const amrex::Real uz = (gamma - psi);
                 // Weight with quasi-static weighting factor
                 const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip] * gamma/psi;

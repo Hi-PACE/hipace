@@ -49,7 +49,7 @@ void UpdateMomentumPerezElastic (
         return;
     }
 
-    // Transform to SI units (u is the proper velocity here)
+    // Transform to SI units (u is the normalized momentum here)
     if (normalized_units) {
         m1 *= PhysConstSI::m_e;
         m2 *= PhysConstSI::m_e;

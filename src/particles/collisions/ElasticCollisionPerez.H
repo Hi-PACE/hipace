@@ -21,11 +21,11 @@
  * @param[in] I2e start index for I2 (exclusive).
  * @param[in] I1 index array.
  * @param[in] I2 index array.
- * @param[in,out] u1x x Proper velocity (u=v*gamma) array of species 1.
- * @param[in,out] u1y y Proper velocity (u=v*gamma) array of species 1.
+ * @param[in,out] u1x x normalized momentum (u=beta*gamma) array of species 1.
+ * @param[in,out] u1y y normalized momentum (u=beta*gamma) array of species 1.
  * @param[in,out] psi1 pseudo-potential array of species 1.
- * @param[in,out] u2x x Proper velocity (u=v*gamma) array of species 2.
- * @param[in,out] u2y y Proper velocity (u=v*gamma) array of species 2.
+ * @param[in,out] u2x x normalized momentum (u=beta*gamma) array of species 2.
+ * @param[in,out] u2y y normalized momentum (u=beta*gamma) array of species 2.
  * @param[in,out] psi2 pseudo-potential array of species 2.
  * @param[in] w1 array of weights.
  * @param[in] w2 array of weights.
