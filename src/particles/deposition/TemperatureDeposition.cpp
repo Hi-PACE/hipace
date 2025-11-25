@@ -54,7 +54,6 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         // extract laser properties and boolean for the presence of the laser and for ionization
         const PhysConst pc = get_phys_const();
         const int aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
-        const amrex::Real clightinv = 1.0_rt/pc.c;
         const bool can_ionize = plasma.m_can_ionize;
         const bool use_laser = Hipace::m_use_laser;
         const amrex::Real laser_norm = (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass)
@@ -106,8 +105,8 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                     Aabssqp *= laser_norm_ion;
                 }
 
-                const amrex::Real uxp = ptd.rdata(PlasmaIdx::ux)[ip]*clightinv;
-                const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip]*clightinv;
+                const amrex::Real uxp = ptd.rdata(PlasmaIdx::ux)[ip];
+                const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip];
                 amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real uzp = (1._rt + uxp*uxp + uyp*uyp - psi*psi
                     + 0.5_rt*Aabssqp)/(2._rt*psi);
