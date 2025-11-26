@@ -807,7 +807,8 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
 
         if (beam.communicateIdCpuComponent()) {
             // only pack idcpu component if it should be communicated
-            if (const auto& bo_m_beam_idcpu_b = bo.m_beam_idcpu[b]; bo.m_beam_idcpu[b].has_value()){
+            const auto& bo_m_beam_idcpu_b = bo.m_beam_idcpu[b];
+            if (bo_m_beam_idcpu_b.has_value()){
                 memcpy_to_buffer(slice, *bo_m_beam_idcpu_b,
                              soa.GetIdCPUData().dataPtr(),
                              num_particles * sizeof(std::uint64_t));
@@ -866,7 +867,8 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
 
         if (beam.communicateIdCpuComponent()) {
             // only undpack idcpu component if it should be communicated
-            if (const auto& bo_m_beam_idcpu_b = bo.m_beam_idcpu[b]; bo.m_beam_idcpu[b].has_value()){
+            const auto& bo_m_beam_idcpu_b = bo.m_beam_idcpu[b];
+            if (bo_m_beam_idcpu_b.has_value()){
                 memcpy_from_buffer(slice, *bo_m_beam_idcpu_b,
                                soa.GetIdCPUData().dataPtr(),
                                num_particles * sizeof(std::uint64_t));
