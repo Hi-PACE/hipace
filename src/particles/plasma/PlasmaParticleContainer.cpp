@@ -835,7 +835,6 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
     const amrex::Real insitu_radius_sq = m_insitu_radius * m_insitu_radius;
-    const PhysConst phys_const = get_phys_const();
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
