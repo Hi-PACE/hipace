@@ -829,14 +829,9 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
         for (int icomp = 0; icomp < beam.numIntComponents(); ++icomp) {
             // only pack int component if it should be communicated
             if (beam.communicateIntComponent(icomp)) {
-                if (bo.m_beam_int[b].has_value()){
-                    memcpy_to_buffer(slice, (*bo.m_beam_int[b]).at(icomp),
+                memcpy_to_buffer(slice, bo.m_beam_int[b].at(icomp),
                                  soa.GetIntData(icomp).dataPtr(),
                                  num_particles * sizeof(int));
-                }
-                else{
-                    amrex::Abort("bo.m_beam_int[" + std::to_string(b) + "] has no value!");
-                }
             }
         }
     }
@@ -871,9 +866,14 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
 
         if (beam.communicateIdCpuComponent()) {
             // only undpack idcpu component if it should be communicated
-            memcpy_from_buffer(slice, bo.m_beam_idcpu[b].value(),
+            if (bo.m_beam_idcpu[b].has_value()){
+                memcpy_from_buffer(slice, *bo.m_beam_idcpu[b],
                                soa.GetIdCPUData().dataPtr(),
                                num_particles * sizeof(std::uint64_t));
+            }
+            else {
+                amrex::Abort("bo.m_beam_idcpu[" + std::to_string(b) + "] has no value!");
+            }
         } else {
             // if idcpu is not communicated, then we need to initialize it here
             std::uint64_t* data_ptr = soa.GetIdCPUData().dataPtr();
