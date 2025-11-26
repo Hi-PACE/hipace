@@ -61,7 +61,7 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
         return;
     }
 
-    // put slipped particles at the start of the slice
+    // put non slipped particles at the start of the slice
     amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This), num_stay,
         [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
             return ptd.pos(2, i) >= min_z;
