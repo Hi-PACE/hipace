@@ -813,7 +813,7 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
                              num_particles * sizeof(std::uint64_t));
             }
             else{
-                amrex::Abort("bo.m_beam_idcpu[" + std::to_string(b) "] has no value!");
+                amrex::Abort("bo.m_beam_idcpu[" + std::to_string(b) + "] has no value!");
             }
         }
 
@@ -834,7 +834,7 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
                                  soa.GetIntData(icomp).dataPtr(),
                                  num_particles * sizeof(int));
                 else{
-                    amrex::Abort("bo.m_beam_int[" + std::to_string(b) "] has no value!");
+                    amrex::Abort("bo.m_beam_int[" + std::to_string(b) + "] has no value!");
                 }
             }
         }
