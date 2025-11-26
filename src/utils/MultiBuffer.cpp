@@ -833,6 +833,7 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
                     memcpy_to_buffer(slice, bo.m_beam_int[b].at(icomp),
                                  soa.GetIntData(icomp).dataPtr(),
                                  num_particles * sizeof(int));
+                }
                 else{
                     amrex::Abort("bo.m_beam_int[" + std::to_string(b) + "] has no value!");
                 }
