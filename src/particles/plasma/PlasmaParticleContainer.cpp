@@ -401,7 +401,6 @@ IonizationModule (const int lev,
 
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // For momenta and weights
 
-        const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
         // Calculation of E0 in SI units for denormalization
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
@@ -468,8 +467,8 @@ IonizationModule (const int lev,
             const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp )*E0;
 
             // Compute probability of ionization p
-            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
-                                               + uyp[ip] * uyp[ip] * clightsq
+            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip]
+                                               + uyp[ip] * uyp[ip]
                                                + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
             const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
@@ -598,7 +597,6 @@ LaserIonization (const int islice,
 
         auto& soa_ion = ptile_ion.GetStructOfArrays(); // for momenta and weights
 
-        const amrex::Real clightsq = 1.0_rt / ( phys_const.c * phys_const.c );
         // Calcuation of E0 in SI units for denormalization
         const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
                                          PhysConstSI::q_e*PhysConstSI::q_e /
@@ -672,8 +670,8 @@ LaserIonization (const int islice,
             Ep *= phys_const.m_e * phys_const.c / phys_const.q_e * E0;
 
             // Compute probability of ionization p
-            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip] * clightsq
-                                               + uyp[ip] * uyp[ip] * clightsq
+            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip]
+                                               + uyp[ip] * uyp[ip]
                                                + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
             const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
@@ -799,14 +797,14 @@ LaserIonization (const int islice,
                 arrdata_elec[PlasmaIdx::x      ][pidx] = arrdata_ion[PlasmaIdx::x     ][ip];
                 arrdata_elec[PlasmaIdx::y      ][pidx] = arrdata_ion[PlasmaIdx::y     ][ip];
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
-                arrdata_elec[PlasmaIdx::ux     ][pidx] = ux * phys_const.c;
-                arrdata_elec[PlasmaIdx::uy     ][pidx] = uy * phys_const.c;
+                arrdata_elec[PlasmaIdx::ux     ][pidx] = ux;
+                arrdata_elec[PlasmaIdx::uy     ][pidx] = uy;
                 arrdata_elec[PlasmaIdx::psi    ][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
                                                             + 0.5_rt*amrex::abs(A*A))-uz;
                 arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
-                arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = ux * phys_const.c;
-                arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = uy * phys_const.c;
+                arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = ux;
+                arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = uy;
                 arrdata_elec[PlasmaIdx::psi_half_step][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
                                                             + 0.5_rt*amrex::abs(A*A))-uz;
 #ifdef HIPACE_USE_AB5_PUSH
@@ -838,7 +836,6 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
     const amrex::Real insitu_radius_sq = m_insitu_radius * m_insitu_radius;
     const PhysConst phys_const = get_phys_const();
-    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
@@ -871,8 +868,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
             {
                 const amrex::Real x = ptd.pos(0, ip);
                 const amrex::Real y = ptd.pos(1, ip);
-                const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip] * clight_inv; // proper velocity to u
-                const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip] * clight_inv;
+                const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip];
+                const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip];
                 const amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
 
                 if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
@@ -894,7 +891,6 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 // Particle's Lorentz factor
                 const amrex::Real gamma = (1._rt + ux*ux + uy*uy + psi*psi
                     + 0.5_rt*Aabssqp)/(2._rt*psi);
-                // The *c from uz cancels with the /c from the proper velocity conversion
                 const amrex::Real uz = (gamma - psi);
                 // Weight with quasi-static weighting factor
                 const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip] * gamma/psi;
