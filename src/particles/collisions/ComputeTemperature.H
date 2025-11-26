@@ -29,9 +29,9 @@ T_R ComputeTemperature (
         // particle's Lorentz factor
         gm = is_beam_coll ? std::sqrt( 1._rt + ux[I[i]]*ux[I[i]] + uy[I[i]]*uy[I[i]]
                                                 + psi[I[i]]*psi[I[i]] )
-                          : (1.0_rt + ux[I[i]]*ux[I[i]] + uy[I[i]]*uy[I[i]]
-                                       + psi[I[i]]*psi[I[i]]) / (2.0_rt * psi[I[i]] );
-        const amrex::Real uz = is_beam_coll ? psi[I[i]] : gm - psi[I[i]];
+                          : plasma_gamma(ux[I[i]], uy[I[i]], psi[I[i]], 1._rt / psi[I[i]],
+                                         /* Assumes Aabssq == 0 */ 0._rt);
+        const amrex::Real uz = is_beam_coll ? psi[I[i]] : plasma_uz(gm, psi[I[i]]);
         const amrex::Real gmi = clight / gm;
         us = ( ux[ I[i] ] * ux[ I[i] ] +
                uy[ I[i] ] * uy[ I[i] ] +

@@ -467,12 +467,11 @@ IonizationModule (const int lev,
             const amrex::ParticleReal Ep = std::sqrt( Exp*Exp + Eyp*Eyp + Ezp*Ezp )*E0;
 
             // Compute probability of ionization p
-            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip]
-                                               + uyp[ip] * uyp[ip]
-                                               + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
+            const amrex::Real gamma_psi = plasma_gamma_psi(uxp[ip], uyp[ip], 1._rt / psip[ip],
+                                                           /* Assumes Aabssq == 0 */ 0._rt);
             const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
-            amrex::Real w_dtau = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
+            amrex::Real w_dtau = gamma_psi * adk_prefactor[ion_lev_loc] *
                 std::pow(Ep, adk_power[ion_lev_loc]) *
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
             amrex::Real p = 1._rt - std::exp( - w_dtau );
@@ -530,7 +529,7 @@ IonizationModule (const int lev,
                 arrdata_elec[PlasmaIdx::ux     ][pidx] = 0._rt;
                 arrdata_elec[PlasmaIdx::uy     ][pidx] = 0._rt;
                 // Later we could consider adding a finite temperature to the ionized electrons
-                arrdata_elec[PlasmaIdx::psi    ][pidx] = 1._rt;
+                arrdata_elec[PlasmaIdx::psi    ][pidx] = 1._rt; // Assumes Aabssq == 0
                 arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = 0._rt;
@@ -670,12 +669,11 @@ LaserIonization (const int islice,
             Ep *= phys_const.m_e * phys_const.c / phys_const.q_e * E0;
 
             // Compute probability of ionization p
-            const amrex::Real gammap = (1.0_rt + uxp[ip] * uxp[ip]
-                                               + uyp[ip] * uyp[ip]
-                                               + psip[ip]* psip[ip] ) / ( 2.0_rt * psip[ip] );
+            const amrex::Real gamma_psi = plasma_gamma_psi(uxp[ip], uyp[ip], 1._rt / psip[ip],
+                                                           amrex::abs(A*A));
             const int ion_lev_loc = ion_lev[ip];
             // gamma / (psi + 1) to complete dt for QSA
-            amrex::Real w_dtau_dc = gammap / psip[ip] * adk_prefactor[ion_lev_loc] *
+            amrex::Real w_dtau_dc = gamma_psi * adk_prefactor[ion_lev_loc] *
                 std::pow(Ep, adk_power[ion_lev_loc]) *
                 std::exp( adk_exp_prefactor[ion_lev_loc]/Ep );
 
@@ -789,6 +787,7 @@ LaserIonization (const int islice,
 
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
+                const amrex::Real psi = plasma_psi(ux, uy, uz, amrex::abs(A*A));
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
                 amrex::ParticleIDWrapper{idcpu_elec[pidx]} = 2;
@@ -799,14 +798,12 @@ LaserIonization (const int islice,
                 arrdata_elec[PlasmaIdx::w      ][pidx] = arrdata_ion[PlasmaIdx::w     ][ip];
                 arrdata_elec[PlasmaIdx::ux     ][pidx] = ux;
                 arrdata_elec[PlasmaIdx::uy     ][pidx] = uy;
-                arrdata_elec[PlasmaIdx::psi    ][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
-                                                            + 0.5_rt*amrex::abs(A*A))-uz;
+                arrdata_elec[PlasmaIdx::psi    ][pidx] = psi;
                 arrdata_elec[PlasmaIdx::x_prev ][pidx] = arrdata_ion[PlasmaIdx::x_prev][ip];
                 arrdata_elec[PlasmaIdx::y_prev ][pidx] = arrdata_ion[PlasmaIdx::y_prev][ip];
                 arrdata_elec[PlasmaIdx::ux_half_step ][pidx] = ux;
                 arrdata_elec[PlasmaIdx::uy_half_step ][pidx] = uy;
-                arrdata_elec[PlasmaIdx::psi_half_step][pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
-                                                            + 0.5_rt*amrex::abs(A*A))-uz;
+                arrdata_elec[PlasmaIdx::psi_half_step][pidx] = psi;
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
@@ -871,6 +868,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 const amrex::Real ux = ptd.rdata(PlasmaIdx::ux)[ip];
                 const amrex::Real uy = ptd.rdata(PlasmaIdx::uy)[ip];
                 const amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real psi_inv = 1._rt / psi;
 
                 if (!ptd.id(ip).is_valid() || x*x + y*y > insitu_radius_sq) {
                     return amrex::IdentityTuple(ReduceTuple{}, reduce_op);
@@ -889,11 +887,10 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 }
 
                 // Particle's Lorentz factor
-                const amrex::Real gamma = (1._rt + ux*ux + uy*uy + psi*psi
-                    + 0.5_rt*Aabssqp)/(2._rt*psi);
-                const amrex::Real uz = (gamma - psi);
+                const amrex::Real gamma = plasma_gamma(ux, uy, psi, psi_inv, Aabssqp);
+                const amrex::Real uz = plasma_uz(gamma, psi);
                 // Weight with quasi-static weighting factor
-                const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip] * gamma/psi;
+                const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip] * gamma * psi_inv;
                 // No quasi-static weighting factor to calculate quasi-static energy
                 const amrex::Real energy = ptd.rdata(PlasmaIdx::w)[ip] * (gamma - 1._rt);
                 return {            // Tuple contains:

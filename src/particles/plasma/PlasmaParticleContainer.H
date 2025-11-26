@@ -18,6 +18,78 @@
 #include <AMReX_AmrCore.H>
 #include <map>
 
+/** compute gamma / (normalized psi + 1)
+ * \param[in] ux normalized momentum in x
+ * \param[in] uy normalized momentum in y
+ * \param[in] psi_inv 1 / (normalized psi + 1)
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_gamma_psi (amrex::Real ux, amrex::Real uy,
+                              amrex::Real psi_inv, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return 0.5_rt * (
+        (1._rt + 0.5_rt * Aabssq + ux * ux + uy * uy) * (psi_inv * psi_inv)
+        + 1._rt
+    );
+}
+
+/** compute gamma / (normalized psi + 1)
+ * \param[in] vx ux / (normalized psi + 1)
+ * \param[in] vy uy / (normalized psi + 1)
+ * \param[in] psi_inv 1 / (normalized psi + 1)
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_gamma_psi_v (amrex::Real vx, amrex::Real vy,
+                                amrex::Real psi_inv, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return 0.5_rt * (
+        (1._rt + 0.5_rt * Aabssq) * (psi_inv * psi_inv)
+        + vx * vx
+        + vy * vy
+        + 1._rt
+    );
+}
+
+/** compute gamma
+ * \param[in] ux normalized momentum in x
+ * \param[in] uy normalized momentum in y
+ * \param[in] psi normalized psi + 1
+ * \param[in] psi_inv 1 / (normalized psi + 1)
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_gamma (amrex::Real ux, amrex::Real uy, amrex::Real psi,
+                          amrex::Real psi_inv, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return 0.5_rt * (
+        (1._rt + 0.5_rt * Aabssq + ux * ux + uy * uy) * psi_inv
+        + psi
+    );
+}
+
+/** compute uz
+ * \param[in] gamma gamma of the plasma particle
+ * \param[in] psi normalized psi + 1
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_uz (amrex::Real gamma, amrex::Real psi) {
+    return gamma - psi;
+}
+
+/** compute normalized psi + 1
+ * \param[in] ux normalized momentum in x
+ * \param[in] uy normalized momentum in y
+ * \param[in] uz normalized momentum in z
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_psi (amrex::Real ux, amrex::Real uy, amrex::Real uz, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return std::sqrt(1._rt + ux * ux + uy * uy + uz * uz + 0.5_rt * Aabssq) - uz;
+}
+
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
 {
