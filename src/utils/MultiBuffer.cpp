@@ -807,9 +807,14 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
 
         if (beam.communicateIdCpuComponent()) {
             // only pack idcpu component if it should be communicated
-            memcpy_to_buffer(slice, bo.m_beam_idcpu[b].value(),
+            if (bo.m_beam_idcpu[b].has_value()){
+                memcpy_to_buffer(slice, bo.m_beam_idcpu[b].value(),
                              soa.GetIdCPUData().dataPtr(),
                              num_particles * sizeof(std::uint64_t));
+            }
+            else{
+                amrex::Abort("bo.m_beam_idcpu[" + std::to_string(b) "] has no value!");
+            }
         }
 
         for (int rcomp = 0; rcomp < beam.numRealComponents(); ++rcomp) {
@@ -824,9 +829,13 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
         for (int icomp = 0; icomp < beam.numIntComponents(); ++icomp) {
             // only pack int component if it should be communicated
             if (beam.communicateIntComponent(icomp)) {
-                memcpy_to_buffer(slice, bo.m_beam_int[b].at(icomp),
+                if (bo.m_beam_idcpu[b].has_value()){
+                    memcpy_to_buffer(slice, bo.m_beam_int[b].at(icomp),
                                  soa.GetIntData(icomp).dataPtr(),
                                  num_particles * sizeof(int));
+                else{
+                    amrex::Abort("bo.m_beam_int[" + std::to_string(b) "] has no value!");
+                }
             }
         }
     }
