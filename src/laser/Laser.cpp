@@ -98,6 +98,41 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
 
         auto mesh = iteration.meshes[m_file_envelope_name];
 
+        // Check that we are reading a normalized vector potential and not an electric field
+        const std::array<double, 7> units_file = mesh.unitDimension();
+        const std::array<double, 7> units_norm_potential{0., 0., 0., 0., 0., 0., 0.};
+        const std::array<double, 7> units_electric_field{1., 1., -3., -1., 0., 0., 0.};
+        const std::string help_msg = "Make sure to store the normalized vector potential, "
+            "set the Attribute 'envelopeField' to 'normalized_vector_potential' and "
+            "unitDimension to '" + amrex::ToString(units_norm_potential) + "'. "
+            "If you are using LASY to generate the laser, pass 'save_as_vector_potential=True' "
+            "to laser.write_to_file() or write_to_openpmd_file()";
+
+        if (mesh.containsAttribute("envelopeField")) {
+            const std::string field_type = mesh.getAttribute("envelopeField").get<std::string>();
+            if (field_type == "electric_field") {
+                amrex::Abort("Attribute 'envelopeField' in file '" + m_input_file_path +
+                    "' is set to 'electric_field' which is not compatible with HiAPCE++. " +
+                    help_msg
+                );
+            } else if (field_type != "normalized_vector_potential") {
+                amrex::AllPrint() << "WARNING: Attribute 'envelopeField' in file '"
+                    << m_input_file_path << "' is set to '" << field_type << "' which is not "
+                    " recognized. " << help_msg << '\n';
+            }
+        }
+
+        if (units_file == units_electric_field) {
+            amrex::Abort("unitDimension '" + amrex::ToString(units_file) + "' in file '"
+                + m_input_file_path + "' is that of an electric field which is not compatible "
+                "with HiAPCE++. " + help_msg
+            );
+        } else if (units_file != units_norm_potential) {
+            amrex::AllPrint() << "WARNING: unitDimension '" << amrex::ToString(units_file)
+                << "' in file '" << m_input_file_path << "' is not recognized. "
+                << help_msg << '\n';
+        }
+
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             mesh.containsAttribute("angularFrequency"),
             "Could not find Attribute 'angularFrequency' of iteration "
