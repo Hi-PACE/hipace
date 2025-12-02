@@ -200,6 +200,7 @@ InitParticles (const amrex::RealVect& a_u_std,
         auto [np_tup, lo_tup, hi_tup] = amrex::TupleSplit<1, 2*n_lev, 2*n_lev>(reduce_data.value());
 
         amrex::Long total_num_particles = amrex::get<0>(np_tup);
+        const amrex::Long total_non_mirrored_particles = total_num_particles;
         auto lo_arr = amrex::tupleToArray(lo_tup);
         auto hi_arr = amrex::tupleToArray(hi_tup);
 
@@ -295,6 +296,8 @@ InitParticles (const amrex::RealVect& a_u_std,
                 amrex::Scan::retSum);
         }
 
+        AMREX_ALWAYS_ASSERT(total_non_mirrored_particles == current_size);
+
         amrex::ParallelForRNG(current_size,
             [=] AMREX_GPU_DEVICE (unsigned int pidx, const amrex::RandomEngine& engine) {
                 const amrex::Real x = ptd.rdata(PlasmaIdx::x)[pidx];
@@ -326,8 +329,7 @@ InitParticles (const amrex::RealVect& a_u_std,
 
             const amrex::Real x_mid2 = (a_bounds.lo(0) + a_bounds.hi(0));
             const amrex::Real y_mid2 = (a_bounds.lo(1) + a_bounds.hi(1));
-            const amrex::Long mirror_offset = total_num_particles/4;
-            amrex::ParallelFor(mirror_offset,
+            amrex::ParallelFor(total_non_mirrored_particles,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
                 const amrex::Real x = ptd.rdata(PlasmaIdx::x)[pidx];
@@ -344,7 +346,7 @@ InitParticles (const amrex::RealVect& a_u_std,
 #pragma unroll
 #endif
                 for (int imirror=0; imirror<3; ++imirror) {
-                    const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
+                    const amrex::Long midx = (imirror+1)*total_non_mirrored_particles + pidx;
 
                     ptd.id(midx) = 1; // plasma id is only used to distinguish between valid/invalid
                     ptd.cpu(midx) = 0; // level 0
