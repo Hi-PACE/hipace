@@ -39,8 +39,13 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
             m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
             GetEnvelopeFromFileHelper(laser_geom_3D);
         }
-        // lambda0 is read from input file, but it can be overwritten here
-        queryWithParser(pp, "lambda0", m_init_lambda0);
+        if (m_init_lambda0 != 0.) {
+            // lambda0 is read from input file, but it can be overwritten explicitly here
+            queryWithParser(pp, "lambda0", m_init_lambda0);
+        } else {
+            // lambda0 not defined in file
+            getWithParserAlt(pp, "lambda0", m_init_lambda0, pp_lasers);
+        }
         return;
     }
     else if (m_laser_init_type == "gaussian") {
@@ -139,15 +144,10 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
                 << help_msg << '\n';
         }
 
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            mesh.containsAttribute("angularFrequency"),
-            "Could not find Attribute 'angularFrequency' of iteration "
-            + std::to_string(m_file_num_iteration) + " in file "
-            + m_input_file_path + "\n"
-        );
-
-        m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
-            / mesh.getAttribute("angularFrequency").get<double>();
+        if (mesh.containsAttribute("angularFrequency")) {
+            m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+                / mesh.getAttribute("angularFrequency").get<double>();
+        }
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             mesh.contains(openPMD::RecordComponent::SCALAR),
