@@ -129,7 +129,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
                     "for lasers read from an openPMD file, lambda0 is also read from the file.\n" +
                     m_names[0] + " lambda0: " + amrex::ToString(m_lambda0) + "\n" +
                     m_names[1] + " lambda0: " + amrex::ToString(m_all_lasers[i].m_init_lambda0) +
-                    "\ndiffereance: " + amrex::ToString(m_lambda0 - m_all_lasers[i].m_init_lambda0)
+                    "\ndifference: " + amrex::ToString(m_lambda0 - m_all_lasers[i].m_init_lambda0)
                 );
             }
         }

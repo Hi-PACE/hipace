@@ -39,7 +39,8 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
             m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
             GetEnvelopeFromFileHelper(laser_geom_3D);
         }
-        // lambda0 is read from input file
+        // lambda0 is read from input file, but it can be overwritten here
+        queryWithParser(pp, "lambda0", m_init_lambda0);
         return;
     }
     else if (m_laser_init_type == "gaussian") {
