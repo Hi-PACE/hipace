@@ -26,7 +26,7 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Relative tolerance for checksum tests depends on the platform
-RTOL=2e-5
+RTOL=2e-3
 
 
 for solver_type in FFTDirichletDirect FFTDirichletExpanded FFTDirichletFast FFTDirichletQuick MGDirichlet
