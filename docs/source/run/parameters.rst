@@ -1017,6 +1017,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
           The laser pulse is injected in the HiPACE++ simulation so that the beginning of the temporal profile from the file corresponds to the head of the simulation box, and time (in the file) is converted to space (HiPACE++ longitudinal coordinate) with ``z = -c*t + const``.
           If this parameter is set, then the file is used to initialize all lasers instead of using a gaussian profile.
 
+      * ``<laser name>.lambda0`` (`float`) optional (default `<read from file>`)
+          Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
+          The wavelength is already read in from the metadata of the openPMD file,
+          however it can be overwritten using this parameter.
+
       * ``<laser name>.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
           Name of the laser envelope field inside the openPMD file to be read in.
 

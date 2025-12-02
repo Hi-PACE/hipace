@@ -437,8 +437,8 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     // calculate the multiplier to convert from Hipace to SI units
     double hipace_to_SI_pos = 1.;
     double hipace_to_SI_weight = 1.;
-    double hipace_to_SI_momentum = beam.m_mass;
-    double hipace_to_unitSI_momentum = beam.m_mass;
+    double hipace_to_SI_momentum = beam.m_mass * phys_const_SI.c;
+    double hipace_to_unitSI_momentum = beam.m_mass * phys_const_SI.c;
     double hipace_to_SI_charge = 1.;
     double hipace_to_SI_mass = 1.;
 
