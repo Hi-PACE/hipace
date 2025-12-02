@@ -67,8 +67,8 @@ public:
     int m_file_num_iteration = 0;
     /** Geometry of the laser file, 'rt' or 'xyt' */
     std::string m_file_geometry = "";
-    /** Wavelength from file */
-    amrex::Real m_lambda0_from_file {0.};
+    /** central wavelength of the laser */
+    amrex::Real m_init_lambda0 {0.};
 };
 
 #endif // LASER_H_

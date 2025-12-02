@@ -150,8 +150,8 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
-                const amrex::Real vx = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv * clight_inv;
-                const amrex::Real vy = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv * clight_inv;
+                const amrex::Real vx = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv;
+                const amrex::Real vy = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv;
 
                 // Rename variable for NVCC lambda capture to work
                 amrex::Real q_invvol_mu0 = charge_invvol_mu0;
