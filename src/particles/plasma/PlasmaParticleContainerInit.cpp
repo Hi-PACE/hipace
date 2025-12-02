@@ -222,7 +222,7 @@ InitParticles (const amrex::RealVect& a_u_std,
             lev_bounds[ilev].setSmall(idx_x, lo_arr[2*ilev]);
             lev_bounds[ilev].setSmall(idx_y, lo_arr[2*ilev+1]);
             lev_bounds[ilev].setSmall(idx_ppc,
-                ilev == 0 ? 0 : ppc_lev[ilev-1][0] * ppc_lev[ilev-1][1]);
+                ilev == 0 ? 0 : ppc_lev[ilev-1][0] * ppc_lev[ilev-1][1] + 1);
             lev_bounds[ilev].setBig(idx_x, hi_arr[2*ilev]);
             lev_bounds[ilev].setBig(idx_y, hi_arr[2*ilev+1]);
             lev_bounds[ilev].setBig(idx_ppc, ppc_lev[ilev][0] * ppc_lev[ilev][1]);
