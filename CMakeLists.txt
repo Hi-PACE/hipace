@@ -360,6 +360,18 @@ if(BUILD_TESTING)
             WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
         )
 
+        add_test(NAME Poisson_even.SI.1Rank
+            COMMAND bash ${HiPACE_SOURCE_DIR}/tests/Poisson_even.1Rank.sh
+                    $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR} ${HiPACE_COMPUTE}
+            WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
+        add_test(NAME Poisson_odd.SI.1Rank
+            COMMAND bash ${HiPACE_SOURCE_DIR}/tests/Poisson_odd.1Rank.sh
+                    $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR} ${HiPACE_COMPUTE}
+            WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        )
+
         if (NOT HiPACE_COMPUTE STREQUAL CUDA)
 
             # These tests only run on CPU
