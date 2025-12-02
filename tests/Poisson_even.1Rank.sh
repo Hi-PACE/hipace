@@ -10,8 +10,6 @@
 
 
 # This file is part of the HiPACE++ test suite.
-# It runs a Hipace simulation in the blowout regime and compares the result
-# with SI units.
 
 # abort on first encounted error
 set -eu -o pipefail
@@ -25,7 +23,6 @@ echo $HIPACE_EXECUTABLE
 HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
-# Relative tolerance for checksum tests depends on the platform
 RTOL=2e-3
 
 
