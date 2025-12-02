@@ -46,7 +46,7 @@ $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --rtol $RTOL \
     --file_name $solver_type/hdf5/ \
-    --test-name Poisson_even.1Rank
+    --test-name Poisson_odd.1Rank
 
 rm -rf $solver_type
 
