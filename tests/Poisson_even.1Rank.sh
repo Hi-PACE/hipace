@@ -39,7 +39,8 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         hipace.output_folder=$solver_type/ \
         fields.poisson_solver = $solver_type \
         amr.n_cell = 64 72 100 \
-        max_step=0
+        max_step=0 \
+        MGDirichlet.MG_tolerance_rel = 1e-7 \
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
