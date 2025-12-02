@@ -39,6 +39,16 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
             m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
             GetEnvelopeFromFileHelper(laser_geom_3D);
         }
+
+        // m_init_lambda0 is only read by the HeadRank, so we need to communicate it
+#ifdef AMREX_USE_MPI
+        MPI_Bcast(&m_init_lambda0,
+                  1,
+                  amrex::ParallelDescriptor::Mpi_typemap<decltype(m_init_lambda0)>::type(),
+                  Hipace::HeadRankID(),
+                  amrex::ParallelDescriptor::Communicator());
+#endif
+
         if (m_init_lambda0 != 0.) {
             // lambda0 is read from input file, but it can be overwritten explicitly here
             queryWithParser(pp, "lambda0", m_init_lambda0);
