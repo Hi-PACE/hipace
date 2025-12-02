@@ -28,6 +28,8 @@ void
 Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
 {
     amrex::ParmParse pp(m_name);
+    amrex::ParmParse pp_lasers("lasers");
+
     queryWithParser(pp, "init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") {
         queryWithParser(pp, "input_file", m_input_file_path);
@@ -37,6 +39,7 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
             m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
             GetEnvelopeFromFileHelper(laser_geom_3D);
         }
+        // lambda0 is read from input file
         return;
     }
     else if (m_laser_init_type == "gaussian") {
@@ -56,6 +59,7 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
         queryWithParser(pp, "zeta",  m_zeta);
         queryWithParser(pp, "beta",  m_beta);
         queryWithParser(pp, "phi2",  m_phi2);
+        getWithParser(pp_lasers, "lambda0", m_init_lambda0);
         return;
     }
     else if (m_laser_init_type == "parser") {
@@ -65,6 +69,7 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
         getWithParser(pp, "laser_imag(x,y,z)", profile_imag_str);
         m_profile_real = makeFunctionWithParser<3>( profile_real_str, m_parser_lr, {"x", "y", "z"});
         m_profile_imag = makeFunctionWithParser<3>( profile_imag_str, m_parser_li, {"x", "y", "z"});
+        getWithParser(pp_lasers, "lambda0", m_init_lambda0);
         return;
     }
     else {
@@ -140,7 +145,7 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
             + m_input_file_path + "\n"
         );
 
-        m_lambda0_from_file = 2.*MathConst::pi*PhysConstSI::c
+        m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
             / mesh.getAttribute("angularFrequency").get<double>();
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
