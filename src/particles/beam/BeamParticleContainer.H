@@ -28,8 +28,7 @@ struct BeamIdx
         ux, uy, uz, // momentum
         nsubcycles, // nsubcycles: by how many subcycles was this particle pushed already
         real_nattribs,
-        // nsubcycles is not stored or communicated in MultiBuffer
-        real_nattribs_in_buffer = nsubcycles
+        real_nattribs_in_buffer = real_nattribs
     };
     enum {
         mr_level,
@@ -199,10 +198,6 @@ public:
 
     bool communicateIdCpuComponent () const { return true; }
     bool communicateRealComponent (int rcomp) const {
-        // don't communicate nsubcycles
-        if (rcomp == BeamIdx::nsubcycles) {
-            return false;
-        }
         // otherwise communicate all compile-time and runtime real components
         return rcomp < numRealComponents();
     }

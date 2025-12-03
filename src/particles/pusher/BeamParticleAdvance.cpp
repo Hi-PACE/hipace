@@ -109,6 +109,8 @@ AdvanceBeamParticlesSlice (
     // don't include slipped particles in count as they were already pushed
     Hipace::m_num_beam_particles_pushed += double(beam.getNumParticles(WhichBeamSlice::This));
 
+    const int num_non_slipped = beam.getNumParticles(WhichBeamSlice::This);
+
     // Use OMP ParallelFor to use multiple threads when running on CPU
     omp::ParallelFor(
         amrex::TypeList<
@@ -135,6 +137,11 @@ AdvanceBeamParticlesSlice (
 
             amrex::Real i_subcycle = ptd.rdata(BeamIdx::nsubcycles)[ip];
 
+            if (ip < num_non_slipped) {
+                // new time step
+                i_subcycle -= n_subcycles;
+            }
+
             amrex::RealVect spin {0._rt, 0._rt, 0._rt};
             if (spin_tracking) {
                 spin[0] = ptd.m_runtime_rdata[0][ip];
@@ -142,14 +149,20 @@ AdvanceBeamParticlesSlice (
                 spin[2] = ptd.m_runtime_rdata[2][ip];
             }
 
-            for (; i_subcycle < n_subcycles; i_subcycle += 1._rt) {
+            while (i_subcycle < n_subcycles) {
 
                 if (zp < min_z) {
                     // stop pushing particle if it is not on this slice anymore
                     break;
                 }
 
-                const amrex::Real dt = max_dt * std::min(1._rt, n_subcycles - i_subcycle);
+                i_subcycle += 1._rt;
+
+                amrex::Real dt = max_dt;
+                if (i_subcycle >= n_subcycles) {
+                    dt *= n_subcycles - i_subcycle + 1._rt;
+                    i_subcycle = n_subcycles;
+                }
 
                 const amrex::ParticleReal gammap_inv = 1._rt / std::sqrt( 1._rt
                     + ux*ux + uy*uy + uz*uz);
@@ -331,7 +344,7 @@ AdvanceBeamParticlesSlice (
             ptd.pos(0, ip) = xp;
             ptd.pos(1, ip) = yp;
             ptd.pos(2, ip) = zp;
-            ptd.rdata(BeamIdx::nsubcycles)[ip] = std::min(i_subcycle, n_subcycles);
+            ptd.rdata(BeamIdx::nsubcycles)[ip] = i_subcycle;
             ptd.rdata(BeamIdx::ux)[ip] = ux;
             ptd.rdata(BeamIdx::uy)[ip] = uy;
             ptd.rdata(BeamIdx::uz)[ip] = uz;
