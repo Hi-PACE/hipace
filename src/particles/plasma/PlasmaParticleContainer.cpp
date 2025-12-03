@@ -795,7 +795,7 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = uy;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
                                                             + 0.5_rt*amrex::abs(A*A))-uz;
-                arrdata_elec[PlasmaIdx::time_integral][pidx] = arrdata_ion[PlasmaIdx::time_integral][ip];
+                ptd_elec.rdata(PlasmaIdx::time_integral)[pidx] = ptd_ion.rdata(PlasmaIdx::time_integral)[ip];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
