@@ -226,7 +226,7 @@ if(BUILD_TESTING)
         foreach(test_name IN LISTS ARGN)
             add_test(NAME ${test_name}
                 COMMAND bash ${HiPACE_SOURCE_DIR}/tests/${test_name}.sh
-                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR}
+                        $<TARGET_FILE:HiPACE> ${HiPACE_SOURCE_DIR} ${HiPACE_COMPUTE}
                 WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
             )
         endforeach()
