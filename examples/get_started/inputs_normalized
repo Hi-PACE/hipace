@@ -6,13 +6,13 @@ amr.max_level = 0                       # level of mesh refinement. Currently, o
 #### General simulation settings
 ################################
 max_step = 20                           # max time step. 0 computes the fields of the initial beam
-diagnostic.output_period = 1                # output period. Last step is always written
+diagnostic.output_period = 1            # output period. Last step is always written
 hipace.normalized_units = 1             # unit system: SI units: 0, normalized units: 1
 hipace.dt = 4.4                         # Time step
 
 ### Simulation domain
 ################################
-boundary.field = Dirichlet             # boundary condition for fields
+boundary.field = Dirichlet              # boundary condition for fields
 boundary.particle = Periodic            # boundary condition for particles
 geometry.prob_lo     = -8.   -8.   -6   # physical domain: dimension must be provided
 geometry.prob_hi     =  8.    8.    6   # in the respective unit system
@@ -38,3 +38,4 @@ plasma.ppc = 1 1                        # particles per cell in x,y
 ### Diagnostics
 ################################
 diagnostic.diag_type = xz               # 2D xz slice output. Options: xyz, xz, yz
+beams.insitu_period = 1                 # in-situ diagnostic period for beam(s)

@@ -180,9 +180,11 @@ public:
      */
     static constexpr int get_num_comps (int system_type) {
         switch (system_type) {
-            case 1: return 2;
-            case 2: return 2;
-            case 3: return 1;
+            case 1:
+            case 2:
+                return 2;
+            case 3:
+                return 1;
         }
         return 0;
     }
@@ -193,9 +195,12 @@ public:
      */
     static constexpr int get_num_comps_acf (int system_type) {
         switch (system_type) {
-            case 1: return 1;
-            case 2: return 2;
-            case 3: return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+            case 3:
+                return 0;
         }
         return 0;
     }
@@ -250,10 +255,8 @@ private:
     amrex::Array4<amrex::Real> const* m_cor_a = nullptr;
     amrex::Array4<amrex::Real> const* m_rescor_a = nullptr;
 
-    /** Pinned vector as a staging area for memcpy to device */
-    amrex::Gpu::PinnedVector<amrex::Array4<amrex::Real> > m_h_array4;
     /** Device vector of Array4s used by the single-block kernel at the bottom */
-    amrex::Gpu::DeviceVector<amrex::Array4<amrex::Real> > m_d_array4;
+    amrex::Gpu::Buffer<amrex::Array4<amrex::Real> > m_array4;
 
 #if defined(AMREX_USE_CUDA)
     /** CUDA graphs for average-down */

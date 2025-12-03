@@ -12,6 +12,7 @@
 #include "fields/Fields.H"
 #include "utils/Parser.H"
 #include "utils/GPUUtil.H"
+#include "particles/profiles/GetInitialDensity.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
@@ -170,7 +171,9 @@ public:
     // init:
 
     amrex::Parser m_parser; /**< owns data for m_density_func */
-    amrex::ParserExecutor<3> m_density_func; /**< Density function for the plasma */
+    std::shared_ptr<float> m_f_density_data; /**< owns data for m_density_func */
+    std::shared_ptr<double> m_d_density_data; /**< owns data for m_density_func */
+    PlasmaDensityAccessor m_density_func; /**< Density function for the plasma */
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */
@@ -215,17 +218,17 @@ public:
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
     /** to calculate Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_adk_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_adk_prefactor;
     /** to calculate Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_adk_exp_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_adk_exp_prefactor;
     /** to calculate Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_adk_power;
+    amrex::Gpu::Buffer<amrex::Real> m_adk_power;
     /** to calculate laser Ionization probability with ADK formula */
-    amrex::Gpu::DeviceVector<amrex::Real> m_laser_adk_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_laser_adk_prefactor;
     /** to calculate laser ionization momentum width for linear polarization */
-    amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_laser_dp_prefactor;
     /** to calculate laser ionization momentum width at the second order for linear polarization */
-    amrex::Gpu::DeviceVector<amrex::Real> m_laser_dp_second_prefactor;
+    amrex::Gpu::Buffer<amrex::Real> m_laser_dp_second_prefactor;
     // laser injection:
     bool m_can_laser_injection = false; /**< whether laser injection is enabled */
     std::string m_product_beam_name = ""; /**< name of Injection product beam */

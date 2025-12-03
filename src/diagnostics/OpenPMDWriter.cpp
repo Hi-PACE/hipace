@@ -41,10 +41,8 @@ namespace utils {
     getUnitDimension ( std::string const & record_name )
     {
 
-        if( record_name == "position" ) return {
-            {openPMD::UnitDimension::L,  1.}
-        };
-        else if( record_name == "positionOffset" ) return {
+        if( (record_name == "position") ||
+            (record_name == "positionOffset")) return {
             {openPMD::UnitDimension::L,  1.}
         };
         else if( record_name == "momentum" ) return {
@@ -220,13 +218,15 @@ OpenPMDWriter::WriteFieldData (
 
         if (is_laser_comp) {
             // set laser attributes and store laser
-            field.setAttribute("envelopeField", "normalized_vector_potential");
-            field.setAttribute("angularFrequency",
-                double(2.) * MathConst::pi * PhysConstSI::c / a_multi_laser.GetLambda0());
-            std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
-            field.setAttribute("polarization", polarization);
+            if (fd.m_comps_output[icomp] == "laserEnvelope") {
+                field.setAttribute("envelopeField", "normalized_vector_potential");
+                field.setAttribute("angularFrequency",
+                    double(2.) * MathConst::pi * PhysConstSI::c / a_multi_laser.GetLambda0());
+                std::vector< std::complex<double> > polarization {{1., 0.}, {0., 0.}};
+                field.setAttribute("polarization", polarization);
+            }
             field_comp.storeChunkRaw(
-                reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr()),
+                reinterpret_cast<const std::complex<amrex::Real>*>(fd.m_F_laser.dataPtr(icomp)),
                 chunk_offset, chunk_size);
         } else {
             field_comp.storeChunkRaw(fd.m_F.dataPtr(icomp), chunk_offset, chunk_size);
@@ -438,8 +438,8 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     // calculate the multiplier to convert from Hipace to SI units
     double hipace_to_SI_pos = 1.;
     double hipace_to_SI_weight = 1.;
-    double hipace_to_SI_momentum = beam.m_mass;
-    double hipace_to_unitSI_momentum = beam.m_mass;
+    double hipace_to_SI_momentum = beam.m_mass * phys_const_SI.c;
+    double hipace_to_unitSI_momentum = beam.m_mass * phys_const_SI.c;
     double hipace_to_SI_charge = 1.;
     double hipace_to_SI_mass = 1.;
 

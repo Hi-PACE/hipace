@@ -1096,7 +1096,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
     m_num_single_block_levels = m_num_mg_levels - m_single_block_level_begin;
 
     if (m_num_single_block_levels > 0) {
-        m_h_array4.reserve(nfabvs*m_num_single_block_levels);
+        m_array4.reserve(nfabvs*m_num_single_block_levels);
     }
 
     // Allocate the proportional coefficient of the Helmholtz equation.
@@ -1105,7 +1105,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_acf.emplace_back(m_domain[ilev], m_num_comps_acf);
         if (ilev >= m_single_block_level_begin) {
-            m_h_array4.push_back(m_acf[ilev].array());
+            m_array4.push_back(m_acf[ilev].array());
         }
     }
 
@@ -1121,7 +1121,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
                 m_res[ilev].template setVal<RunOn::Device>(0);
             }
             if (ilev >= m_single_block_level_begin) {
-                m_h_array4.push_back(m_res[ilev].array());
+                m_array4.push_back(m_res[ilev].array());
             }
         }
     }
@@ -1134,7 +1134,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
             m_cor[ilev].template setVal<RunOn::Device>(0);
         }
         if (ilev >= m_single_block_level_begin) {
-            m_h_array4.push_back(m_cor[ilev].array());
+            m_array4.push_back(m_cor[ilev].array());
         }
     }
 
@@ -1146,16 +1146,14 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
             m_rescor[ilev].template setVal<RunOn::Device>(0);
         }
         if (ilev >= m_single_block_level_begin) {
-            m_h_array4.push_back(m_rescor[ilev].array());
+            m_array4.push_back(m_rescor[ilev].array());
         }
     }
 
     // Copy Array4s to GPU for bottomsolve_gpu()
-    if (!m_h_array4.empty()) {
-        m_d_array4.resize(m_h_array4.size());
-        Gpu::copyAsync(Gpu::hostToDevice, m_h_array4.begin(), m_h_array4.end(),
-                       m_d_array4.begin());
-        m_acf_a = m_d_array4.data();
+    if (!m_array4.empty()) {
+        m_array4.copyToDeviceAsync();
+        m_acf_a = m_array4.data();
         m_res_a = m_acf_a + m_num_single_block_levels;
         m_cor_a = m_res_a + m_num_single_block_levels;
         m_rescor_a = m_cor_a + m_num_single_block_levels;

@@ -28,6 +28,8 @@ void
 Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
 {
     amrex::ParmParse pp(m_name);
+    amrex::ParmParse pp_lasers("lasers");
+
     queryWithParser(pp, "init_type", m_laser_init_type);
     if (m_laser_init_type == "from_file") {
         queryWithParser(pp, "input_file", m_input_file_path);
@@ -36,6 +38,23 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
         if (Hipace::HeadRank()) {
             m_F_input_file.resize(laser_geom_3D.Domain(), 2, amrex::The_Pinned_Arena());
             GetEnvelopeFromFileHelper(laser_geom_3D);
+        }
+
+        // m_init_lambda0 is only read by the HeadRank, so we need to communicate it
+#ifdef AMREX_USE_MPI
+        MPI_Bcast(&m_init_lambda0,
+                  1,
+                  amrex::ParallelDescriptor::Mpi_typemap<decltype(m_init_lambda0)>::type(),
+                  Hipace::HeadRankID(),
+                  amrex::ParallelDescriptor::Communicator());
+#endif
+
+        if (m_init_lambda0 != 0.) {
+            // lambda0 is read from input file, but it can be overwritten explicitly here
+            queryWithParser(pp, "lambda0", m_init_lambda0);
+        } else {
+            // lambda0 not defined in file
+            getWithParserAlt(pp, "lambda0", m_init_lambda0, pp_lasers);
         }
         return;
     }
@@ -56,6 +75,7 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
         queryWithParser(pp, "zeta",  m_zeta);
         queryWithParser(pp, "beta",  m_beta);
         queryWithParser(pp, "phi2",  m_phi2);
+        getWithParser(pp_lasers, "lambda0", m_init_lambda0);
         return;
     }
     else if (m_laser_init_type == "parser") {
@@ -65,6 +85,7 @@ Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
         getWithParser(pp, "laser_imag(x,y,z)", profile_imag_str);
         m_profile_real = makeFunctionWithParser<3>( profile_real_str, m_parser_lr, {"x", "y", "z"});
         m_profile_imag = makeFunctionWithParser<3>( profile_imag_str, m_parser_li, {"x", "y", "z"});
+        getWithParser(pp_lasers, "lambda0", m_init_lambda0);
         return;
     }
     else {
@@ -98,15 +119,45 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
 
         auto mesh = iteration.meshes[m_file_envelope_name];
 
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            mesh.containsAttribute("angularFrequency"),
-            "Could not find Attribute 'angularFrequency' of iteration "
-            + std::to_string(m_file_num_iteration) + " in file "
-            + m_input_file_path + "\n"
-        );
+        // Check that we are reading a normalized vector potential and not an electric field
+        const std::array<double, 7> units_file = mesh.unitDimension();
+        const std::array<double, 7> units_norm_potential{0., 0., 0., 0., 0., 0., 0.};
+        const std::array<double, 7> units_electric_field{1., 1., -3., -1., 0., 0., 0.};
+        const std::string help_msg = "Make sure to store the normalized vector potential, "
+            "set the Attribute 'envelopeField' to 'normalized_vector_potential' and "
+            "unitDimension to '" + amrex::ToString(units_norm_potential) + "'. "
+            "If you are using LASY to generate the laser, pass 'save_as_vector_potential=True' "
+            "to laser.write_to_file() or write_to_openpmd_file()";
 
-        m_lambda0_from_file = 2.*MathConst::pi*PhysConstSI::c
-            / mesh.getAttribute("angularFrequency").get<double>();
+        if (mesh.containsAttribute("envelopeField")) {
+            const std::string field_type = mesh.getAttribute("envelopeField").get<std::string>();
+            if (field_type == "electric_field") {
+                amrex::Abort("Attribute 'envelopeField' in file '" + m_input_file_path +
+                    "' is set to 'electric_field' which is not compatible with HiAPCE++. " +
+                    help_msg
+                );
+            } else if (field_type != "normalized_vector_potential") {
+                amrex::AllPrint() << "WARNING: Attribute 'envelopeField' in file '"
+                    << m_input_file_path << "' is set to '" << field_type << "' which is not "
+                    " recognized. " << help_msg << '\n';
+            }
+        }
+
+        if (units_file == units_electric_field) {
+            amrex::Abort("unitDimension '" + amrex::ToString(units_file) + "' in file '"
+                + m_input_file_path + "' is that of an electric field which is not compatible "
+                "with HiAPCE++. " + help_msg
+            );
+        } else if (units_file != units_norm_potential) {
+            amrex::AllPrint() << "WARNING: unitDimension '" << amrex::ToString(units_file)
+                << "' in file '" << m_input_file_path << "' is not recognized. "
+                << help_msg << '\n';
+        }
+
+        if (mesh.containsAttribute("angularFrequency")) {
+            m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+                / mesh.getAttribute("angularFrequency").get<double>();
+        }
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
             mesh.contains(openPMD::RecordComponent::SCALAR),

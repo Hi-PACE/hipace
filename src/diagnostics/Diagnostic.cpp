@@ -152,33 +152,44 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
     std::map<std::string, FieldDiagnosticData::geom_type> geometry_name_to_geom_type{};
     // for each geometry name, if its for fields what MR level is it on
     std::map<std::string, int> geometry_name_to_level{};
+    // for each geometry, to which index do output components map to
+    std::map<std::string, std::map<std::string, int>> geometry_name_to_output_comps_map{};
     // for each geometry, what output components are available
     std::map<std::string, std::set<std::string>> geometry_name_to_output_comps{};
     // in case there is an error, generate a string with all available geometries and components
     std::stringstream all_comps_error_str{};
+
     for (int lev = 0; lev<nlev; ++lev) {
         std::string diag_name = "lev" + std::to_string(lev);
         std::string geom_name = "level_" + std::to_string(lev);
         diag_name_to_default_geometry.emplace(diag_name, geom_name);
         geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::field);
         geometry_name_to_level.emplace(geom_name, lev);
-        all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
-        for (const auto& [comp, idx] : Comps[WhichSlice::This]) {
-            geometry_name_to_output_comps[geom_name].insert(comp);
-            all_comps_error_str << comp << " ";
-        }
-        all_comps_error_str << "\n";
+        geometry_name_to_output_comps_map[geom_name] = Comps[WhichSlice::This];
+        // add derived diagnostics for Ex and Ey
+        geometry_name_to_output_comps_map[geom_name]["Ex"] = -1;
+        geometry_name_to_output_comps_map[geom_name]["Ey"] = -2;
     }
     if (use_laser) {
         std::string diag_name = "laser_diag";
         std::string geom_name = "laser";
-        std::string laser_io_name = "laserEnvelope";
         diag_name_to_default_geometry.emplace(diag_name, geom_name);
         geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::laser);
         geometry_name_to_level.emplace(geom_name, 0);
+        geometry_name_to_output_comps_map[geom_name]["laserEnvelope"] = WhichLaserSlice::n00j00_r;
+        // real=chi, imag=chi_initial
+        geometry_name_to_output_comps_map[geom_name]["laserChi"] = WhichLaserSlice::chi;
+        // add derived diagnostics for |a^2|
+        geometry_name_to_output_comps_map[geom_name]["|a^2|"] = -1;
+    }
+
+    for (const auto& [geom_name, comp_map] : geometry_name_to_output_comps_map) {
         all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
-        geometry_name_to_output_comps[geom_name].insert(laser_io_name);
-        all_comps_error_str << laser_io_name << "\n";
+        for (const auto& [comp, idx] : comp_map) {
+            geometry_name_to_output_comps[geom_name].insert(comp);
+            all_comps_error_str << comp << " ";
+        }
+        all_comps_error_str << "\n";
     }
     all_comps_error_str << "Additionally, 'all' and 'none' are supported as field_data\n"
                         << "Components can be removed after 'all' by using 'remove_<comp name>'.\n";
@@ -258,13 +269,12 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         fd.m_nfields = fd.m_comps_output.size();
 
         // copy the indexes of m_comps_output to the GPU
-        if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::field) {
-            amrex::Gpu::PinnedVector<int> local_comps_output_idx(fd.m_nfields);
-            for(int i = 0; i < fd.m_nfields; ++i) {
-                local_comps_output_idx[i] = Comps[WhichSlice::This][fd.m_comps_output[i]];
-            }
-            fd.m_comps_output_idx.assign(local_comps_output_idx.begin(), local_comps_output_idx.end());
+        fd.m_comps_output_idx.resize(fd.m_nfields);
+        for (int i = 0; i < fd.m_nfields; ++i) {
+            fd.m_comps_output_idx[i] =
+                geometry_name_to_output_comps_map.at(base_geom_name).at(fd.m_comps_output[i]);
         }
+        fd.m_comps_output_idx.copyToDeviceAsync();
     }
 
     // check that all components are at least used by one of the diagnostics

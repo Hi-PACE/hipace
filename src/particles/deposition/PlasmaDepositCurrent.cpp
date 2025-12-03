@@ -74,15 +74,20 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
         const PhysConst pc = get_phys_const();
         const amrex::Real clight = pc.c;
-        const amrex::Real clightinv = 1.0_rt/pc.c;
         const amrex::Real charge_invvol = charge * invvol;
         const amrex::Real charge_mu0_mass_ratio = charge * pc.mu0 / mass;
         const amrex::Real laser_norm = (charge/pc.q_e) * (pc.m_e/mass)
                                      * (charge/pc.q_e) * (pc.m_e/mass);
 
-        int n_qsa_violation = 0;
-        amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation(n_qsa_violation);
-        int* const AMREX_RESTRICT p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
+        amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation{};
+        int* AMREX_RESTRICT p_n_qsa_violation = nullptr;
+
+        if (Hipace::m_verbose >= 3 && Hipace::HeadRank()) {
+            p_n_qsa_violation = gpu_n_qsa_violation.dataPtr();
+            const int n_qsa_violation = 0;
+            amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice,
+                &n_qsa_violation, &n_qsa_violation + 1, p_n_qsa_violation);
+        }
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
             "jx, jy, jz, and rho must be cell centered in all directions.");
@@ -164,8 +169,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
-                const amrex::Real vx_c = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv;
-                const amrex::Real vy_c = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv;
+                const amrex::Real vx = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv;
+                const amrex::Real vy = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv;
 
                 // calculate charge of the plasma particles
                 amrex::Real q_invvol = charge_invvol * ptd.rdata(PlasmaIdx::w)[ip];
@@ -191,15 +196,17 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 // calculate gamma/psi for plasma particles
                 const amrex::Real gamma_psi = 0.5_rt * (
                     (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv
-                    + vx_c * vx_c * clightinv * clightinv
-                    + vy_c * vy_c * clightinv * clightinv
+                    + vx * vx
+                    + vy * vy
                     + 1._rt
                 );
 
                 if (gamma_psi < 0.0_rt || (gamma_psi > max_qsa_weighting_factor && ptd.id(ip)!=3) || psi_inv < 0.0_rt)
                 {
                     // This particle violates the QSA, discard it and do not deposit its current
-                    amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
+                    if (p_n_qsa_violation) {
+                        amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
+                    }
                     ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
                     ptd.id(ip).make_invalid();
                     return;
@@ -219,9 +226,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
                         const amrex::Real charge_density = q_invvol * shape_x * shape_y;
                         // wqx, wqy wqz are particle current in each direction
-                        const amrex::Real wqx     = charge_density * vx_c;
-                        const amrex::Real wqy     = charge_density * vy_c;
-                        const amrex::Real wqz     = charge_density * (gamma_psi-1._rt) * clight;
+                        const amrex::Real wqx     = charge_density * clight * vx;
+                        const amrex::Real wqy     = charge_density * clight * vy;
+                        const amrex::Real wqz     = charge_density * clight * (gamma_psi-1._rt);
                         const amrex::Real wq      = charge_density * gamma_psi;
                         const amrex::Real wchi    = charge_density * q_mu0_mass_ratio * psi_inv;
                         const amrex::Real wrhomjz = charge_density;
@@ -247,10 +254,13 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 }
             });
 
-        n_qsa_violation = gpu_n_qsa_violation.dataValue();
-        if (n_qsa_violation > 0 && (Hipace::m_verbose >= 3))
-            amrex::Print()<< "number of QSA violating particles on this slice: " \
-                        << n_qsa_violation << "\n";
+        if (Hipace::m_verbose >= 3 && Hipace::HeadRank()) {
+            const int n_qsa_violation = gpu_n_qsa_violation.dataValue();
+            if (n_qsa_violation > 0) {
+                amrex::AllPrint() << "number of QSA violating particles on this slice: "
+                                  << n_qsa_violation << "\n";
+            }
+        }
     }
 
     if (deposit_rho && deposit_rho_individual && Hipace::m_deposit_rho) {

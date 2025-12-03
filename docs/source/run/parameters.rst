@@ -581,7 +581,7 @@ which are valid only for certain beam types, are introduced further below under
 
 * ``<beam name>.injection_type`` (`string`)
     The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight``, ``fixed_ppc``,
-    and ``from_file``.
+    ``from_file`` and ``from_list``.
     ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
     the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
     user-specified probability density function. It is more general and faster, and uses
@@ -590,6 +590,7 @@ which are valid only for certain beam types, are introduced further below under
     ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
     varying weights. It can be either a Gaussian or a flattop beam.
     ``from_file`` reads a beam from openPMD files.
+    ``from_list`` reads a beam from arrays provided directly in the input script.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -863,6 +864,27 @@ Option: ``from_file``
     Whether to initialize the beam on the CPU instead of the GPU.
     Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
 
+Option: ``from_list``
+^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.num_particles`` (`int`)
+    Number of particles to generate the beam. If this is equal to zero,
+    then the other parameters can be omitted.
+
+* ``<beam name>.init_pos_x``, ``<beam name>.init_pos_y`` and ``<beam name>.init_pos_z`` (`float`)
+    List of initial x-, y- and z-positions for all beam particles.
+
+* ``<beam name>.init_ux``, ``<beam name>.init_uy`` and ``<beam name>.init_uz`` (`float`)
+    List of initial normalized momentum (:math:`= \gamma \beta = \frac{p}{m c}`)
+    in x, y and z for all beam particles.
+
+* ``<beam name>.init_weight`` (`float`)
+    List of macro-particle weight for all beam particles.
+    A value of one corresponds to one physical particle.
+
+* ``<beam name>.init_sx``, ``<beam name>.init_sy`` and ``<beam name>.init_sz`` (`float`)
+    If spin-tracking is enabled, list of initial x-, y- and z-spin for all beam particles.
+
 SALAME algorithm
 ^^^^^^^^^^^^^^^^
 
@@ -987,6 +1009,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 
           .. math::
               E(\boldsymbol{x},t) \propto Re\left[ \exp\left(  -\frac{(t-t_{peak})^2}{\tau^2 + 2i\phi^{(2)}} + i\omega_0 (t-t_{peak}) + i\phi_0 \right) \right]
+
           where :math:`\tau` is given by ``<laser_name>.tau`` and represents the Fourier-limited duration of the laser pulse. Thus, the actual duration of the chirped laser pulse is:
 
           .. math::
@@ -1000,6 +1023,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
           Currently supported geometries: 3D or cylindrical profiles with azimuthal decomposition.
           The laser pulse is injected in the HiPACE++ simulation so that the beginning of the temporal profile from the file corresponds to the head of the simulation box, and time (in the file) is converted to space (HiPACE++ longitudinal coordinate) with ``z = -c*t + const``.
           If this parameter is set, then the file is used to initialize all lasers instead of using a gaussian profile.
+
+      * ``<laser name>.lambda0`` (`float`) optional (default `<read from file>`)
+          Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
+          The wavelength is already read in from the metadata of the openPMD file,
+          however it can be overwritten using this parameter.
 
       * ``<laser name>.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
           Name of the laser envelope field inside the openPMD file to be read in.
@@ -1023,6 +1051,7 @@ Diagnostic parameters
 
 There are different types of diagnostics in HiPACE++. The standard diagnostics are compliant with the openPMD standard. The
 in-situ diagnostics allow for fast analysis of large beams or the plasma particles.
+Please make sure to always clear or rename the output folder before running a new simulation to avoid mixing data from different runs.
 
 * ``diagnostic.output_period`` (`integer`) optional (default `0`)
     Output period for standard beam and field diagnostics. Field or beam specific diagnostics can overwrite this parameter.
@@ -1066,7 +1095,7 @@ Field diagnostics
     Available geometries are `level_0`, `level_1`, `level_2` and `laser`,
     depending on if MR or a laser is used.
     If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
-    becomes ``level_0 level_1 level_2 laser``respectively.
+    becomes ``level_0 level_1 level_2 laser`` respectively.
 
 * ``<diag name>.output_period`` (`integer`) optional (default `0`)
     Output period for fields. No output is given for ``<diag name>.output_period = 0``.
@@ -1094,11 +1123,15 @@ Field diagnostics
 
     * ``all``: Includes all available fields.
     * ``none``: Excludes all fields.
-    * A subset of the following: ``ExmBy``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
+    * A subset of the following: ``Ex``, ``ExmBy``, ``Ey``, ``EypBx``, ``Ez``, ``Bx``, ``By``, ``Bz``, ``Psi``.
     * Specific to the Predictor-Corrector solver: ``jx``, ``jy``, ``jz``, and ``rhomjz``, which correspond to the current and charge densities of the plasma and beam (``rhomjz`` is defined as :math:`\rho-j_z/c`).
     * Specific to the Explicit solver: separate current and charge densities for the beam (``jx_beam``, ``jy_beam``, ``jz_beam``) and plasma (``jx``, ``jy``, and ``rhomjz``).
     * Plasma diagnostics: ``rho`` (total charge density) is always available. Per-species diagnostics are also available: ``rho_<plasma name>`` (charge density of the species); ``w_<plasma name>`` (particle weights of the species); and momentum components ``ux_<plasma name>``, ``uy_<plasma name>``, ``uz_<plasma name>``, ``ux^2_<plasma name>``, etc.
-    * Laser diagnostics, when a laser pulse is used: ``laserEnvelope`` (the complex envelope of the laser in the ``laser`` base geometry) and ``chi`` (plasma proper density :math:`n/\gamma`).
+    * Laser diagnostics, when a laser pulse is used: ``laserEnvelope`` (the complex envelope of the
+      laser in the ``laser`` base geometry) and ``chi`` (plasma proper density :math:`n/\gamma`).
+      ``laserChi`` can be used to access chi on the laser grid, with the imaginary component
+      containing chi of the initial unperturbed plasma. ``|a^2|`` contains the absolute value
+      squared of the laser envelope in the real component and zero in the imaginary component.
     * Fields can be added or removed from the list dynamically: to remove a field after including ``all``, use ``remove_<field name>``. If a field is added and removed multiple times, the last occurrence takes precedence.
 
 * ``<diag name> or diagnostic.patch_lo`` (3 `float`) optional (default `-infinity -infinity -infinity`)
@@ -1167,7 +1200,20 @@ When this is parsed into Python it can be converted to a NumPy structured dataty
 The rest of the file, following immediately after the closing ``}``, is in binary format and
 contains all of the in-situ diagnostics along with some metadata. This part can be read using the
 structured datatype of the first section.
-Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format. Functions to calculate the most useful properties are also provided in that file.
+Use ``hipace/tools/read_insitu_diagnostics.py`` to read the files using this format.
+It can be installed using the command ``pip install -U -e /path_to_hipace/hipace/tools``.
+Functions to calculate the most useful properties are also provided in that file.
+Usage example:
+
+.. code-block:: python
+
+    import read_insitu_diagnostics as diag
+    ir = diag.InSituReader("diags/insitu/reduced_beam.*.txt")
+    ir.avail() # print available quantities
+    ir.avg_data("[x]") # get 1D array over time steps
+    ir.slice_data("emittance_x") # get 2D array over time steps and slices
+    ir.time, ir.zeta # get metadata needed for plotting
+
 
 * ``<beam name> or beams.insitu_period`` (`int`) optional (default ``0``)
     Period of the beam in-situ diagnostics. `0` means no beam in-situ diagnostics.

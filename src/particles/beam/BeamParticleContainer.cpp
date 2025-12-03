@@ -95,14 +95,14 @@ BeamParticleContainer::ReadParameters ()
         {"x", "y", "z", "t"});
     m_external_fields[5] = makeFunctionWithParser<4>(field_str[2], m_external_fields_parser[5],
         {"x", "y", "z", "t"});
-    if (m_injection_type == "fixed_ppc" || m_injection_type == "from_file"){
+    if (m_injection_type != "fixed_weight"){
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_duz_per_uz0_dzeta == 0.,
         "Tilted beams and correlated energy spreads are only implemented for fixed weight beams");
     }
     queryWithParserAlt(pp, "initialize_on_cpu", m_initialize_on_cpu, pp_alt);
     queryWithParserAlt(pp, "do_spin_tracking", m_do_spin_tracking, pp_alt);
     if (m_do_spin_tracking) {
-        if (m_injection_type != "from_file") {
+        if (m_injection_type != "from_file" && m_injection_type != "from_list") {
             getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
         }
         queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
@@ -277,9 +277,19 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         amrex::Abort("beam particle injection via external_file requires openPMD support: "
                      "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
 #endif  // HIPACE_USE_OPENPMD
+    } else if (m_injection_type == "from_list") {
+        getWithParser(pp, "num_particles", m_num_particles_list);
+        m_total_num_particles = m_num_particles_list;
+        InitBeamFromList3D();
+        if (Hipace::HeadRank()) {
+            m_init_sorter.sortParticlesByBox(
+                getBeamInitSlice().GetStructOfArrays().GetRealData(BeamIdx::z).dataPtr(),
+                getBeamInitSlice().size(), m_initialize_on_cpu, geom);
+        }
     } else {
 
-        amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight or from_file\n");
+        amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight, from_file"
+            " or from_list\n");
 
     }
 
@@ -360,7 +370,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         InitBeamFixedWeightSlice(slice, which_slice);
     } else if (m_injection_type == "fixed_weight_pdf") {
         InitBeamFixedWeightPDFSlice(slice, which_slice);
-    } else {
+    } else { // from_file and from_list
         HIPACE_PROFILE("BeamParticleContainer::initializeSlice()");
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
 
@@ -395,7 +405,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         );
     }
 
-    if (m_do_spin_tracking && m_injection_type != "from_file") {
+    if (m_do_spin_tracking && m_injection_type != "from_file" && m_injection_type != "from_list" ) {
         HIPACE_PROFILE("BeamParticleContainer::initializeSpin()");
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
@@ -494,8 +504,6 @@ BeamParticleContainer::InSituComputeDiags (int islice)
                         m_insitu_sum_rdata.size()>0 && m_insitu_sum_idata.size()>0);
 
     const amrex::Real insitu_radius_sq = m_insitu_radius * m_insitu_radius;
-    const PhysConst phys_const = get_phys_const();
-    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
     const auto ptd = getBeamSlice(WhichBeamSlice::This).getParticleTileData();
 
     amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
@@ -508,9 +516,9 @@ BeamParticleContainer::InSituComputeDiags (int islice)
             const amrex::Real x = ptd.pos(0, ip);
             const amrex::Real y = ptd.pos(1, ip);
             const amrex::Real z = ptd.pos(2, ip);
-            const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip] * clight_inv; // proper velocity to u
-            const amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip] * clight_inv;
-            const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip] * clight_inv;
+            const amrex::Real ux = ptd.rdata(BeamIdx::ux)[ip];
+            const amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
+            const amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
             const amrex::Real w = ptd.rdata(BeamIdx::w)[ip];
 
             const amrex::Real uz_inv = uz == 0._rt ? 0._rt : 1._rt / uz;
@@ -608,6 +616,8 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
 {
     HIPACE_PROFILE("BeamParticleContainer::InSituWriteToFile()");
 
+    using namespace amrex::literals;
+
 #ifdef HIPACE_USE_OPENPMD
     // create subdirectory
     openPMD::auxiliary::create_directories(m_insitu_file_prefix);
@@ -622,7 +632,8 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_" + m_name + "." + pad_rank_num + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
-    const amrex::Real sum_w0 = m_insitu_sum_rdata[0];
+    const amrex::Real sum_w0_inv = m_insitu_sum_rdata[0] <= 0._rt ?
+        0._rt : 1._rt / m_insitu_sum_rdata[0];
     const std::size_t nslices = static_cast<std::size_t>(m_nslices);
     const amrex::Real normalized_density_factor = Hipace::m_normalized_units ?
         geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
@@ -664,27 +675,27 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         {"sum(w)"  , &m_insitu_rdata[0], nslices},
         {"Np"      , &m_insitu_idata[0], nslices},
         {"average" , {
-            {"[x]"   , &(m_insitu_sum_rdata[ 1] /= sum_w0)},
-            {"[x^2]" , &(m_insitu_sum_rdata[ 2] /= sum_w0)},
-            {"[y]"   , &(m_insitu_sum_rdata[ 3] /= sum_w0)},
-            {"[y^2]" , &(m_insitu_sum_rdata[ 4] /= sum_w0)},
-            {"[z]"   , &(m_insitu_sum_rdata[ 5] /= sum_w0)},
-            {"[z^2]" , &(m_insitu_sum_rdata[ 6] /= sum_w0)},
-            {"[ux]"  , &(m_insitu_sum_rdata[ 7] /= sum_w0)},
-            {"[ux^2]", &(m_insitu_sum_rdata[ 8] /= sum_w0)},
-            {"[uy]"  , &(m_insitu_sum_rdata[ 9] /= sum_w0)},
-            {"[uy^2]", &(m_insitu_sum_rdata[10] /= sum_w0)},
-            {"[uz]"  , &(m_insitu_sum_rdata[11] /= sum_w0)},
-            {"[uz^2]", &(m_insitu_sum_rdata[12] /= sum_w0)},
-            {"[x*ux]", &(m_insitu_sum_rdata[13] /= sum_w0)},
-            {"[y*uy]", &(m_insitu_sum_rdata[14] /= sum_w0)},
-            {"[z*uz]", &(m_insitu_sum_rdata[15] /= sum_w0)},
-            {"[x*uy]", &(m_insitu_sum_rdata[16] /= sum_w0)},
-            {"[y*ux]", &(m_insitu_sum_rdata[17] /= sum_w0)},
-            {"[ux/uz]",&(m_insitu_sum_rdata[18] /= sum_w0)},
-            {"[uy/uz]",&(m_insitu_sum_rdata[19] /= sum_w0)},
-            {"[ga]"  , &(m_insitu_sum_rdata[20] /= sum_w0)},
-            {"[ga^2]", &(m_insitu_sum_rdata[21] /= sum_w0)}
+            {"[x]"   , &(m_insitu_sum_rdata[ 1] *= sum_w0_inv)},
+            {"[x^2]" , &(m_insitu_sum_rdata[ 2] *= sum_w0_inv)},
+            {"[y]"   , &(m_insitu_sum_rdata[ 3] *= sum_w0_inv)},
+            {"[y^2]" , &(m_insitu_sum_rdata[ 4] *= sum_w0_inv)},
+            {"[z]"   , &(m_insitu_sum_rdata[ 5] *= sum_w0_inv)},
+            {"[z^2]" , &(m_insitu_sum_rdata[ 6] *= sum_w0_inv)},
+            {"[ux]"  , &(m_insitu_sum_rdata[ 7] *= sum_w0_inv)},
+            {"[ux^2]", &(m_insitu_sum_rdata[ 8] *= sum_w0_inv)},
+            {"[uy]"  , &(m_insitu_sum_rdata[ 9] *= sum_w0_inv)},
+            {"[uy^2]", &(m_insitu_sum_rdata[10] *= sum_w0_inv)},
+            {"[uz]"  , &(m_insitu_sum_rdata[11] *= sum_w0_inv)},
+            {"[uz^2]", &(m_insitu_sum_rdata[12] *= sum_w0_inv)},
+            {"[x*ux]", &(m_insitu_sum_rdata[13] *= sum_w0_inv)},
+            {"[y*uy]", &(m_insitu_sum_rdata[14] *= sum_w0_inv)},
+            {"[z*uz]", &(m_insitu_sum_rdata[15] *= sum_w0_inv)},
+            {"[x*uy]", &(m_insitu_sum_rdata[16] *= sum_w0_inv)},
+            {"[y*ux]", &(m_insitu_sum_rdata[17] *= sum_w0_inv)},
+            {"[ux/uz]",&(m_insitu_sum_rdata[18] *= sum_w0_inv)},
+            {"[uy/uz]",&(m_insitu_sum_rdata[19] *= sum_w0_inv)},
+            {"[ga]"  , &(m_insitu_sum_rdata[20] *= sum_w0_inv)},
+            {"[ga^2]", &(m_insitu_sum_rdata[21] *= sum_w0_inv)}
         }},
         {"total"   , {
             {"sum(w)", &m_insitu_sum_rdata[0]},
@@ -701,12 +712,12 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
             {"[sz]"     , &m_insitu_spin_data[4*nslices], nslices},
             {"[sz^2]"   , &m_insitu_spin_data[5*nslices], nslices},
             {"average" , {
-                {"[sx]"   , &(m_insitu_sum_spin_data[0] /= sum_w0)},
-                {"[sx^2]" , &(m_insitu_sum_spin_data[1] /= sum_w0)},
-                {"[sy]"   , &(m_insitu_sum_spin_data[2] /= sum_w0)},
-                {"[sy^2]" , &(m_insitu_sum_spin_data[3] /= sum_w0)},
-                {"[sz]"   , &(m_insitu_sum_spin_data[4] /= sum_w0)},
-                {"[sz^2]" , &(m_insitu_sum_spin_data[5] /= sum_w0)}
+                {"[sx]"   , &(m_insitu_sum_spin_data[0] *= sum_w0_inv)},
+                {"[sx^2]" , &(m_insitu_sum_spin_data[1] *= sum_w0_inv)},
+                {"[sy]"   , &(m_insitu_sum_spin_data[2] *= sum_w0_inv)},
+                {"[sy^2]" , &(m_insitu_sum_spin_data[3] *= sum_w0_inv)},
+                {"[sz]"   , &(m_insitu_sum_spin_data[4] *= sum_w0_inv)},
+                {"[sz^2]" , &(m_insitu_sum_spin_data[5] *= sum_w0_inv)}
             }}
         };
 
