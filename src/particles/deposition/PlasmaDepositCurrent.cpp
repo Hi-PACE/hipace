@@ -36,7 +36,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhomJzIons)"
     " or for the Salame slice (WhichSlice::Salame)");
 
-    const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
+    // const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
     const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
     // only deposit rho individual on WhichSlice::This

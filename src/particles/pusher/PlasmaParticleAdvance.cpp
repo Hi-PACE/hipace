@@ -69,6 +69,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real dz = gm[0].CellSize(2) / n_subcycles;
         const amrex::Real dzeta = gm[0].CellSize(2);
         const amrex::Real dt = Hipace::GetInstance().m_dt;
+        const bool check_time = plasma.m_can_laser_injection;
 
         if (!temp_slice && lev == 0) {
             // only count particles on non-temp slices and only once for all MR levels
@@ -248,7 +249,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         is_valid = false;
                     }
 
-                    {
+                    if (check_time) {
                         amrex::Real gamma_psi = 0.5_rt*psi_inv*psi_inv*(
                             1.0_rt + Aabssqp
                             + ux*ux
