@@ -44,10 +44,11 @@ public:
      * \param[in] gm Geometry object at level lev
      * \param[in] slice longitudinal slice
      * \param[in] current_N_level number of MR levels active on the current slice
+     * \param[in] step time step
      */
     void AdvanceBeamParticlesSlice (
         const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
-        int const current_N_level);
+        int const current_N_level, int step);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation

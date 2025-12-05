@@ -19,7 +19,7 @@
 void
 AdvanceBeamParticlesSlice (
     BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
-    const int slice, int const current_N_level)
+    const int slice, int const current_N_level, int step)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -109,7 +109,7 @@ AdvanceBeamParticlesSlice (
     // don't include slipped particles in count as they were already pushed
     Hipace::m_num_beam_particles_pushed += double(beam.getNumParticles(WhichBeamSlice::This));
 
-    const int num_non_slipped = beam.getNumParticles(WhichBeamSlice::This);
+    const int num_non_slipped = step == 0 ? 0 : beam.getNumParticles(WhichBeamSlice::This);
 
     // Use OMP ParallelFor to use multiple threads when running on CPU
     omp::ParallelFor(

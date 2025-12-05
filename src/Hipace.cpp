@@ -821,7 +821,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_adaptive_time_step.GatherMinAccSlice(m_multi_beam, m_3D_geom[0], m_fields);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level, step);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
