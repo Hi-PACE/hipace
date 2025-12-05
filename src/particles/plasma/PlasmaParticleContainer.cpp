@@ -849,25 +849,7 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
             num_particles, reduce_data,
             [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
             {
-                if (!ptd_plasma.id(ip).is_valid() || ptd_plasma.id(ip) != 2) {
-                    return {0};
-                }
-
-                amrex::Real Aabssqp = 0;
-                const amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux)[ip];
-                const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy)[ip];
-                const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi)[ip];
-                amrex::Real gamma_psi = 0.5_rt*(1._rt / psi)*(1._rt / psi)*(
-                    1.0_rt + Aabssqp
-                    + ux*ux
-                    + uy*uy)
-                    + 0.5_rt;
-
-                const amrex::Real time_in_slice = dzeta * gamma_psi * clight_inv;
-
-                if (time_in_slice > dt)
-                {
-                    ptd_plasma.id(ip) = 3;
+                if (ptd_plasma.id(ip) == 3) {
                     return {1};
                 } else {
                     return {0};
@@ -898,12 +880,14 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
 
         const amrex::Real n_subcycles = static_cast<amrex::Real>(beam_elec->m_n_subcycles);
 
-        const amrex::Real poff_z = GetPosOffset(2, gm[0], gm[0].Domain());
+        // const amrex::Real poff_z = GetPosOffset(2, gm[0], gm[0].Domain());
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
 
-        const amrex::Real init_z = poff_z + (islice - 0.5_rt) * dzeta;
+        // const amrex::Real init_z = poff_z + (islice - 0.5_rt) * dzeta;
+        const amrex::Real init_z = gm[0].ProbLo(2) +
+            (islice + 1._rt - gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
 
         // This kernel does the transfer of the ionized electrons from the plasma container
         // to the beam container and make them invalid in the plasma container
@@ -917,26 +901,15 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     const amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux_half_step)[ip];
                     const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy_half_step)[ip];
                     const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi_half_step)[ip];
-
-                    amrex::Real integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip];
-                    // amrex::Real extra = integral - dt;
-                    // amrex::Real extra_gamma_psi = extra * dzeta_inv * clight;
-
-                    // amrex::Real gamma_psi = 0.5_rt*(1._rt / psi)*(1._rt / psi)*(
-                    //     1.0_rt + Aabssqp
-                    //     + ux*ux*(clight_inv*clight_inv)
-                    //     + uy*uy*(clight_inv*clight_inv))
-                    //     + 0.5_rt;
-
-                    // amrex::Real frac = extra_gamma_psi / gamma_psi;
+                    const amrex::Real integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip];
 
                     ptd_beam.id(pidx_beam) = pid_beam + 1;
                     ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
-                    ptd_beam.pos(0, pidx_beam) = ptd_plasma.pos(0, ip);
-                    ptd_beam.pos(1, pidx_beam) = ptd_plasma.pos(1, ip);
+                    ptd_beam.pos(0, pidx_beam) = ptd_plasma.rdata(PlasmaIdx::x_prev)[ip];
+                    ptd_beam.pos(1, pidx_beam) = ptd_plasma.rdata(PlasmaIdx::y_prev)[ip];
                     ptd_beam.pos(2, pidx_beam) = init_z;
-                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::ux_half_step)[ip];
-                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::uy_half_step)[ip];
+                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ux;
+                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = uy;
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*Aabssqp)/(2.*psi);
                     //amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
                     //const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A));

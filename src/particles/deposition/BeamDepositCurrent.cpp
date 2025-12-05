@@ -84,6 +84,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     const amrex::Real clight = phys_const.c;
     const amrex::Real q = beam.m_charge;
+    const amrex::Real n_subcycles = static_cast<amrex::Real>(beam.m_n_subcycles);
 
     amrex::AnyCTO(
         // use compile-time options
@@ -112,7 +113,8 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             return ptd.id(ip).is_valid() &&
                 (only_highest ?
                     (ptd.idata(BeamIdx::mr_level)[ip] == lev) :
-                    (ptd.idata(BeamIdx::mr_level)[ip] >= lev));
+                    (ptd.idata(BeamIdx::mr_level)[ip] >= lev)) &&
+                ptd.rdata(BeamIdx::nsubcycles)[ip] <= n_subcycles;
         },
         // get_cell
         // return the lowest cell index that the particle deposits into
