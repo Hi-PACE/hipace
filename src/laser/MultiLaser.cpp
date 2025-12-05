@@ -32,7 +32,6 @@ MultiLaser::ReadParameters ()
     m_use_laser = m_names[0] != "no_laser";
 
     if (!m_use_laser) return;
-    queryWithParser(pp, "lambda0", m_lambda0);
     DeprecatedInput("lasers", "3d_on_host", "comms_buffer.on_gpu", "", true);
     std::string polarization = "linear";
     queryWithParser(pp, "polarization", polarization);
@@ -117,6 +116,25 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
         m_all_lasers.emplace_back(Laser(m_names[i]));
         m_all_lasers.back().ReadParameters(m_laser_geom_3D);
         amrex::Print()<<"Laser "+ m_names[i] + " loaded" << "\n";
+    }
+
+    if (m_nlasers > 0) {
+        for (int i = 0; i < m_nlasers; ++i) {
+            if (i == 0) {
+                m_lambda0 = m_all_lasers[i].m_init_lambda0;
+            } else {
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    m_all_lasers[i].m_init_lambda0 == m_lambda0,
+                    "The central wavelength (lambda0) of all lasers must be identical. Note that "
+                    "for lasers read from an openPMD file, lambda0 is also read from the file.\n" +
+                    m_names[0] + " lambda0: " + amrex::ToString(m_lambda0) + "\n" +
+                    m_names[1] + " lambda0: " + amrex::ToString(m_all_lasers[i].m_init_lambda0) +
+                    "\ndifference: " + amrex::ToString(m_lambda0 - m_all_lasers[i].m_init_lambda0)
+                );
+            }
+        }
+    } else {
+        getWithParser(pp, "lambda0", m_lambda0);
     }
 
     m_slice_box = domain_3D_laser;
@@ -854,11 +872,6 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     arr(i, j, k, comp ) += arr_ff(i, j, islice, 0 );
                     arr(i, j, k, comp + 1 ) += arr_ff(i, j, islice, 1 );
                 }
-                );
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                    laser.m_lambda0_from_file == m_lambda0 && m_lambda0 != 0,
-                    "The central wavelength of laser from openPMD file and "
-                    "other lasers must be identical"
                 );
             }
             if (laser.m_laser_init_type == "parser") {
