@@ -1,3 +1,11 @@
+# Enabled checks:
+#
+# - all the checks of the bugprone-* group except:
+#   easily-swappable-parameters, implicit-widening-of-multiplication-result,
+#   misplaced-widening-cast, narrowing-conversions
+#
+# - cppcoreguidelines-avoid-goto
+#
 Checks: '
     -*,
     bugprone-*,
