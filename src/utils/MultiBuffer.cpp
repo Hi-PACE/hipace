@@ -807,15 +807,9 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
 
         if (beam.communicateIdCpuComponent()) {
             // only pack idcpu component if it should be communicated
-            const auto& bo_m_beam_idcpu_b = bo.m_beam_idcpu[b];
-            if (bo_m_beam_idcpu_b.has_value()){
-                memcpy_to_buffer(slice, *bo_m_beam_idcpu_b,
+            memcpy_to_buffer(slice, bo.m_beam_idcpu[b].value(),
                              soa.GetIdCPUData().dataPtr(),
                              num_particles * sizeof(std::uint64_t));
-            }
-            else{
-                amrex::Abort("bo.m_beam_idcpu[" + std::to_string(b) + "] has no value!");
-            }
         }
 
         for (int rcomp = 0; rcomp < beam.numRealComponents(); ++rcomp) {
@@ -867,15 +861,9 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
 
         if (beam.communicateIdCpuComponent()) {
             // only undpack idcpu component if it should be communicated
-            const auto& bo_m_beam_idcpu_b = bo.m_beam_idcpu[b];
-            if (bo_m_beam_idcpu_b.has_value()){
-                memcpy_from_buffer(slice, *bo_m_beam_idcpu_b,
+            memcpy_from_buffer(slice, bo.m_beam_idcpu[b].value(),
                                soa.GetIdCPUData().dataPtr(),
                                num_particles * sizeof(std::uint64_t));
-            }
-            else {
-                amrex::Abort("bo.m_beam_idcpu[" + std::to_string(b) + "] has no value!");
-            }
         } else {
             // if idcpu is not communicated, then we need to initialize it here
             std::uint64_t* data_ptr = soa.GetIdCPUData().dataPtr();
