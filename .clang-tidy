@@ -8,8 +8,4 @@ Checks: '
     cppcoreguidelines-avoid-goto
     '
 
-CheckOptions:
-- key:          bugprone-unchecked-optional-access.IgnoreValueCalls
-  value:        "true"
-
 HeaderFilterRegex: 'src[a-z_A-Z0-9\/]+\.H$'
