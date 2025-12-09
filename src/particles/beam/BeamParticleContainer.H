@@ -69,8 +69,8 @@ class BeamParticleContainer // NOLINT(clang-analyzer-optin.performance.Padding)
 {
 public:
     /** Constructor */
-    explicit BeamParticleContainer (const std::string& name) :
-        m_name(name)
+    explicit BeamParticleContainer (std::string name) :
+        m_name(std::move(name))
     {}
 
     /** Read parameters in the input file */

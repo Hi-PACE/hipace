@@ -52,9 +52,9 @@ class PlasmaParticleContainer
 {
 public:
     /** Constructor */
-    explicit PlasmaParticleContainer (const std::string& name) :
+    explicit PlasmaParticleContainer (std::string name) :
         amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(),
-        m_name(name)
+        m_name(std::move(name))
     {}
 
     /** Read parameters from the input file */

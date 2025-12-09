@@ -183,8 +183,8 @@ namespace Parser
                 // also check in local and global namespaces, same as the amrex parser
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                     recursive_symbols.count(parse_string) == 0,
-                    "Expression '" + str + "' contains recursive symbol '" + parse_string + "'!\n"
                     // NOLINT(performance-inefficient-string-concatenation)
+                    "Expression '" + str + "' contains recursive symbol '" + parse_string + "'!\n"
                 );
                 std::string replacer;
                 if (amrex::ParmParse{}.contains(parse_string.c_str())) {

@@ -78,8 +78,8 @@ namespace ParticleUtil
                     do_init = true;
                     int ix_part = i_part % nx;
                     int iy_part = i_part / nx;
-                    r[0] = (0.5_rt + static_cast<amrex::Real>(ix_part))/nx;
-                    r[1] = (0.5_rt + static_cast<amrex::Real>(iy_part))/ny;
+                    r[0] = (0.5_rt + static_cast<amrex::Real>(ix_part))/amrex::Real(nx);
+                    r[1] = (0.5_rt + static_cast<amrex::Real>(iy_part))/amrex::Real(ny);
                 } else {
                     do_init = false;
                 }

@@ -246,7 +246,7 @@ Hipace::ReadParameters ()
 
     queryWithParser(pph, "collisions", m_collision_names);
     /** Initialize the collision objects */
-    m_ncollisions = m_collision_names.size();
+    m_ncollisions = static_cast<int>(m_collision_names.size());
     for (int i = 0; i < m_ncollisions; ++i) {
         m_all_collisions.emplace_back(CoulombCollision());
         m_all_collisions.back().ReadParameters(m_multi_plasma.m_names, m_multi_beam.m_names, m_collision_names[i]);
@@ -377,8 +377,8 @@ Hipace::MakeGeometry ()
             };
 
             std::array<amrex::Real, 2> patch_len_lev {
-                n_cells_lev[0] * m_3D_geom[0].CellSize(0) / ref_ratio[0],
-                n_cells_lev[1] * m_3D_geom[0].CellSize(1) / ref_ratio[1],
+                amrex::Real(n_cells_lev[0]) * m_3D_geom[0].CellSize(0) / ref_ratio[0],
+                amrex::Real(n_cells_lev[1]) * m_3D_geom[0].CellSize(1) / ref_ratio[1],
             };
 
             std::array<amrex::Real, 2> old_patch_len {
@@ -416,8 +416,8 @@ Hipace::MakeGeometry ()
             int(amrex::Math::round((patch_hi_lev[2] - pos_offset_z) * m_3D_geom[0].InvCellSize(2)))
         );
 
-        patch_lo_lev[2] = (zeta_lo-0.5_rt)*m_3D_geom[0].CellSize(2) + pos_offset_z;
-        patch_hi_lev[2] = (zeta_hi+0.5_rt)*m_3D_geom[0].CellSize(2) + pos_offset_z;
+        patch_lo_lev[2] = (amrex::Real(zeta_lo)-0.5_rt)*m_3D_geom[0].CellSize(2) + pos_offset_z;
+        patch_hi_lev[2] = (amrex::Real(zeta_hi)+0.5_rt)*m_3D_geom[0].CellSize(2) + pos_offset_z;
 
         const amrex::Box domain_3D_lev{amrex::IntVect(0,0,zeta_lo),
             amrex::IntVect(n_cells_lev[0]-1, n_cells_lev[1]-1, zeta_hi)};
@@ -589,8 +589,8 @@ Hipace::Evolve ()
 
         if (!m_explicit) {
             // averaging predictor corrector loop diagnostics
-            m_predcorr_avg_iterations /= bx.length(Direction::z);
-            m_predcorr_avg_B_error /= bx.length(Direction::z);
+            m_predcorr_avg_iterations /= amrex::Real(bx.length(Direction::z));
+            m_predcorr_avg_B_error /= amrex::Real(bx.length(Direction::z));
             if (m_verbose >= 2) {
                 amrex::AllPrint() << "Rank " << rank
                                   << ": avg. number of iterations " << m_predcorr_avg_iterations
@@ -1217,12 +1217,12 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
         amrex::ParallelFor(to2D(bx),
             [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
-                const amrex::Real x = i * dx + poff_x;
-                const amrex::Real y = j * dy + poff_y;
-                const amrex::Real xlo = (i-1) * dx + poff_x;
-                const amrex::Real ylo = (j-1) * dy + poff_y;
-                const amrex::Real xhi = (i+1) * dx + poff_x;
-                const amrex::Real yhi = (j+1) * dy + poff_y;
+                const amrex::Real x = amrex::Real(i) * dx + poff_x;
+                const amrex::Real y = amrex::Real(j) * dy + poff_y;
+                const amrex::Real xlo = amrex::Real(i-1) * dx + poff_x;
+                const amrex::Real ylo = amrex::Real(j-1) * dy + poff_y;
+                const amrex::Real xhi = amrex::Real(i+1) * dx + poff_x;
+                const amrex::Real yhi = amrex::Real(j+1) * dy + poff_y;
                 const amrex::Real z = islice * dz + poff_z;
 
                 const amrex::Real Bxp = external_fields[0](x, y, z, time);

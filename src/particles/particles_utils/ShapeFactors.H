@@ -60,7 +60,7 @@ int compute_shape_factor <1> (amrex::Real* const sx, amrex::Real xmid){
     using namespace amrex::literals;
 
     const auto j = static_cast<int>(amrex::Math::floor(xmid));
-    const amrex::Real xint = amrex::Real(xmid-j);
+    const amrex::Real xint = xmid-amrex::Real(j);
     sx[0] = 1.0_rt - xint;
     sx[1] = xint;
     return j;
@@ -78,7 +78,7 @@ int compute_shape_factor <2> (amrex::Real* const sx, amrex::Real xmid){
     using namespace amrex::literals;
 
     const auto j = static_cast<int>(amrex::Math::floor(xmid+0.5_rt));
-    const amrex::Real xint = amrex::Real(xmid-j);
+    const amrex::Real xint = xmid-amrex::Real(j);
     sx[0] = 0.5_rt*(0.5_rt-xint)*(0.5_rt-xint);
     sx[1] = 0.75_rt-xint*xint;
     sx[2] = 0.5_rt*(0.5_rt+xint)*(0.5_rt+xint);
@@ -98,7 +98,7 @@ int compute_shape_factor <3> (amrex::Real* const sx, amrex::Real xmid){
     using namespace amrex::literals;
 
     const auto j = static_cast<int>(amrex::Math::floor(xmid));
-    const amrex::Real xint = amrex::Real(xmid-j);
+    const amrex::Real xint = xmid-amrex::Real(j);
     sx[0] = 1.0_rt/6.0_rt*(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-xint);
     sx[1] = 2.0_rt/3.0_rt-xint*xint*(1.0_rt-xint/2.0_rt);
     sx[2] = 2.0_rt/3.0_rt-(1.0_rt-xint)*(1.0_rt-xint)*(1.0_rt-0.5_rt*(1.0_rt-xint));
