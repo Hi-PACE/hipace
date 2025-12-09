@@ -457,7 +457,7 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
     const int num_blocks_y = (loop_box.length(1) + final_tilesize_y - 1)/final_tilesize_y;
     amrex::Math::FastDivmodU64 num_blocks_divmod {static_cast<std::uint64_t>(num_blocks_x)};
 
-    amrex::launch<num_threads>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
+    amrex::launch<num_threads>(num_blocks_x*num_blocks_y, amrex::amrex::Gpu::gpuStream(),
         [=] AMREX_GPU_DEVICE() noexcept
         {
             // allocate static shared memory
@@ -875,10 +875,10 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
 
     static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
 #if defined(AMREX_USE_DPCPP)
-    amrex::launch(1, 1024, Gpu::gpuStream(),
+    amrex::launch(1, 1024, amrex::Gpu::gpuStream(),
     [=] (sycl::nd_item<1> const& item) noexcept
 #else
-    amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
+    amrex::launch_global<1024><<<1, 1024, 0, amrex::Gpu::gpuStream()>>>(
     [=] AMREX_GPU_DEVICE () noexcept
 #endif
     {
@@ -1446,7 +1446,7 @@ MultiGrid::vcycle ()
     };
 
     if (m_cuda_graph_vcycle.count(key) == 0) {
-        cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
+        cudaStreamBeginCapture(amrex::Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 
     for (int ilev = 0; ilev < m_single_block_level_begin; ++ilev) {
@@ -1514,11 +1514,11 @@ MultiGrid::vcycle ()
         m_acf[0].const_array(), m_rescor[0].array(), m_sol.array(), m_dx, m_dy);
 
 #if defined(AMREX_USE_CUDA)
-        cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_vcycle[key].first);
+        cudaStreamEndCapture(amrex::Gpu::gpuStream(), &m_cuda_graph_vcycle[key].first);
         cudaGraphInstantiate(&m_cuda_graph_vcycle[key].second,
                             m_cuda_graph_vcycle[key].first, NULL, NULL, 0);
     }
-    cudaGraphLaunch(m_cuda_graph_vcycle[key].second, Gpu::gpuStream());
+    cudaGraphLaunch(m_cuda_graph_vcycle[key].second, amrex::Gpu::gpuStream());
 #endif
 }
 
@@ -1635,10 +1635,10 @@ namespace {
     void avgdown_acf (amrex::Array4<amrex::Real> const* acf, int ncomp, int nlevels, F&& f)
     {
 #if defined(AMREX_USE_DPCPP)
-        amrex::launch(1, 1024, Gpu::gpuStream(),
+        amrex::launch(1, 1024, amrex::Gpu::gpuStream(),
         [=] (sycl::nd_item<1> const& item) noexcept
 #else
-        amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
+        amrex::launch_global<1024><<<1, 1024, 0, amrex::Gpu::gpuStream()>>>(
         [=] AMREX_GPU_DEVICE () noexcept
 #endif
         {
@@ -1674,7 +1674,7 @@ MultiGrid::average_down_acoef ()
 {
 #if defined(AMREX_USE_CUDA)
     if (!m_cuda_graph_acf_created) {
-    cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
+    cudaStreamBeginCapture(amrex::Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 
     for (int ilev = 1; ilev <= m_single_block_level_begin; ++ilev) {
@@ -1725,11 +1725,11 @@ MultiGrid::average_down_acoef ()
 #endif
 
 #if defined(AMREX_USE_CUDA)
-    cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_acf);
+    cudaStreamEndCapture(amrex::Gpu::gpuStream(), &m_cuda_graph_acf);
     cudaGraphInstantiate(&m_cuda_graph_exe_acf, m_cuda_graph_acf, NULL, NULL, 0);
     m_cuda_graph_acf_created = true;
     }
-    cudaGraphLaunch(m_cuda_graph_exe_acf, Gpu::gpuStream());
+    cudaGraphLaunch(m_cuda_graph_exe_acf, amrex::Gpu::gpuStream());
 #endif
 }
 
