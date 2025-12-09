@@ -50,6 +50,11 @@ public:
     /** \brief Dtor */
     ~MultiGrid ();
 
+    MultiGrid (const MultiGrid& rhs) = delete;
+    MultiGrid (MultiGrid&& rhs) = delete;
+    MultiGrid& operator= (const MultiGrid& rhs) = delete;
+    MultiGrid& operator= (MultiGrid&& rhs) = delete;
+
     /** \brief Solve the Type I equation given the initial guess, right hand side,
      * and the coefficient.
      *

@@ -19,7 +19,7 @@
 
 struct VendorPlan;
 
-enum struct FFTType {
+enum struct FFTType : int {
     C2C_2D_fwd,
     C2C_2D_bkw,
     C2R_2D,
@@ -55,6 +55,11 @@ struct AnyFFT {
 
     /** \brief Destructor to destroy the FFT plan */
     ~AnyFFT ();
+
+    AnyFFT (const AnyFFT& rhs) = delete;
+    AnyFFT (AnyFFT&& rhs) = delete;
+    AnyFFT& operator= (const AnyFFT& rhs) = delete;
+    AnyFFT& operator= (AnyFFT&& rhs) = delete;
 
     /** \brief Setup function that has to be called before any FFT plan is initialized. */
     static void setup ();

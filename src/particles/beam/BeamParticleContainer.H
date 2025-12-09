@@ -22,14 +22,14 @@ class AdaptiveTimeStep;
 /** \brief Map names and indices for beam particles attributes (SoA data) */
 struct BeamIdx
 {
-    enum {
+    enum : int {
         x=0, y, z,  // position
         w,          // weight
         ux, uy, uz, // momentum
         real_nattribs_in_buffer,
         real_nattribs=real_nattribs_in_buffer
     };
-    enum {
+    enum : int {
         // no extra components stored in MultiBuffer, besides 64bit idcpu
         int_nattribs_in_buffer,
         // nsubcycles: by how many subcycles was this particle pushed already
@@ -65,11 +65,11 @@ using BeamTileInit = amrex::ParticleTile<
     >;
 
 /** \brief Container for particles of 1 beam species. */
-class BeamParticleContainer
+class BeamParticleContainer // NOLINT(clang-analyzer-optin.performance.Padding)
 {
 public:
     /** Constructor */
-    explicit BeamParticleContainer (std::string name) :
+    explicit BeamParticleContainer (const std::string& name) :
         m_name(name)
     {}
 
@@ -292,7 +292,7 @@ private:
     amrex::Long m_num_particles; /**< Number of particles for fixed-weight Gaussian beam */
     amrex::Real m_total_charge; /**< Total beam charge for fixed-weight Gaussian beam */
     amrex::Real m_density; /**< Peak density for fixed-weight Gaussian beam */
-    bool m_do_symmetrize {0}; /**< Option to symmetrize the beam */
+    bool m_do_symmetrize = false; /**< Option to symmetrize the beam */
     /** Array for the z position of all beam particles */
     amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
 

@@ -38,8 +38,10 @@ Checks: '
         -modernize-avoid-c-arrays,
         -modernize-macro-to-enum,
         -modernize-return-braced-init-list,
+        -modernize-use-auto,
         -modernize-use-trailing-return-type,
     performance-*,
+        -performance-enum-size,
     portability-*,
     mpi-*
     '

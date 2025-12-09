@@ -23,7 +23,7 @@
 namespace WhichLaserSlice {
     // n stands for the time step, j for the longitudinal slice.
     // n00 is time step n, nm1 is n-1 and np1 is n+1. Similar notation for slice j.
-    enum slice {
+    enum slice : int {
         nm1j00_r,
         nm1j00_i,
         nm1jp1_r,
@@ -52,7 +52,7 @@ class Fields;
 
 class MultiPlasma;
 
-class MultiLaser
+class MultiLaser // NOLINT(clang-analyzer-optin.performance.Padding)
 {
 
     using SpectralFieldLoc = amrex::BaseFab <amrex::GpuComplex<amrex::Real>>;

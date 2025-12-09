@@ -41,9 +41,9 @@ namespace ParticleUtil
         int iy_part = (i_part % (ny * nz)) % ny;
         int iz_part = (i_part % (ny * nz)) / ny;
 
-        r[0] = rand[0] ? amrex::Random(engine) : (0.5_rt + ix_part)/nx;
-        r[1] = rand[1] ? amrex::Random(engine) : (0.5_rt + iy_part)/ny;
-        r[2] = rand[2] ? amrex::Random(engine) : (0.5_rt + iz_part)/nz;
+        r[0] = rand[0] ? amrex::Random(engine) : (0.5_rt + amrex::Real(ix_part))/amrex::Real(nx);
+        r[1] = rand[1] ? amrex::Random(engine) : (0.5_rt + amrex::Real(iy_part))/amrex::Real(ny);
+        r[2] = rand[2] ? amrex::Random(engine) : (0.5_rt + amrex::Real(iz_part))/amrex::Real(nz);
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -57,9 +57,9 @@ namespace ParticleUtil
         int iy_part = (i_part % (ny * nz)) % ny;
         int iz_part = (i_part % (ny * nz)) / ny;
 
-        r[0] = (0.5_rt + ix_part)/nx;
-        r[1] = (0.5_rt + iy_part)/ny;
-        r[2] = (0.5_rt + iz_part)/nz;
+        r[0] = (0.5_rt + amrex::Real(ix_part))/amrex::Real(nx);
+        r[1] = (0.5_rt + amrex::Real(iy_part))/amrex::Real(ny);
+        r[2] = (0.5_rt + amrex::Real(iz_part))/amrex::Real(nz);
     }
 
     template<std::size_t n_level>
@@ -78,8 +78,8 @@ namespace ParticleUtil
                     do_init = true;
                     int ix_part = i_part % nx;
                     int iy_part = i_part / nx;
-                    r[0] = (0.5_rt + ix_part)/nx;
-                    r[1] = (0.5_rt + iy_part)/ny;
+                    r[0] = (0.5_rt + static_cast<amrex::Real>(ix_part))/nx;
+                    r[1] = (0.5_rt + static_cast<amrex::Real>(iy_part))/ny;
                 } else {
                     do_init = false;
                 }
@@ -102,13 +102,15 @@ namespace ParticleUtil
 
                     amrex::Real s =
                         amrex::Real(i_fine_transition_cells - lev * (n_fine_transition_cells + 1))
-                        / (n_fine_transition_cells + 1);
+                        / amrex::Real(n_fine_transition_cells + 1);
                     s = 1.5_rt*s - 0.5_rt*s*s*s;
 
-                    r[0] = ((0.5_rt + ix_part_coarse) / nx_coarse) * (1._rt - s) +
-                        ((0.5_rt + ix_part_fine) / nx_fine) * s;
-                    r[1] = ((0.5_rt + iy_part_coarse) / ny_coarse) * (1._rt - s) +
-                        ((0.5_rt + iy_part_fine) / ny_fine) * s;
+                    r[0] = ((1._rt - s) *
+                        (0.5_rt + amrex::Real(ix_part_coarse)) / amrex::Real(nx_coarse)) +
+                        s * ((0.5_rt + amrex::Real(ix_part_fine)) / amrex::Real(nx_fine));
+                    r[1] = ((1._rt - s) *
+                        (0.5_rt + amrex::Real(iy_part_coarse)) / amrex::Real(ny_coarse)) +
+                        s * ((0.5_rt + amrex::Real(iy_part_fine)) / amrex::Real(ny_fine));
                 } else {
                     do_init = false;
                 }

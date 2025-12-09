@@ -21,7 +21,7 @@
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
 {
-    enum {
+    enum : int {
         x=0, y,             // position
         w,                  // weight, this will be returned by pos(2)
         ux, uy,             // momentum
@@ -40,7 +40,7 @@ struct PlasmaIdx
 #endif
         real_nattribs
     };
-    enum {
+    enum : int {
         ion_lev,            // ionization level
         int_nattribs
     };
@@ -52,7 +52,7 @@ class PlasmaParticleContainer
 {
 public:
     /** Constructor */
-    explicit PlasmaParticleContainer (std::string name) :
+    explicit PlasmaParticleContainer (const std::string& name) :
         amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(),
         m_name(name)
     {}

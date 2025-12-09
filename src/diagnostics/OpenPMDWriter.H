@@ -110,6 +110,11 @@ public:
 
     ~OpenPMDWriter ();
 
+    OpenPMDWriter (const OpenPMDWriter& rhs) = delete;
+    OpenPMDWriter (OpenPMDWriter&& rhs) = delete;
+    OpenPMDWriter& operator= (const OpenPMDWriter& rhs) = delete;
+    OpenPMDWriter& operator= (OpenPMDWriter&& rhs) = delete;
+
     /** Read parameters from the input file */
     void ReadParameters ();
 

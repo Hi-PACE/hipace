@@ -15,7 +15,7 @@
 #include "particles/particles_utils/ShapeFactors.H"
 
 /** \brief Beam profile type, currently only Gaussian or Flattop or Parsed */
-enum struct BeamProfileType { Gaussian, Flattop, Parsed };
+enum struct BeamProfileType : int { Gaussian, Flattop, Parsed };
 
 /** \brief Functor gets the initial density for beam particles for a given position
  */
@@ -40,9 +40,9 @@ struct GetInitialDensity
             amrex::Real delta_x = (x - m_position_mean[0]) / m_position_std[0];
             amrex::Real delta_y = (y - m_position_mean[1]) / m_position_std[1];
             amrex::Real delta_z = (z - m_position_mean[2]) / m_position_std[2];
-            density = m_density * exp( -0.5_rt*delta_x*delta_x )
-                                * exp( -0.5_rt*delta_y*delta_y )
-                                * exp( -0.5_rt*delta_z*delta_z );
+            density = m_density * std::exp( -0.5_rt*delta_x*delta_x )
+                                * std::exp( -0.5_rt*delta_y*delta_y )
+                                * std::exp( -0.5_rt*delta_z*delta_z );
         } else if (m_profile == BeamProfileType::Flattop) {
             density = m_density;
         } else if (m_profile == BeamProfileType::Parsed) {
@@ -127,8 +127,8 @@ struct PlasmaDensityAccessor {
                 auto [sr, i] = compute_single_shape_factor<false, interp_order>(rmid, ir);
                 result += sz * sr * array(i, j, 0);
             for (int im=1; im<=m_bigend[2]/2; im++) {
-                result += sz * sr * array(i, j, 2*im-1) * std::cos(im*theta);
-                result += sz * sr * array(i, j, 2*im) * std::sin(im*theta);
+                result += sz * sr * array(i, j, 2*im-1) * std::cos(amrex::Real(im)*theta);
+                result += sz * sr * array(i, j, 2*im) * std::sin(amrex::Real(im)*theta);
             }}}
             return m_unitSI * result;
         }

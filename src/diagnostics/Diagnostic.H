@@ -20,7 +20,7 @@
 struct FieldDiagnosticData
 {
     std::string m_diag_name; /**< name used for input parameters and in the output */
-    enum struct geom_type {
+    enum struct geom_type : int {
         field,
         laser
     } m_base_geom_type = geom_type::field;  /**< which geometry the diagnostics is based on */

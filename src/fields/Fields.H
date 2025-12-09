@@ -25,7 +25,7 @@ class MultiLaser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous, RhomJzIons, Salame, PCIter, PCPrevIter, N };
+    enum slice : int { Next=0, This, Previous, RhomJzIons, Salame, PCIter, PCPrevIter, N };
 };
 
 struct assert_map : std::map<std::string, int> {
@@ -54,7 +54,7 @@ inline int N_Comps {0};
 
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
-    enum dir{x=0, y, z};
+    enum dir : int {x=0, y, z};
 };
 
 /** \brief Function to help converting field indexes to positions and backwards. Usage:
@@ -70,7 +70,7 @@ GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box)
     using namespace amrex::literals;
     // match boxes at center point
     return 0.5_rt * (geom.ProbLo(dir) + geom.ProbHi(dir)
-           - geom.CellSize(dir) * (box.smallEnd(dir) + box.bigEnd(dir)));
+           - geom.CellSize(dir) * static_cast<amrex::Real>(box.smallEnd(dir) + box.bigEnd(dir)));
 }
 
 /** \brief Main class handling all field data structures and operations
@@ -111,7 +111,7 @@ public:
      * \param[in] islice slice index
      * \param[in] comp component name of field (see Comps)
      */
-    amrex::MultiFab getField (const int lev, const int islice, const std::string comp) {
+    amrex::MultiFab getField (const int lev, const int islice, const std::string& comp) {
         return amrex::MultiFab(getSlices(lev), amrex::make_alias, Comps[islice][comp], 1);
     }
     /** get amrex::MultiFab of the poisson staging area
