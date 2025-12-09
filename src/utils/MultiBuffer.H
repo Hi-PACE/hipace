@@ -39,6 +39,7 @@ public:
     // destructor to clean up all open MPI requests
     ~MultiBuffer();
 
+    MultiBuffer () = default;
     MultiBuffer (const MultiBuffer& rhs) = delete;
     MultiBuffer (MultiBuffer&& rhs) = delete;
     MultiBuffer& operator= (const MultiBuffer& rhs) = delete;

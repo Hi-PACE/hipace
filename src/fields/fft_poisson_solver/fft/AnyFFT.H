@@ -56,6 +56,7 @@ struct AnyFFT {
     /** \brief Destructor to destroy the FFT plan */
     ~AnyFFT ();
 
+    AnyFFT () = default;
     AnyFFT (const AnyFFT& rhs) = delete;
     AnyFFT (AnyFFT&& rhs) = delete;
     AnyFFT& operator= (const AnyFFT& rhs) = delete;

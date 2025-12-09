@@ -86,12 +86,7 @@ Array2<T> to_array2 (const amrex::Array4<T>& in) {
 }
 
 template<class T> inline
-Array2<T> to_array2 (const amrex::Array4<T>& in) {
-    return Array2<T>{in};
-}
-
-template<class T> inline
-T to_array2 (T&& in) {
+T to_array2 (const T& in) {
     return in;
 }
 
