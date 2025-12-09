@@ -243,6 +243,7 @@ public:
     amrex::Real m_spin_anom = 0.00115965218128;
     /** ratio of beam particles that are written to the openPMD output */
     int m_output_ratio = 1;
+    bool m_do_uz_push = true; /**<if accelerator the beam on z */
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
@@ -296,7 +297,6 @@ private:
     /** Array for the z position of all beam particles */
     amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
 
-    bool m_do_uz_push = true; /**<if accelerator the beam on z */
     // fixed_weight_pdf:
 
     bool m_peak_density_is_specified = false; /**< if the peak density is specified */
