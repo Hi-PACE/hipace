@@ -296,6 +296,7 @@ private:
     /** Array for the z position of all beam particles */
     amrex::PODVector<amrex::Real, amrex::PolymorphicArenaAllocator<amrex::Real>> m_z_array {};
 
+    bool m_do_uz_push = true; /**<if accelerator the beam on z */
     // fixed_weight_pdf:
 
     bool m_peak_density_is_specified = false; /**< if the peak density is specified */

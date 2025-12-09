@@ -25,7 +25,7 @@ AdvanceBeamParticlesSlice (
     using namespace amrex::literals;
 
     const PhysConst phys_const = get_phys_const();
-
+    const bool do_uz_push = beam.m_do_uz_push;
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
     const bool radiation_reaction = beam.m_do_radiation_reaction;
@@ -323,7 +323,7 @@ AdvanceBeamParticlesSlice (
                 if (do_z_push) zp += dt * clight * ( uz_next * gamma_next_inv - 1._rt );
                 ux = ux_next;
                 uy = uy_next;
-                uz = uz_next;
+                if (do_uz_push) = uz_next;
             } // end for loop over n_subcycles
             if (enforceBC(ptd, ip, xp, yp, ux, uy, BeamIdx::w)) return;
             ptd.pos(0, ip) = xp;
