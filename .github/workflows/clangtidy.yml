@@ -22,5 +22,8 @@ jobs:
     - name: Build & Install
       run: |
         ./tools/runClangTidy.sh
+    - name: Output clang-tidy log
+      if: always()
+      run: |
         cat ./build_clang_tidy/clang-tidy.log
 
