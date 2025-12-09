@@ -400,9 +400,10 @@ IonizationModule (const int lev,
         auto& ptile_ion = plevel_ion.at(index);
 
         // Calculation of E0 in SI units for denormalization
-        const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                         PhysConstSI::q_e*PhysConstSI::q_e /
-                                         (PhysConstSI::ep0 * PhysConstSI::m_e) );
+        const amrex::Real wp = amrex::Real(
+                std::sqrt(static_cast<double>(background_density_SI) *
+                    PhysConstSI::q_e*PhysConstSI::q_e /
+                    (PhysConstSI::ep0*PhysConstSI::m_e)));
         const amrex::Real E0 = Hipace::m_normalized_units ?
                                wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
 
@@ -588,9 +589,10 @@ LaserIonization (const int islice,
         auto& ptile_ion = plevel_ion.at(index);
 
         // Calcuation of E0 in SI units for denormalization
-        const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                         PhysConstSI::q_e*PhysConstSI::q_e /
-                                         (PhysConstSI::ep0 * PhysConstSI::m_e) );
+        const amrex::Real wp = amrex::Real(
+            std::sqrt(static_cast<double>(background_density_SI) *
+                PhysConstSI::q_e*PhysConstSI::q_e /
+                (PhysConstSI::ep0*PhysConstSI::m_e)));
         const amrex::Real E0 = Hipace::m_normalized_units ?
                                wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
         const amrex::Real lambda0 = laser.GetLambda0();

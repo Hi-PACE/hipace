@@ -29,7 +29,7 @@ struct DataNode {
 
     // constructor for nodes containing a simple datatype
     template<class T>
-    DataNode (const std::string& name, const T* data, std::size_t size = 1) : m_name{name} {
+    DataNode (std::string name, const T* data, std::size_t size = 1) : m_name{std::move(name)} {
         std::string type_letter = "";
         if (std::is_integral_v<T> && std::is_signed_v<T>) type_letter = "i"; // int
         else if (std::is_integral_v<T> && std::is_unsigned_v<T>) type_letter = "u"; // unsiged int
@@ -81,7 +81,7 @@ inline void write_header (const amrex::Vector<DataNode>& nodes, std::ofstream& o
 inline void write_data (const amrex::Vector<DataNode>& nodes, std::ofstream& ofs) {
     for (auto& dn : nodes) {
         if (dn.m_data_location) {
-            ofs.write(dn.m_data_location, dn.m_data_size);
+            ofs.write(dn.m_data_location, static_cast<std::streamsize>(dn.m_data_size));
         } else {
             // recursive call for nested structured datatypes
             write_data(dn.m_structured_format, ofs);

@@ -444,9 +444,10 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
 
     // Plasma frequency in SI units to denormalize ionization
-    const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                     PhysConstSI::q_e*PhysConstSI::q_e /
-                                     (PhysConstSI::ep0 * PhysConstSI::m_e) );
+    const amrex::Real wp = amrex::Real(
+        std::sqrt(static_cast<double>(background_density_SI) *
+            PhysConstSI::q_e*PhysConstSI::q_e /
+            (PhysConstSI::ep0*PhysConstSI::m_e)));
     const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/phys_const.c;
 
     m_adk_power.resize(ion_atomic_number);

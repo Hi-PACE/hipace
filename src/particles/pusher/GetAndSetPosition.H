@@ -35,8 +35,8 @@ struct EnforceBC
     /** Constructor.
      */
     EnforceBC () noexcept
+        : m_particle_boundary{Hipace::m_boundary_particles}
     {
-        m_particle_boundary = Hipace::m_boundary_particles;
         m_plo[0] = Hipace::m_boundary_particle_lo[0];
         m_plo[1] = Hipace::m_boundary_particle_lo[1];
         m_phi[0] = Hipace::m_boundary_particle_hi[0];
