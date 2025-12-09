@@ -15,7 +15,9 @@ namespace hpmg {
 
 namespace {
 
-constexpr int n_cell_single = 32; // switch to single block when box is smaller than this
+#if defined(AMREX_USE_GPU)
+    constexpr int n_cell_single = 32; // switch to single block when box is smaller than this
+#endif
 
 Box valid_domain_box (Box const& domain)
 {

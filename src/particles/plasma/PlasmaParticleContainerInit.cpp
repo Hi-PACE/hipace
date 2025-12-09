@@ -315,13 +315,13 @@ InitParticles (const amrex::RealVect& a_u_std,
                     ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
                 }
 
-                ptd.rdata(PlasmaIdx::ux)[pidx] = u[0] * c_light;
-                ptd.rdata(PlasmaIdx::uy)[pidx] = u[1] * c_light;
+                ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
+                ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
                 ptd.rdata(PlasmaIdx::psi)[pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
                 ptd.rdata(PlasmaIdx::x_prev)[pidx] = x;
                 ptd.rdata(PlasmaIdx::y_prev)[pidx] = y;
-                ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0] * c_light;
-                ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1] * c_light;
+                ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0];
+                ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1];
                 ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU

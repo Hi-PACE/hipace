@@ -500,7 +500,10 @@ Hipace::Evolve ()
         const amrex::Box& bx = m_3D_ba[0][0];
 
         if (m_multi_laser.UseLaser()) {
-            AMREX_ALWAYS_ASSERT(!m_adaptive_time_step.m_do_adaptive_time_step);
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                !m_adaptive_time_step.m_do_adaptive_time_step,
+                "Adaptive time step cannot be used with laser pulses."
+            );
         }
 
         m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();

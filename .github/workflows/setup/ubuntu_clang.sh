@@ -19,6 +19,10 @@ sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
     build-essential     \
     ccache              \
-    clang-7             \
+    clang               \
+    clang-tidy          \
+    libomp-dev          \
     libopenmpi-dev      \
-    openmpi-bin
+    openmpi-bin         \
+    libfftw3-dev        \
+    libfftw3-single3
