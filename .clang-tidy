@@ -42,7 +42,6 @@ Checks: '
         -modernize-use-trailing-return-type,
     performance-*,
         -performance-enum-size,
-        -performance-avoid-endl,
     portability-*,
     mpi-*
     '

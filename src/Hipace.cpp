@@ -533,11 +533,13 @@ Hipace::Evolve ()
         }
 
         if (m_verbose >= 1) {
-            std::cout << utils::format_time{amrex::second() - start_time}
-                      << " Rank " << rank
-                      << " started step " << step
-                      << " at time = " << m_physical_time
-                      << " with dt = " << m_dt << std::endl;
+            amrex::OutStream()
+                << utils::format_time{amrex::second() - start_time}
+                << " Rank " << rank
+                << " started step " << step
+                << " at time = " << m_physical_time
+                << " with dt = " << m_dt << '\n';
+            amrex::OutStream().flush();
         }
 
         if (step+1 <= m_max_step) {
@@ -616,37 +618,39 @@ Hipace::Evolve ()
         if (HeadRank()) {
             const double total_time_s = (amrex::second() - start_time);
 
-            amrex::IOFormatSaver iofmtsaver(std::cout);
-            std::cout << std::setprecision(4);
+            amrex::IOFormatSaver iofmtsaver(amrex::OutStream());
+            amrex::OutStream() << std::setprecision(4);
 
-            std::cout << '\n' << "Finished Evolve after " << total_time_s << " seconds using "
-                      << m_numprocs << (m_numprocs > 1 ? " ranks" : " rank" ) << std::endl;
+            amrex::OutStream() << '\n' << "Finished Evolve after " << total_time_s <<
+                " seconds using " << m_numprocs << (m_numprocs > 1 ? " ranks" : " rank" ) << '\n';
 
             if (m_num_plasma_particles_pushed + m_num_beam_particles_pushed > 0.) {
-                std::cout << "Total time per particle push: "
+                amrex::OutStream() << "Total time per particle push: "
                           << 1e9 * total_time_s /
                             (m_num_plasma_particles_pushed + m_num_beam_particles_pushed)
                           << " nanoseconds";
                 if (m_num_plasma_particles_pushed > 0. && m_num_beam_particles_pushed > 0.) {
-                    std::cout << " ("
+                    amrex::OutStream() << " ("
                               << 1e9 * total_time_s / m_num_plasma_particles_pushed << " plasma, "
                               << 1e9 * total_time_s / m_num_beam_particles_pushed << " beam)";
                 }
-                std::cout << std::endl;
+                amrex::OutStream() << '\n';
             }
 
             if (m_num_field_cells_updated + m_num_laser_cells_updated > 0.) {
-                std::cout << "Total time per cell update: "
+                amrex::OutStream() << "Total time per cell update: "
                           << 1e9 * total_time_s /
                             (m_num_field_cells_updated + m_num_laser_cells_updated)
                           << " nanoseconds";
                 if (m_num_field_cells_updated > 0. && m_num_laser_cells_updated > 0.) {
-                    std::cout << " ("
+                    amrex::OutStream() << " ("
                               << 1e9 * total_time_s / m_num_field_cells_updated << " field, "
                               << 1e9 * total_time_s / m_num_laser_cells_updated << " laser)";
                 }
-                std::cout << std::endl;
+                amrex::OutStream() << '\n';
             }
+
+            amrex::OutStream().flush();
         }
     }
 }
