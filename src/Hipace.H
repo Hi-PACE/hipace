@@ -284,7 +284,7 @@ public:
     OpenPMDWriter m_openpmd_writer;
 #endif
     /** Disable laser evolution */
-    Bool m_disable_laser_solver = False;
+    bool m_disable_laser_solver = false;
     // Performance Counters
 
     /** total number of plasma particle pushes for performance printout */
