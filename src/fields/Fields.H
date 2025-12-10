@@ -165,8 +165,8 @@ public:
      * \param[in] factor multiply the boundary value by this factor
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                               const int which_slice, std::string component,
-                               amrex::MultiFab&& staging_area,
+                               const int which_slice, const std::string& component,
+                               amrex::MultiFab staging_area,
                                amrex::Real offset, amrex::Real factor);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
@@ -234,7 +234,7 @@ public:
      * \param[in] do_sum if the fields are currents and needs to be summed
      * \param[in] comp_idx vector of component indexes such as Comps[WhichSlice::This]["Ez"]
      */
-    void EnforcePeriodic (const bool do_sum, std::vector<int>&& comp_idx);
+    void EnforcePeriodic (const bool do_sum, std::vector<int> comp_idx);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices

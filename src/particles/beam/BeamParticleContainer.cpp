@@ -184,7 +184,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             m_total_charge = m_density*m_charge;
             for (int idim=0; idim<AMREX_SPACEDIM; ++idim)
             {
-                m_total_charge *= m_position_std[idim] * sqrt(2. * MathConst::pi);
+                m_total_charge *= m_position_std[idim] * std::sqrt(amrex::Real(2) * MathConst::pi);
             }
         }
         if (Hipace::m_normalized_units)
@@ -372,20 +372,20 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         InitBeamFixedWeightPDFSlice(slice, which_slice);
     } else { // from_file and from_list
         HIPACE_PROFILE("BeamParticleContainer::initializeSlice()");
-        const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
+        const int num_particles = static_cast<int>(m_init_sorter.m_box_counts_cpu[slice]);
 
         resize(which_slice, num_particles, 0);
 
         auto ptd_init = getBeamInitSlice().getParticleTileData();
         auto ptd = getBeamSlice(which_slice).getParticleTileData();
 
-        const int slice_offset = m_init_sorter.m_box_offsets_cpu[slice];
+        const int slice_offset = static_cast<int>(m_init_sorter.m_box_offsets_cpu[slice]);
         const auto permutations = m_init_sorter.m_box_permutations.dataPtr();
         const bool do_spin_tracking = m_do_spin_tracking;
 
         amrex::ParallelFor(num_particles,
             [=] AMREX_GPU_DEVICE (const int ip) {
-                const int idx_src = permutations[slice_offset + ip];
+                const auto idx_src = permutations[slice_offset + ip];
                 ptd.rdata(BeamIdx::x)[ip] = ptd_init.rdata(BeamIdx::x)[idx_src];
                 ptd.rdata(BeamIdx::y)[ip] = ptd_init.rdata(BeamIdx::y)[idx_src];
                 ptd.rdata(BeamIdx::z)[ip] = ptd_init.rdata(BeamIdx::z)[idx_src];
@@ -398,7 +398,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
                     ptd.m_runtime_rdata[1][ip] = ptd_init.m_runtime_rdata[1][idx_src];
                     ptd.m_runtime_rdata[2][ip] = ptd_init.m_runtime_rdata[2][idx_src];
                 }
-                ptd.idcpu(ip) = ptd_init.idcpu(idx_src);
+                ptd.idcpu(ip) = ptd_init.idcpu(static_cast<int>(idx_src));
                 ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
                 ptd.idata(BeamIdx::mr_level)[ip] = 0;
             }
@@ -421,7 +421,7 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
 
     // remove invalid particles so they don't show up in the beam diagnostic of the first time step
     amrex::removeInvalidParticles(getBeamSlice(which_slice));
-    resize(which_slice, getBeamSlice(which_slice).size(), 0);
+    resize(which_slice, static_cast<int>(getBeamSlice(which_slice).size()), 0);
 }
 
 void

@@ -45,8 +45,9 @@ struct DataNode {
     }
 
     // constructor for nodes containing a structured datatype
-    DataNode (const std::string& name, const amrex::Vector<DataNode>& structured_format)
-        : m_name{name}, m_data_location{nullptr}, m_structured_format{structured_format} {}
+    DataNode (std::string name, amrex::Vector<DataNode> structured_format)
+        : m_name{std::move(name)}, m_data_location{nullptr},
+          m_structured_format{std::move(structured_format)} {}
 };
 
 // write JSON header describing the datatype

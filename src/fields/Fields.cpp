@@ -273,7 +273,8 @@ template<int dir>
 struct derivative {
     // use brace initialization as constructor
     amrex::MultiFab f_view; // field to calculate its derivative
-    const amrex::Geometry& geom; // geometry of field
+    // geometry of field
+    const amrex::Geometry& geom; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
 
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<dir> array (amrex::MFIter& mfi) const {
@@ -287,7 +288,8 @@ struct derivative<Direction::z> {
     // use brace initialization as constructor
     amrex::MultiFab f_view1; // field on previous slice to calculate its derivative
     amrex::MultiFab f_view2; // field on next slice to calculate its derivative
-    const amrex::Geometry& geom; // geometry of field
+    // geometry of field
+    const amrex::Geometry& geom; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
 
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<Direction::z> array (amrex::MFIter& mfi) const {
@@ -367,7 +369,8 @@ struct guarded_field_xy_inner {
 /** \brief if indices are outside of the fields box zero is returned */
 struct guarded_field_xy {
     // use brace initialization as constructor
-    amrex::MultiFab& mfab; // field to be guarded (zero extended)
+    // field to be guarded (zero extended)
+    amrex::MultiFab& mfab; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
 
     // use .array(mfi) like with amrex::MultiFab
     guarded_field_xy_inner array (amrex::MFIter& mfi) const {
@@ -448,8 +451,10 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
     // Calculate to which diag_fab slices this slice could contribute
     const int i_slice_min = i_slice - depos_order_offset;
     const int i_slice_max = i_slice + depos_order_offset;
-    const amrex::Real pos_slice_min = i_slice_min * field_geom[0].CellSize(2) + poff_calc_z;
-    const amrex::Real pos_slice_max = i_slice_max * field_geom[0].CellSize(2) + poff_calc_z;
+    const amrex::Real pos_slice_min = amrex::Real(i_slice_min) * field_geom[0].CellSize(2)
+                                      + poff_calc_z;
+    const amrex::Real pos_slice_max = amrex::Real(i_slice_max) * field_geom[0].CellSize(2)
+                                      + poff_calc_z;
     int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
                                                           * fd.m_geom_io.InvCellSize(2)));
     const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)
@@ -460,7 +465,7 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         // Put contributions from i_slice to different diag_fab slices in GPU vector
         m_rel_z_vec.resize(k_max+1-k_min);
         for (int k=k_min; k<=k_max; ++k) {
-            const amrex::Real pos = k * fd.m_geom_io.CellSize(2) + poff_diag_z;
+            const amrex::Real pos = amrex::Real(k) * fd.m_geom_io.CellSize(2) + poff_diag_z;
             const amrex::Real mid_i_slice = (pos - poff_calc_z)*field_geom[0].InvCellSize(2);
             amrex::Real sz_cell[depos_order_z + 1];
             const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
@@ -487,7 +492,7 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     } else {
         m_rel_z_vec.resize(1);
-        const amrex::Real pos_z = i_slice * field_geom[0].CellSize(2) + poff_calc_z;
+        const amrex::Real pos_z = amrex::Real(i_slice) * field_geom[0].CellSize(2) + poff_calc_z;
         if (fd.m_geom_io.ProbLo(2) <= pos_z && pos_z <= fd.m_geom_io.ProbHi(2)) {
             m_rel_z_vec[0] = field_geom[0].CellSize(2);
             k_min = 0;
@@ -524,8 +529,8 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
             amrex::ParallelFor(diag_box, fd.m_nfields,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
                 {
-                    const amrex::Real x = i * dx + poff_diag_x;
-                    const amrex::Real y = j * dy + poff_diag_y;
+                    const amrex::Real x = amrex::Real(i) * dx + poff_diag_x;
+                    const amrex::Real y = amrex::Real(j) * dy + poff_diag_y;
                     const int m = n[diag_comps];
                     if (m == -1) { // Ex
                         diag_array(i,j,k,n) += rel_z_data[k-k_min] * (
@@ -544,8 +549,8 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
             amrex::ParallelFor(diag_box, fd.m_nfields,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
                 {
-                    const amrex::Real x = i * dx + poff_diag_x;
-                    const amrex::Real y = j * dy + poff_diag_y;
+                    const amrex::Real x = amrex::Real(i) * dx + poff_diag_x;
+                    const amrex::Real y = amrex::Real(j) * dy + poff_diag_y;
                     const int m = n[diag_comps];
                     if (m == -1) { // real=|a^2|, imag=0
                         diag_array_laser(i,j,k,n) += amrex::GpuComplex<amrex::Real>{
@@ -707,13 +712,16 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
             const int i_idx = box_lo0 + i_hi_edge*(box_len0-1) + i_is_changing*i;
             const int j_idx = box_lo1 + j_hi_edge*(box_len1-1) + (!i_is_changing)*(i-box_len0);
 
-            const amrex::Real i_idx_offset = i_idx + (- i_lo_edge + i_hi_edge) * offset;
-            const amrex::Real j_idx_offset = j_idx + (- j_lo_edge + j_hi_edge) * offset;
+            const amrex::Real i_idx_offset = amrex::Real(i_idx) +
+                                             amrex::Real(- i_lo_edge + i_hi_edge) * offset;
+            const amrex::Real j_idx_offset = amrex::Real(j_idx) +
+                                             amrex::Real(- j_lo_edge + j_hi_edge) * offset;
 
             const amrex::Real x = i_idx_offset * dx + offset0;
             const amrex::Real y = j_idx_offset * dy + offset1;
 
-            const amrex::Real dxdx = dx*dx*(!i_is_changing) + dy*dy*i_is_changing;
+            const amrex::Real dxdx = dx*dx*amrex::Real(!i_is_changing) +
+                                     dy*dy*amrex::Real(i_is_changing);
 
             // atomic add because the corners of RHS get two values
             amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx)),
@@ -723,8 +731,8 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
 
 void
 Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                              const int which_slice, std::string component,
-                              amrex::MultiFab&& staging_area,
+                              const int which_slice, const std::string& component,
+                              amrex::MultiFab staging_area,
                               amrex::Real offset, amrex::Real factor)
 {
     const amrex::Box staging_box = geom[lev].Domain();
@@ -764,8 +772,8 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
                          staging_area,
             [=] AMREX_GPU_DEVICE (int /*box_num*/, int i, int j, int) noexcept
             {
-                const amrex::Real x = (i * dx + poff_x) * scale;
-                const amrex::Real y = (j * dy + poff_y) * scale;
+                const amrex::Real x = (amrex::Real(i) * dx + poff_x) * scale;
+                const amrex::Real y = (amrex::Real(j) * dy + poff_y) * scale;
                 if (x*x + y*y > cutoff_sq)  {
                     return amrex::IdentityTuple(MultipoleTuple{}, MultipoleReduceOpList{});
                 }
@@ -843,8 +851,8 @@ Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int l
                 // set interpolated values near edge of fine field between outer_edge and inner_edge
                 // to compensate for incomplete charge/current deposition in those cells
                 if(i<narrow_i_lo || i>narrow_i_hi || j<narrow_j_lo || j>narrow_j_hi) {
-                    amrex::Real x = i * dx + offset0;
-                    amrex::Real y = j * dy + offset1;
+                    amrex::Real x = amrex::Real(i) * dx + offset0;
+                    amrex::Real y = amrex::Real(j) * dy + offset1;
                     arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
                 }
             });
@@ -877,8 +885,8 @@ Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
             [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
                 // interpolate the full field
-                const amrex::Real x = i * dx + offset0;
-                const amrex::Real y = j * dy + offset1;
+                const amrex::Real x = amrex::Real(i) * dx + offset0;
+                const amrex::Real y = amrex::Real(j) * dy + offset1;
                 arr_field_fine(i,j) = arr_field_coarse_interp(x,y);
             });
     }
@@ -1148,20 +1156,22 @@ Fields::SymmetrizeFields (int field_comp, const int lev, const int symm_x, const
         amrex::ParallelFor(to2D(quarter_box),
             [=] AMREX_GPU_DEVICE (int i, int j) noexcept
             {
-                const amrex::Real avg = 0.25_rt*(arr(i, j) + arr(upper_x - i, j)*symm_x
-                    + arr(i, upper_y - j)*symm_y + arr(upper_x - i, upper_y - j)*symm_x*symm_y);
+                const amrex::Real symm_xr = amrex::Real(symm_x);
+                const amrex::Real symm_yr = amrex::Real(symm_y);
+                const amrex::Real avg = 0.25_rt*(arr(i, j) + arr(upper_x - i, j)*symm_xr
+                    + arr(i, upper_y - j)*symm_yr + arr(upper_x - i, upper_y - j)*symm_xr*symm_yr);
 
                 // Note: this may write to the same cell multiple times in the center.
                 arr(i, j) = avg;
-                arr(upper_x - i, j) = avg*symm_x;
-                arr(i, upper_y - j) = avg*symm_y;
-                arr(upper_x - i, upper_y - j) = avg*symm_x*symm_y;
+                arr(upper_x - i, j) = avg*symm_xr;
+                arr(i, upper_y - j) = avg*symm_yr;
+                arr(upper_x - i, upper_y - j) = avg*symm_xr*symm_yr;
             });
     }
 }
 
 void
-Fields::EnforcePeriodic (const bool do_sum, std::vector<int>&& comp_idx)
+Fields::EnforcePeriodic (const bool do_sum, std::vector<int> comp_idx)
 {
     amrex::MultiFab& mfab = getSlices(0);
 
@@ -1201,8 +1211,8 @@ Fields::InitialBfieldGuess (const amrex::Real relative_Bfield_error,
      */
     HIPACE_PROFILE("Fields::InitialBfieldGuess()");
 
-    const amrex::Real mix_factor_init_guess = std::exp(-0.5_rt * std::pow(relative_Bfield_error /
-                                              ( 2.5_rt * predcorr_B_error_tolerance ), 2));
+    const amrex::Real mix_factor_init_guess = std::exp(-0.5_rt *
+        amrex::Math::powi<2>(relative_Bfield_error / (2.5_rt * predcorr_B_error_tolerance)));
 
     amrex::MultiFab& slicemf = getSlices(lev);
 

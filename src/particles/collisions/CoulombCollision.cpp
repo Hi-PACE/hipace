@@ -260,7 +260,7 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     BeamBins bins1 = findBeamParticlesInEachTile(bx, 1, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(bx, 1, species2, geom);
 
-    int const n_cells = bins2.numBins();
+    int const n_cells = static_cast<int>(bins2.numBins());
 
     // Counter to check there is only 1 box
     int count = 0;

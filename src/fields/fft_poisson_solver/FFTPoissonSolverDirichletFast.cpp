@@ -32,7 +32,7 @@ FFTPoissonSolverDirichletFast::FFTPoissonSolverDirichletFast (
  * \param[in] n_data number of (contiguous) rows in position matrix
  */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int n_data) {
+amrex::GpuComplex<amrex::Real> to_complex (const T& in, int i, int j, int n_half, int n_data) {
     amrex::Real real = 0;
     amrex::Real imag = 0;
     if (i == 0) {
@@ -62,7 +62,7 @@ amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int
  * \param[in] sine_factor prefactor for ToSine equal to 1/(2*sin((idx+1)*pi/(n_data+1)))
  */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_factor) {
+amrex::Real to_sine (const T& in, int i, int j, int n_data, const amrex::Real* sine_factor) {
     const amrex::Real in_a = in(i+1, j);
     const amrex::Real in_b = in(n_data-i, j);
     // possible optimization:
@@ -235,12 +235,15 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
         [=] AMREX_GPU_DEVICE (int j, int i) noexcept
         {
             /* fast poisson solver diagonal x coeffs */
-            amrex::Real sinex_sq = std::sin(( i + 1 ) * sine_x_factor) * std::sin(( i + 1 ) * sine_x_factor);
+            const amrex::Real sinex_sq = amrex::Math::powi<2>(
+                std::sin(amrex::Real(i + 1)*sine_x_factor));
             /* fast poisson solver diagonal y coeffs */
-            amrex::Real siney_sq = std::sin(( j + 1 ) * sine_y_factor) * std::sin(( j + 1 ) * sine_y_factor);
+            const amrex::Real siney_sq = amrex::Math::powi<2>(
+                std::sin(amrex::Real(j + 1)*sine_y_factor));
 
             if ((sinex_sq!=0) && (siney_sq!=0)) {
-                eigenvalue_matrix(j,i) = norm_fac / ( -4.0_rt * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+                eigenvalue_matrix(j,i) = norm_fac / ( -4.0_rt *
+                                         ( sinex_sq / dxsquared + siney_sq / dysquared ));
             } else {
                 // Avoid division by 0
                 eigenvalue_matrix(j,i) = 0._rt;

@@ -171,11 +171,11 @@ FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba
             to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = std::sin(amrex::Real( i - lo[0] + 1 ) * sine_x_factor)
-                                         * std::sin(amrex::Real( i - lo[0] + 1 ) * sine_x_factor);
+                    const amrex::Real sinex_sq = amrex::Math::powi<2>(
+                        std::sin(amrex::Real( i - lo[0] + 1 ) * sine_x_factor));
                     /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = std::sin(amrex::Real( j - lo[1] + 1 ) * sine_y_factor)
-                                         * std::sin(amrex::Real( j - lo[1] + 1 ) * sine_y_factor);
+                    const amrex::Real siney_sq = amrex::Math::powi<2>(
+                        std::sin(amrex::Real( j - lo[1] + 1 ) * sine_y_factor));
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
                         eigenvalue_matrix(i,j) = norm_fac / ( -4.0_rt *

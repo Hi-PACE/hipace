@@ -22,7 +22,7 @@ MultiBeam::ReadParameters ()
     DeprecatedInput("beams", "insitu_freq", "insitu_period");
     DeprecatedInput("beams", "all_from_file",
         "injection_type = from_file\nand beams.input_file = <file name>\n");
-    m_nbeams = m_names.size();
+    m_nbeams = static_cast<int>(m_names.size());
     for (int i = 0; i < m_nbeams; ++i) {
         m_all_beams.emplace_back(BeamParticleContainer(m_names[i]));
         m_all_beams.back().ReadParameters();
