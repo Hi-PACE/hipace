@@ -420,7 +420,7 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
 
         amrex::ParallelFor(
             beam.getNumParticles(WhichBeamSlice::This),
-            [=] AMREX_GPU_DEVICE (long ip) {
+            [=] AMREX_GPU_DEVICE (int ip) {
                 // Skip invalid particles and ghost particles not in the last slice
                 auto id = amrex::ParticleIDWrapper(idcpup[ip]);
                 if (!id.is_valid()) return;

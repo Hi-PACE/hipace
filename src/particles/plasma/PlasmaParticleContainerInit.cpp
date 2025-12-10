@@ -155,7 +155,7 @@ InitParticles (const amrex::RealVect& a_u_std,
         amrex::Long total_num_particles = amrex::Reduce::Sum<amrex::Long>(tile_box.numPts(),
             [=] AMREX_GPU_DEVICE (amrex::Long idx) noexcept
             {
-                auto [i,j,k] = tile_box.atOffset3d(idx).arr;
+                auto [i,j,k] = tile_box.atOffset(idx);
 
                 amrex::Long num_particles_cell = 0;
                 for (int i_part=0; i_part<max_ppc; ++i_part)

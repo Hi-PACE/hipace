@@ -44,7 +44,7 @@ namespace
         const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
         const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz,
         const amrex::Real& sx, const amrex::Real& sy, const amrex::Real& sz,
-        const amrex::Real& weight, const amrex::Long pid, const amrex::Long ip,
+        const amrex::Real& weight, const uint64_t pid, const amrex::Long ip,
         const EnforceBC& enforceBC, bool do_spin) noexcept
     {
         amrex::Real xp = x;
@@ -66,7 +66,7 @@ namespace
         }
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 
-        ptd.idcpu(ip) = pid + ip;
+        ptd.idcpu(ip) = static_cast<amrex::Long>(pid) + ip;
         ptd.id(ip).make_valid();
     }
 
@@ -89,7 +89,7 @@ namespace
     void AddOneBeamParticleSlice (
         const BeamTile::ParticleTileDataType& ptd, const amrex::Real x,
         const amrex::Real y, const amrex::Real z, const amrex::Real ux, const amrex::Real uy,
-        const amrex::Real uz, const amrex::Real weight, const amrex::Long pid,
+        const amrex::Real uz, const amrex::Real weight, const uint64_t pid,
         const amrex::Long ip, const EnforceBC& enforceBC,
         const bool is_valid=true) noexcept
     {
@@ -110,7 +110,7 @@ namespace
         ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
         ptd.idata(BeamIdx::mr_level)[ip] = 0;
 
-        ptd.idcpu(ip) = pid + ip;
+        ptd.idcpu(ip) =  static_cast<amrex::Long>(pid) + ip;
         if (is_valid) {
             ptd.id(ip).make_valid(); // ensure id is valid
         } else {
@@ -1034,25 +1034,26 @@ InitBeamFromFile (const std::string input_file,
         amrex::Abort("Coud not find z coordinate in file. Use file_coordinates_xyz x1 x2 x3\n");
     }
 
-    for(std::string name_r_c : {name_rx, name_ry, name_rz}) {
+    for(const std::string& name_r_c : {name_rx, name_ry, name_rz}) {
         if(!series.iterations[num_iteration].particles[name_particle][name_r].contains(name_r_c)) {
-            amrex::Abort("Beam input file does not contain " + name_r_c + " coordinate in " +
-            name_r + " (position)\n");
+            amrex::Abort("Beam input file does not contain " + name_r_c + " coordinate in "
+                + name_r + " (position)\n"); // NOLINT(performance-inefficient-string-concatenation)
         }
     }
-    for(std::string name_u_c : {name_ux, name_uy, name_uz}) {
+    for(const std::string& name_u_c : {name_ux, name_uy, name_uz}) {
         if(!series.iterations[num_iteration].particles[name_particle][name_u].contains(name_u_c)) {
-            amrex::Abort("Beam input file does not contain " + name_u_c + " coordinate in " +
-            name_u + " (momentum)\n");
+            amrex::Abort("Beam input file does not contain " + name_u_c + " coordinate in "
+                + name_u + " (momentum)\n"); // NOLINT(performance-inefficient-string-concatenation)
         }
     }
 
     if (m_do_spin_tracking) {
-        for(std::string name_s_c : {name_sx, name_sy, name_sz}) {
+        for(const std::string& name_s_c : {name_sx, name_sy, name_sz}) {
             if(!series.iterations[num_iteration].particles[name_particle][name_s].contains(name_s_c)) {
-                amrex::Abort("Beam input file does not contain " + name_s_c + " coordinate in " +
-                             name_s + " (spin). An attempt to read these was done because " +
-                             "do_spin_tracking is on for at least one beam.\n");
+                amrex::Abort("Beam input file does not contain " + name_s_c + " coordinate in "
+                    + name_s + // NOLINT(performance-inefficient-string-concatenation)
+                    " (spin). An attempt to read these was done because " +
+                    "do_spin_tracking is on for at least one beam.\n");
             }
         }
     }
@@ -1125,7 +1126,7 @@ InitBeamFromFile (const std::string input_file,
     if(Hipace::m_normalized_units) {
         if(n_0 == 0) {
             if(electrons.containsAttribute("HiPACE++_Plasma_Density")) {
-                n_0 = electrons.getAttribute("HiPACE++_Plasma_Density").get<double>();
+                n_0 = amrex::Real(electrons.getAttribute("HiPACE++_Plasma_Density").get<double>());
             }
             else {
                 amrex::Abort("Please specify the plasma density of the external beam "

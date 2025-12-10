@@ -177,10 +177,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
                 [[maybe_unused]] amrex::Real laser_norm_ion = laser_norm;
                 if constexpr (can_ionize) {
-                    q_invvol *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    q_mu0_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    laser_norm_ion *=
-                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    const amrex::Real ilev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
+                    q_invvol *= ilev;
+                    q_mu0_mass_ratio *= ilev;
+                    laser_norm_ion *= ilev * ilev;
                 }
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;

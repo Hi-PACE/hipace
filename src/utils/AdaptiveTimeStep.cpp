@@ -298,7 +298,7 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
         const auto idcpup = soa.GetIdCPUData().data();
 
         reduce_op.eval(beam.getNumParticles(WhichBeamSlice::This), reduce_data,
-            [=] AMREX_GPU_DEVICE (long ip) noexcept -> ReduceTuple
+            [=] AMREX_GPU_DEVICE (int ip) noexcept -> ReduceTuple
             {
                 if (amrex::ConstParticleIDWrapper(idcpup[ip]) < 0) return { 0._rt };
                 const amrex::Real xp = pos_x[ip];

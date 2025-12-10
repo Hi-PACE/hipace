@@ -29,7 +29,7 @@ MultiPlasma::ReadParameters ()
                     "hipace.background_density_SI", "", true);
 
     if (m_names[0] == "no_plasma") return;
-    m_nplasmas = m_names.size();
+    m_nplasmas = static_cast<int>(m_names.size());
     for (int i = 0; i < m_nplasmas; ++i) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_names[i]!="beam", "Cannot have plasma with name 'beam'");
         m_all_plasmas.emplace_back(PlasmaParticleContainer(m_names[i]));

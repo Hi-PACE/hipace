@@ -97,8 +97,8 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 if (use_laser) {
                     amrex::Real laser_norm_ion = laser_norm;
                     if (can_ionize) {
-                        laser_norm_ion *=
-                            ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                        const amrex::Real ilev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
+                        laser_norm_ion *= ilev * ilev;
                     }
                     doLaserGatherShapeN<2>(xp, yp, Aabssqp, arr, cache_idx[0],
                                            dx_inv, dy_inv, x_pos_offset, y_pos_offset);
