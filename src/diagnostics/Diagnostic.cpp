@@ -256,7 +256,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 // if field_data was specified through <diag name>,
                 // assert that all components exist in the geometry
                 amrex::Abort("Unknown diagnostics field_data '" + comp_name +
-                             "' in base_geometry '" + base_geom_name + "'!\n" + // NOLINT(performance-inefficient-string-concatenation)
+                             "' in base_geometry '" + base_geom_name + "'!\n" +
                              all_comps_error_str.str());
             } else {
                 // if field_data was specified through diagnostic,

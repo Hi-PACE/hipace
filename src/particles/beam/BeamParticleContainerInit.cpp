@@ -1037,13 +1037,13 @@ InitBeamFromFile (const std::string& input_file,
     for(const std::string& name_r_c : {name_rx, name_ry, name_rz}) {
         if(!series.iterations[num_iteration].particles[name_particle][name_r].contains(name_r_c)) {
             amrex::Abort("Beam input file does not contain " + name_r_c + " coordinate in "
-                + name_r + " (position)\n"); // NOLINT(performance-inefficient-string-concatenation)
+                + name_r + " (position)\n");
         }
     }
     for(const std::string& name_u_c : {name_ux, name_uy, name_uz}) {
         if(!series.iterations[num_iteration].particles[name_particle][name_u].contains(name_u_c)) {
             amrex::Abort("Beam input file does not contain " + name_u_c + " coordinate in "
-                + name_u + " (momentum)\n"); // NOLINT(performance-inefficient-string-concatenation)
+                + name_u + " (momentum)\n");
         }
     }
 
@@ -1051,8 +1051,7 @@ InitBeamFromFile (const std::string& input_file,
         for(const std::string& name_s_c : {name_sx, name_sy, name_sz}) {
             if(!series.iterations[num_iteration].particles[name_particle][name_s].contains(name_s_c)) {
                 amrex::Abort("Beam input file does not contain " + name_s_c + " coordinate in "
-                    + name_s + // NOLINT(performance-inefficient-string-concatenation)
-                    " (spin). An attempt to read these was done because " +
+                    + name_s + " (spin). An attempt to read these was done because " +
                     "do_spin_tracking is on for at least one beam.\n");
             }
         }
