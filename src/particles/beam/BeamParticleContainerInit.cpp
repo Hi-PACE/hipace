@@ -153,7 +153,7 @@ InitBeamFixedPPC3D ()
         domain_box.numPts(), reduce_data,
         [=] AMREX_GPU_DEVICE (amrex::Long idx) -> ReduceTuple
         {
-            auto [i, j, k] = domain_box.atOffset3d(idx).arr;
+            auto [i, j, k] = domain_box.atOffset(idx);
 
             uint64_t count = 0;
 
