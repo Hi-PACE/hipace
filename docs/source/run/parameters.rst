@@ -624,6 +624,10 @@ which are valid only for certain beam types, are introduced further below under
     Whether the beam particles are pushed along the z-axis. The momentum is still fully updated.
     Note: using ``do_z_push = 0`` results in unphysical behavior.
 
+``<beam name>.do_uz_push`` (`bool`) optional (default `1`)
+    Whether the beam particles are accelerated. The transverse momentum is still fully updated.
+    Note: using ``do_uz_push = 0`` results in unphysical behavior.
+
 * ``<beam name> or beams.do_push`` (`bool`) optional (default `1`)
     When set to `0`, disables the beam particle pusher.
 
@@ -937,11 +941,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     the field to laser interpolation of chi. Currently, `0,1,2,3` are implemented.
 
 * ``lasers.solver_type`` (`string`) optional (default `multigrid`)
-    Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
+    Type of solver for the laser envelope solver, either ``fft``, ``multigrid`` or ``disable``.
     Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
     With the multigrid solver, we could drop this assumption.
     For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
-
+    If set ``disable``, the laser will not evolve and remain as the initial profile through the simulation.
 * ``lasers.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solver used for the laser pulse.
 
