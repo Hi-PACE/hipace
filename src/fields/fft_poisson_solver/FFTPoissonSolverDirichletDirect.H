@@ -32,7 +32,12 @@ public:
                                       amrex::Geometry const& gm);
 
     /** virtual destructor */
-    virtual ~FFTPoissonSolverDirichletDirect () override final {}
+    ~FFTPoissonSolverDirichletDirect () final = default;
+
+    FFTPoissonSolverDirichletDirect (const FFTPoissonSolverDirichletDirect& rhs) = delete;
+    FFTPoissonSolverDirichletDirect (FFTPoissonSolverDirichletDirect&& rhs) = delete;
+    FFTPoissonSolverDirichletDirect& operator= (const FFTPoissonSolverDirichletDirect& rhs) = delete;
+    FFTPoissonSolverDirichletDirect& operator= (FFTPoissonSolverDirichletDirect&& rhs) = delete;
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, Dirichlet
@@ -52,11 +57,11 @@ public:
      *
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
-    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
+    void SolvePoissonEquation (amrex::MultiFab& lhs_mf) final;
 
     /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
-    virtual amrex::Real BoundaryOffset() override final { return 1.; }
-    virtual amrex::Real BoundaryFactor() override final { return 1.; }
+    amrex::Real BoundaryOffset() final { return 1.; }
+    amrex::Real BoundaryFactor() final { return 1.; }
 
 private:
     /** Spectral fields, contains (real) field in Fourier space */

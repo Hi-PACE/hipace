@@ -133,10 +133,10 @@ Fields::AllocData (
                     "jx", "jy", "jz_beam", "Bx", "By", "Sy", "Sx", "Sy_back", "Sx_back");
             }
 
-            isl = WhichSlice::PCIter;
+            // isl = WhichSlice::PCIter;
             // empty
 
-            isl = WhichSlice::PCPrevIter;
+            // isl = WhichSlice::PCPrevIter;
             // empty
 
         } else {
@@ -184,7 +184,7 @@ Fields::AllocData (
                 Comps[isl].multi_emplace(N_Comps, "rhomjz");
             }
 
-            isl = WhichSlice::Salame;
+            // isl = WhichSlice::Salame;
             // empty, not compatible
 
             isl = WhichSlice::PCIter;
@@ -207,30 +207,20 @@ Fields::AllocData (
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
     if (m_poisson_solver_str == "FFTDirichletDirect"){
-        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletDirect>(
-            new FFTPoissonSolverDirichletDirect(getSlices(lev).boxArray(),
-                                                getSlices(lev).DistributionMap(),
-                                                geom)) );
+        m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverDirichletDirect>(
+            getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
     } else if (m_poisson_solver_str == "FFTDirichletExpanded"){
-        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletExpanded>(
-            new FFTPoissonSolverDirichletExpanded(getSlices(lev).boxArray(),
-                                                  getSlices(lev).DistributionMap(),
-                                                  geom)) );
+        m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverDirichletExpanded>(
+            getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
     } else if (m_poisson_solver_str == "FFTDirichletFast"){
-        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletFast>(
-            new FFTPoissonSolverDirichletFast(getSlices(lev).boxArray(),
-                                              getSlices(lev).DistributionMap(),
-                                              geom)) );
+        m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverDirichletFast>(
+            getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
     } else if (m_poisson_solver_str == "FFTPeriodic") {
-        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverPeriodic>(
-            new FFTPoissonSolverPeriodic(getSlices(lev).boxArray(),
-                                         getSlices(lev).DistributionMap(),
-                                         geom))  );
+        m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverPeriodic>(
+            getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
     } else if (m_poisson_solver_str == "MGDirichlet") {
-        m_poisson_solver.push_back(std::unique_ptr<MGPoissonSolverDirichlet>(
-            new MGPoissonSolverDirichlet(getSlices(lev).boxArray(),
-                                         getSlices(lev).DistributionMap(),
-                                         geom))  );
+        m_poisson_solver.push_back(std::make_unique<MGPoissonSolverDirichlet>(
+            getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
     } else {
         amrex::Abort("Unknown poisson solver '" + m_poisson_solver_str +
             "', must be 'FFTDirichletDirect', 'FFTDirichletExpanded', 'FFTDirichletFast', " +

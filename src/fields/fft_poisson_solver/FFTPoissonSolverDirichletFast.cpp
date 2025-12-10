@@ -221,12 +221,12 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( nx + 1 ));
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( ny + 1 ));
+    const amrex::Real sine_x_factor = MathConst::pi / amrex::Real( 2 * ( nx + 1 ));
+    const amrex::Real sine_y_factor = MathConst::pi / amrex::Real( 2 * ( ny + 1 ));
 
     // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
     // This normalization is used regardless of the sine transform library
-    const amrex::Real norm_fac = 0.5 / ( 2 * (( nx + 1 ) * ( ny + 1 )));
+    const amrex::Real norm_fac = 0.5_rt / amrex::Real( 2 * (( nx + 1 ) * ( ny + 1 )));
 
     // Calculate the array of m_eigenvalue_matrix
     m_eigenvalue_matrix.resize({{0,0,0}, {ny-1,nx-1,0}});
@@ -270,14 +270,16 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     amrex::Real* const sine_x_ptr = m_sine_x_factor.dataPtr();
     amrex::ParallelFor(nx,
         [=] AMREX_GPU_DEVICE (int i) {
-            sine_x_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi((i + 1._rt) / (nx + 1._rt)));
+            sine_x_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi(amrex::Real(i + 1) /
+                                                                amrex::Real(nx + 1)));
         });
 
     m_sine_y_factor.resize(ny);
     amrex::Real* const sine_y_ptr = m_sine_y_factor.dataPtr();
     amrex::ParallelFor(ny,
         [=] AMREX_GPU_DEVICE (int i) {
-            sine_y_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi((i + 1._rt) / (ny + 1._rt)));
+            sine_y_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi(amrex::Real(i + 1) /
+                                                                amrex::Real(ny + 1)));
         });
 }
 
