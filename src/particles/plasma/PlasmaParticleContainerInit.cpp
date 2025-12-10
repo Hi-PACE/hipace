@@ -360,7 +360,7 @@ InitParticles (const amrex::RealVect& a_u_std,
 #pragma unroll
 #endif
                 for (int imirror=0; imirror<3; ++imirror) {
-                    const amrex::Long midx = (imirror+1)*mirror_offset + pidx;
+                    const int midx = (imirror+1)*mirror_offset + pidx;
 
                     ptd.id(midx) = 1; // plasma id is only used to distinguish between valid/invalid
                     ptd.cpu(midx) = 0; // level 0

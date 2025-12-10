@@ -112,7 +112,7 @@ public:
      * \return physical time at which the simulation will start
      */
     template<typename input_type>
-    amrex::Real InitBeamFromFile (const std::string input_file,
+    amrex::Real InitBeamFromFile (const std::string& input_file,
                                   const bool coordinates_specified,
                                   const amrex::Array<std::string, 3>& file_coordinates_xyz,
                                   const amrex::Geometry& geom,

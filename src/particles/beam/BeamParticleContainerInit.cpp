@@ -554,8 +554,8 @@ InitBeamFixedWeightPDF3D ()
         const amrex::Long num_to_add_now = num_to_add - num_added;
 
         for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice >=0; --slice) {
-            const amrex::Real zmin = zoffset + slice*zscale;
-            const amrex::Real zmax = zoffset + (slice+1)*zscale;
+            const amrex::Real zmin = zoffset + amrex::Real(slice) * zscale;
+            const amrex::Real zmax = zoffset + amrex::Real(slice+1) * zscale;
 
             const amrex::Real pdf_zmin = m_pdf_func(zmin);
             const amrex::Real pdf_zmax = m_pdf_func(zmax);
@@ -592,7 +592,7 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
 
     int num_to_add_full = 0;
     for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
-        num_to_add_full += m_num_particles_slice[slice*m_pdf_ref_ratio+r];
+        num_to_add_full += static_cast<int>(m_num_particles_slice[slice*m_pdf_ref_ratio+r]);
     }
     if (m_do_symmetrize) {
         resize(which_slice, 4*num_to_add_full, 0);
@@ -605,7 +605,7 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
 
     int loc_index = 0;
     for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
-        const int num_to_add = m_num_particles_slice[slice*m_pdf_ref_ratio+r];
+        const int num_to_add = static_cast<int>(m_num_particles_slice[slice*m_pdf_ref_ratio+r]);
         if (num_to_add == 0) continue;
 
         auto& particle_tile = getBeamSlice(which_slice);
@@ -840,7 +840,7 @@ InitBeamFromFileHelper (const std::string& input_file,
 template <typename input_type>
 amrex::Real
 BeamParticleContainer::
-InitBeamFromFile (const std::string input_file,
+InitBeamFromFile (const std::string& input_file,
                   const bool coordinates_specified,
                   const amrex::Array<std::string, 3>& file_coordinates_xyz,
                   const amrex::Geometry& geom,

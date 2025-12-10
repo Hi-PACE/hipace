@@ -24,7 +24,7 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
 
     // min_z is the lower end of WhichBeamSlice::This
     const amrex::Real min_z = geom.ProbLo(2) +
-        (amrex::Real(slice) - geom.Domain().smallEnd(2))*geom.CellSize(2);
+        amrex::Real(slice - geom.Domain().smallEnd(2))*geom.CellSize(2);
 
     // put non slipped particles at the start of the slice
     const int num_stay = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),

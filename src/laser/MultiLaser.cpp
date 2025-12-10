@@ -66,6 +66,7 @@ MultiLaser::ReadParameters ()
 void
 MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 {
+    using namespace amrex::literals;
     if (!m_use_laser) return;
     amrex::ParmParse pp("lasers");
 
@@ -97,8 +98,8 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
         int(amrex::Math::round((patch_hi_laser[2] - pos_offset_z) * field_geom_3D.InvCellSize(2)))
     );
 
-    patch_lo_laser[2] = (amrex::Real(zeta_lo) - 0.5) * field_geom_3D.CellSize(2) + pos_offset_z;
-    patch_hi_laser[2] = (amrex::Real(zeta_hi) + 0.5) * field_geom_3D.CellSize(2) + pos_offset_z;
+    patch_lo_laser[2] = (amrex::Real(zeta_lo) - 0.5_rt) * field_geom_3D.CellSize(2) + pos_offset_z;
+    patch_hi_laser[2] = (amrex::Real(zeta_hi) + 0.5_rt) * field_geom_3D.CellSize(2) + pos_offset_z;
 
     // make the boxes
     const amrex::Box domain_3D_laser{amrex::IntVect(0, 0, zeta_lo),

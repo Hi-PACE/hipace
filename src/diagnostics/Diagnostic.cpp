@@ -390,9 +390,9 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         amrex::RealBox diag_domain = geom.ProbDomain();
         for(int dir=0; dir<=2; ++dir) {
             // make diag_domain correspond to box
-            diag_domain.setLo(dir, geom.ProbLo(dir) + (amrex::Real(domain.smallEnd(dir))
+            diag_domain.setLo(dir, geom.ProbLo(dir) + amrex::Real(domain.smallEnd(dir)
                 - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
-            diag_domain.setHi(dir, geom.ProbHi(dir) + (amrex::Real(domain.bigEnd(dir))
+            diag_domain.setHi(dir, geom.ProbHi(dir) + amrex::Real(domain.bigEnd(dir)
                 - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
         }
         // trim the 3D box to slice box for slice IO
@@ -427,7 +427,7 @@ Diagnostic::TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbo
     using namespace amrex::literals;
     if (slice_dir >= 0){
         const amrex::Real half_cell_size = amrex::Real(rbox_3d.length(slice_dir)) /
-                                           (2._rt * domain_3d.length(slice_dir) );
+                                           (2._rt * amrex::Real(domain_3d.length(slice_dir)));
         const amrex::Real mid = (rbox_3d.lo(slice_dir) + rbox_3d.hi(slice_dir)) / 2._rt;
         // Flatten the box down to 1 cell in the approprate direction.
         domain_3d.setSmall(slice_dir, 0);
