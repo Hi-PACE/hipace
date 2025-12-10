@@ -97,8 +97,8 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
         int(amrex::Math::round((patch_hi_laser[2] - pos_offset_z) * field_geom_3D.InvCellSize(2)))
     );
 
-    patch_lo_laser[2] = (zeta_lo-0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
-    patch_hi_laser[2] = (zeta_hi+0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
+    patch_lo_laser[2] = (amrex::Real(zeta_lo) - 0.5) * field_geom_3D.CellSize(2) + pos_offset_z;
+    patch_hi_laser[2] = (amrex::Real(zeta_hi) + 0.5) * field_geom_3D.CellSize(2) + pos_offset_z;
 
     // make the boxes
     const amrex::Box domain_3D_laser{amrex::IntVect(0, 0, zeta_lo),
@@ -110,7 +110,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     // make the geometry, slice box and ba and dm
     m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
-    m_nlasers = m_names.size();
+    m_nlasers = static_cast<int>(m_names.size());
 
     for (int i = 0; i < m_nlasers; ++i) {
         m_all_lasers.emplace_back(Laser(m_names[i]));
@@ -286,8 +286,8 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
             [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
                 using namespace WhichLaserSlice;
 
-                const amrex::Real x = i * dx_field + poff_field_x;
-                const amrex::Real y = j * dy_field + poff_field_y;
+                const amrex::Real x = amrex::Real(i) * dx_field + poff_field_x;
+                const amrex::Real y = amrex::Real(j) * dy_field + poff_field_y;
 
                 const amrex::Real xmid = (x - poff_laser_x) * dx_laser_inv;
                 const amrex::Real ymid = (y - poff_laser_y) * dy_laser_inv;
@@ -341,7 +341,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
             const amrex::Real c_t = pc.c * Hipace::m_physical_time;
             amrex::Real chi_factor = plasma.GetCharge() * plasma.GetCharge() * pc.mu0 / plasma.GetMass();
             if (plasma.m_can_ionize) {
-                chi_factor *= plasma.m_init_ion_lev * plasma.m_init_ion_lev;
+                chi_factor *= amrex::Real(plasma.m_init_ion_lev * plasma.m_init_ion_lev);
             }
 
             auto density_func = plasma.m_density_func;
@@ -354,8 +354,8 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
 
             amrex::ParallelFor(to2D(mfi.growntilebox()),
                 [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
-                    const amrex::Real x = i * dx_laser + poff_laser_x;
-                    const amrex::Real y = j * dy_laser + poff_laser_y;
+                    const amrex::Real x = amrex::Real(i) * dx_laser + poff_laser_x;
+                    const amrex::Real y = amrex::Real(j) * dy_laser + poff_laser_y;
 
                     laser_arr_chi(i, j) += density_func(x, y, c_t) * chi_factor;
                 });
@@ -408,8 +408,8 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
             {m_interp_order},
             mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
-                const amrex::Real x = i * dx_laser + poff_laser_x;
-                const amrex::Real y = j * dy_laser + poff_laser_y;
+                const amrex::Real x = amrex::Real(i) * dx_laser + poff_laser_x;
+                const amrex::Real y = amrex::Real(j) * dy_laser + poff_laser_y;
 
                 const amrex::Real xmid = (x - poff_field_x) * dx_field_inv;
                 const amrex::Real ymid = (y - poff_field_y) * dy_field_inv;

@@ -198,7 +198,7 @@ AdaptiveTimeStep::CalculateFromMinUz (
             std::sqrt(std::abs(m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared]
                                 /m_timestep_data[ibeam][WhichDouble::SumWeights]
                                 - mean_uz*mean_uz));
-        const amrex::Real sigma_uz_dev = mean_uz - 4.*sigma_uz;
+        const amrex::Real sigma_uz_dev = mean_uz - 4._rt * sigma_uz;
         const amrex::Real max_supported_uz = 1.e30;
         amrex::Real chosen_min_uz =
             std::min(std::max(sigma_uz_dev, m_timestep_data[ibeam][WhichDouble::MinUz]),
@@ -240,8 +240,8 @@ AdaptiveTimeStep::CalculateFromMinUz (
             // Just make sure min_uz is >0, to avoid nans below.
             min_uz = std::max(min_uz, 0.001_rt*m_threshold_uz);
             amrex::Real omega_b = std::sqrt(plasma_charge_density /
-                                            (2. * std::abs(min_uz * mass_charge_ratio) * ep0));
-            new_dt = 2. * MathConst::pi / omega_b / m_nt_per_betatron;
+                (2._rt * std::abs(min_uz * mass_charge_ratio) * ep0));
+            new_dt = 2._rt * MathConst::pi / omega_b / m_nt_per_betatron;
             new_time += new_dt;
             if (min_uz > m_threshold_uz) {
                 new_dts[ibeam] = new_dt;
@@ -326,11 +326,11 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
     if (!m_do_adaptive_time_step) return;
 
     for (int ibeam = 0; ibeam < m_nbeams; ibeam++) {
-        m_timestep_data[ibeam][WhichDouble::MinUz] = 1e30;
-        m_timestep_data[ibeam][WhichDouble::MinAcc] = 0.;
-        m_timestep_data[ibeam][WhichDouble::SumWeights] = 0.;
-        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz] = 0.;
-        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] = 0.;
+        m_timestep_data[ibeam][WhichDouble::MinUz] = 1e30_rt;
+        m_timestep_data[ibeam][WhichDouble::MinAcc] = 0._rt;
+        m_timestep_data[ibeam][WhichDouble::SumWeights] = 0._rt;
+        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUz] = 0._rt;
+        m_timestep_data[ibeam][WhichDouble::SumWeightsTimesUzSquared] = 0._rt;
     }
 
     if (!m_adaptive_control_phase_advance) return;
@@ -339,28 +339,29 @@ AdaptiveTimeStep::CalculateFromDensity (amrex::Real t, amrex::Real& dt, MultiPla
 
     const PhysConst pc = get_phys_const();
 
-    amrex::Real dt_sub = dt / m_adaptive_phase_substeps;
-    amrex::Real phase_advance = 0.;
-    amrex::Real phase_advance0 = 0.;
+    amrex::Real dt_sub = dt / amrex::Real(m_adaptive_phase_substeps);
+    amrex::Real phase_advance = 0._rt;
+    amrex::Real phase_advance0 = 0._rt;
 
     // Get plasma density at beginning of step
     const amrex::Real plasma_charge_density0 = plasmas.maxChargeDensity(pc.c * t);
-    const amrex::Real omgb0 = std::sqrt(plasma_charge_density0 / (2. * m_min_uz_mq * pc.ep0));
+    const amrex::Real omgb0 = std::sqrt(plasma_charge_density0 / (2._rt * m_min_uz_mq * pc.ep0));
 
     // Numerically integrate the phase advance from t to t+dt. The time step is reduced such that
     // the expected phase advance equals that of a uniform plasma up to a tolerance level.
     for (int i = 0; i < m_adaptive_phase_substeps; i++)
     {
-        const amrex::Real plasma_charge_density = plasmas.maxChargeDensity(pc.c * (t+i*dt_sub));
-        const amrex::Real omgb = std::sqrt(plasma_charge_density / (2. * m_min_uz_mq * pc.ep0));
+        const amrex::Real plasma_charge_density =
+            plasmas.maxChargeDensity(pc.c * (t + amrex::Real(i) * dt_sub));
+        const amrex::Real omgb = std::sqrt(plasma_charge_density / (2._rt * m_min_uz_mq * pc.ep0));
         phase_advance += omgb * dt_sub;
         phase_advance0 += omgb0 * dt_sub;
         if(std::abs(phase_advance - phase_advance0) >
-           2.*MathConst::pi*m_adaptive_phase_tolerance/m_nt_per_betatron)
+           2._rt*MathConst::pi*m_adaptive_phase_tolerance/m_nt_per_betatron)
         {
             if (i==0) amrex::AllPrint()<<"WARNING: adaptive time step exits at first substep."<<
                                          " Consider increasing hipace.adaptive_phase_substeps!\n";
-            dt = i*dt_sub;
+            dt = amrex::Real(i) * dt_sub;
             return;
         }
     }

@@ -23,7 +23,8 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
     amrex::removeInvalidParticles(beam.getBeamSlice(WhichBeamSlice::This));
 
     // min_z is the lower end of WhichBeamSlice::This
-    const amrex::Real min_z = geom.ProbLo(2) + (slice-geom.Domain().smallEnd(2))*geom.CellSize(2);
+    const amrex::Real min_z = geom.ProbLo(2) +
+        (amrex::Real(slice) - geom.Domain().smallEnd(2))*geom.CellSize(2);
 
     // put non slipped particles at the start of the slice
     const int num_stay = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),
@@ -31,7 +32,7 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
             return ptd.pos(2, i) >= min_z;
         });
 
-    const int num_slipped = beam.getBeamSlice(WhichBeamSlice::This).size() - num_stay;
+    const int num_slipped = beam.getBeamSlice(WhichBeamSlice::This).numTotalParticles() - num_stay;
 
     if (num_slipped == 0) {
         // nothing to do

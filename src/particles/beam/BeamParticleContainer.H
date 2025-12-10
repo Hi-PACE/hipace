@@ -99,13 +99,13 @@ public:
     /** Checks the input file first to determine its Datatype
      * \return physical time at which the simulation will start
      */
-    amrex::Real InitBeamFromFileHelper (const std::string input_file,
+    amrex::Real InitBeamFromFileHelper (const std::string& input_file,
                                         const bool coordinates_specified,
-                                        const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                                        const amrex::Array<std::string, 3>& file_coordinates_xyz,
                                         const amrex::Geometry& geom,
                                         amrex::Real n_0,
                                         const int num_iteration,
-                                        const std::string species_name,
+                                        const std::string& species_name,
                                         const bool species_specified);
 
     /** Initialize a beam from an external input file using openPMD and HDF5
@@ -114,11 +114,11 @@ public:
     template<typename input_type>
     amrex::Real InitBeamFromFile (const std::string input_file,
                                   const bool coordinates_specified,
-                                  const amrex::Array<std::string, AMREX_SPACEDIM> file_coordinates_xyz,
+                                  const amrex::Array<std::string, 3>& file_coordinates_xyz,
                                   const amrex::Geometry& geom,
                                   amrex::Real n_0,
                                   const int num_iteration,
-                                  const std::string species_name,
+                                  const std::string& species_name,
                                   const bool species_specified);
 #endif
 

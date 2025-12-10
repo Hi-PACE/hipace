@@ -19,10 +19,7 @@
 #include <openPMD/openPMD.hpp>
 #endif
 
-Laser::Laser (std::string name)
-{
-    m_name = name;
-}
+Laser::Laser (std::string name) : m_name{std::move(name)} {}
 
 void
 Laser::ReadParameters (const amrex::Geometry& laser_geom_3D)
@@ -155,7 +152,7 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
         }
 
         if (mesh.containsAttribute("angularFrequency")) {
-            m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+            m_init_lambda0 = amrex::Real(2) * MathConst::pi*PhysConstSI::c
                 / mesh.getAttribute("angularFrequency").get<double>();
         }
 
@@ -244,8 +241,8 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
     if (m_file_geometry == "xyt") {
         // Calculate the min and max of the grid from laser file
-        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
-        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
+        amrex::Real ymin_laser = amrex::Real(offset[1] + position[1]*spacing[1]);
+        amrex::Real xmin_laser = amrex::Real(offset[2] + position[2]*spacing[2]);
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0 && position[2] == 0);
 
 
@@ -253,18 +250,18 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
             for (int j = jmin; j <= domain.bigEnd(1); ++j) {
                 for (int i = imin; i <= domain.bigEnd(0); ++i) {
 
-                    const amrex::Real x = (i-imin)*dx + xmin;
-                    const amrex::Real xmid = (x - xmin_laser)/spacing[2];
+                    const amrex::Real x = amrex::Real(i-imin)*dx + xmin;
+                    const amrex::Real xmid = (x - xmin_laser)/amrex::Real(spacing[2]);
                     amrex::Real sx_cell[interp_order_xy+1];
                     const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
 
-                    const amrex::Real y = (j-jmin)*dy + ymin;
-                    const amrex::Real ymid = (y - ymin_laser)/spacing[1];
+                    const amrex::Real y = amrex::Real(j-jmin)*dy + ymin;
+                    const amrex::Real ymid = (y - ymin_laser)/amrex::Real(spacing[1]);
                     amrex::Real sy_cell[interp_order_xy+1];
                     const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
-                    const amrex::Real z = (k-kmin)*dz + zmin;
-                    const amrex::Real tmid = (zmax-z)/clight/spacing[0];
+                    const amrex::Real z = amrex::Real(k-kmin)*dz + zmin;
+                    const amrex::Real tmid = (zmax-z)/clight/amrex::Real(spacing[0]);
                     amrex::Real st_cell[interp_order_xy+1];
                     const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
@@ -293,26 +290,26 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
         } // End of 3 loops (1 per dimension) over laser array from simulation
     } else if (m_file_geometry == "xyz") {
         // Calculate the min and max of the grid from laser file
-        amrex::Real zmin_laser = offset[0] + position[0]*spacing[0];
-        amrex::Real ymin_laser = offset[1] + position[1]*spacing[1];
-        amrex::Real xmin_laser = offset[2] + position[2]*spacing[2];
+        amrex::Real zmin_laser = amrex::Real(offset[0] + position[0]*spacing[0]);
+        amrex::Real ymin_laser = amrex::Real(offset[1] + position[1]*spacing[1]);
+        amrex::Real xmin_laser = amrex::Real(offset[2] + position[2]*spacing[2]);
 
         for (int k = kmin; k <= domain.bigEnd(2); ++k) {
             for (int j = jmin; j <= domain.bigEnd(1); ++j) {
                 for (int i = imin; i <= domain.bigEnd(0); ++i) {
 
-                    const amrex::Real x = (i-imin)*dx + xmin;
-                    const amrex::Real xmid = (x - xmin_laser)/spacing[2];
+                    const amrex::Real x = amrex::Real(i-imin)*dx + xmin;
+                    const amrex::Real xmid = (x - xmin_laser)/amrex::Real(spacing[2]);
                     amrex::Real sx_cell[interp_order_xy+1];
                     const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
 
-                    const amrex::Real y = (j-jmin)*dy + ymin;
-                    const amrex::Real ymid = (y - ymin_laser)/spacing[1];
+                    const amrex::Real y = amrex::Real(j-jmin)*dy + ymin;
+                    const amrex::Real ymid = (y - ymin_laser)/amrex::Real(spacing[1]);
                     amrex::Real sy_cell[interp_order_xy+1];
                     const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
-                    const amrex::Real z = (k-kmin)*dz + zmin;
-                    const amrex::Real zmid = (z - zmin_laser)/spacing[0];
+                    const amrex::Real z = amrex::Real(k-kmin)*dz + zmin;
+                    const amrex::Real zmid = (z - zmin_laser)/amrex::Real(spacing[0]);
                     amrex::Real sz_cell[interp_order_xy+1];
                     const int k_cell = compute_shape_factor<interp_order_xy>(sz_cell, zmid);
 
@@ -344,23 +341,23 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
         // extent = {nmodes, nt, nr}
 
         // Calculate the min and max of the grid from laser file
-        amrex::Real rmin_laser = offset[1] + position[1]*spacing[1];
+        amrex::Real rmin_laser = amrex::Real(offset[1] + position[1]*spacing[1]);
         AMREX_ALWAYS_ASSERT(position[0] == 0 && position[1] == 0);
 
         for (int k = kmin; k <= domain.bigEnd(2); ++k) {
             for (int j = jmin; j <= domain.bigEnd(1); ++j) {
                 for (int i = imin; i <= domain.bigEnd(0); ++i) {
 
-                    const amrex::Real x = (i-imin)*dx + xmin;
-                    const amrex::Real y = (j-jmin)*dy + ymin;
+                    const amrex::Real x = amrex::Real(i-imin)*dx + xmin;
+                    const amrex::Real y = amrex::Real(j-jmin)*dy + ymin;
                     const amrex::Real r = std::sqrt(x*x + y*y);
                     const amrex::Real theta = std::atan2(y, x);
-                    const amrex::Real rmid = (r - rmin_laser)/spacing[1];
+                    const amrex::Real rmid = (r - rmin_laser)/amrex::Real(spacing[1]);
                     amrex::Real sr_cell[interp_order_xy+1];
                     const int i_cell = compute_shape_factor<interp_order_xy>(sr_cell, rmid);
 
-                    const amrex::Real z = (k-kmin)*dz + zmin;
-                    const amrex::Real tmid = (zmax-z)/clight/spacing[0];
+                    const amrex::Real z = amrex::Real(k-kmin)*dz + zmin;
+                    const amrex::Real tmid = (zmax-z)/clight/amrex::Real(spacing[0]);
                     amrex::Real st_cell[interp_order_xy+1];
                     const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
@@ -381,18 +378,19 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
                                     input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
                                 for (int im=1; im<=static_cast<int>(extent[0])/2; im++) {
                                     // cos(m*theta) part of the mode
+                                    const amrex::Real angle = amrex::Real(im) * theta;
                                     laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
-                                        std::cos(im*theta) * static_cast<amrex::Real>(
+                                        std::cos(angle) * static_cast<amrex::Real>(
                                         input_file_arr(i_cell+ir, k_cell+it, 2*im-1).real() * unitSI);
                                     laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
-                                        std::cos(im*theta) * static_cast<amrex::Real>(
+                                        std::cos(angle) * static_cast<amrex::Real>(
                                         input_file_arr(i_cell+ir, k_cell+it, 2*im-1).imag() * unitSI);
                                     // sin(m*theta) part of the mode
                                     laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
-                                        std::sin(im*theta) * static_cast<amrex::Real>(
+                                        std::sin(angle) * static_cast<amrex::Real>(
                                         input_file_arr(i_cell+ir, k_cell+it, 2*im).real() * unitSI);
                                     laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
-                                        std::sin(im*theta) * static_cast<amrex::Real>(
+                                        std::sin(angle) * static_cast<amrex::Real>(
                                         input_file_arr(i_cell+ir, k_cell+it, 2*im).imag() * unitSI);
                                 } // End of loop over modes of laser array from file
                             }
