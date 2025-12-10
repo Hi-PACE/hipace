@@ -454,7 +454,7 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
     } else if (m_solver_type == "fft") {
         AdvanceSliceFFT(dt, step);
     } else if (m_solver_type == "disable"){
-        InitData ();
+        InitSliceEnvelope(islice, WhichSlice::This);
     }
     else
     {
