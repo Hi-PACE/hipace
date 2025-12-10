@@ -509,8 +509,8 @@ IonizationModule (const int lev,
             [=] AMREX_GPU_DEVICE (int ip) {
 
             if(p_ion_mask[ip] != 0) {
-                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
-                const long pidx = pid + old_size;
+                const int pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
+                const int pidx = pid + old_size;
 
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
@@ -771,8 +771,8 @@ LaserIonization (const int islice,
                     uz = amrex::abs(A*A);
                 }
 
-                const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
-                const long pidx = pid + old_size;
+                const int pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
+                const int pidx = pid + old_size;
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
                 ptd_elec.id(pidx) = 2;
