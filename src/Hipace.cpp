@@ -730,7 +730,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // Advance laser slice by 1 step using chi
     // no MR for laser
-    m_multi_laser.AdvanceSlice(islice, m_fields, m_dt, step, m_3D_geom[0]);
+    //m_multi_laser.AdvanceSlice(islice, m_fields, m_dt, step, m_3D_geom[0]);
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
         m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
         m_multi_beam.ReorderParticles( WhichBeamSlice::Next, step, m_slice_geom[0]);
