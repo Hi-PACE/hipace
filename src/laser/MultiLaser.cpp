@@ -453,7 +453,9 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
         AdvanceSliceMG(dt, step);
     } else if (m_solver_type == "fft") {
         AdvanceSliceFFT(dt, step);
-    } else if (m_solver_type == "disable") return;
+    } else if (m_solver_type == "disable"){
+        InitData ();
+    }
     else
     {
         amrex::Abort("laser.solver_type must be fft or multigrid");
