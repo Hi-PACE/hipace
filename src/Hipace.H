@@ -283,6 +283,7 @@ public:
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
 #endif
+
     // Performance Counters
 
     /** total number of plasma particle pushes for performance printout */
