@@ -24,7 +24,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
                                             WhichSlice::This, {"Ez"});
         }
         overloaded = false;
-        hipace->m_salame_zeta_initial = islice * hipace->m_3D_geom[0].CellSize(2) +
+        hipace->m_salame_zeta_initial = amrex::Real(islice) * hipace->m_3D_geom[0].CellSize(2) +
             GetPosOffset(2, hipace->m_3D_geom[0], hipace->m_3D_geom[0].Domain());
     }
     last_islice = islice;
@@ -308,7 +308,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                     {Hipace::m_depos_order_xy},
                     int(idx_end - idx_begin),
                     [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
-                        const int ip = idx + idx_begin;
+                        const int ip = static_cast<int>(idx + idx_begin);
                         // only push plasma particles on their according MR level
                         if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
@@ -323,7 +323,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                             bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                         const amrex::Real q_mass_ratio = can_ionize ?
-                            ptd.idata(PlasmaIdx::ion_lev)[ip] * charge_mass_ratio
+                            amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]) * charge_mass_ratio
                             : charge_mass_ratio;
 
 #ifdef HIPACE_USE_AB5_PUSH
@@ -394,7 +394,7 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
     sum_Ez_only_salame /= sum_jz;
 
     // - 1 because this is for the Ez field of the next slice
-    const amrex::Real zeta = (islice-1) * hipace->m_3D_geom[0].CellSize(2) +
+    const amrex::Real zeta = amrex::Real(islice-1) * hipace->m_3D_geom[0].CellSize(2) +
                              GetPosOffset(2, hipace->m_3D_geom[0], hipace->m_3D_geom[0].Domain());
     // update target with user function
     sum_Ez_target = hipace->m_salame_target_func(

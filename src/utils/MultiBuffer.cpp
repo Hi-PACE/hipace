@@ -134,8 +134,8 @@ void MultiBuffer::initialize (int nslices, MultiBeam& beams, MultiLaser& laser) 
         }
 
         if (laser.UseLaser()) {
-            size_estimate += laser.GetLaserGeom().Domain().numPts()
-                * m_laser_ncomp * sizeof(amrex::Real);
+            size_estimate += double(laser.GetLaserGeom().Domain().numPts()
+                * m_laser_ncomp * sizeof(amrex::Real));
         }
 
         size_estimate /= 1024*1024*1024;
@@ -239,7 +239,7 @@ MultiBuffer::~MultiBuffer () {
         if (m_datanodes[slice].m_metadata_progress == comm_progress::ready_to_send) {
             MPI_Isend(
                 get_metadata_location(slice),
-                get_metadata_size(),
+                static_cast<int>(get_metadata_size()),
                 amrex::ParallelDescriptor::Mpi_typemap<std::size_t>::type(),
                 m_rank_send_to,
                 m_tag_metadata_start + slice,
@@ -254,7 +254,7 @@ MultiBuffer::~MultiBuffer () {
             } else {
                 MPI_Isend(
                     m_datanodes[slice].m_buffer,
-                    m_datanodes[slice].m_buffer_size,
+                    static_cast<int>(m_datanodes[slice].m_buffer_size),
                     amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
                     m_rank_send_to,
                     m_tag_buffer_start + slice,
@@ -336,7 +336,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking_recv,
         if (allow_metadata_send) {
             MPI_Isend(
                 get_metadata_location(slice),
-                get_metadata_size(),
+                static_cast<int>(get_metadata_size()),
                 amrex::ParallelDescriptor::Mpi_typemap<std::size_t>::type(),
                 m_rank_send_to,
                 m_tag_metadata_start + slice,
@@ -358,7 +358,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking_recv,
         } else if (allow_data_send) {
             MPI_Isend(
                 m_datanodes[slice].m_buffer,
-                m_datanodes[slice].m_buffer_size,
+                static_cast<int>(m_datanodes[slice].m_buffer_size),
                 amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
                 m_rank_send_to,
                 m_tag_buffer_start + slice,
@@ -391,7 +391,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking_recv,
         if (allow_metadata_recv) {
             MPI_Irecv(
                 get_metadata_location(slice),
-                get_metadata_size(),
+                static_cast<int>(get_metadata_size()),
                 amrex::ParallelDescriptor::Mpi_typemap<std::size_t>::type(),
                 m_rank_receive_from,
                 m_tag_metadata_start + slice,
@@ -453,7 +453,7 @@ void MultiBuffer::make_progress (int slice, bool is_blocking_recv,
             allocate_buffer(slice);
             MPI_Irecv(
                 m_datanodes[slice].m_buffer,
-                m_datanodes[slice].m_buffer_size,
+                static_cast<int>(m_datanodes[slice].m_buffer_size),
                 amrex::ParallelDescriptor::Mpi_typemap<storage_type>::type(),
                 m_rank_receive_from,
                 m_tag_buffer_start + slice,
@@ -697,8 +697,8 @@ MultiBuffer::BufferOffset MultiBuffer::get_buffer_offset (int slice, MultiBeam& 
     for (int b = 0; b < m_nbeams; ++b) {
         auto& beam = beams.getBeam(b);
         // Roundup the number of particles to a value that ensures proper alignment between types
-        const int num_particles_round_up = (get_metadata_location(slice)[b + 1]
-            + buffer_size_roundup - 1) / buffer_size_roundup * buffer_size_roundup;
+        const int num_particles_round_up = static_cast<int>((get_metadata_location(slice)[b + 1]
+            + buffer_size_roundup - 1) / buffer_size_roundup * buffer_size_roundup);
 
         // add offset for idcpu, if used
         if (beam.communicateIdCpuComponent()) {
@@ -855,7 +855,7 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
 
     for (int b = 0; b < m_nbeams; ++b) {
         auto& beam = beams.getBeam(b);
-        const int num_particles = get_metadata_location(slice)[b + 1];
+        const int num_particles = static_cast<int>(get_metadata_location(slice)[b + 1]);
         beam.resize(beam_slice, num_particles, 0);
         auto& soa = beam.getBeamSlice(beam_slice).GetStructOfArrays();
 

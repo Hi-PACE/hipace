@@ -28,7 +28,7 @@ namespace Parser {
                 "\"<var name>=<value>\" or \"<var name>=[<range begin>,<range end>,<num values>]\"."
                 " Got: \"" + s + "\"";
 
-            auto pos = s.find_first_of("=");
+            auto pos = s.find_first_of('=');
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(pos != std::string::npos, abort_str);
 

@@ -392,10 +392,10 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
         // chi near the boundaries is incorrect due to >0 deposition order.
         field_box.grow(-2*Fields::m_slices_nguards);
 
-        const amrex::Real pos_x_lo = field_box.smallEnd(0) * dx_field + poff_field_x;
-        const amrex::Real pos_x_hi = field_box.bigEnd(0) * dx_field + poff_field_x;
-        const amrex::Real pos_y_lo = field_box.smallEnd(1) * dy_field + poff_field_y;
-        const amrex::Real pos_y_hi = field_box.bigEnd(1) * dy_field + poff_field_y;
+        const amrex::Real pos_x_lo = amrex::Real(field_box.smallEnd(0)) * dx_field + poff_field_x;
+        const amrex::Real pos_x_hi = amrex::Real(field_box.bigEnd(0)) * dx_field + poff_field_x;
+        const amrex::Real pos_y_lo = amrex::Real(field_box.smallEnd(1)) * dy_field + poff_field_y;
+        const amrex::Real pos_y_hi = amrex::Real(field_box.bigEnd(1)) * dy_field + poff_field_y;
 
         // the indexes of the laser box where the fields box ends
         const int x_lo = amrex::Math::ceil((pos_x_lo - poff_laser_x) * dx_laser_inv);
@@ -474,7 +474,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
 
     const PhysConst phc = get_phys_const();
     const amrex::Real c = phc.c;
-    const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
+    const amrex::Real k0 = 2._rt * MathConst::pi/m_lambda0;
     const bool do_avg_rhs = m_MG_average_rhs;
 
     amrex::Real acoeff_real_scalar = 0._rt;
@@ -654,7 +654,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
 
     const PhysConst phc = get_phys_const();
     const amrex::Real c = phc.c;
-    const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
+    const amrex::Real k0 = 2._rt * MathConst::pi/m_lambda0;
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -792,8 +792,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         m_forward_fft.Execute();
 
         // Multiply by appropriate factors in Fourier space
-        amrex::Real dkx = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(0);
-        amrex::Real dky = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(1);
+        amrex::Real dkx = 2._rt * MathConst::pi/m_laser_geom_3D.ProbLength(0);
+        amrex::Real dky = 2._rt * MathConst::pi/m_laser_geom_3D.ProbLength(1);
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
@@ -803,10 +803,10 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
             to2D(bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 // divide rhs_fourier by -(k^2+a)
-                amrex::Real kx = (i<imid) ? dkx*i : dkx*(i-Nx);
-                amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
-                const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
-                    1._rt/(kx*kx + ky*ky + acoeff) : 0.;
+                amrex::Real kx = (i<imid) ? dkx*amrex::Real(i) : dkx*amrex::Real(i-Nx);
+                amrex::Real ky = (j<jmid) ? dky*amrex::Real(j) : dky*amrex::Real(j-Ny);
+                const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0._rt ?
+                    1._rt/(kx*kx + ky*ky + acoeff) : 0._rt;
                 rhs_fourier_arr(i,j) *= -inv_k2a;
             });
 
@@ -816,7 +816,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         // Normalize and store solution in np1j00[0]. Guard cells are filled with 0s.
         amrex::Box grown_bx = bx;
         grown_bx.grow(m_slices_nguards);
-        const amrex::Real inv_numPts = 1./bx.numPts();
+        const amrex::Real inv_numPts = 1._rt / amrex::Real(bx.numPts());
         amrex::ParallelFor(
             to2D(grown_bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
@@ -881,9 +881,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    const amrex::Real x = i * dx_arr[0] + poff_x;
-                    const amrex::Real y = j * dx_arr[1] + poff_y;
-                    const amrex::Real z = islice * dx_arr[2] + poff_z;
+                    const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x;
+                    const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y;
+                    const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z;
                     if (ilaser == 0) {
                         arr(i, j, k, comp ) = 0._rt;
                         arr(i, j, k, comp + 1 ) = 0._rt;
@@ -913,9 +913,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 bx,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k)
                 {
-                    const amrex::Real x = i * dx_arr[0] + poff_x - x0;
-                    const amrex::Real y = j * dx_arr[1] + poff_y - y0;
-                    const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
+                    const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x - x0;
+                    const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y - y0;
+                    const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z - z0;
                     // Coordinate rotation in yz plane for a laser propagating at an angle.
                     const amrex::Real yp = std::cos(propagation_angle_yz) * y \
                         - std::sin( propagation_angle_yz ) * z;
@@ -974,7 +974,7 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
     const amrex::Real dx = m_laser_geom_3D.CellSize(0);
     const amrex::Real dy = m_laser_geom_3D.CellSize(1);
     const amrex::Real dz = m_laser_geom_3D.CellSize(2);
-    const amrex::Real dz2i = 1./(2. * dz);
+    const amrex::Real dz2i = 1._rt/(2._rt * dz);
     const amrex::Real dxdydz = dx * dy * dz;
 
     const int xmid_lo = m_laser_geom_3D.Domain().smallEnd(0) + (m_laser_geom_3D.Domain().length(0) - 1) / 2;
@@ -1003,8 +1003,8 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
                      - abssq(arr(i,j, n00jp2_r), arr(i,j, n00jp2_i))
                      + abssq(arr(i,j, n00jp1_r), arr(i,j, n00jp1_i))
                     ) * dz2i;
-                const amrex::Real x = i * dx + poff_x;
-                const amrex::Real y = j * dy + poff_y;
+                const amrex::Real x = amrex::Real(i) * dx + poff_x;
+                const amrex::Real y = amrex::Real(j) * dy + poff_y;
 
                 const bool is_on_axis = (i==xmid_lo || i==xmid_hi) && (j==ymid_lo || j==ymid_hi);
                 const Complex aaxis{is_on_axis ? areal : 0._rt, is_on_axis ? aimag : 0._rt};

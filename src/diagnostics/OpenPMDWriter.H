@@ -62,7 +62,7 @@ private:
      */
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration& iteration,
                                 const amrex::Geometry& geom,
-                                const amrex::Vector< std::string > beamnames);
+                                const amrex::Vector<std::string>& beamnames);
 
     /** \brief writing openPMD field data
      *
@@ -127,7 +127,7 @@ public:
      * \param[in] beams multi beam container which is written to openPMD file
      * \param[in] beamnames list of the names of the beam to be written to file
      */
-    void InitBeamData (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
+    void InitBeamData (MultiBeam& beams, const amrex::Vector<std::string>& beamnames);
 
     /** \brief writing openPMD beam data
      *
@@ -139,7 +139,7 @@ public:
      */
     void WriteBeamDiagnostics (
         MultiBeam& a_multi_beam, const amrex::Real physical_time, const int output_step,
-        const amrex::Vector< std::string > beamnames,
+        const amrex::Vector<std::string>& beamnames,
         amrex::Vector<amrex::Geometry> const& geom3D);
 
     /** \brief writing openPMD field data
@@ -158,7 +158,7 @@ public:
      * \param[in] beams multi beam container which is written to openPMD file
      * \param[in] beamnames list of the names of the beam to be written to file
      */
-    void CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
+    void CopyBeams (MultiBeam& beams, const amrex::Vector<std::string>& beamnames);
 
     /** \brief Resets and flushes the openPMD series of all levels
      */

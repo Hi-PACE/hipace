@@ -256,7 +256,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 // if field_data was specified through <diag name>,
                 // assert that all components exist in the geometry
                 amrex::Abort("Unknown diagnostics field_data '" + comp_name +
-                             "' in base_geometry '" + base_geom_name + "'!\n" +
+                             "' in base_geometry '" + base_geom_name + "'!\n" + // NOLINT(performance-inefficient-string-concatenation)
                              all_comps_error_str.str());
             } else {
                 // if field_data was specified through diagnostic,
@@ -266,7 +266,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         }
 
         fd.m_comps_output.assign(comps_set.begin(), comps_set.end());
-        fd.m_nfields = fd.m_comps_output.size();
+        fd.m_nfields = static_cast<int>(fd.m_comps_output.size());
 
         // copy the indexes of m_comps_output to the GPU
         fd.m_comps_output_idx.resize(fd.m_nfields);
@@ -308,7 +308,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
     if(m_output_beam_names.empty()) {
         m_output_beam_names = all_beam_names;
     } else {
-        for(std::string beam_name : m_output_beam_names) {
+        for(const std::string& beam_name : m_output_beam_names) {
             if(beam_name == "all" || beam_name == "All") {
                 m_output_beam_names = all_beam_names;
                 break;
@@ -390,10 +390,10 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         amrex::RealBox diag_domain = geom.ProbDomain();
         for(int dir=0; dir<=2; ++dir) {
             // make diag_domain correspond to box
-            diag_domain.setLo(dir, geom.ProbLo(dir)
-                + (domain.smallEnd(dir) - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
-            diag_domain.setHi(dir, geom.ProbHi(dir)
-                + (domain.bigEnd(dir) - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
+            diag_domain.setLo(dir, geom.ProbLo(dir) + (amrex::Real(domain.smallEnd(dir))
+                - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
+            diag_domain.setHi(dir, geom.ProbHi(dir) + (amrex::Real(domain.bigEnd(dir))
+                - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
         }
         // trim the 3D box to slice box for slice IO
         TrimIOBox(fd.m_slice_dir, domain, diag_domain);
@@ -424,10 +424,11 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 void
 Diagnostic::TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbox_3d)
 {
+    using namespace amrex::literals;
     if (slice_dir >= 0){
-        const amrex::Real half_cell_size = rbox_3d.length(slice_dir) /
-                                           ( 2. * domain_3d.length(slice_dir) );
-        const amrex::Real mid = (rbox_3d.lo(slice_dir) + rbox_3d.hi(slice_dir)) / 2.;
+        const amrex::Real half_cell_size = amrex::Real(rbox_3d.length(slice_dir)) /
+                                           (2._rt * domain_3d.length(slice_dir) );
+        const amrex::Real mid = (rbox_3d.lo(slice_dir) + rbox_3d.hi(slice_dir)) / 2._rt;
         // Flatten the box down to 1 cell in the approprate direction.
         domain_3d.setSmall(slice_dir, 0);
         domain_3d.setBig  (slice_dir, 0);

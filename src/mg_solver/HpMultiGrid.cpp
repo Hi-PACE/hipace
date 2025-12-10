@@ -1051,11 +1051,12 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 MultiGrid::MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain, int a_system_type)
-    : m_system_type(a_system_type), m_dx(dx), m_dy(dy)
+    : m_system_type(a_system_type),
+      m_num_comps(get_num_comps(a_system_type)),
+      m_num_comps_acf(get_num_comps_acf(a_system_type)),
+      m_dx(dx),
+      m_dy(dy)
 {
-    m_num_comps = get_num_comps(m_system_type);
-    m_num_comps_acf = get_num_comps_acf(m_system_type);
-
     amrex::IntVect const a_domain_len = a_domain.length();
 
     AMREX_ALWAYS_ASSERT(a_domain_len[2] == 1 && a_domain.cellCentered() &&
@@ -1081,7 +1082,7 @@ MultiGrid::MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain, int a
             break;
         }
     }
-    m_max_level = m_domain.size()-1;
+    m_max_level = static_cast<int>(m_domain.size()-1);
 #if defined(AMREX_USE_GPU)
     auto r = std::find_if(std::begin(m_domain), std::end(m_domain),
                           [=] (amrex::Box const& b) -> bool
@@ -1381,8 +1382,6 @@ MultiGrid::solve_doit (amrex::FArrayBox& a_sol, amrex::FArrayBox const& a_rhs,
         bool converged = true;
 
         for (int iter = 0; iter < nummaxiter; ++iter) {
-
-            converged = false;
 
             // do one vcycle iteration with the fist 4 Gauss-Seidel iterations omitted
             // from the beginning and instead done after the vcycle to also get the residual
