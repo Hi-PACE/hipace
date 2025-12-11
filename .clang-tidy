@@ -1,0 +1,19 @@
+# Enabled checks:
+#
+# - all the checks of the bugprone-* group except:
+#   easily-swappable-parameters, implicit-widening-of-multiplication-result,
+#   misplaced-widening-cast, narrowing-conversions
+#
+# - cppcoreguidelines-avoid-goto
+#
+Checks: '
+    -*,
+    bugprone-*,
+        -bugprone-easily-swappable-parameters,
+        -bugprone-implicit-widening-of-multiplication-result,
+        -bugprone-misplaced-widening-cast,
+        -bugprone-narrowing-conversions,
+    cppcoreguidelines-avoid-goto
+    '
+
+HeaderFilterRegex: 'src[a-z_A-Z0-9\/]+\.H$'

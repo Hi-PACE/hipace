@@ -24,7 +24,6 @@
 
 namespace
 {
-#ifdef HIPACE_USE_OPENPMD
     /** \brief Adds a single beam particle
      *
      * \param[in,out] ptd real and int beam data
@@ -37,7 +36,6 @@ namespace
      * \param[in] weight weight of the single particle
      * \param[in] pid particle ID to be assigned to the particle
      * \param[in] ip index of the particle
-     * \param[in] speed_of_light speed of light in the current units
      * \param[in] enforceBC functor to enforce the boundary condition
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -47,20 +45,20 @@ namespace
         const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz,
         const amrex::Real& sx, const amrex::Real& sy, const amrex::Real& sz,
         const amrex::Real& weight, const amrex::Long pid, const amrex::Long ip,
-        const amrex::Real& speed_of_light, const EnforceBC& enforceBC, bool do_spin) noexcept
+        const EnforceBC& enforceBC, bool do_spin) noexcept
     {
         amrex::Real xp = x;
         amrex::Real yp = y;
-        amrex::Real uxp = ux * speed_of_light;
-        amrex::Real uyp = uy * speed_of_light;
+        amrex::Real uxp = ux;
+        amrex::Real uyp = uy;
         if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
 
-        ptd.rdata(BeamIdx::x  )[ip] = xp;
-        ptd.rdata(BeamIdx::y  )[ip] = yp;
-        ptd.rdata(BeamIdx::z  )[ip] = z;
-        ptd.rdata(BeamIdx::ux )[ip] = uxp;
-        ptd.rdata(BeamIdx::uy )[ip] = uyp;
-        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
+        ptd.rdata(BeamIdx::x )[ip] = xp;
+        ptd.rdata(BeamIdx::y )[ip] = yp;
+        ptd.rdata(BeamIdx::z )[ip] = z;
+        ptd.rdata(BeamIdx::ux)[ip] = uxp;
+        ptd.rdata(BeamIdx::uy)[ip] = uyp;
+        ptd.rdata(BeamIdx::uz)[ip] = uz;
         if (do_spin) {
             ptd.m_runtime_rdata[0][ip] = sx;
             ptd.m_runtime_rdata[1][ip] = sy;
@@ -71,7 +69,6 @@ namespace
         ptd.idcpu(ip) = pid + ip;
         ptd.id(ip).make_valid();
     }
-#endif // HIPACE_USE_OPENPMD
 
     /** \brief Adds a single beam particle into the per-slice BeamTile
      *
@@ -85,7 +82,6 @@ namespace
      * \param[in] weight weight of the single particle
      * \param[in] pid particle ID to be assigned to the particle at index 0
      * \param[in] ip index of the particle
-     * \param[in] speed_of_light speed of light in the current units
      * \param[in] enforceBC functor to enforce the boundary condition
      * \param[in] is_valid if the particle is valid
      */
@@ -94,22 +90,22 @@ namespace
         const BeamTile::ParticleTileDataType& ptd, const amrex::Real x,
         const amrex::Real y, const amrex::Real z, const amrex::Real ux, const amrex::Real uy,
         const amrex::Real uz, const amrex::Real weight, const amrex::Long pid,
-        const amrex::Long ip, const amrex::Real speed_of_light, const EnforceBC& enforceBC,
+        const amrex::Long ip, const EnforceBC& enforceBC,
         const bool is_valid=true) noexcept
     {
         amrex::Real xp = x;
         amrex::Real yp = y;
-        amrex::Real uxp = ux * speed_of_light;
-        amrex::Real uyp = uy * speed_of_light;
+        amrex::Real uxp = ux;
+        amrex::Real uyp = uy;
         if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
 
-        ptd.rdata(BeamIdx::x  )[ip] = xp;
-        ptd.rdata(BeamIdx::y  )[ip] = yp;
-        ptd.rdata(BeamIdx::z  )[ip] = z;
-        ptd.rdata(BeamIdx::ux )[ip] = uxp;
-        ptd.rdata(BeamIdx::uy )[ip] = uyp;
-        ptd.rdata(BeamIdx::uz )[ip] = uz * speed_of_light;
-        ptd.rdata(BeamIdx::w  )[ip] = is_valid ? std::abs(weight) : amrex::Real{0};
+        ptd.rdata(BeamIdx::x )[ip] = xp;
+        ptd.rdata(BeamIdx::y )[ip] = yp;
+        ptd.rdata(BeamIdx::z )[ip] = z;
+        ptd.rdata(BeamIdx::ux)[ip] = uxp;
+        ptd.rdata(BeamIdx::uy)[ip] = uyp;
+        ptd.rdata(BeamIdx::uz)[ip] = uz;
+        ptd.rdata(BeamIdx::w )[ip] = is_valid ? std::abs(weight) : amrex::Real{0};
 
         ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
         ptd.idata(BeamIdx::mr_level)[ip] = 0;
@@ -300,8 +296,6 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
     const uint64_t pid = m_id64;
     m_id64 += num_to_add;
 
-    const amrex::Real speed_of_light = get_phys_const().c;
-
     const auto enforceBC = EnforceBC();
 
     amrex::ParallelForRNG(to2D(slice_box),
@@ -347,7 +341,7 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
                 const amrex::Real weight = density * scale_fac;
 
                 AddOneBeamParticleSlice(ptd, x, y, z, u[0], u[1], u[2], weight,
-                                        pid, pidx, speed_of_light, enforceBC, true);
+                                        pid, pidx, enforceBC, true);
 
                 ++pidx;
             }
@@ -406,8 +400,6 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
 
     if (num_to_add == 0) return;
 
-    const amrex::Real clight = get_phys_const().c;
-
     auto& particle_tile = getBeamSlice(which_slice);
 
     // Access particles' SoA
@@ -463,21 +455,21 @@ InitBeamFixedWeightSlice (int slice, int which_slice)
             {
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos+y,
                                         z_central, u[0], u[1], u[2], weight,
-                                        pid, i, clight, enforceBC, is_valid);
+                                        pid, i, enforceBC, is_valid);
 
             } else {
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos+y,
                                         z_central, u[0], u[1], u[2], weight,
-                                        pid, 4*i, clight, enforceBC, is_valid);
+                                        pid, 4*i, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos+y,
                                         z_central, -u[0], u[1], u[2], weight,
-                                        pid, 4*i+1, clight, enforceBC, is_valid);
+                                        pid, 4*i+1, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos+x, cental_y_pos-y,
                                         z_central, u[0], -u[1], u[2], weight,
-                                        pid, 4*i+2, clight, enforceBC, is_valid);
+                                        pid, 4*i+2, enforceBC, is_valid);
                 AddOneBeamParticleSlice(ptd, cental_x_pos-x, cental_y_pos-y,
                                         z_central, -u[0], -u[1], u[2], weight,
-                                        pid, 4*i+3, clight, enforceBC, is_valid);
+                                        pid, 4*i+3, enforceBC, is_valid);
             }
         });
 
@@ -620,7 +612,6 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         // Access particles' SoA
         const auto ptd = particle_tile.getParticleTileData();
 
-        const amrex::Real clight = get_phys_const().c;
         const bool do_symmetrize = m_do_symmetrize;
         const bool peak_density_is_specified = m_peak_density_is_specified;
         const amrex::Real z_foc = m_z_foc;
@@ -687,22 +678,94 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
                 if (!do_symmetrize)
                 {
                     AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
-                                            z, ux, uy, uz, weight, pid, i, clight, enforceBC, is_valid);
+                                            z, ux, uy, uz, weight, pid, i, enforceBC, is_valid);
 
                 } else {
                     AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
-                                            z, ux, uy, uz, weight, pid, 4*i, clight, enforceBC, is_valid);
+                                            z, ux, uy, uz, weight, pid, 4*i, enforceBC, is_valid);
                     AddOneBeamParticleSlice(ptd, x_mean-x, y_mean+y,
-                                            z, -ux, uy, uz, weight, pid, 4*i+1, clight, enforceBC, is_valid);
+                                            z, -ux, uy, uz, weight, pid, 4*i+1, enforceBC, is_valid);
                     AddOneBeamParticleSlice(ptd, x_mean+x, y_mean-y,
-                                            z, ux, -uy, uz, weight, pid, 4*i+2, clight, enforceBC, is_valid);
+                                            z, ux, -uy, uz, weight, pid, 4*i+2, enforceBC, is_valid);
                     AddOneBeamParticleSlice(ptd, x_mean-x, y_mean-y,
-                                            z, -ux, -uy, uz, weight, pid, 4*i+3, clight, enforceBC, is_valid);
+                                            z, -ux, -uy, uz, weight, pid, 4*i+3, enforceBC, is_valid);
                 }
             });
 
         loc_index += num_to_add;
     }
+}
+
+void
+BeamParticleContainer::
+InitBeamFromList3D ()
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFromList3D()");
+    using namespace amrex::literals;
+
+    if (!Hipace::HeadRank() || m_num_particles_list == 0) { return; }
+
+    const bool do_spin_tracking = m_do_spin_tracking;
+
+    amrex::Gpu::PinnedVector<amrex::Real> init_x, init_y, init_z, init_ux, init_uy, init_uz, init_w;
+    amrex::Gpu::PinnedVector<amrex::Real> init_sx, init_sy, init_sz;
+
+    amrex::ParmParse pp(m_name);
+    getWithParser(pp, "init_pos_x", init_x);
+    getWithParser(pp, "init_pos_y", init_y);
+    getWithParser(pp, "init_pos_z", init_z);
+    getWithParser(pp, "init_ux", init_ux);
+    getWithParser(pp, "init_uy", init_uy);
+    getWithParser(pp, "init_uz", init_uz);
+    getWithParser(pp, "init_weight", init_w);
+    if (do_spin_tracking) {
+        getWithParser(pp, "init_sx", init_sx);
+        getWithParser(pp, "init_sy", init_sy);
+        getWithParser(pp, "init_sz", init_sz);
+    }
+
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_x.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_y.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_z.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_ux.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_uy.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_uz.size()) == m_num_particles_list);
+    AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_w.size()) == m_num_particles_list);
+    if (do_spin_tracking) {
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sx.size()) == m_num_particles_list);
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sy.size()) == m_num_particles_list);
+        AMREX_ALWAYS_ASSERT(static_cast<amrex::Long>(init_sz.size()) == m_num_particles_list);
+    }
+
+    const amrex::Real *p_x=init_x.dataPtr(), *p_y=init_y.dataPtr(), *p_z=init_z.dataPtr();
+    const amrex::Real *p_ux=init_ux.dataPtr(), *p_uy=init_uy.dataPtr(), *p_uz=init_uz.dataPtr();
+    const amrex::Real *p_w=init_w.dataPtr();
+    const amrex::Real *p_sx=init_sx.dataPtr(), *p_sy=init_sy.dataPtr(), *p_sz=init_sz.dataPtr();
+
+    auto& particle_tile = getBeamInitSlice();
+    auto old_size = particle_tile.size();
+    auto new_size = old_size + m_num_particles_list;
+    particle_tile.resize(new_size);
+
+    const auto ptd = particle_tile.getParticleTileData();
+    const auto enforceBC = EnforceBC();
+
+    const uint64_t pid = m_id64;
+    m_id64 += m_num_particles_list;
+
+    amrex::ParallelFor(amrex::Long(m_num_particles_list),
+        [=] AMREX_GPU_DEVICE (const amrex::Long i) {
+            AddOneBeamParticle(ptd,
+                p_x[i], p_y[i], p_z[i],
+                p_ux[i], p_uy[i], p_uz[i],
+                do_spin_tracking ? p_sx[i] : 0.,
+                do_spin_tracking ? p_sy[i] : 0.,
+                do_spin_tracking ? p_sz[i] : 0.,
+                p_w[i],
+                pid, i, enforceBC, do_spin_tracking);
+        });
+
+    amrex::Gpu::streamSynchronize();
 }
 
 #ifdef HIPACE_USE_OPENPMD
@@ -1142,7 +1205,7 @@ InitBeamFromFile (const std::string input_file,
                 do_spin_tracking ? static_cast<amrex::Real>(s_y_ptr[i]) : 0.,
                 do_spin_tracking ? static_cast<amrex::Real>(s_z_ptr[i]) : 0.,
                 static_cast<amrex::Real>(w_w_ptr[i] * unit_ww),
-                pid, i, phys_const.c, enforceBC, do_spin_tracking);
+                pid, i, enforceBC, do_spin_tracking);
         });
 
     amrex::Gpu::streamSynchronize();

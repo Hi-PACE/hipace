@@ -10,9 +10,6 @@ import numpy as np
 import math
 from openpmd_viewer import OpenPMDTimeSeries
 import scipy.constants as scc
-
-import sys
-sys.path.append("../../tools/")
 import read_insitu_diagnostics as diag
 
 
@@ -74,17 +71,17 @@ print(f"fraction_hipace_circular = {fraction_circular}")
 
 # in-situ diagnostics for calculation of the temperature in all directions in circular polarization
 insitu_path_linear = f'./{args.third}/reduced_elec.0000.txt'
-all_data_linear = diag.read_file(insitu_path_linear)
-Tx2 = all_data_linear['[ux^2]'][0,0]*scc.m_e*scc.c**2/scc.e
-Ty2 = all_data_linear['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
-Tz2 = all_data_linear['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
+ir_linear = diag.InSituReader(insitu_path_linear)
+Tx2 = ir_linear.slice_data('[ux^2]')[0,0]*scc.m_e*scc.c**2/scc.e
+Ty2 = ir_linear.slice_data('[uy^2]')[0,0]*scc.m_e*scc.c**2/scc.e
+Tz2 = ir_linear.slice_data('[uz^2]')[0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_linear = 1./3*(Tx2+Ty2+Tz2)
 
 insitu_path_circular = f'./{args.fourth}/reduced_elec.0000.txt'
-all_data_circular = diag.read_file(insitu_path_circular)
-Tx2 = all_data_circular['[ux^2]'][0,0]*scc.m_e*scc.c**2/scc.e
-Ty2 = all_data_circular['[uy^2]'][0,0]*scc.m_e*scc.c**2/scc.e
-Tz2 = all_data_circular['[uz^2]'][0,0]*scc.m_e*scc.c**2/scc.e
+ir_circular = diag.InSituReader(insitu_path_circular)
+Tx2 = ir_circular.slice_data('[ux^2]')[0,0]*scc.m_e*scc.c**2/scc.e
+Ty2 = ir_circular.slice_data('[uy^2]')[0,0]*scc.m_e*scc.c**2/scc.e
+Tz2 = ir_circular.slice_data('[uz^2]')[0,0]*scc.m_e*scc.c**2/scc.e
 temp_eV_circular = 1./3*(Tx2+Ty2+Tz2)
 
 # calculation of temperature with OpenPMD-viewer diagnostics

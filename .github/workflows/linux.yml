@@ -38,6 +38,7 @@ jobs:
           ccache-linux-gccompompi-
     - name: Build & Install
       run: |
+        pip install -U -e ./tools
         cmake -S . -B build                        \
             -DHiPACE_COMPUTE=OMP                   \
             -DCMAKE_CXX_STANDARD=17                \
@@ -69,6 +70,7 @@ jobs:
           ccache-linux-gccnompi-
     - name: Build & Install
       run: |
+        pip install -U -e ./tools
         cmake -S . -B build             \
             -DHiPACE_MPI=OFF            \
             -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -76,22 +78,3 @@ jobs:
         cmake --build build -j 2
     - name: Run Tests
       run: ctest --test-dir build --output-on-failure
-
-# enable again when we open-source (free core-hours for GH Actions)
-#
-#  linux_clang7:
-#    name: Clang@7 C++17 OMPI
-#    runs-on: ubuntu-latest
-#    steps:
-#    - uses: actions/checkout@v4
-#    - name: Dependencies
-#      run: .github/workflows/setup/ubuntu_clang.sh
-#    - name: Build & Install
-#      run: |
-#        mkdir build
-#        cd build
-#        cmake ..                                           \
-#            -DCMAKE_C_COMPILER=$(which clang-7)            \
-#            -DCMAKE_CXX_COMPILER=$(which clang++-7)
-#        make -j 2 VERBOSE=ON
-#        ctest --output-on-failure

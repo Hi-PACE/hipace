@@ -74,8 +74,6 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
     bool normalized_units = Hipace::m_normalized_units;
 
     const amrex::Real clight = cst.c;
-    const amrex::Real inv_c = 1.0_rt / cst.c;
-    const amrex::Real inv_c2 = 1.0_rt / ( cst.c * cst.c );
     constexpr amrex::Real inv_c_SI = 1.0_rt / PhysConstSI::c;
     constexpr amrex::Real inv_c2_SI = 1.0_rt / ( PhysConstSI::c * PhysConstSI::c );
 
@@ -135,7 +133,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
                         indices1, indices1,
                         ux1, uy1, psi1, ux1, uy1, psi1, w1, w1, ion_lev1, ion_lev1,
                         q1, q1, m1, m1, -1.0_rt, -1.0_rt, can_ionize1, can_ionize1,
-                        dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
+                        dt, CoulombLog, inv_dV, clight, inv_c_SI, inv_c2_SI,
                         normalized_units, background_density_SI, is_same_species, false, engine );
                 }
                 );
@@ -226,7 +224,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
                         indices1, indices2,
                         ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev1, ion_lev2,
                         q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
-                        dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
+                        dt, CoulombLog, inv_dV, clight, inv_c_SI, inv_c2_SI,
                         normalized_units, background_density_SI, is_same_species, false, engine );
                 }
                 );
@@ -253,8 +251,6 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     bool normalized_units = Hipace::m_normalized_units;
 
     const amrex::Real clight = cst.c;
-    const amrex::Real inv_c = 1.0_rt / cst.c;
-    const amrex::Real inv_c2 = 1.0_rt / ( cst.c * cst.c );
     constexpr amrex::Real inv_c_SI = 1.0_rt / PhysConstSI::c;
     constexpr amrex::Real inv_c2_SI = 1.0_rt / ( PhysConstSI::c * PhysConstSI::c );
 
@@ -339,7 +335,7 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
                     indices1, indices2,
                     ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev2, ion_lev2, // passing ion_lev2 for beam particles, will never be used
                     q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
-                    dt, CoulombLog, inv_dV, clight, inv_c, inv_c_SI, inv_c2, inv_c2_SI,
+                    dt, CoulombLog, inv_dV, clight, inv_c_SI, inv_c2_SI,
                     normalized_units, background_density_SI, false, true, engine );
             }
             );

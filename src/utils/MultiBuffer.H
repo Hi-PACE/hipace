@@ -136,11 +136,13 @@ private:
 
     // calculate distance of a and b in the periodic range [0,m_nslices) with
     // a barrier at current_slice
-    int periodic_distance (int current_slice, int a, int b) const;
+    [[nodiscard]] int
+    periodic_distance (int current_slice, int a, int b) const;
 
     // calculate min of a and b in the periodic range [0,m_nslices) with
     // a barrier at current_slice
-    int periodic_min (int current_slice, int a, int b) const;
+    [[nodiscard]] int
+    periodic_min (int current_slice, int a, int b) const;
 
     // send some dummy messages so MPI can pre-register the memory
     void pre_register_memory ();

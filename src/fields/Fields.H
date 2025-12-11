@@ -104,7 +104,8 @@ public:
     /** get function for the 2D slices (const version)
      * \param[in] lev MR level
      */
-    const amrex::MultiFab& getSlices (int lev) const {return m_slices[lev]; }
+    [[nodiscard]] const amrex::MultiFab&
+    getSlices (int lev) const {return m_slices[lev]; }
     /** get amrex::MultiFab of a field in a slice
      * \param[in] lev MR level
      * \param[in] islice slice index
@@ -465,9 +466,7 @@ private:
     /** Class to handle transverse FFT Poisson solver on 1 slice */
     amrex::Vector<std::unique_ptr<FFTPoissonSolver>> m_poisson_solver;
     /** Stores temporary values for z interpolation in Fields::Copy */
-    amrex::Gpu::DeviceVector<amrex::Real> m_rel_z_vec;
-    /** Stores temporary values for z interpolation in Fields::Copy on the CPU */
-    amrex::Gpu::PinnedVector<amrex::Real> m_rel_z_vec_cpu;
+    amrex::Gpu::Buffer<amrex::Real> m_rel_z_vec;
     /** If the explicit solver is being used */
     bool m_explicit = false;
     /** If any plasma species has a neutralizing background */

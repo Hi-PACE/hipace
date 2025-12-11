@@ -285,12 +285,14 @@ InitParticles (const amrex::RealVect& a_u_std,
                 amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
                 amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
 
+                const amrex::Real density = density_func(x, y, c_t);
+
                 const amrex::Real rsq = x*x + y*y;
                 if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
                     y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
                     rsq > radius_sq ||
                     rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                    density_func(x, y, c_t) <= min_density) return;
+                    density <= min_density) return;
 
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
@@ -303,23 +305,23 @@ InitParticles (const amrex::RealVect& a_u_std,
                 if (use_fine_patch) {
                     const int fine_loc = arr_fine(i, j, comp_a);
                     if (fine_loc == 0) {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[0];
+                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
                     } else if (fine_loc <= fine_transition_cells + 1) {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[1];
+                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[1];
                     } else {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[2];
+                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[2];
                     }
                 } else {
-                    ptd.rdata(PlasmaIdx::w)[pidx] = density_func(x, y, c_t) * scale_fac_lev[0];
+                    ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
                 }
 
-                ptd.rdata(PlasmaIdx::ux)[pidx] = u[0] * c_light;
-                ptd.rdata(PlasmaIdx::uy)[pidx] = u[1] * c_light;
+                ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
+                ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
                 ptd.rdata(PlasmaIdx::psi)[pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
                 ptd.rdata(PlasmaIdx::x_prev)[pidx] = x;
                 ptd.rdata(PlasmaIdx::y_prev)[pidx] = y;
-                ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0] * c_light;
-                ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1] * c_light;
+                ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0];
+                ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1];
                 ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
@@ -454,38 +456,25 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_laser_dp_prefactor.resize(ion_atomic_number);
     m_laser_dp_second_prefactor.resize(ion_atomic_number);
 
-    amrex::Gpu::PinnedVector<amrex::Real> h_adk_power(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_adk_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_adk_exp_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_laser_adk_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_laser_dp_prefactor(ion_atomic_number);
-    amrex::Gpu::PinnedVector<amrex::Real> h_laser_dp_second_prefactor(ion_atomic_number);
-
     for (int i=0; i<ion_atomic_number; ++i)
     {
         const amrex::Real n_eff = (i+1) * std::sqrt(UH/h_ionization_energies[i]);
         const amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
                          * std::tgamma(n_eff-l_eff));
-        h_adk_power[i] = -(2 * n_eff - 1.);
+        m_adk_power[i] = -(2 * n_eff - 1.);
         const amrex::Real Uion = h_ionization_energies[i];
-        h_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2.*UH) )
+        m_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2.*UH) )
             * std::pow(2*std::pow((Uion/UH),3./2.)*Ea,2*n_eff - 1);
-        h_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
-        h_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
-        h_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
-        h_laser_dp_second_prefactor[i] = 2.*ion_atomic_number * std::sqrt(UH/Uion) - 1.;
+        m_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
+        m_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
+        m_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
+        m_laser_dp_second_prefactor[i] = 2.*ion_atomic_number * std::sqrt(UH/Uion) - 1.;
     }
 
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_adk_power.begin(), h_adk_power.end(), m_adk_power.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_adk_prefactor.begin(), h_adk_prefactor.end(), m_adk_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_adk_exp_prefactor.begin(), h_adk_exp_prefactor.end(), m_adk_exp_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-        h_laser_adk_prefactor.begin(), h_laser_adk_prefactor.end(), m_laser_adk_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-         h_laser_dp_prefactor.begin(), h_laser_dp_prefactor.end(), m_laser_dp_prefactor.begin());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
-         h_laser_dp_second_prefactor.begin(), h_laser_dp_second_prefactor.end(), m_laser_dp_second_prefactor.begin());
+    m_adk_power.copyToDeviceAsync();
+    m_adk_prefactor.copyToDeviceAsync();
+    m_adk_exp_prefactor.copyToDeviceAsync();
+    m_laser_adk_prefactor.copyToDeviceAsync();
+    m_laser_dp_prefactor.copyToDeviceAsync();
+    m_laser_dp_second_prefactor.copyToDeviceAsync();
 }
