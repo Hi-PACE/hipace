@@ -104,11 +104,11 @@ struct PlasmaDensityAccessor {
 
             amrex::Real result = 0;
             for (int iz=0; iz<=interp_order; iz++){
-                auto [sz, k] = compute_single_shape_factor<false, interp_order>(mid[2], iz);
+                auto [sz, k] = shape_factor<interp_order>(mid[2], iz);
             for (int iy=0; iy<=interp_order; iy++){
-                auto [sy, j] = compute_single_shape_factor<false, interp_order>(mid[1], iy);
+                auto [sy, j] = shape_factor<interp_order>(mid[1], iy);
             for (int ix=0; ix<=interp_order; ix++){
-                auto [sx, i] = compute_single_shape_factor<false, interp_order>(mid[0], ix);
+                auto [sx, i] = shape_factor<interp_order>(mid[0], ix);
                 result += sz * sy * sx * array(i, j, k);
             }}}
             return m_unitSI * result;
@@ -122,9 +122,9 @@ struct PlasmaDensityAccessor {
 
             amrex::Real result = 0;
             for (int iz=0; iz<=interp_order; iz++){
-                auto [sz, j] = compute_single_shape_factor<false, interp_order>(zmid, iz);
+                auto [sz, j] = shape_factor<interp_order>(zmid, iz);
             for (int ir=0; ir<=interp_order; ir++){
-                auto [sr, i] = compute_single_shape_factor<false, interp_order>(rmid, ir);
+                auto [sr, i] = shape_factor<interp_order>(rmid, ir);
                 result += sz * sr * array(i, j, 0);
             for (int im=1; im<=m_bigend[2]/2; im++) {
                 result += sz * sr * array(i, j, 2*im-1) * std::cos(im*theta);

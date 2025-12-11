@@ -112,8 +112,6 @@ struct shape_factor_result {
     int cell;
 };
 
-namespace {
-
 static constexpr
 amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 2> depos_prefactor_c1 = {{
     {-1., 1.},
@@ -131,57 +129,77 @@ static constexpr
 amrex::GpuArray<amrex::GpuArray<amrex::Real, 4>, 4> depos_prefactor_c3 = {{
     {-1./6., 0.5, -0.5, 1./6.},
     {   0.5, -1.,   0., 2./3.},
-    {  -0.5, 0.5,  0.5,  1./6},
+    {  -0.5, 0.5,  0.5, 1./6.},
     { 1./6.,  0.,   0.,    0.}
 }};
 
-AMREX_GPU_CONSTANT constexpr static
-amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 2> depos_prefactor_g1 = depos_prefactor_c1;
+#ifdef AMREX_USE_CUDA
+AMREX_GPU_CONSTANT constexpr static auto depos_prefactor_g1 = depos_prefactor_c1;
+AMREX_GPU_CONSTANT constexpr static auto depos_prefactor_g2 = depos_prefactor_c2;
+AMREX_GPU_CONSTANT constexpr static auto depos_prefactor_g3 = depos_prefactor_c3;
+#endif
 
-AMREX_GPU_CONSTANT constexpr static
-amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 3> depos_prefactor_g2 = depos_prefactor_c2;
-
-AMREX_GPU_CONSTANT constexpr static
-amrex::GpuArray<amrex::GpuArray<amrex::Real, 4>, 4> depos_prefactor_g3 = depos_prefactor_c3;
-
+template<int depos_order> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+auto get_depos_prefactor (int ix) {
+    if constexpr (depos_order == 1) {
+#ifdef AMREX_USE_CUDA
+        AMREX_IF_ON_DEVICE((return depos_prefactor_g1[ix];))
+        AMREX_IF_ON_HOST((return depos_prefactor_c1[ix];))
+#else
+        return depos_prefactor_c1[ix];
+#endif
+    } else if constexpr (depos_order == 2) {
+#ifdef AMREX_USE_CUDA
+        AMREX_IF_ON_DEVICE((return depos_prefactor_g2[ix];))
+        AMREX_IF_ON_HOST((return depos_prefactor_c2[ix];))
+#else
+        return depos_prefactor_c2[ix];
+#endif
+    } else if constexpr (depos_order == 3) {
+#ifdef AMREX_USE_CUDA
+        AMREX_IF_ON_DEVICE((return depos_prefactor_g3[ix];))
+        AMREX_IF_ON_HOST((return depos_prefactor_c3[ix];))
+#else
+        return depos_prefactor_c3[ix];
+#endif
+    } else {
+        return 0;
+    }
 }
 
+/** \brief Compute a single shape factor and return the index of the cell where the particle writes.
+ *
+ * \tparam depos_order Order of the shape factor
+ * \param[in] xmid exact position of the particle in index space
+ * \param[in] ix index of the shape factor, must be 0 <= ix <= depos_order
+ */
 template<int depos_order> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 shape_factor_result shape_factor (amrex::Real xmid, int ix) noexcept {
 
-    if constexpr (depos_order==0) {
-        return {1., static_cast<int>(std::floor(xmid+0.5))};
-    } else if constexpr (depos_order==1) {
-        const amrex::Real xfloor = std::floor(xmid);
-        const amrex::Real xint = xmid-xfloor;
-        const int xbegin = static_cast<int>(xfloor);
+    if constexpr (depos_order % 2 == 0) {
+        xmid += amrex::Real(0.5);
+    }
 
-        amrex::GpuArray<amrex::Real, 2> s;
-        AMREX_IF_ON_DEVICE((s = depos_prefactor_g1[ix];))
-        AMREX_IF_ON_HOST((s = depos_prefactor_c1[ix];))
+    const amrex::Real xfloor = std::floor(xmid);
+    constexpr int floor_offset = - depos_order / 2;
+    const int xbegin = static_cast<int>(xfloor) + floor_offset;
+
+    if constexpr (depos_order == 0) {
+        return {amrex::Real(1), xbegin};
+    }
+
+    const amrex::Real xint = xmid-xfloor;
+    const auto s = get_depos_prefactor<depos_order>(ix);
+
+    if constexpr (depos_order == 1) {
         const amrex::Real res = s[0] * xint + s[1];
-        return {res, xbegin+ix};
-    } else if constexpr (depos_order==2) {
-        xmid += 0.5;
-        const amrex::Real xfloor = std::floor(xmid);
-        const amrex::Real xint = xmid-xfloor;
-        const int xbegin = static_cast<int>(xfloor)-1;
-
-        amrex::GpuArray<amrex::Real, 3> s;
-        AMREX_IF_ON_DEVICE((s = depos_prefactor_g2[ix];))
-        AMREX_IF_ON_HOST((s = depos_prefactor_c2[ix];))
+        return {res, xbegin + ix};
+    } else if constexpr (depos_order == 2) {
         const amrex::Real res = (s[0] * xint + s[1]) * xint + s[2];
-        return {res, xbegin+ix};
-    } else if constexpr (depos_order==3) {
-        const amrex::Real xfloor = std::floor(xmid);
-        const amrex::Real xint = xmid-xfloor;
-        const int xbegin = static_cast<int>(xfloor)-1;
-
-        amrex::GpuArray<amrex::Real, 4> s;
-        AMREX_IF_ON_DEVICE((s = depos_prefactor_g3[ix];))
-        AMREX_IF_ON_HOST((s = depos_prefactor_c3[ix];))
+        return {res, xbegin + ix};
+    } else if constexpr (depos_order == 3) {
         const amrex::Real res = ((s[0] * xint + s[1]) * xint + s[2]) * xint + s[3];
-        return {res, xbegin+ix};
+        return {res, xbegin + ix};
     }
 
     static_assert(0 <= depos_order && depos_order <= 3);
