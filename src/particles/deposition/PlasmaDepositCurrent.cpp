@@ -210,8 +210,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                     return;
                 }
 
-                for (int iy=0; iy <= depos_order; ++iy) {
-                    for (int ix=0; ix <= depos_order; ++ix) {
+                AMREX_UNROLL_LOOP(1)
+                for (int ix=0; ix <= depos_order; ++ix) {
+                    AMREX_UNROLL_LOOP(1)
+                    for (int iy=0; iy <= depos_order; ++iy) {
 
                         // --- Compute shape factors
                         // x direction

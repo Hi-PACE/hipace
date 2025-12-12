@@ -120,9 +120,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 auto [shape_y, shape_dy, j] =
-                    single_derivative_shape_factor<derivative_type, depos_order>(ymid, 0);
+                    derivative_shape_factor<derivative_type, depos_order>(ymid, 0);
                 auto [shape_x, shape_dx, i] =
-                    single_derivative_shape_factor<derivative_type, depos_order>(xmid, 0);
+                    derivative_shape_factor<derivative_type, depos_order>(xmid, 0);
 
                 if constexpr (use_laser) {
                     // need extra cells for gathering the laser
@@ -183,13 +183,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     + 1._rt
                 );
 
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                AMREX_UNROLL_LOOP(1)
                 for (int iy=0; iy <= depos_order+derivative_type; ++iy) {
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                    AMREX_UNROLL_LOOP(1)
                     for (int ix=0; ix <= depos_order+derivative_type; ++ix) {
 
                         if constexpr (derivative_type == 2) {
@@ -200,9 +196,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                         }
 
                         auto [shape_y, shape_dy, j] =
-                            single_derivative_shape_factor<derivative_type, depos_order>(ymid, iy);
+                            derivative_shape_factor<derivative_type, depos_order>(ymid, iy);
                         auto [shape_x, shape_dx, i] =
-                            single_derivative_shape_factor<derivative_type, depos_order>(xmid, ix);
+                            derivative_shape_factor<derivative_type, depos_order>(xmid, ix);
 
                         // get fields per cell instead of gathering them to avoid blurring
                         const amrex::Real Bz_v = arr(i, j, cache_idx[0]);

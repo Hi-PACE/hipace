@@ -67,30 +67,40 @@ void doGatherShapeN (const amrex::Real xp,
     const amrex::Real x = (xp-x_pos_offset)*dx_inv;
     const amrex::Real y = (yp-y_pos_offset)*dy_inv;
 
+    // Gather field on particle from field on grid
+
+    AMREX_UNROLL_LOOP()
+    for (int iy=0; iy<=depos_order_xy; iy++){
+        AMREX_UNROLL_LOOP()
+        for (int ix=0; ix<=depos_order_xy; ix++){
+
+            // Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            Ezp += (shape_x * shape_y) * slice_arr(i, j, ez_comp);
+            Bxp += (shape_x * shape_y) * slice_arr(i, j, bx_comp);
+            Byp += (shape_x * shape_y) * slice_arr(i, j, by_comp);
+            Bzp += (shape_x * shape_y) * slice_arr(i, j, bz_comp);
+        }
+    }
+
     constexpr int derivative_type = 1;
 
-    // Gather field on particle from field on grid
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+    AMREX_UNROLL_LOOP()
     for (int iy=0; iy<=depos_order_xy+derivative_type; iy++){
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+        AMREX_UNROLL_LOOP()
         for (int ix=0; ix<=depos_order_xy+derivative_type; ix++){
 
             // Compute shape factors
             auto [shape_y, shape_dy, j] =
-                single_derivative_shape_factor<derivative_type, depos_order_xy>(y, iy);
+                derivative_shape_factor<derivative_type, depos_order_xy>(y, iy);
             auto [shape_x, shape_dx, i] =
-                single_derivative_shape_factor<derivative_type, depos_order_xy>(x, ix);
+                derivative_shape_factor<derivative_type, depos_order_xy>(x, ix);
 
-            ExmByp += (shape_dx* shape_y) * slice_arr(i, j, psi_comp) * dx_inv;
-            EypBxp += (shape_x * shape_dy)* slice_arr(i, j, psi_comp) * dy_inv;
-            Ezp    += (shape_x * shape_y) * slice_arr(i, j, ez_comp);
-            Bxp    += (shape_x * shape_y) * slice_arr(i, j, bx_comp);
-            Byp    += (shape_x * shape_y) * slice_arr(i, j, by_comp);
-            Bzp    += (shape_x * shape_y) * slice_arr(i, j, bz_comp);
+            const amrex::Real psip = slice_arr(i, j, psi_comp);
+            ExmByp += (shape_dx * shape_y) * psip * dx_inv;
+            EypBxp += (shape_x * shape_dy) * psip * dy_inv;
         }
     }
 }
