@@ -183,9 +183,13 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     + 1._rt
                 );
 
-                AMREX_UNROLL_LOOP(1)
+#ifdef AMREX_USE_GPU
+#pragma unroll 1
+#endif
                 for (int iy=0; iy <= depos_order+derivative_type; ++iy) {
-                    AMREX_UNROLL_LOOP(1)
+#ifdef AMREX_USE_GPU
+#pragma unroll 1
+#endif
                     for (int ix=0; ix <= depos_order+derivative_type; ++ix) {
 
                         if constexpr (derivative_type == 2) {

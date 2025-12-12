@@ -69,9 +69,13 @@ void doGatherShapeN (const amrex::Real xp,
 
     // Gather field on particle from field on grid
 
-    AMREX_UNROLL_LOOP()
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
     for (int iy=0; iy<=depos_order_xy; iy++){
-        AMREX_UNROLL_LOOP()
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
         for (int ix=0; ix<=depos_order_xy; ix++){
 
             // Compute shape factors
@@ -87,9 +91,13 @@ void doGatherShapeN (const amrex::Real xp,
 
     constexpr int derivative_type = 1;
 
-    AMREX_UNROLL_LOOP()
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
     for (int iy=0; iy<=depos_order_xy+derivative_type; iy++){
-        AMREX_UNROLL_LOOP()
+#ifdef AMREX_USE_GPU
+#pragma unroll
+#endif
         for (int ix=0; ix<=depos_order_xy+derivative_type; ix++){
 
             // Compute shape factors
@@ -141,21 +149,15 @@ void doBxByGatherShapeN (const amrex::Real xp,
     const amrex::Real x = (xp-x_pos_offset)*dx_inv;
     const amrex::Real y = (yp-y_pos_offset)*dy_inv;
 
-    // --- Compute shape factors
-    // x direction
-    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-    amrex::Real sx_cell[depos_order_xy + 1];
-    const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
-
-    // y direction
-    amrex::Real sy_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
-
     // Gather field on particle from field on grid
     for (int iy=0; iy<=depos_order_xy; iy++){
         for (int ix=0; ix<=depos_order_xy; ix++){
-            Bxp += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, bx_comp);
-            Byp += sx_cell[ix]*sy_cell[iy] * slice_arr(i_cell+ix, j_cell+iy, by_comp);
+            // --- Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            Bxp += shape_x * shape_y * slice_arr(i, j, bx_comp);
+            Byp += shape_x * shape_y * slice_arr(i, j, by_comp);
         }
     }
 }
@@ -198,28 +200,22 @@ void doLaserGatherShapeN (const amrex::Real xp,
     const amrex::Real x = (xp-x_pos_offset)*dx_inv;
     const amrex::Real y = (yp-y_pos_offset)*dy_inv;
 
-    // --- Compute shape factors
-    // x direction
-    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-    amrex::Real sx_cell[depos_order_xy + 1];
-    const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
-
-    // y direction
-    amrex::Real sy_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
-
     // Gather field Aabssq, AabssqDxp, and AabssqDxp on particle from field on grid slice_arr
     // the derivative is calculated on the fly
     for (int iy=0; iy<=depos_order_xy; iy++){
         for (int ix=0; ix<=depos_order_xy; ix++){
-            const amrex::Real x00y00 = slice_arr(i_cell+ix  , j_cell+iy  , aabs_comp);
-            const amrex::Real xp1y00 = slice_arr(i_cell+ix+1, j_cell+iy  , aabs_comp);
-            const amrex::Real xm1y00 = slice_arr(i_cell+ix-1, j_cell+iy  , aabs_comp);
-            const amrex::Real x00yp1 = slice_arr(i_cell+ix  , j_cell+iy+1, aabs_comp);
-            const amrex::Real x00ym1 = slice_arr(i_cell+ix  , j_cell+iy-1, aabs_comp);
-            Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
-            AabssqDxp += sx_cell[ix]*sy_cell[iy]*0.5_rt*dx_inv*(xp1y00-xm1y00);
-            AabssqDyp += sx_cell[ix]*sy_cell[iy]*0.5_rt*dy_inv*(x00yp1-x00ym1);
+            // --- Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            const amrex::Real x00y00 = slice_arr(i  , j  , aabs_comp);
+            const amrex::Real xp1y00 = slice_arr(i+1, j  , aabs_comp);
+            const amrex::Real xm1y00 = slice_arr(i-1, j  , aabs_comp);
+            const amrex::Real x00yp1 = slice_arr(i  , j+1, aabs_comp);
+            const amrex::Real x00ym1 = slice_arr(i  , j-1, aabs_comp);
+            Aabssqp += shape_x * shape_y * x00y00;
+            AabssqDxp += shape_x * shape_y * 0.5_rt * dx_inv * (xp1y00 - xm1y00);
+            AabssqDyp += shape_x * shape_y * 0.5_rt * dy_inv * (x00yp1 - x00ym1);
         }
     }
 }
@@ -256,21 +252,15 @@ void doLaserGatherShapeN (const amrex::Real xp,
     const amrex::Real x = (xp-x_pos_offset)*dx_inv;
     const amrex::Real y = (yp-y_pos_offset)*dy_inv;
 
-    // --- Compute shape factors
-    // x direction
-    // i_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-    amrex::Real sx_cell[depos_order_xy + 1];
-    const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
-
-    // y direction
-    amrex::Real sy_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
-
     // Gather field Aabssq, on particle from field on grid slice_arr
     for (int iy=0; iy<=depos_order_xy; iy++){
         for (int ix=0; ix<=depos_order_xy; ix++){
-            const amrex::Real x00y00 = slice_arr(i_cell+ix, j_cell+iy, aabs_comp);
-            Aabssqp += sx_cell[ix]*sy_cell[iy]*x00y00;
+            // --- Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            const amrex::Real x00y00 = slice_arr(i, j, aabs_comp);
+            Aabssqp += shape_x * shape_y * x00y00;
         }
     }
 }
@@ -311,24 +301,17 @@ void doLaserGatherShapeN (const amrex::Real xp,
     const amrex::Real x = (xp-x_pos_offset)*dx_inv;
     const amrex::Real y = (yp-y_pos_offset)*dy_inv;
 
-    // --- Compute shape factors
-    // x direction
-    // j_cell leftmost cell in x that the particle touches. sx_cell shape factor along x
-    amrex::Real sx_cell[depos_order_xy + 1];
-    const int i_cell = compute_shape_factor<depos_order_xy>(sx_cell, x);
-
-    // y direction
-    amrex::Real sy_cell[depos_order_xy + 1];
-    const int j_cell = compute_shape_factor<depos_order_xy>(sy_cell, y);
-
     // Gather field Aabssq, AabssqDxp, and AabssqDxp on particle from field on grid slice_arr
     // the derivative is calculated on the fly
     for (int iy=0; iy<=depos_order_xy; iy++){
         for (int ix=0; ix<=depos_order_xy; ix++){
             using namespace WhichLaserSlice;
-            const amrex::Real s_cell = sx_cell[ix]*sy_cell[iy];
-            const int i = i_cell+ix;
-            const int j = j_cell+iy;
+
+            // --- Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            const amrex::Real s_cell = shape_x * shape_y;
             Ap += amrex::GpuComplex<amrex::Real> {
                 s_cell * laser_arr(i, j, n00j00_r),
                 s_cell * laser_arr(i, j, n00j00_i)

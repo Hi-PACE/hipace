@@ -255,34 +255,34 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
                     const amrex::Real x = (i-imin)*dx + xmin;
                     const amrex::Real xmid = (x - xmin_laser)/spacing[2];
-                    amrex::Real sx_cell[interp_order_xy+1];
-                    const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
 
                     const amrex::Real y = (j-jmin)*dy + ymin;
                     const amrex::Real ymid = (y - ymin_laser)/spacing[1];
-                    amrex::Real sy_cell[interp_order_xy+1];
-                    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
                     const amrex::Real z = (k-kmin)*dz + zmin;
                     const amrex::Real tmid = (zmax-z)/clight/spacing[0];
-                    amrex::Real st_cell[interp_order_xy+1];
-                    const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
                     laser_arr(i, j, k, 0) = 0._rt;
                     laser_arr(i, j, k, 1) = 0._rt;
                     for (int it=0; it<=interp_order_xy; it++){
                         for (int iy=0; iy<=interp_order_xy; iy++){
                             for (int ix=0; ix<=interp_order_xy; ix++){
-                                if (i_cell+ix >= 0 && i_cell+ix < static_cast<int>(extent[2]) &&
-                                    j_cell+iy >= 0 && j_cell+iy < static_cast<int>(extent[1]) &&
-                                    k_cell+it >= 0 && k_cell+it < static_cast<int>(extent[0])) {
-                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
+
+                                auto [shape_z, kk] = shape_factor<interp_order_xy>(tmid, it);
+                                auto [shape_y, jj] = shape_factor<interp_order_xy>(ymid, iy);
+                                auto [shape_x, ii] = shape_factor<interp_order_xy>(xmid, ix);
+
+                                if (ii >= 0 && ii < static_cast<int>(extent[2]) &&
+                                    jj >= 0 && jj < static_cast<int>(extent[1]) &&
+                                    kk >= 0 && kk < static_cast<int>(extent[0])) {
+
+                                    laser_arr(i, j, k, 0) += shape_x * shape_y * shape_z *
                                         static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).real() * unitSI
+                                            input_file_arr(ii, jj, kk).real() * unitSI
                                         );
-                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * st_cell[it] *
+                                    laser_arr(i, j, k, 1) += shape_x * shape_y * shape_z *
                                         static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+it).imag() * unitSI
+                                            input_file_arr(ii, jj, kk).imag() * unitSI
                                         );
                                 }
                             }
@@ -303,34 +303,33 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
                     const amrex::Real x = (i-imin)*dx + xmin;
                     const amrex::Real xmid = (x - xmin_laser)/spacing[2];
-                    amrex::Real sx_cell[interp_order_xy+1];
-                    const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
 
                     const amrex::Real y = (j-jmin)*dy + ymin;
                     const amrex::Real ymid = (y - ymin_laser)/spacing[1];
-                    amrex::Real sy_cell[interp_order_xy+1];
-                    const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
                     const amrex::Real z = (k-kmin)*dz + zmin;
                     const amrex::Real zmid = (z - zmin_laser)/spacing[0];
-                    amrex::Real sz_cell[interp_order_xy+1];
-                    const int k_cell = compute_shape_factor<interp_order_xy>(sz_cell, zmid);
 
                     laser_arr(i, j, k, 0) = 0._rt;
                     laser_arr(i, j, k, 1) = 0._rt;
                     for (int iz=0; iz<=interp_order_xy; iz++){
                         for (int iy=0; iy<=interp_order_xy; iy++){
                             for (int ix=0; ix<=interp_order_xy; ix++){
-                                if (i_cell+ix >= 0 && i_cell+ix < static_cast<int>(extent[2]) &&
-                                    j_cell+iy >= 0 && j_cell+iy < static_cast<int>(extent[1]) &&
-                                    k_cell+iz >= 0 && k_cell+iz < static_cast<int>(extent[0])) {
-                                    laser_arr(i, j, k, 0) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
+
+                                auto [shape_z, kk] = shape_factor<interp_order_xy>(zmid, iz);
+                                auto [shape_y, jj] = shape_factor<interp_order_xy>(ymid, iy);
+                                auto [shape_x, ii] = shape_factor<interp_order_xy>(xmid, ix);
+
+                                if (ii >= 0 && ii < static_cast<int>(extent[2]) &&
+                                    jj >= 0 && jj < static_cast<int>(extent[1]) &&
+                                    kk >= 0 && kk < static_cast<int>(extent[0])) {
+                                    laser_arr(i, j, k, 0) += shape_x * shape_y * shape_z *
                                         static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).real() * unitSI
+                                            input_file_arr(ii, jj, kk).real() * unitSI
                                         );
-                                    laser_arr(i, j, k, 1) += sx_cell[ix] * sy_cell[iy] * sz_cell[iz] *
+                                    laser_arr(i, j, k, 1) += shape_x * shape_y * shape_z *
                                         static_cast<amrex::Real>(
-                                            input_file_arr(i_cell+ix, j_cell+iy, k_cell+iz).imag() * unitSI
+                                            input_file_arr(ii, jj, kk).imag() * unitSI
                                         );
                                 }
                             }
@@ -356,44 +355,44 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
                     const amrex::Real r = std::sqrt(x*x + y*y);
                     const amrex::Real theta = std::atan2(y, x);
                     const amrex::Real rmid = (r - rmin_laser)/spacing[1];
-                    amrex::Real sr_cell[interp_order_xy+1];
-                    const int i_cell = compute_shape_factor<interp_order_xy>(sr_cell, rmid);
 
                     const amrex::Real z = (k-kmin)*dz + zmin;
                     const amrex::Real tmid = (zmax-z)/clight/spacing[0];
-                    amrex::Real st_cell[interp_order_xy+1];
-                    const int k_cell = compute_shape_factor<interp_order_xy>(st_cell, tmid);
 
                     laser_arr(i, j, k, 0) = 0._rt;
                     laser_arr(i, j, k, 1) = 0._rt;
                     for (int it=0; it<=interp_order_xy; it++){
                         for (int ir=0; ir<=interp_order_xy; ir++){
-                            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(i_cell+ir >= 0,
+
+                            auto [shape_y, jj] = shape_factor<interp_order_xy>(tmid, it);
+                            auto [shape_x, ii] = shape_factor<interp_order_xy>(rmid, ir);
+
+                            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ii >= 0,
                                 "Touching a r<0 cell in laser file reader. Is staggering correct?");
-                            if (i_cell+ir < static_cast<int>(extent[2]) &&
-                                k_cell+it >= 0 && k_cell+it < static_cast<int>(extent[1])) {
+                            if (ii < static_cast<int>(extent[2]) &&
+                                jj >= 0 && jj < static_cast<int>(extent[1])) {
                                 // mode 0
-                                laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
+                                laser_arr(i, j, k, 0) += shape_x * shape_y *
                                     static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ir, k_cell+it, 0).real() * unitSI);
-                                laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
+                                    input_file_arr(ii, jj, 0).real() * unitSI);
+                                laser_arr(i, j, k, 1) += shape_x * shape_y *
                                     static_cast<amrex::Real>(
-                                    input_file_arr(i_cell+ir, k_cell+it, 0).imag() * unitSI);
+                                    input_file_arr(ii, jj, 0).imag() * unitSI);
                                 for (int im=1; im<=static_cast<int>(extent[0])/2; im++) {
                                     // cos(m*theta) part of the mode
-                                    laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
+                                    laser_arr(i, j, k, 0) += shape_x * shape_y *
                                         std::cos(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im-1).real() * unitSI);
-                                    laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
+                                        input_file_arr(ii, jj, 2*im-1).real() * unitSI);
+                                    laser_arr(i, j, k, 1) += shape_x * shape_y *
                                         std::cos(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im-1).imag() * unitSI);
+                                        input_file_arr(ii, jj, 2*im-1).imag() * unitSI);
                                     // sin(m*theta) part of the mode
-                                    laser_arr(i, j, k, 0) += sr_cell[ir] * st_cell[it] *
+                                    laser_arr(i, j, k, 0) += shape_x * shape_y *
                                         std::sin(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im).real() * unitSI);
-                                    laser_arr(i, j, k, 1) += sr_cell[ir] * st_cell[it] *
+                                        input_file_arr(ii, jj, 2*im).real() * unitSI);
+                                    laser_arr(i, j, k, 1) += shape_x * shape_y *
                                         std::sin(im*theta) * static_cast<amrex::Real>(
-                                        input_file_arr(i_cell+ir, k_cell+it, 2*im).imag() * unitSI);
+                                        input_file_arr(ii, jj, 2*im).imag() * unitSI);
                                 } // End of loop over modes of laser array from file
                             }
                         }
