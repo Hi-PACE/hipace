@@ -126,13 +126,16 @@ public:
     void DoLaserInjection (amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
-    bool AnySpeciesNeutralizeBackground () const;
+    [[nodiscard]] bool
+    AnySpeciesNeutralizeBackground () const;
 
     /** returns a Vector of names of the plasmas */
-    const amrex::Vector<std::string>& GetNames() const {return m_names;}
+    [[nodiscard]] const amrex::Vector<std::string>&
+    GetNames() const {return m_names;}
 
     /** returns number of plasma species */
-    int GetNPlasmas() const {return m_nplasmas;}
+    [[nodiscard]] int
+    GetNPlasmas() const {return m_nplasmas;}
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
