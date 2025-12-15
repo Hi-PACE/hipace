@@ -19,7 +19,7 @@
 void
 AdvanceBeamParticlesSlice (
     BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
-    const int slice, int const current_N_level)
+    const int slice, int const current_N_level, int step)
 {
     HIPACE_PROFILE("AdvanceBeamParticlesSlice()");
     using namespace amrex::literals;
@@ -27,10 +27,10 @@ AdvanceBeamParticlesSlice (
     const PhysConst phys_const = get_phys_const();
 
     const bool do_z_push = beam.m_do_z_push;
-    const int n_subcycles = beam.m_n_subcycles;
+    const amrex::Real n_subcycles = static_cast<amrex::Real>(beam.m_n_subcycles);
     const bool radiation_reaction = beam.m_do_radiation_reaction;
     const amrex::Real time = Hipace::GetInstance().m_physical_time;
-    const amrex::Real dt = Hipace::GetInstance().m_dt / n_subcycles;
+    const amrex::Real max_dt = Hipace::GetInstance().m_dt / n_subcycles;
     const bool spin_tracking = beam.m_do_spin_tracking;
     const amrex::Real spin_anom = beam.m_spin_anom;
 
@@ -109,6 +109,8 @@ AdvanceBeamParticlesSlice (
     // don't include slipped particles in count as they were already pushed
     Hipace::m_num_beam_particles_pushed += double(beam.getNumParticles(WhichBeamSlice::This));
 
+    const int num_non_slipped = step == 0 ? 0 : beam.getNumParticles(WhichBeamSlice::This);
+
     // Use OMP ParallelFor to use multiple threads when running on CPU
     omp::ParallelFor(
         amrex::TypeList<
@@ -133,7 +135,12 @@ AdvanceBeamParticlesSlice (
             amrex::Real uy = ptd.rdata(BeamIdx::uy)[ip];
             amrex::Real uz = ptd.rdata(BeamIdx::uz)[ip];
 
-            int i = ptd.idata(BeamIdx::nsubcycles)[ip];
+            amrex::Real i_subcycle = ptd.rdata(BeamIdx::nsubcycles)[ip];
+
+            if (ip < num_non_slipped) {
+                // new time step
+                i_subcycle -= n_subcycles;
+            }
 
             amrex::RealVect spin {0._rt, 0._rt, 0._rt};
             if (spin_tracking) {
@@ -142,11 +149,19 @@ AdvanceBeamParticlesSlice (
                 spin[2] = ptd.m_runtime_rdata[2][ip];
             }
 
-            for (; i < n_subcycles; i++) {
+            while (i_subcycle < n_subcycles) {
 
                 if (zp < min_z) {
                     // stop pushing particle if it is not on this slice anymore
                     break;
+                }
+
+                i_subcycle += 1._rt;
+
+                amrex::Real dt = max_dt;
+                if (i_subcycle >= n_subcycles) {
+                    dt *= n_subcycles - i_subcycle + 1._rt;
+                    i_subcycle = n_subcycles;
                 }
 
                 const amrex::ParticleReal gammap_inv = 1._rt / std::sqrt( 1._rt
@@ -329,7 +344,7 @@ AdvanceBeamParticlesSlice (
             ptd.pos(0, ip) = xp;
             ptd.pos(1, ip) = yp;
             ptd.pos(2, ip) = zp;
-            ptd.idata(BeamIdx::nsubcycles)[ip] = i;
+            ptd.rdata(BeamIdx::nsubcycles)[ip] = i_subcycle;
             ptd.rdata(BeamIdx::ux)[ip] = ux;
             ptd.rdata(BeamIdx::uy)[ip] = uy;
             ptd.rdata(BeamIdx::uz)[ip] = uz;

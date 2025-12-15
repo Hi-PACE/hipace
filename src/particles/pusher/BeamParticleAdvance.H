@@ -18,10 +18,11 @@
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] slice longitudinal slice
  * \param[in] current_N_level number of MR levels active on the current slice
+ * \param[in] step time step
  */
 void
 AdvanceBeamParticlesSlice (
     BeamParticleContainer& beam, const Fields& fields, amrex::Vector<amrex::Geometry> const& gm,
-    const int slice, int const current_N_level);
+    const int slice, int const current_N_level, int step);
 
 #endif //  BEAMPARTICLEADVANCE_H_

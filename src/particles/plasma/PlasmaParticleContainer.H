@@ -16,6 +16,8 @@
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
 #include <AMReX_AmrCore.H>
+#include "particles/beam/MultiBeam.H"
+#include "particles/beam/BeamParticleContainer.H"
 #include <map>
 
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
@@ -31,6 +33,7 @@ struct PlasmaIdx
         ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
         uy_half_step,       // at the same step for AB5 pusher
         psi_half_step,      // never effected by temp slice
+        time_integral,
 #ifdef HIPACE_USE_AB5_PUSH
         Fx1, Fx2, Fx3, Fx4, Fx5,             // AB5 force terms
         Fy1, Fy2, Fy3, Fy4, Fy5,             //
@@ -110,6 +113,13 @@ public:
                           const amrex::Geometry& laser_geom,
                           const MultiLaser& laser,
                           const amrex::Real background_density_SI);
+
+    /** Do the transfer of particles from the plasma container to the beam container
+     *
+     * \param[in] gm Geometry object for the whole domain
+     * \param[in] islice Slice index corresponding to the current simulation slice
+     */
+    void PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
@@ -219,6 +229,10 @@ public:
     amrex::Gpu::Buffer<amrex::Real> m_laser_dp_prefactor;
     /** to calculate laser ionization momentum width at the second order for linear polarization */
     amrex::Gpu::Buffer<amrex::Real> m_laser_dp_second_prefactor;
+    // laser injection:
+    bool m_can_laser_injection = false; /**< whether laser injection is enabled */
+    std::string m_product_beam_name = ""; /**< name of Injection product beam */
+    BeamParticleContainer* m_product_beam_pc = nullptr; /**< Injection product beam */
 
     // plasma sorting/reordering:
 

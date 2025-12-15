@@ -18,6 +18,7 @@
 #include "particles/pusher/GetAndSetPosition.H"
 #include "mg_solver/HpMultiGrid.H"
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
+#include "particles/beam/MultiBeam.H"
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_IntVect.H>
@@ -126,6 +127,10 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "do_beam_jz_minus_rho", m_do_beam_jz_minus_rho);
     m_deposit_rho = m_diags.needsRho();
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
+    queryWithParser(pph, "deposit_rho_beam", m_deposit_rho_beam);
+    if (m_deposit_rho_beam) {
+        m_deposit_rho = true;
+    }
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
@@ -545,7 +550,7 @@ Hipace::Evolve ()
         }
 
         // Only reset plasma after receiving time step, to use proper density
-        m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
+        m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom, m_multi_beam);
 
         m_multi_laser.SetInitialChi(m_multi_plasma);
 
@@ -805,6 +810,9 @@ Hipace::SolveOneSlice (int islice, int step)
         m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
     }
 
+    // injection
+    m_multi_plasma.DoLaserInjection(m_3D_geom, islice);
+
     if (m_depos_order_z == 2) {
         CalculateEzNext(current_N_level, step);
     }
@@ -813,7 +821,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_adaptive_time_step.GatherMinAccSlice(m_multi_beam, m_3D_geom[0], m_fields);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level, step);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 

@@ -20,6 +20,9 @@
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "particles/pusher/GetAndSetPosition.H"
+#include "particles/beam/BeamParticleContainer.H"
+#include "particles/beam/MultiBeam.H"
+
 #include <cmath>
 #include <fstream>
 #include <sstream>
@@ -69,7 +72,9 @@ PlasmaParticleContainer::ReadParameters ()
 
     queryWithParser(pp, "can_ionize", m_can_field_ionize);
     m_can_laser_ionize = false;
+    m_can_laser_injection = false;
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
+    queryWithParser(pp, "can_laser_injection", m_can_laser_injection);
 
     m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
 
@@ -91,6 +96,7 @@ PlasmaParticleContainer::ReadParameters ()
         m_charge *= m_init_ion_lev;
     }
     queryWithParser(pp, "ionization_product", m_product_name);
+    queryWithParser(pp, "injection_product", m_product_beam_name);
 
     DeprecatedInput(m_name, "density", "density(x,y,z)");
     DeprecatedInput(m_name, "parabolic_curvature", "density(x,y,z)",
@@ -528,6 +534,7 @@ IonizationModule (const int lev,
                 ptd_elec.rdata(PlasmaIdx::ux_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = 1._rt;
+                ptd_elec.rdata(PlasmaIdx::time_integral)[pidx] = ptd_ion.rdata(PlasmaIdx::time_integral)[ip];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
@@ -683,10 +690,10 @@ LaserIonization (const int islice,
 
         if (num_new_electrons.dataValue() == 0) continue;
 
-        if(Hipace::m_verbose >= 3) {
-            amrex::Print() << "Number of ionized Plasma Particles (laser): "
-            << num_new_electrons.dataValue() << "\n";
-        }
+        // if(Hipace::m_verbose >= 3) {
+        //     amrex::Print() << "Number of ionized Plasma Particles (laser): "
+        //     << num_new_electrons.dataValue() << "\n";
+        // }
 
 
         // Resize electron particle tile
@@ -788,6 +795,7 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = uy;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = std::sqrt(1._rt + ux*ux + uy*uy + uz*uz
                                                             + 0.5_rt*amrex::abs(A*A))-uz;
+                ptd_elec.rdata(PlasmaIdx::time_integral)[pidx] = ptd_ion.rdata(PlasmaIdx::time_integral)[ip];
 #ifdef HIPACE_USE_AB5_PUSH
 #ifdef AMREX_USE_GPU
 #pragma unroll
@@ -802,6 +810,113 @@ LaserIonization (const int islice,
 
         // Synchronize before ion_mask and ip_elec go out of scope
         amrex::Gpu::streamSynchronize();
+    }
+}
+
+void
+PlasmaParticleContainer::
+PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
+{
+    if (!m_can_laser_injection) return;
+    HIPACE_PROFILE("PlasmaParticleContainer::PlasmaToBeam()");
+
+    uint32_t num_new_beam_part = 0;
+
+    using namespace amrex::literals;
+    const PhysConst phys_const = get_phys_const();
+    const amrex::Real clight = phys_const.c;
+
+    const amrex::Real dzeta_inv = gm[0].InvCellSize(2);
+
+    const amrex::Real dt = Hipace::GetInstance().m_dt;
+
+    // Loop over plasma particle boxes
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        // Loading the data from the plasma containers
+        const auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
+
+        amrex::Long const num_particles = pti.numParticles();
+
+        amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
+        amrex::ReduceData<uint64_t> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+
+        // This kernel calculates the number of ionized electrons in the plasma container
+        reduce_op.eval(
+            num_particles, reduce_data,
+            [=] AMREX_GPU_DEVICE (int ip) -> ReduceTuple
+            {
+                if (ptd_plasma.id(ip) == 3) {
+                    return {1};
+                } else {
+                    return {0};
+                }
+        });
+
+        auto [sum_new_beam_part] = reduce_data.value();
+
+        num_new_beam_part = sum_new_beam_part;
+
+        auto& beam_elec = m_product_beam_pc;
+
+
+        if (num_new_beam_part == 0) continue;
+
+        // if(Hipace::m_verbose >= 3) {
+        //     amrex::AllPrint() << "Number of transfered particles: "
+        //                 << num_new_beam_part << "\n";
+        // }
+
+        // Resize the beam container
+        auto old_size_non_slip = beam_elec->getNumParticles(WhichBeamSlice::This);
+        auto old_size = beam_elec->getNumParticlesIncludingSlipped(WhichBeamSlice::This);
+        auto new_size = old_size + num_new_beam_part;
+        beam_elec->resize(WhichBeamSlice::This, old_size_non_slip, new_size - old_size_non_slip);
+
+        auto ptd_beam = beam_elec->getBeamSlice(WhichBeamSlice::This).getParticleTileData();
+
+        const amrex::Real n_subcycles = static_cast<amrex::Real>(beam_elec->m_n_subcycles);
+
+        amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
+        uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
+
+        const amrex::Real init_z = gm[0].ProbLo(2) +
+            (islice + 1._rt - gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
+
+        // This kernel does the transfer of the ionized electrons from the plasma container
+        // to the beam container and make them invalid in the plasma container
+        amrex::ParallelFor(num_particles,
+            [=] AMREX_GPU_DEVICE (int ip) {
+                if (ptd_plasma.id(ip) == 3){
+                    const amrex::Long pid_beam = amrex::Gpu::Atomic::Add(p_ip_beam, 1u);
+                    const amrex::Long pidx_beam = pid_beam + old_size;
+
+                    amrex::Real Aabssqp = 0;
+                    const amrex::Real ux = ptd_plasma.rdata(PlasmaIdx::ux_half_step)[ip];
+                    const amrex::Real uy = ptd_plasma.rdata(PlasmaIdx::uy_half_step)[ip];
+                    const amrex::Real psi = ptd_plasma.rdata(PlasmaIdx::psi_half_step)[ip];
+                    const amrex::Real integral = ptd_plasma.rdata(PlasmaIdx::time_integral)[ip];
+
+                    ptd_beam.id(pidx_beam) = pid_beam + 1;
+                    ptd_beam.id(pidx_beam).make_valid(); // ensure id is valid
+                    ptd_beam.pos(0, pidx_beam) = ptd_plasma.rdata(PlasmaIdx::x_prev)[ip];
+                    ptd_beam.pos(1, pidx_beam) = ptd_plasma.rdata(PlasmaIdx::y_prev)[ip];
+                    ptd_beam.pos(2, pidx_beam) = init_z;
+                    ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ux;
+                    ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = uy;
+                    ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*Aabssqp)/(2.*psi);
+                    ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * dt * clight * dzeta_inv;
+                    // conservation of j_x and j_y
+                    // don't push beam on this time step
+
+                    // AMREX_DEVICE_PRINTF("beam nsubcycles: %f\n", (integral / dt) * n_subcycles);
+                    ptd_beam.rdata(BeamIdx::nsubcycles)[pidx_beam] = (integral / dt) * n_subcycles;
+                    ptd_beam.idata(BeamIdx::mr_level)[pidx_beam] = 0;
+                    ptd_plasma.id(ip).make_invalid();
+                }
+            });
+            amrex::Gpu::streamSynchronize();
     }
 }
 

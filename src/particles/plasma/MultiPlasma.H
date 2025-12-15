@@ -11,6 +11,7 @@
 #include "PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 #include "particles/collisions/CoulombCollision.H"
+#include "particles/beam/MultiBeam.H"
 
 class MultiPlasma
 {
@@ -26,10 +27,12 @@ public:
      * \param[in] slice_dm DistributionMapping of the transverse slice domain
      * \param[in] slice_gm slice geometry
      * \param[in] gm Geometry of the simulation, to get the cell size
+     * \param[in] beams MultiBeam object containing all beams
      */
     void InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                    amrex::Vector<amrex::DistributionMapping> slice_dm,
-                   amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm);
+                   amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm,
+                   MultiBeam& beams);
 
 
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
@@ -114,6 +117,13 @@ public:
      */
     void DoLaserIonization (const int islice, const amrex::Geometry& laser_geom,
                             const MultiLaser& laser);
+
+    /** Do the transfer of ionized plasma particles to beam particles
+     *
+     * \param[in] gm Geometry object for the whole domain
+     * \param[in] islice Slice index corresponding to the current simulation slice
+     */
+    void DoLaserInjection (amrex::Vector<amrex::Geometry> const& gm, const int islice);
 
     /** \brief whether any plasma species uses a neutralizing background, e.g. no ion motion */
     [[nodiscard]] bool

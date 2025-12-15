@@ -36,7 +36,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     " (WhichSlice::Next), for the ion charge deposition (WhichSLice::RhomJzIons)"
     " or for the Salame slice (WhichSlice::Salame)");
 
-    const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
+    // const amrex::Real max_qsa_weighting_factor = plasma.m_max_qsa_weighting_factor;
     const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
     // only deposit rho individual on WhichSlice::This
@@ -201,16 +201,17 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                     + 1._rt
                 );
 
-                if (gamma_psi < 0.0_rt || gamma_psi > max_qsa_weighting_factor || psi_inv < 0.0_rt)
-                {
-                    // This particle violates the QSA, discard it and do not deposit its current
-                    if (p_n_qsa_violation) {
-                        amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
-                    }
-                    ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
-                    ptd.id(ip).make_invalid();
-                    return;
-                }
+                // if (gamma_psi < 0.0_rt || (gamma_psi > max_qsa_weighting_factor && ptd.id(ip)!=3) || psi_inv < 0.0_rt)
+                // {
+                //     // AMREX_DEVICE_PRINTF("gamma_psi of plasma particle: %f psi_inv: %f\n", gamma_psi, psi_inv);
+                //     // This particle violates the QSA, discard it and do not deposit its current
+                //     if (p_n_qsa_violation) {
+                //         amrex::Gpu::Atomic::Add(p_n_qsa_violation, 1);
+                //     }
+                //     ptd.rdata(PlasmaIdx::w)[ip] = 0.0_rt;
+                //     ptd.id(ip).make_invalid();
+                //     return;
+                // }
 
                 for (int iy=0; iy <= depos_order; ++iy) {
                     for (int ix=0; ix <= depos_order; ++ix) {

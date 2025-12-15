@@ -484,7 +484,7 @@ When both are specified, the per-species value is used.
 * ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
 
-* ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `<plasma name>.can_ionize`)
+* ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can be ionized by a laser.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
@@ -638,6 +638,13 @@ which are valid only for certain beam types, are introduced further below under
     for both x and y direction as part of the reordering.
     The ideal index type is different for beam push and beam deposition so some experimentation
     may be required to find the overall fastest setting for a specific simulation.
+
+* ``<plasma name>.can_laser_injection`` (`bool`) optional (default `0`)
+    Whether the laser injection is enabled. Can also be set to 1 by specifying ``<plasma name>.injection_product``.
+
+* ``<plasma name>.injection_product`` (`string`) optional (default "")
+    Name of the beam species that contains the new electrons that are produced
+    when this plasma gets ionized. Only needed if this plasma is ionizable and the laser injection is unabled.
 
 * ``<beam name> or beams.output_ratio`` (`int`) optional (default `1`)
     Set the fraction of beam particles that should be written to the openPMD output.

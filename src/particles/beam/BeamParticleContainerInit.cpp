@@ -107,7 +107,7 @@ namespace
         ptd.rdata(BeamIdx::uz)[ip] = uz;
         ptd.rdata(BeamIdx::w )[ip] = is_valid ? std::abs(weight) : amrex::Real{0};
 
-        ptd.idata(BeamIdx::nsubcycles)[ip] = 0;
+        ptd.rdata(BeamIdx::nsubcycles)[ip] = 0;
         ptd.idata(BeamIdx::mr_level)[ip] = 0;
 
         ptd.idcpu(ip) = pid + ip;
