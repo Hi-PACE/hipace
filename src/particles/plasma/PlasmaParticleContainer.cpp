@@ -825,10 +825,8 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
     using namespace amrex::literals;
     const PhysConst phys_const = get_phys_const();
     const amrex::Real clight = phys_const.c;
-    const amrex::Real clight_inv = 1.0_rt/phys_const.c;
 
     const amrex::Real dzeta_inv = gm[0].InvCellSize(2);
-    const amrex::Real dzeta = gm[0].CellSize(2);
 
     const amrex::Real dt = Hipace::GetInstance().m_dt;
 
@@ -880,12 +878,9 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
 
         const amrex::Real n_subcycles = static_cast<amrex::Real>(beam_elec->m_n_subcycles);
 
-        // const amrex::Real poff_z = GetPosOffset(2, gm[0], gm[0].Domain());
-
         amrex::Gpu::DeviceScalar<uint32_t> ip_beam(0);
         uint32_t * AMREX_RESTRICT p_ip_beam = ip_beam.dataPtr();
 
-        // const amrex::Real init_z = poff_z + (islice - 0.5_rt) * dzeta;
         const amrex::Real init_z = gm[0].ProbLo(2) +
             (islice + 1._rt - gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
 
@@ -911,8 +906,6 @@ PlasmaToBeam (amrex::Vector<amrex::Geometry> const& gm, const int islice)
                     ptd_beam.rdata(BeamIdx::ux)[pidx_beam] = ux;
                     ptd_beam.rdata(BeamIdx::uy)[pidx_beam] = uy;
                     ptd_beam.rdata(BeamIdx::uz)[pidx_beam] = (1+ux*ux+uy*uy - psi*psi + 0.5_rt*Aabssqp)/(2.*psi);
-                    //amrex::Real uz = ptd_beam.rdata(BeamIdx::uz)[pidx_beam] * clight_inv;
-                    //const amrex::Real gam = std::sqrt(1. + ux*ux + uy*uy + uz*uz + 0.5_rt*amrex::abs(A*A));
                     ptd_beam.rdata(BeamIdx::w)[pidx_beam] = ptd_plasma.rdata(PlasmaIdx::w)[ip] * dt * clight * dzeta_inv;
                     // conservation of j_x and j_y
                     // don't push beam on this time step
