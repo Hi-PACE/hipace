@@ -116,6 +116,12 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
             lengths[0] = nx;
             number_of_transforms = ny;
             break;
+        case FFTType::R2C_1D_batched:
+            transform_type = rocfft_transform_type_real_forward;
+            dimensions = 1;
+            lengths[0] = nx;
+            number_of_transforms = ny;
+            break;
     }
 
     rocfft_status status;

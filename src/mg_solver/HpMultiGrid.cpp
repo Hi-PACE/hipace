@@ -1087,7 +1087,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
             << " cannot be coarsened enough times to be solved efficiently.\n"
             << "hpmg: Size of the final MG level: "
             << m_domain[m_max_level].length(0) << " " << m_domain[m_max_level].length(1) << ".\n"
-            << "hpmg: Please consider using a domain size of the form '2^n', '3*2^n', '2^n+1' or '3*n^2+1'.\n";
+            << "hpmg: Please consider using a domain size of the form '2^n', '3*2^n', '2^n-1' or '3*n^2-1'.\n";
     }
 #else
     m_single_block_level_begin = m_max_level;
