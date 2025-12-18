@@ -210,22 +210,22 @@ Fields::AllocData (
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
-    if (m_poisson_solver_str == "FFTDirichletDirect"){
+    if (poisson_solver_str == "FFTDirichletDirect"){
         m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverDirichletDirect>(
             getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
-    } else if (m_poisson_solver_str == "FFTDirichletExpanded"){
+    } else if (poisson_solver_str == "FFTDirichletExpanded"){
         m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverDirichletExpanded>(
             getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
-    } else if (m_poisson_solver_str == "FFTDirichletFast"){
+    } else if (poisson_solver_str == "FFTDirichletFast"){
         m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverDirichletFast>(
             getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
-    } else if (m_poisson_solver_str == "FFTDirichletQuick"){
+    } else if (poisson_solver_str == "FFTDirichletQuick"){
         m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverDirichletQuick>(
             getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
-    } else if (m_poisson_solver_str == "FFTPeriodic") {
+    } else if (poisson_solver_str == "FFTPeriodic") {
         m_poisson_solver.push_back(std::make_unique<FFTPoissonSolverPeriodic>(
             getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
-    } else if (m_poisson_solver_str == "MGDirichlet") {
+    } else if (poisson_solver_str == "MGDirichlet") {
         m_poisson_solver.push_back(std::make_unique<MGPoissonSolverDirichlet>(
             getSlices(lev).boxArray(), getSlices(lev).DistributionMap(), geom));
     } else {
