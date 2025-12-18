@@ -12,6 +12,7 @@ target_sources(HiPACE
     FFTPoissonSolverDirichletDirect.cpp
     FFTPoissonSolverDirichletExpanded.cpp
     FFTPoissonSolverDirichletFast.cpp
+    FFTPoissonSolverDirichletQuick.cpp
     MGPoissonSolverDirichlet.cpp
 )
 
