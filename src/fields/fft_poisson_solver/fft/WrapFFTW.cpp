@@ -90,6 +90,16 @@ void AnyFFT::SetBuffers (void* in, void* out, [[maybe_unused]] void* work_area) 
                         FFTW_MEASURE);
                 }
                 break;
+            case FFTType::R2C_1D_batched:
+                {
+                    int n[1] = {m_plan->m_nx};
+                    m_plan->m_fftwf_plan = fftwf_plan_many_dft_r2c(
+                        1, n, m_plan->m_ny,
+                        reinterpret_cast<float*>(in), nullptr, 1, m_plan->m_nx,
+                        reinterpret_cast<fftwf_complex*>(out), nullptr, 1, m_plan->m_nx/2+1,
+                        FFTW_MEASURE);
+                }
+                break;
         }
     } else {
         switch (m_plan->m_type) {
@@ -130,6 +140,16 @@ void AnyFFT::SetBuffers (void* in, void* out, [[maybe_unused]] void* work_area) 
                         1, n, m_plan->m_ny,
                         reinterpret_cast<fftw_complex*>(in), nullptr, 1, m_plan->m_nx/2+1,
                         reinterpret_cast<double*>(out), nullptr, 1, m_plan->m_nx,
+                        FFTW_MEASURE);
+                }
+                break;
+            case FFTType::R2C_1D_batched:
+                {
+                    int n[1] = {m_plan->m_nx};
+                    m_plan->m_fftw_plan = fftw_plan_many_dft_r2c(
+                        1, n, m_plan->m_ny,
+                        reinterpret_cast<double*>(in), nullptr, 1, m_plan->m_nx,
+                        reinterpret_cast<fftw_complex*>(out), nullptr, 1, m_plan->m_nx/2+1,
                         FFTW_MEASURE);
                 }
                 break;

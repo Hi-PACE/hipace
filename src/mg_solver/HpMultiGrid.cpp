@@ -1098,7 +1098,7 @@ MultiGrid::MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain, int a
             << "hpmg: Size of the final MG level: "
             << m_domain[m_max_level].length(0) << " " << m_domain[m_max_level].length(1) << ".\n"
             << "hpmg: Please consider using a domain size of the form "
-            << "'2^n', '3*2^n', '2^n+1' or '3*n^2+1'.\n";
+            << "'2^n', '3*2^n', '2^n-1' or '3*n^2-1'.\n";
     }
 #else
     m_single_block_level_begin = m_max_level;
