@@ -92,7 +92,8 @@ public:
      * \param[in] output_time physical time of current step
      * \param[in] max_time physical time of last step
      */
-    bool hasAnyFieldOutput (int output_step, int max_step,
+    [[nodiscard]] bool
+    hasAnyFieldOutput (int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time) const
     {
         for (const auto& fd : m_field_data) {
@@ -108,7 +109,8 @@ public:
      * \param[in] output_time physical time of current step
      * \param[in] max_time physical time of last step
      */
-    bool hasBeamOutput (int output_step, int max_step,
+    [[nodiscard]] bool
+    hasBeamOutput (int output_step, int max_step,
                         amrex::Real output_time, amrex::Real max_time) const
     {
         return m_output_beam_names.size() > 0 &&
@@ -123,7 +125,8 @@ public:
      * \param[in] output_time physical time of current step
      * \param[in] max_time physical time of last step
      */
-    bool hasAnyOutput (int output_step, int max_step,
+    [[nodiscard]] bool
+    hasAnyOutput (int output_step, int max_step,
                        amrex::Real output_time, amrex::Real max_time) const
     {
         return hasAnyFieldOutput(output_step, max_step, output_time, max_time) ||
@@ -132,15 +135,18 @@ public:
 
     /** \brief determines if rho is requested as a diagnostic
      */
-    bool needsRho () const;
+    [[nodiscard]] bool
+    needsRho () const;
 
     /** \brief determines if rho for every individual plasma is requested as a diagnostic
      */
-    bool needsRhoIndividual () const;
+    [[nodiscard]] bool
+    needsRhoIndividual () const;
 
     /** \brief determines if the temperature parameters for every individual plasma are requested as a diagnostic
      */
-    bool needsTempIndividual () const;
+    [[nodiscard]] bool
+    needsTempIndividual () const;
 
     /** \brief calculate box which possibly was trimmed in case of slice IO
      *

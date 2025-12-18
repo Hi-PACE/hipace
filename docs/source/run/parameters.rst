@@ -341,7 +341,7 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
-* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletFast`)
+* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletQuick` or `FFTDirichletFast`)
     Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
     solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are:
 
@@ -357,6 +357,10 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
       * ``FFTDirichletFast`` Perform the discrete sine transformation using a fast sine transform
         algorithm that uses FFTs of the same size as the fields.
         Preferred resolution: :math:`2^N-1`.
+
+      * ``FFTDirichletQuick`` Similar to ``FFTDirichletFast`` but uses a different type of FFT that
+        works better for even resolutions.
+        Preferred resolution: :math:`2^N`.
 
       * ``MGDirichlet`` Use the HiPACE++ multigrid solver to solve the Poisson equation with
         Dirichlet boundary conditions.
@@ -1016,6 +1020,11 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
           Currently supported geometries: 3D or cylindrical profiles with azimuthal decomposition.
           The laser pulse is injected in the HiPACE++ simulation so that the beginning of the temporal profile from the file corresponds to the head of the simulation box, and time (in the file) is converted to space (HiPACE++ longitudinal coordinate) with ``z = -c*t + const``.
           If this parameter is set, then the file is used to initialize all lasers instead of using a gaussian profile.
+
+      * ``<laser name>.lambda0`` (`float`) optional (default `<read from file>`)
+          Wavelength of the laser pulses. Currently, all pulses must have the same wavelength.
+          The wavelength is already read in from the metadata of the openPMD file,
+          however it can be overwritten using this parameter.
 
       * ``<laser name>.openPMD_laser_name`` (`string`) optional (default `laserEnvelope`)
           Name of the laser envelope field inside the openPMD file to be read in.
