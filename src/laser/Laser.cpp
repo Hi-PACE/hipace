@@ -98,84 +98,150 @@ Laser::GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D) {
 
     HIPACE_PROFILE("MultiLaser::GetEnvelopeFromFileHelper()");
 #ifdef HIPACE_USE_OPENPMD
-    openPMD::Datatype input_type = openPMD::Datatype::INT;
-    {
-        // Check what kind of Datatype is used in the Laser file
-        auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
+    // Check what kind of Datatype is used in the Laser file
+    auto series = openPMD::Series( m_input_file_path , openPMD::Access::READ_ONLY );
 
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            series.iterations.contains(m_file_num_iteration),
-            "Could not find iteration " + std::to_string(m_file_num_iteration) +
-            " in file " + m_input_file_path + "\n"
-        );
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        series.iterations.contains(m_file_num_iteration),
+        "Could not find iteration " + std::to_string(m_file_num_iteration) +
+        " in file " + m_input_file_path + "\n"
+    );
 
-        auto iteration = series.iterations[m_file_num_iteration];
+    auto iteration = series.iterations[m_file_num_iteration];
 
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            iteration.meshes.contains(m_file_envelope_name),
-            "Could not find mesh '" + m_file_envelope_name + "' in file "
-            + m_input_file_path + "\n"
-        );
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        iteration.meshes.contains(m_file_envelope_name),
+        "Could not find mesh '" + m_file_envelope_name + "' in file "
+        + m_input_file_path + "\n"
+    );
 
-        auto mesh = iteration.meshes[m_file_envelope_name];
+    auto mesh = iteration.meshes[m_file_envelope_name];
 
-        // Check that we are reading a normalized vector potential and not an electric field
-        const std::array<double, 7> units_file = mesh.unitDimension();
-        const std::array<double, 7> units_norm_potential{0., 0., 0., 0., 0., 0., 0.};
-        const std::array<double, 7> units_electric_field{1., 1., -3., -1., 0., 0., 0.};
-        const std::string help_msg = "Make sure to store the normalized vector potential, "
-            "set the Attribute 'envelopeField' to 'normalized_vector_potential' and "
-            "unitDimension to '" + amrex::ToString(units_norm_potential) + "'. "
-            "If you are using LASY to generate the laser, pass 'save_as_vector_potential=True' "
-            "to laser.write_to_file() or write_to_openpmd_file()";
+    // Check that we are reading a normalized vector potential and not an electric field
+    const std::array<double, 7> units_file = mesh.unitDimension();
+    const std::array<double, 7> units_norm_potential{0., 0., 0., 0., 0., 0., 0.};
+    const std::array<double, 7> units_electric_field{1., 1., -3., -1., 0., 0., 0.};
+    const std::string help_msg = "Make sure to store the normalized vector potential, "
+        "set the Attribute 'envelopeField' to 'normalized_vector_potential' and "
+        "unitDimension to '" + amrex::ToString(units_norm_potential) + "'. "
+        "If you are using LASY to generate the laser, pass 'save_as_vector_potential=True' "
+        "to laser.write_to_file() or write_to_openpmd_file()";
 
-        if (mesh.containsAttribute("envelopeField")) {
-            const std::string field_type = mesh.getAttribute("envelopeField").get<std::string>();
-            if (field_type == "electric_field") {
-                amrex::Abort("Attribute 'envelopeField' in file '" + m_input_file_path +
-                    "' is set to 'electric_field' which is not compatible with HiAPCE++. " +
-                    help_msg
-                );
-            } else if (field_type != "normalized_vector_potential") {
-                amrex::AllPrint() << "WARNING: Attribute 'envelopeField' in file '"
-                    << m_input_file_path << "' is set to '" << field_type << "' which is not "
-                    " recognized. " << help_msg << '\n';
-            }
-        }
-
-        if (units_file == units_electric_field) {
-            amrex::Abort("unitDimension '" + amrex::ToString(units_file) + "' in file '"
-                + m_input_file_path + "' is that of an electric field which is not compatible "
-                "with HiAPCE++. " + help_msg
+    if (mesh.containsAttribute("envelopeField")) {
+        const std::string field_type = mesh.getAttribute("envelopeField").get<std::string>();
+        if (field_type == "electric_field") {
+            amrex::Abort("Attribute 'envelopeField' in file '" + m_input_file_path +
+                "' is set to 'electric_field' which is not compatible with HiAPCE++. " +
+                help_msg
             );
-        } else if (units_file != units_norm_potential) {
-            amrex::AllPrint() << "WARNING: unitDimension '" << amrex::ToString(units_file)
-                << "' in file '" << m_input_file_path << "' is not recognized. "
-                << help_msg << '\n';
+        } else if (field_type != "normalized_vector_potential") {
+            amrex::AllPrint() << "WARNING: Attribute 'envelopeField' in file '"
+                << m_input_file_path << "' is set to '" << field_type << "' which is not "
+                " recognized. " << help_msg << '\n';
         }
-
-        if (mesh.containsAttribute("angularFrequency")) {
-            m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
-                / mesh.getAttribute("angularFrequency").get<double>();
-        }
-
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-            mesh.contains(openPMD::RecordComponent::SCALAR),
-            "Could not find component '" +
-            std::string(openPMD::RecordComponent::SCALAR) +
-            "' in file " + m_input_file_path + "\n"
-        );
-
-        input_type = mesh[openPMD::RecordComponent::SCALAR].getDatatype();
     }
 
+    if (units_file == units_electric_field) {
+        amrex::Abort("unitDimension '" + amrex::ToString(units_file) + "' in file '"
+            + m_input_file_path + "' is that of an electric field which is not compatible "
+            "with HiAPCE++. " + help_msg
+        );
+    } else if (units_file != units_norm_potential) {
+        amrex::AllPrint() << "WARNING: unitDimension '" << amrex::ToString(units_file)
+            << "' in file '" << m_input_file_path << "' is not recognized. "
+            << help_msg << '\n';
+    }
+
+    if (mesh.containsAttribute("angularFrequency")) {
+        m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+            / mesh.getAttribute("angularFrequency").get<double>();
+    }
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        mesh.contains(openPMD::RecordComponent::SCALAR),
+        "Could not find component '" +
+        std::string(openPMD::RecordComponent::SCALAR) +
+        "' in file " + m_input_file_path + "\n"
+    );
+
+    auto comp = mesh[openPMD::RecordComponent::SCALAR];
+
+    const PhysConst phc = get_phys_const();
+    const amrex::Real clight = phc.c;
+
+    const auto extent = comp.getExtent();
+    std::vector<double> offset = mesh.gridGlobalOffset();
+    std::vector<double> position = comp.position<double>();
+    std::vector<double> spacing = mesh.gridSpacing<double>();
+
+    const std::vector<std::string> axis_labels = mesh.axisLabels();
+
+    AMREX_ALWAYS_ASSERT(extent.size() >= 3);
+
+    m_strides = {extent[2], extent[2] * extent[1]};
+    m_bigend = {extent[2] - 1, extent[1] - 1, extent[0] - 1};
+    m_unitSI = static_cast<amrex::Real>(comp.unitSI());
+
+    if (axis_labels.size() >= 3 &&
+        axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x") {
+
+        m_dx_inv = {1. / spacing[2], 1. / spacing[1], -1. / (clight * spacing[0])};
+        m_pos_offset = {
+            offset[2] + spacing[2] * position[2],
+            offset[1] + spacing[1] * position[1],
+            laser_geom_3D.ProbHi(Direction::z) - laser_geom_3D.CellSize(Direction::z) / 2
+        };
+        m_file_geometry = "xyt";
+    } else if (axis_labels.size() >= 3 &&
+               axis_labels[0] == "z" && axis_labels[1] == "y" && axis_labels[2] == "x") {
+
+        m_dx_inv = {1. / spacing[2], 1. / spacing[1], 1. / spacing[0]};
+        m_pos_offset = {
+            offset[2] + spacing[2] * position[2],
+            offset[1] + spacing[1] * position[1],
+            offset[0] + spacing[0] * position[0]
+        };
+        m_file_geometry = "xyz";
+    } else if (axis_labels.size() >= 2 && axis_labels[0] == "t" && axis_labels[1] == "r") {
+
+        m_dx_inv = {1. / spacing[1], -1. / (clight * spacing[0])};
+        m_pos_offset = {
+            offset[1] + spacing[1] * position[1],
+            laser_geom_3D.ProbHi(Direction::z) - laser_geom_3D.CellSize(Direction::z) / 2
+        };
+        m_file_geometry = "rt";
+    } else {
+        amrex::Abort("Incorrect axis labels in laser file, must be either tyx, zyx or tr");
+    }
+
+    uint64_t num_cells = (m_bigend[0] + 1) * (m_bigend[1] + 1) * (m_bigend[2] + 1);
+
+    input_type = comp.getDatatype();
     if (input_type == openPMD::Datatype::CFLOAT) {
-        GetEnvelopeFromFile<std::complex<float>>(laser_geom_3D);
+        m_cf_laser_data.reset(
+            reinterpret_cast<std::complex<float>*>(
+                amrex::The_Managed_Arena()->alloc(num_cells*sizeof(std::complex<float>))),
+            [](std::complex<float> *p){
+                amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
+
+        comp.loadChunk(m_cf_laser_data, {0u}, {-1u});
+
+        m_cf_ptr = m_cf_laser_data.get();
     } else if (input_type == openPMD::Datatype::CDOUBLE) {
-        GetEnvelopeFromFile<std::complex<double>>(laser_geom_3D);
+        m_cd_laser_data.reset(
+            reinterpret_cast<std::complex<double>*>(
+                amrex::The_Managed_Arena()->alloc(num_cells*sizeof(std::complex<double>))),
+            [](std::complex<double> *p){
+                amrex::The_Managed_Arena()->free(reinterpret_cast<double*>(p)); });
+
+        comp.loadChunk(m_cd_laser_data, {0u}, {-1u});
+
+        m_cd_ptr = m_cd_laser_data.get();
     } else {
         amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
     }
+
+    series.flush();
 #else
     amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
                  "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
