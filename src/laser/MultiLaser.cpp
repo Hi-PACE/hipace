@@ -841,7 +841,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     using Complex = amrex::GpuComplex<amrex::Real>;
 
     // Basic laser parameters and constants
-    Complex I(0,1);
+    constexpr Complex I(0,1);
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
 
     // Get grid properties
@@ -855,11 +855,13 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
 #endif
     for ( amrex::MFIter mfi(m_slices, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
+        Array3<amrex::Real> const arr = m_slices.array(mfi);
         // Initialize a laser envelope on slice islice
         for (int ilaser = 0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             if (laser.m_laser_init_type == "from_file"){
+
+                constexpr int interp_order = 1;
 
                 const amrex::GpuComplex<float>* cf_ptr = laser.m_cf_ptr;
                 const amrex::GpuComplex<double>* cd_ptr = laser.m_cd_ptr;;
@@ -875,50 +877,106 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         return Complex{0, 0};
                     }
 
-                    const uint64_t offset = i + j * laser_strides[0] + k * laser_strides[1];
+                    const uint64_t offset =i + j * laser_strides[0] + k * laser_strides[1];
 
                     if (cf_ptr) {
                         const auto val = cf_ptr[offset];
                         return Complex {
-                            static_cast<amrex::Real>(val.real()),
-                            static_cast<amrex::Real>(val.imag())
+                            static_cast<amrex::Real>(val.real()) * laser_unitSI,
+                            static_cast<amrex::Real>(val.imag()) * laser_unitSI
                         };
                     } else {
                         const auto val = cd_ptr[offset];
                         return Complex {
-                            static_cast<amrex::Real>(val.real()),
-                            static_cast<amrex::Real>(val.imag())
+                            static_cast<amrex::Real>(val.real()) * laser_unitSI,
+                            static_cast<amrex::Real>(val.imag()) * laser_unitSI
                         };
                     }
                 };
 
-                amrex::ParallelFor(bx,
-                    [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                    {
-                        if (ilaser == 0) {
-                            arr(i, j, k, comp ) = 0._rt;
-                            arr(i, j, k, comp + 1 ) = 0._rt;
-                        }
-                        arr(i, j, k, comp ) += 0;
-                        arr(i, j, k, comp + 1 ) += 0;
+                if (laser.m_file_geometry == "xyt" || laser.m_file_geometry == "xyz") {
+                    amrex::ParallelFor(to2D(bx),
+                        [=] AMREX_GPU_DEVICE (int i, int j)
+                        {
+                            const amrex::Real x = i * dx_arr[0] + poff_x;
+                            const amrex::Real y = j * dx_arr[1] + poff_y;
+                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+
+                            const amrex::Real xmid = (x - laser_pos_offset[0]) * laser_dx_inv[0];
+                            const amrex::Real ymid = (y - laser_pos_offset[1]) * laser_dx_inv[1];
+                            const amrex::Real zmid = (z - laser_pos_offset[2]) * laser_dx_inv[2];
+
+                            Complex val{0, 0};
+                            if (ilaser != 0) {
+                                val = {arr(i, j, comp), arr(i, j, comp + 1)};
+                            }
+
+                            for (int iz=0; iz<=interp_order; iz++){
+                                auto [shape_z, kk] =
+                                    compute_single_shape_factor<false, interp_order>(zmid, iz);
+                            for (int iy=0; iy<=interp_order; iy++){
+                                auto [shape_y, jj] =
+                                    compute_single_shape_factor<false, interp_order>(ymid, iy);
+                            for (int ix=0; ix<=interp_order; ix++){
+                                auto [shape_x, ii] =
+                                    compute_single_shape_factor<false, interp_order>(xmid, ix);
+                                val += (shape_x * shape_y * shape_z) * laser_arr(ii, jj, kk);
+                            }}}
+
+                            arr(i, j, comp) = val.real();
+                            arr(i, j, comp + 1) = val.imag();
+                        });
+                } else {
+                    amrex::ParallelFor(to2D(bx),
+                        [=] AMREX_GPU_DEVICE (int i, int j)
+                        {
+                            const amrex::Real x = i * dx_arr[0] + poff_x;
+                            const amrex::Real y = j * dx_arr[1] + poff_y;
+                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+
+                            const amrex::Real r = std::sqrt(x*x + y*y);
+                            const amrex::Real theta = std::atan2(y, x);
+                            const amrex::Real rmid = (r - laser_pos_offset[0]) * laser_dx_inv[0];
+                            const amrex::Real zmid = (z - laser_pos_offset[1]) * laser_dx_inv[1];
+
+                            Complex val{0, 0};
+                            if (ilaser != 0) {
+                                val = {arr(i, j, comp), arr(i, j, comp + 1)};
+                            }
+
+                            for (int iz=0; iz<=interp_order; iz++){
+                                auto [shape_z, jj] =
+                                    compute_single_shape_factor<false, interp_order>(zmid, iz);
+                            for (int ir=0; ir<=interp_order; ir++){
+                                auto [shape_r, ii] =
+                                    compute_single_shape_factor<false, interp_order>(rmid, ir);
+                            for (int im=1; im<=laser_bigend[2]/2; im++) {
+                                val += (shape_r * shape_z) * std::cos(im*theta) *
+                                    laser_arr(ii, jj, 2*im-1);
+                                val += (shape_r * shape_z) * std::sin(im*theta) *
+                                    laser_arr(ii, jj, 2*im);
+                            }}}
+
+                            arr(i, j, comp) = val.real();
+                            arr(i, j, comp + 1) = val.imag();
                     });
+                }
             } else if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;
                 auto profile_imag = laser.m_profile_imag;
-                amrex::ParallelFor(bx,
-                    [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                amrex::ParallelFor(to2D(bx),
+                    [=] AMREX_GPU_DEVICE (int i, int j)
                     {
                         const amrex::Real x = i * dx_arr[0] + poff_x;
                         const amrex::Real y = j * dx_arr[1] + poff_y;
                         const amrex::Real z = islice * dx_arr[2] + poff_z;
                         if (ilaser == 0) {
-                            arr(i, j, k, comp ) = 0._rt;
-                            arr(i, j, k, comp + 1 ) = 0._rt;
+                            arr(i, j, comp) = 0._rt;
+                            arr(i, j, comp + 1) = 0._rt;
                         }
-                        arr(i, j, k, comp ) += profile_real(x,y,z);
-                        arr(i, j, k, comp + 1 ) += profile_imag(x,y,z);
-                    }
-                );
+                        arr(i, j, comp) += profile_real(x,y,z);
+                        arr(i, j, comp + 1) += profile_imag(x,y,z);
+                    });
             } else if (laser.m_laser_init_type == "gaussian") {
                 const amrex::Real a0 = laser.m_a0;
                 const amrex::Real w0_2 = laser.m_w0 * laser.m_w0;
@@ -935,8 +993,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real phi2 = laser.m_phi2;
                 const amrex::Real clight = get_phys_const().c;
                 const amrex::Real theta_xy = laser.m_STC_theta_xy;
-                amrex::ParallelFor(bx,
-                    [=] AMREX_GPU_DEVICE(int i, int j, int k)
+                amrex::ParallelFor(to2D(bx),
+                    [=] AMREX_GPU_DEVICE (int i, int j)
                     {
                         const amrex::Real x = i * dx_arr[0] + poff_x - x0;
                         const amrex::Real y = j * dx_arr[1] + poff_y - y0;
@@ -948,8 +1006,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                             + std::cos(propagation_angle_yz) * z;
                         // For first laser, setval to 0.
                         if (ilaser == 0) {
-                            arr(i, j, k, comp ) = 0._rt;
-                            arr(i, j, k, comp + 1 ) = 0._rt;
+                            arr(i, j, comp) = 0._rt;
+                            arr(i, j, comp + 1) = 0._rt;
                         }
                         // Compute envelope for time step 0
                         Complex diffract_factor = 1._rt + I * (zp - zfoc + z0 *
@@ -970,11 +1028,10 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         Complex stcfactor = prefactor * amrex::exp( - time_exponent);
                         Complex exp_argument = - (x * x + yp * yp) * inv_complex_waist_2;
                         Complex envelope = stcfactor * amrex::exp(exp_argument) *
-                        amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
-                        arr(i, j, k, comp ) += envelope.real();
-                        arr(i, j, k, comp + 1 ) += envelope.imag();
-                    }
-                );
+                            amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
+                        arr(i, j, comp) += envelope.real();
+                        arr(i, j, comp + 1) += envelope.imag();
+                    });
             }
         }
     }
