@@ -189,30 +189,44 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     if (axis_labels.size() >= 3 &&
         axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x") {
 
-        m_dx_inv = {1. / spacing[2], 1. / spacing[1], -1. / (clight * spacing[0])};
+        m_dx_inv = {
+            static_cast<amrex::Real>(1. / spacing[2]),
+            static_cast<amrex::Real>(1. / spacing[1]),
+            static_cast<amrex::Real>(-1. / (clight * spacing[0]))
+        };
         m_pos_offset = {
-            offset[2] + spacing[2] * position[2],
-            offset[1] + spacing[1] * position[1],
-            laser_geom_3D.ProbHi(Direction::z) - laser_geom_3D.CellSize(Direction::z) / 2
+            static_cast<amrex::Real>(offset[2] + spacing[2] * position[2]),
+            static_cast<amrex::Real>(offset[1] + spacing[1] * position[1]),
+            static_cast<amrex::Real>(laser_geom_3D.ProbHi(Direction::z)
+                                     - laser_geom_3D.CellSize(Direction::z) / 2)
         };
         m_file_geometry = "xyt";
     } else if (axis_labels.size() >= 3 &&
                axis_labels[0] == "z" && axis_labels[1] == "y" && axis_labels[2] == "x") {
 
-        m_dx_inv = {1. / spacing[2], 1. / spacing[1], 1. / spacing[0]};
+        m_dx_inv = {
+            static_cast<amrex::Real>(1. / spacing[2]),
+            static_cast<amrex::Real>(1. / spacing[1]),
+            static_cast<amrex::Real>(1. / spacing[0])
+        };
         m_pos_offset = {
-            offset[2] + spacing[2] * position[2],
-            offset[1] + spacing[1] * position[1],
-            offset[0] + spacing[0] * position[0]
+            static_cast<amrex::Real>(offset[2] + spacing[2] * position[2]),
+            static_cast<amrex::Real>(offset[1] + spacing[1] * position[1]),
+            static_cast<amrex::Real>(offset[0] + spacing[0] * position[0])
         };
         m_file_geometry = "xyz";
     } else if (axis_labels.size() >= 2 && axis_labels[0] == "t" && axis_labels[1] == "r") {
 
-        m_dx_inv = {1. / spacing[1], -1. / (clight * spacing[0]), 0};
+        m_dx_inv = {
+            static_cast<amrex::Real>(1. / spacing[1]),
+            static_cast<amrex::Real>(-1. / (clight * spacing[0])),
+            static_cast<amrex::Real>(0)
+        };
         m_pos_offset = {
-            offset[1] + spacing[1] * position[1],
-            laser_geom_3D.ProbHi(Direction::z) - laser_geom_3D.CellSize(Direction::z) / 2,
-            0
+            static_cast<amrex::Real>(offset[1] + spacing[1] * position[1]),
+            static_cast<amrex::Real>(laser_geom_3D.ProbHi(Direction::z)
+                                     - laser_geom_3D.CellSize(Direction::z) / 2),
+            static_cast<amrex::Real>(0)
         };
         m_file_geometry = "rt";
     } else {
