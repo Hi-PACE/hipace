@@ -204,8 +204,8 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
         const int rdim = ndim-1-i; // convert from C to F order
         if (m_file_geometry[i] == 't') {
             m_dx_inv[i] = amrex::Real(-1. / (clight * spacing[rdim]));
-            m_dx_inv[i] = amrex::Real(laser_geom_3D.ProbHi(Direction::z)
-                                       - laser_geom_3D.CellSize(Direction::z) / 2);
+            m_pos_offset[i] = amrex::Real(laser_geom_3D.ProbHi(Direction::z)
+                                          - laser_geom_3D.CellSize(Direction::z) / 2);
         } else {
             m_dx_inv[i] = amrex::Real(1. / spacing[rdim]);
             m_pos_offset[i] = amrex::Real(offset[rdim] + spacing[rdim] * position[rdim]);
@@ -218,9 +218,9 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     if (input_type == openPMD::Datatype::CFLOAT) {
         m_cf_laser_data.reset(
             reinterpret_cast<std::complex<float>*>(
-                amrex::The_Managed_Arena()->alloc(num_cells*sizeof(std::complex<float>))),
+                amrex::The_Pinned_Arena()->alloc(num_cells*sizeof(std::complex<float>))),
             [](std::complex<float> *p){
-                amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
+                amrex::The_Pinned_Arena()->free(reinterpret_cast<void*>(p)); });
 
         comp.loadChunk(m_cf_laser_data, {0u}, {-1u});
 
@@ -228,9 +228,9 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     } else if (input_type == openPMD::Datatype::CDOUBLE) {
         m_cd_laser_data.reset(
             reinterpret_cast<std::complex<double>*>(
-                amrex::The_Managed_Arena()->alloc(num_cells*sizeof(std::complex<double>))),
+                amrex::The_Pinned_Arena()->alloc(num_cells*sizeof(std::complex<double>))),
             [](std::complex<double> *p){
-                amrex::The_Managed_Arena()->free(reinterpret_cast<double*>(p)); });
+                amrex::The_Pinned_Arena()->free(reinterpret_cast<double*>(p)); });
 
         comp.loadChunk(m_cd_laser_data, {0u}, {-1u});
 

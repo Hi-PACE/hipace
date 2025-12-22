@@ -67,17 +67,17 @@ public:
 
     // from_file
 
-    /** full 3D laser data stored on the host */
+    /** full fp32 laser data from the openPMD file */
     std::shared_ptr<std::complex<float>> m_cf_laser_data;
-    /** full 3D laser data stored on the host */
+    /** full fp64 laser data from the openPMD file */
     std::shared_ptr<std::complex<double>> m_cd_laser_data;
-    amrex::GpuComplex<float>* m_cf_ptr = nullptr;
-    amrex::GpuComplex<double>* m_cd_ptr = nullptr;
-    amrex::GpuArray<std::uint64_t, 2> m_strides {};
-    amrex::IntVect m_bigend;
-    amrex::RealVect m_pos_offset;
-    amrex::RealVect m_dx_inv;
-    amrex::Real m_unitSI = 1;
+    amrex::GpuComplex<float>* m_cf_ptr = nullptr; /**< pointer to fp32 laser data */
+    amrex::GpuComplex<double>* m_cd_ptr = nullptr; /**< pointer to fp64 laser data */
+    amrex::GpuArray<std::uint64_t, 2> m_strides {}; /**< strides of laser data */
+    amrex::IntVect m_bigend; /**< upper bound laser data */
+    amrex::RealVect m_pos_offset; /**< position offset */
+    amrex::RealVect m_dx_inv; /**< inverse cell size */
+    amrex::Real m_unitSI = 1; /**< SI conversion factor */
     /** path to input openPMD file */
     std::string m_input_file_path;
     /** name of the openPMD species in the file */

@@ -201,7 +201,6 @@ MultiLaser::InitSliceEnvelope (const int islice, const int comp)
 {
     if (!UseLaser(islice)) return;
 
-    HIPACE_PROFILE("MultiLaser::InitSliceEnvelope()");
     InitLaserSlice(islice, comp);
 }
 
@@ -910,13 +909,13 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                                 val = {arr(i, j, comp), arr(i, j, comp + 1)};
                             }
 
-                            for (int iz=0; iz<=interp_order; iz++){
+                            for (int iz=0; iz<=interp_order; iz++) {
                                 auto [shape_z, kk] =
                                     compute_single_shape_factor<false, interp_order>(zmid, iz);
-                            for (int iy=0; iy<=interp_order; iy++){
+                            for (int iy=0; iy<=interp_order; iy++) {
                                 auto [shape_y, jj] =
                                     compute_single_shape_factor<false, interp_order>(ymid, iy);
-                            for (int ix=0; ix<=interp_order; ix++){
+                            for (int ix=0; ix<=interp_order; ix++) {
                                 auto [shape_x, ii] =
                                     compute_single_shape_factor<false, interp_order>(xmid, ix);
                                 val += (shape_x * shape_y * shape_z) * laser_arr(ii, jj, kk);
@@ -943,12 +942,13 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                                 val = {arr(i, j, comp), arr(i, j, comp + 1)};
                             }
 
-                            for (int iz=0; iz<=interp_order; iz++){
+                            for (int iz=0; iz<=interp_order; iz++) {
                                 auto [shape_z, jj] =
                                     compute_single_shape_factor<false, interp_order>(zmid, iz);
-                            for (int ir=0; ir<=interp_order; ir++){
+                            for (int ir=0; ir<=interp_order; ir++) {
                                 auto [shape_r, ii] =
                                     compute_single_shape_factor<false, interp_order>(rmid, ir);
+                                val += (shape_r * shape_z) * laser_arr(ii, jj, 0);
                             for (int im=1; im<=laser_bigend[2]/2; im++) {
                                 val += (shape_r * shape_z) * std::cos(im*theta) *
                                     laser_arr(ii, jj, 2*im-1);
@@ -959,6 +959,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                             arr(i, j, comp) = val.real();
                             arr(i, j, comp + 1) = val.imag();
                         });
+                } else {
+                    amrex::Abort("Invalid laser geometry");
                 }
             } else if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;
