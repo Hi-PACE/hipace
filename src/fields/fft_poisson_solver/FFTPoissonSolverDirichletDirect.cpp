@@ -61,7 +61,7 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
 
     const amrex::Real sine_x_factor = 1._rt / ( 2._rt * logical_nx);
     const amrex::Real sine_y_factor = 1._rt / ( 2._rt * logical_ny);
-    const amrex::Real norm_fac = -4._rt * logical_nx * logical_ny;
+    const amrex::Real norm_fac = -16._rt * logical_nx * logical_ny;
     const amrex::Real invdxsq = gm.InvCellSize(0)*gm.InvCellSize(0)*norm_fac;
     const amrex::Real invdysq = gm.InvCellSize(1)*gm.InvCellSize(1)*norm_fac;
 
