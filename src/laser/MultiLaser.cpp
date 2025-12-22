@@ -860,8 +860,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
         for (int ilaser = 0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             if (laser.m_laser_init_type == "from_file"){
-
-                constexpr int interp_order = 1;
+                static constexpr int interp_order = 1;
 
                 const amrex::GpuComplex<float>* cf_ptr = laser.m_cf_ptr;
                 const amrex::GpuComplex<double>* cd_ptr = laser.m_cd_ptr;;
@@ -877,7 +876,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                         return Complex{0, 0};
                     }
 
-                    const uint64_t offset =i + j * laser_strides[0] + k * laser_strides[1];
+                    const uint64_t offset = i + j * laser_strides[0] + k * laser_strides[1];
 
                     if (cf_ptr) {
                         const auto val = cf_ptr[offset];
@@ -926,7 +925,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                             arr(i, j, comp) = val.real();
                             arr(i, j, comp + 1) = val.imag();
                         });
-                } else {
+                } else if (laser.m_file_geometry == "rt") {
                     amrex::ParallelFor(to2D(bx),
                         [=] AMREX_GPU_DEVICE (int i, int j)
                         {
@@ -959,7 +958,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
 
                             arr(i, j, comp) = val.real();
                             arr(i, j, comp + 1) = val.imag();
-                    });
+                        });
                 }
             } else if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;
