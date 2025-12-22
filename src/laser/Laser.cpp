@@ -188,49 +188,28 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
     if (axis_labels.size() >= 3 &&
         axis_labels[0] == "t" && axis_labels[1] == "y" && axis_labels[2] == "x") {
-
-        m_dx_inv = {
-            static_cast<amrex::Real>(1. / spacing[2]),
-            static_cast<amrex::Real>(1. / spacing[1]),
-            static_cast<amrex::Real>(-1. / (clight * spacing[0]))
-        };
-        m_pos_offset = {
-            static_cast<amrex::Real>(offset[2] + spacing[2] * position[2]),
-            static_cast<amrex::Real>(offset[1] + spacing[1] * position[1]),
-            static_cast<amrex::Real>(laser_geom_3D.ProbHi(Direction::z)
-                                     - laser_geom_3D.CellSize(Direction::z) / 2)
-        };
         m_file_geometry = "xyt";
     } else if (axis_labels.size() >= 3 &&
                axis_labels[0] == "z" && axis_labels[1] == "y" && axis_labels[2] == "x") {
-
-        m_dx_inv = {
-            static_cast<amrex::Real>(1. / spacing[2]),
-            static_cast<amrex::Real>(1. / spacing[1]),
-            static_cast<amrex::Real>(1. / spacing[0])
-        };
-        m_pos_offset = {
-            static_cast<amrex::Real>(offset[2] + spacing[2] * position[2]),
-            static_cast<amrex::Real>(offset[1] + spacing[1] * position[1]),
-            static_cast<amrex::Real>(offset[0] + spacing[0] * position[0])
-        };
         m_file_geometry = "xyz";
     } else if (axis_labels.size() >= 2 && axis_labels[0] == "t" && axis_labels[1] == "r") {
-
-        m_dx_inv = {
-            static_cast<amrex::Real>(1. / spacing[1]),
-            static_cast<amrex::Real>(-1. / (clight * spacing[0])),
-            static_cast<amrex::Real>(0)
-        };
-        m_pos_offset = {
-            static_cast<amrex::Real>(offset[1] + spacing[1] * position[1]),
-            static_cast<amrex::Real>(laser_geom_3D.ProbHi(Direction::z)
-                                     - laser_geom_3D.CellSize(Direction::z) / 2),
-            static_cast<amrex::Real>(0)
-        };
         m_file_geometry = "rt";
     } else {
         amrex::Abort("Incorrect axis labels in laser file, must be either tyx, zyx or tr");
+    }
+
+    const int ndim = m_file_geometry.size();
+
+    for (int i=0; i<ndim; ++i) {
+        const int rdim = ndim-1-i; // convert from C to F order
+        if (m_file_geometry[i] == 't') {
+            m_dx_inv[i] = amrex::Real(-1. / (clight * spacing[rdim]));
+            m_dx_inv[i] = amrex::Real(laser_geom_3D.ProbHi(Direction::z)
+                                       - laser_geom_3D.CellSize(Direction::z) / 2);
+        } else {
+            m_dx_inv[i] = amrex::Real(1. / spacing[rdim]);
+            m_pos_offset[i] = amrex::Real(offset[rdim] + spacing[rdim] * position[rdim]);
+        }
     }
 
     const uint64_t num_cells = extent[0] * extent[1] * extent[2];
