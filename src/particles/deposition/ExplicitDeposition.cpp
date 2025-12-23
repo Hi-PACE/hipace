@@ -183,9 +183,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     + 1._rt
                 );
 
-                LOOP_UNROLL
                 for (int iy=0; iy <= depos_order+derivative_type; ++iy) {
-                    LOOP_UNROLL
                     for (int ix=0; ix <= depos_order+derivative_type; ++ix) {
 
                         if constexpr (derivative_type == 2) {
