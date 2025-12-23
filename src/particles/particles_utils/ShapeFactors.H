@@ -25,7 +25,7 @@ struct shape_factor_result {
     int cell;
 };
 
-static constexpr amrex::GpuTuple<
+inline static constexpr amrex::GpuTuple<
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 1>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 2>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 3>,
@@ -49,7 +49,7 @@ static constexpr amrex::GpuTuple<
 };
 
 #ifdef AMREX_USE_CUDA
-AMREX_GPU_CONSTANT constexpr static auto depos_prefactor_g = depos_prefactor;
+AMREX_GPU_CONSTANT inline static constexpr auto depos_prefactor_g = depos_prefactor;
 #endif
 
 template<int depos_order> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -95,7 +95,7 @@ struct derivative_shape_factor_result {
     int cell;
 };
 
-static constexpr amrex::GpuTuple<
+inline static constexpr amrex::GpuTuple<
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 1>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 2>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 3>,
@@ -118,7 +118,7 @@ static constexpr amrex::GpuTuple<
     }}
 };
 
-static constexpr amrex::GpuTuple<
+inline static constexpr amrex::GpuTuple<
     amrex::GpuArray<amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 2>, 3>,
     amrex::GpuArray<amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 3>, 3>,
     amrex::GpuArray<amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 4>, 3>,
@@ -189,7 +189,7 @@ static constexpr amrex::GpuTuple<
     }}
 };
 
-static constexpr amrex::GpuTuple<
+inline static constexpr amrex::GpuTuple<
     amrex::GpuArray<amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 3>, 2>,
     amrex::GpuArray<amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 4>, 2>,
     amrex::GpuArray<amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 5>, 2>,
@@ -251,9 +251,9 @@ static constexpr amrex::GpuTuple<
 };
 
 #ifdef AMREX_USE_CUDA
-AMREX_GPU_CONSTANT constexpr static auto ds_0_prefactor_g = ds_0_prefactor;
-AMREX_GPU_CONSTANT constexpr static auto ds_1_prefactor_g = ds_1_prefactor;
-AMREX_GPU_CONSTANT constexpr static auto ds_2_prefactor_g = ds_2_prefactor;
+AMREX_GPU_CONSTANT inline static constexpr auto ds_0_prefactor_g = ds_0_prefactor;
+AMREX_GPU_CONSTANT inline static constexpr auto ds_1_prefactor_g = ds_1_prefactor;
+AMREX_GPU_CONSTANT inline static constexpr auto ds_2_prefactor_g = ds_2_prefactor;
 #endif
 
 template<int depos_order> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -322,7 +322,9 @@ derivative_shape_factor_result derivative_shape_factor (amrex::Real xmid, int ix
         }
         return {res, resd, xbegin + ix};
     } else if constexpr (derivative_type==1) { // nodal derivative
-        const auto s = get_ds_1_prefactor<depos_order>(ix, xint < amrex::Real(0.5) ? 0 : 1);
+        const auto s = xint < amrex::Real(0.5) ?
+            get_ds_1_prefactor<depos_order>(ix, 0) :
+            get_ds_1_prefactor<depos_order>(ix, 1);
         const auto ds = get_ds_1_prefactor<depos_order>(ix, 2);
 
         amrex::Real res = s[0];

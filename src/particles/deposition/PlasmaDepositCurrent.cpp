@@ -210,13 +210,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                     return;
                 }
 
-#ifdef AMREX_USE_GPU
-#pragma unroll 1
-#endif
+                LOOP_UNROLL
                 for (int ix=0; ix <= depos_order; ++ix) {
-#ifdef AMREX_USE_GPU
-#pragma unroll 1
-#endif
+                    LOOP_UNROLL
                     for (int iy=0; iy <= depos_order; ++iy) {
 
                         // --- Compute shape factors
