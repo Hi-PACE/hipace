@@ -58,32 +58,35 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
     const int ny = fft_size[1];
     const int logical_nx = is_even ? nx : nx + 1;
     const int logical_ny = is_even ? ny : ny + 1;
+    const auto dx = gm.CellSizeArray();
+    const amrex::Real dxsquared = dx[0]*dx[0];
+    const amrex::Real dysquared = dx[1]*dx[1];
+    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * logical_nx);
+    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * logical_ny);
 
-    const amrex::Real sine_x_factor = 1._rt / ( 2._rt * logical_nx);
-    const amrex::Real sine_y_factor = 1._rt / ( 2._rt * logical_ny);
-    const amrex::Real norm_fac = -16._rt * logical_nx * logical_ny;
-    const amrex::Real invdxsq = gm.InvCellSize(0)*gm.InvCellSize(0)*norm_fac;
-    const amrex::Real invdysq = gm.InvCellSize(1)*gm.InvCellSize(1)*norm_fac;
+    // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
+    // This normalization is used regardless of the sine transform library
+    const amrex::Real norm_fac = 0.5 / ( 2 * (logical_nx * logical_ny));
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
         Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
         amrex::IntVect lo = fft_box.smallEnd();
-        amrex::ParallelFor(to2D(fft_box),
-            [=] AMREX_GPU_DEVICE (int i, int j) noexcept
-            {
-                /* fast poisson solver diagonal x and y coeffs */
-                const amrex::Real x_fac = amrex::Math::sinpi(sine_x_factor * (i - lo[0] + 1));
-                const amrex::Real y_fac = amrex::Math::sinpi(sine_y_factor * (j - lo[1] + 1));
-                const amrex::Real k = x_fac * x_fac * invdxsq + y_fac * y_fac * invdysq;
+        amrex::ParallelFor(
+            to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
+                {
+                    /* fast poisson solver diagonal x coeffs */
+                    amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
+                    /* fast poisson solver diagonal y coeffs */
+                    amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
 
-                if (k != 0._rt) {
-                    eigenvalue_matrix(i,j) = 1._rt / k;
-                } else {
-                    // Avoid division by 0
-                    eigenvalue_matrix(i,j) = 0._rt;
-                }
-            });
+                    if ((sinex_sq!=0) && (siney_sq!=0)) {
+                        eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+                    } else {
+                        // Avoid division by 0
+                        eigenvalue_matrix(i,j) = 0._rt;
+                    }
+                });
     }
 
     // Allocate and initialize the FFT plans
