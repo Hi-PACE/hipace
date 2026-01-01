@@ -1334,8 +1334,8 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
         using ReduceTuple = typename decltype(reduce_data)::Type;
         const auto& array_res = m_rescor[0].const_array();
         const auto& array_rhs = m_rhs.const_array();
-        reduce_op.eval(valid_domain_box(m_domain[0]), m_num_comps, reduce_data,
-            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept -> ReduceTuple
+        reduce_op.eval(to2D(valid_domain_box(m_domain[0])), m_num_comps, reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept -> ReduceTuple
             {
                 return {std::abs(array_res(i,j,0,n)), std::abs(array_rhs(i,j,0,n))};
             });
