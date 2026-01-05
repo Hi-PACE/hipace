@@ -1433,6 +1433,7 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_fields." + pad_rank_num + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
+    const int out_step = step + Hipace::m_output_iteration_offset;
     const int nslices_int = geom3D.Domain().length(2);
     const std::size_t nslices = static_cast<std::size_t>(nslices_int);
     const int is_normalized_units = Hipace::m_normalized_units;
@@ -1441,7 +1442,7 @@ Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& ge
     // avoid pointers to temporary objects as second argument, stack variables are ok
     const amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"     , &time},
-        {"step"     , &step},
+        {"step"     , &out_step},
         {"n_slices" , &nslices_int},
         {"z_lo"     , &geom3D.ProbLo()[2]},
         {"z_hi"     , &geom3D.ProbHi()[2]},

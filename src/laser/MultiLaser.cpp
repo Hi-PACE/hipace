@@ -1064,6 +1064,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::
     std::ofstream ofs{m_insitu_file_prefix + "/reduced_laser." + pad_rank_num + ".txt",
         std::ofstream::out | std::ofstream::app | std::ofstream::binary};
 
+    const int out_step = step + Hipace::m_output_iteration_offset;
     const int nslices_int = m_laser_geom_3D.Domain().length(2);
     const std::size_t nslices = static_cast<std::size_t>(nslices_int);
     const int is_normalized_units = Hipace::m_normalized_units;
@@ -1072,7 +1073,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::
     // avoid pointers to temporary objects as second argument, stack variables are ok
     const amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"     , &time},
-        {"step"     , &step},
+        {"step"     , &out_step},
         {"n_slices" , &nslices_int},
         {"z_lo"     , &m_laser_geom_3D.ProbLo()[2]},
         {"z_hi"     , &m_laser_geom_3D.ProbHi()[2]},

@@ -634,6 +634,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
 
     const amrex::Real sum_w0_inv = m_insitu_sum_rdata[0] <= 0._rt ?
         0._rt : 1._rt / m_insitu_sum_rdata[0];
+    const int out_step = step + Hipace::m_output_iteration_offset;
     const std::size_t nslices = static_cast<std::size_t>(m_nslices);
     const amrex::Real normalized_density_factor = Hipace::m_normalized_units ?
         geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
@@ -643,7 +644,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
     // avoid pointers to temporary objects as second argument, stack variables are ok
     amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"    , &time},
-        {"step"    , &step},
+        {"step"    , &out_step},
         {"n_slices", &m_nslices},
         {"charge"  , &m_charge},
         {"mass"    , &m_mass},

@@ -192,8 +192,6 @@ public:
     inline static Hipace* m_instance = nullptr;
     /** Whether to use normalized units */
     inline static bool m_normalized_units = false;
-    /** Default location for diagnostics output */
-    inline static std::string m_output_folder = "diags";
     /** All field data (3D array, slices) and field methods */
     Fields m_fields;
     /** Contains all beam species */
@@ -333,6 +331,13 @@ public:
     amrex::GpuArray<amrex::ParserExecutor<4>, 5> m_grid_external_fields;
     /** Owns data for m_grid_external_fields */
     amrex::Array<amrex::Parser, 5> m_grid_external_fields_parser;
+
+    // Diagnostic
+
+    /** Default location for diagnostics output */
+    inline static std::string m_output_folder = "diags";
+    /** iteration number written in diagnostic of first computed step */
+    inline static int m_output_iteration_offset = 0;
 
 private:
 

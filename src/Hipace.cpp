@@ -199,6 +199,8 @@ Hipace::ReadParameters ()
         "boundary.field = Dirichlet\n"
         "boundary.particle = Absorbing\n", true);
 
+    queryWithParser(pph, "output_iteration_offset", m_output_iteration_offset);
+
     amrex::ParmParse ppb("boundary");
     std::string field_boundary = "";
     getWithParser(ppb, "field", field_boundary);
@@ -1322,12 +1324,13 @@ Hipace::WriteDiagnostics (const int step)
 {
 #ifdef HIPACE_USE_OPENPMD
     if (m_diags.hasAnyFieldOutput(step, m_max_step, m_physical_time, m_max_time)) {
-        m_openpmd_writer.WriteFieldDiagnostics(m_diags.getFieldData(),
-            m_multi_laser, m_physical_time, step);
+        m_openpmd_writer.WriteFieldDiagnostics(m_diags.getFieldData(), m_multi_laser,
+            m_physical_time, step + m_output_iteration_offset);
     }
 
     if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
-        m_openpmd_writer.WriteBeamDiagnostics(m_multi_beam, m_physical_time, step,
+        m_openpmd_writer.WriteBeamDiagnostics(m_multi_beam,
+            m_physical_time, step + m_output_iteration_offset,
             getDiagBeamNames(), m_3D_geom);
     }
 #else

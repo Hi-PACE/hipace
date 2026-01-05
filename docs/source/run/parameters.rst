@@ -1066,6 +1066,11 @@ Please make sure to always clear or rename the output folder before running a ne
     available. If both Adios2 and HDF5 are available, ``h5`` is used. Note that ``json`` is extremely
     slow and is not recommended for production runs.
 
+* ``hipace.output_iteration_offset`` (`integer`) optional (default `0`)
+    Iteration number of the diagnostic output of the first computed time step.
+    This applies to both openPMD and in-situ diagnostics. Useful when restarting a simulation and
+    combining the outputs when used together with ``hipace.initial_time``.
+
 Beam diagnostics
 ^^^^^^^^^^^^^^^^
 
