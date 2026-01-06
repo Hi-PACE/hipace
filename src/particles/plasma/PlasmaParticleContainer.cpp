@@ -178,6 +178,7 @@ PlasmaParticleContainer::ReadParameters ()
 void
 PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 {
+    SetArena(amrex::The_Arena());
     reserveData();
     resizeData();
 
