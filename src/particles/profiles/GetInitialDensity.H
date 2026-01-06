@@ -78,7 +78,7 @@ struct PlasmaDensityAccessor {
     amrex::RealVect m_dx_inv;
     amrex::Real m_unitSI = 1;
 
-    AMREX_GPU_HOST_DEVICE
+    [[nodiscard]] AMREX_GPU_HOST_DEVICE
     amrex::Real array (int i, int j, int k) const {
         const int ii = std::min(m_bigend[0], std::max(0, i));
         const int jj = std::min(m_bigend[1], std::max(0, j));
@@ -93,7 +93,7 @@ struct PlasmaDensityAccessor {
         }
     }
 
-    AMREX_GPU_HOST_DEVICE
+    [[nodiscard]] AMREX_GPU_HOST_DEVICE
     amrex::Real operator() (amrex::Real x, amrex::Real y, amrex::Real z) const {
         if (m_profile_type == 0) {
             return m_density_func(x, y, z);

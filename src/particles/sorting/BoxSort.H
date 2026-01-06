@@ -26,16 +26,20 @@ public:
                              const amrex::Geometry& a_geom);
 
     //! \brief returns the pointer to the permutation array
-    index_type* boxCountsPtr () noexcept { return m_box_counts_cpu.dataPtr(); }
+    [[nodiscard]] index_type*
+    boxCountsPtr () noexcept { return m_box_counts_cpu.dataPtr(); }
 
     //! \brief returns the pointer to the offsets array
-    index_type* boxOffsetsPtr () noexcept { return m_box_offsets_cpu.dataPtr(); }
+    [[nodiscard]] index_type*
+    boxOffsetsPtr () noexcept { return m_box_offsets_cpu.dataPtr(); }
 
     //! \brief returns the pointer to the permutation array
-    const index_type* boxCountsPtr () const noexcept { return m_box_counts_cpu.dataPtr(); }
+    [[nodiscard]] const index_type*
+    boxCountsPtr () const noexcept { return m_box_counts_cpu.dataPtr(); }
 
     //! \brief returns the pointer to the offsets array
-    const index_type* boxOffsetsPtr () const noexcept { return m_box_offsets_cpu.dataPtr(); }
+    [[nodiscard]] const index_type*
+    boxOffsetsPtr () const noexcept { return m_box_offsets_cpu.dataPtr(); }
 
 
     /** Number of particles in each box, stored on the cpu */
