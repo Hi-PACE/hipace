@@ -130,7 +130,7 @@ SharedMemoryDeposition (int num_particles,
                     shared_ptr,
                     amrex::IntVectND{tile_begin_x, tile_begin_y},
                     amrex::IntVectND{tile_end_x, tile_end_y},
-                    max_cache + max_depos
+                    static_cast<int>(max_cache + max_depos)
                 };
 
                 for (int s = threadIdx.x; s < tile_s_x * tile_s_y; s+=threads_per_tile) {
@@ -148,7 +148,7 @@ SharedMemoryDeposition (int num_particles,
                         for (int n=0; n != max_depos; ++n) {
                             if (!dynamic_comps || idx_depos[n] != -1) {
                                 // set idx_depos components to zero
-                                shared_arr(sx, sy, n+max_cache) = 0;
+                                shared_arr(sx, sy, static_cast<int>(n+max_cache)) = 0;
                             }
                         }
                     }
@@ -187,7 +187,8 @@ SharedMemoryDeposition (int num_particles,
                         for (int n=0; n != max_depos; ++n) {
                             if (!dynamic_comps || idx_depos[n] != -1) {
                                 amrex::Gpu::Atomic::Add(
-                                    field.ptr(sx, sy, idx_depos[n]), shared_arr(sx, sy, n+max_cache));
+                                    field.ptr(sx, sy, idx_depos[n]),
+                                    shared_arr(sx, sy, static_cast<int>(n+max_cache)));
                             }
                         }
                     }
