@@ -29,8 +29,8 @@ struct Array2 {
           jstride(rhs.nstride[0]),
           start(-rhs.begin[0] - rhs.begin[1] * rhs.nstride[0])
 #if defined(AMREX_DEBUG) || defined(AMREX_BOUND_CHECK)
-          ,begin(rhs.begin[0], rhs.begin[1], rhs.begin[2]),
-          end(rhs.end[0], rhs.end[1], rhs.end[2]),
+          ,begin{rhs.begin[0], rhs.begin[1], rhs.begin[2]},
+          end{rhs.end[0], rhs.end[1], rhs.end[2]},
           ncomp(rhs.end[3] - rhs.begin[3])
 #endif
     {
@@ -129,8 +129,8 @@ struct Array3 {
           nstride(rhs.nstride[2]),
           start(-rhs.begin[0] - rhs.begin[1] * rhs.nstride[0])
 #if defined(AMREX_DEBUG) || defined(AMREX_BOUND_CHECK)
-          ,begin(rhs.begin[0], rhs.begin[1], rhs.begin[2]),
-          end(rhs.end[0], rhs.end[1], rhs.end[2]),
+          ,begin{rhs.begin[0], rhs.begin[1], rhs.begin[2]},
+          end{rhs.end[0], rhs.end[1], rhs.end[2]},
           ncomp(rhs.end[3] - rhs.begin[3])
 #endif
     {
