@@ -126,7 +126,7 @@ macro(find_amrex)
         mark_as_advanced(AMReX_TP_PROFILE)
         mark_as_advanced(USE_XSDK_DEFAULTS)
 
-        message(STATUS "AMReX: Using version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})") 
+        message(STATUS "AMReX: Using version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})")
     else()
         message(STATUS "Searching for pre-installed AMReX ...")
         set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
@@ -146,10 +146,10 @@ set(HiPACE_amrex_src ""
     "Local path to AMReX source directory (preferred if set)")
 
 # Git fetcher
-set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
+set(HiPACE_amrex_repo "https://github.com/ankithadas/amrex.git"
     CACHE STRING
     "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
-set(HiPACE_amrex_branch "development"
+set(HiPACE_amrex_branch "ArrayND"
     CACHE STRING
     "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
 
