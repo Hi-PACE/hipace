@@ -902,7 +902,7 @@ Hipace::InitializeSxSyWithBeam (const int lev)
 
         amrex::Box const& bx = mfi.tilebox();
 
-        Array3<amrex::Real> const arr = slicemf.array(mfi);
+        Array3<amrex::Real> const arr = to3D(slicemf.array(mfi));
 
         const int Sx = Comps[WhichSlice::This]["Sx"];
         const int Sy = Comps[WhichSlice::This]["Sy"];
@@ -1212,7 +1212,7 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
 
         amrex::Box const& bx = mfi.tilebox();
 
-        Array3<amrex::Real> const arr = slicemf.array(mfi);
+        Array3<amrex::Real> const arr = to3D(slicemf.array(mfi));
 
         amrex::ParallelFor(to2D(bx),
             [=] AMREX_GPU_DEVICE (int i, int j) noexcept

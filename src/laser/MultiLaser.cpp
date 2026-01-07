@@ -214,7 +214,7 @@ MultiLaser::ShiftLaserSlices (const int islice)
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box bx = mfi.tilebox();
-        Array3<amrex::Real> arr = m_slices.array(mfi);
+        Array3<amrex::Real> arr = to3D(m_slices.array(mfi));
         amrex::ParallelFor(
         to2D(bx), 2,
         [=] AMREX_GPU_DEVICE(int i, int j, int n) noexcept
@@ -259,9 +259,9 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
 
     // write aabs into fields MultiFab
     for ( amrex::MFIter mfi(fields.getSlices(0), DfltMfi); mfi.isValid(); ++mfi ){
-        const Array3<const amrex::Real> laser_arr = m_slices.const_array(mfi);
+        const Array3<const amrex::Real> laser_arr = to3D(m_slices.const_array(mfi));
         const Array2<amrex::Real> field_arr =
-            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["aabs"]);
+            to2D(fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["aabs"]));
 
         const amrex::Real poff_field_x = GetPosOffset(0, field_geom[0], field_geom[0].Domain());
         const amrex::Real poff_field_y = GetPosOffset(1, field_geom[0], field_geom[0].Domain());
@@ -330,7 +330,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
     HIPACE_PROFILE("MultiLaser::SetInitialChi()");
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> laser_arr_chi = m_slices.array(mfi, WhichLaserSlice::chi_initial);
+        Array2<amrex::Real> laser_arr_chi = to2D(m_slices.array(mfi, WhichLaserSlice::chi_initial));
 
         // put chi from the plasma density function on the laser grid as if it were deposited there,
         // this works even outside the field grid
@@ -369,9 +369,9 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
     HIPACE_PROFILE("MultiLaser::InterpolateChi()");
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
-        Array3<amrex::Real> laser_arr = m_slices.array(mfi);
+        Array3<amrex::Real> laser_arr = to3D(m_slices.array(mfi));
         Array2<const amrex::Real> field_arr_chi =
-            fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["chi"]);
+            to2D(fields.getSlices(0).array(mfi, Comps[WhichSlice::This]["chi"]));
 
         const amrex::Real poff_laser_x = GetPosOffset(0, m_laser_geom_3D, m_laser_geom_3D.Domain());
         const amrex::Real poff_laser_y = GetPosOffset(1, m_laser_geom_3D, m_laser_geom_3D.Domain());
@@ -489,9 +489,9 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
         const int jmin = bx.smallEnd(1);
         const int jmax = bx.bigEnd  (1);
 
-        Array3<amrex::Real> arr = m_slices.array(mfi);
-        Array3<amrex::Real> rhs_mg_arr = m_rhs_mg.array();
-        Array3<amrex::Real> acoeff_real_arr = m_mg_acoeff_real.array();
+        Array3<amrex::Real> arr = to3D(m_slices.array(mfi));
+        Array3<amrex::Real> rhs_mg_arr = to3D(m_rhs_mg.array());
+        Array3<amrex::Real> acoeff_real_arr = to3D(m_mg_acoeff_real.array());
 
         // Calculate phase terms. 0 if !m_use_phase
         amrex::Real tj00 = 0.;
@@ -667,11 +667,11 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         // The right-hand side is computed and stored in rhs
         // Then rhs is Fourier-transformed into rhs_fourier, then multiplied by -1/(k**2+a)
         // rhs_fourier is FFT-back-transformed to sol, and sol is normalized and copied into np1j00.
-        Array3<Complex> sol_arr = m_sol.array();
-        Array3<Complex> rhs_arr = m_rhs.array();
-        Array2<Complex> rhs_fourier_arr = m_rhs_fourier.array();
+        Array2<Complex> sol_arr = to2D(m_sol.array());
+        Array2<Complex> rhs_arr = to2D(m_rhs.array());
+        Array2<Complex> rhs_fourier_arr = to2D(m_rhs_fourier.array());
 
-        Array3<amrex::Real> arr = m_slices.array(mfi);
+        Array3<amrex::Real> arr = to3D(m_slices.array(mfi));
 
         int const Nx = bx.length(0);
         int const Ny = bx.length(1);
@@ -785,7 +785,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                         - lapA
                         + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
                 }
-                rhs_arr(i,j,0) = rhs;
+                rhs_arr(i,j) = rhs;
             });
 
         // Transform rhs to Fourier space
@@ -822,8 +822,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 using namespace WhichLaserSlice;
                 if (i>=imin && i<=imax && j>=jmin && j<=jmax) {
-                    arr(i, j, np1j00_r) = sol_arr(i,j,0).real() * inv_numPts;
-                    arr(i, j, np1j00_i) = sol_arr(i,j,0).imag() * inv_numPts;
+                    arr(i, j, np1j00_r) = sol_arr(i,j).real() * inv_numPts;
+                    arr(i, j, np1j00_i) = sol_arr(i,j).imag() * inv_numPts;
                 } else {
                     arr(i, j, np1j00_r) = 0._rt;
                     arr(i, j, np1j00_i) = 0._rt;
@@ -989,7 +989,7 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ) {
-        Array3<amrex::Real const> const arr = m_slices.const_array(mfi);
+        Array3<amrex::Real const> const arr = to3D(m_slices.const_array(mfi));
         reduce_op.eval(
             mfi.tilebox(), reduce_data,
             [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple

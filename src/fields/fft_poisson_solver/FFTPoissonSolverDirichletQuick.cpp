@@ -366,18 +366,18 @@ FFTPoissonSolverDirichletQuick::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     const int nx = m_stagingArea[0].box().length(0); // initially contiguous
     const int ny = m_stagingArea[0].box().length(1); // contiguous after transpose
 
-    Array2<amrex::Real> input_arr {{m_stagingArea[0].dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
+    Array2<amrex::Real> input_arr {m_stagingArea[0].dataPtr(), {0,0}, {nx,ny}};
 
-    Array2<amrex::Real> real_arr {{m_real_array.dataPtr(), {0,0,0}, {nx,ny,1}, 1}};
-    Array2<amrex::Real> real_arr_t {{m_real_array.dataPtr(), {0,0,0}, {ny,nx,1}, 1}};
+    Array2<amrex::Real> real_arr {m_real_array.dataPtr(), {0,0}, {nx,ny}};
+    Array2<amrex::Real> real_arr_t {m_real_array.dataPtr(), {0,0}, {ny,nx}};
 
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr {{m_comp_array.dataPtr(), {0,0,0}, {nx/2+1,ny,1}, 1}};
-    Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {{m_comp_array.dataPtr(), {0,0,0}, {ny/2+1,nx,1}, 1}};
+    Array2<amrex::GpuComplex<amrex::Real>> comp_arr {m_comp_array.dataPtr(), {0,0}, {nx/2+1,ny}};
+    Array2<amrex::GpuComplex<amrex::Real>> comp_arr_t {m_comp_array.dataPtr(), {0,0}, {ny/2+1,nx}};
 
     amrex::Box lhs_bx = lhs_mf[0].box();
     // shift box to handle ghost cells properly
     lhs_bx -= m_stagingArea[0].box().smallEnd();
-    Array2<amrex::Real> lhs_arr {{lhs_mf[0].dataPtr(), amrex::begin(lhs_bx), amrex::end(lhs_bx), 1}};
+    Array2<amrex::Real> lhs_arr {lhs_mf[0].dataPtr(), to2D(lhs_bx)};
 
     amrex::ParallelFor(amrex::BoxND<2>{{0, 0}, {nx-1, ny-1}},
         [=] AMREX_GPU_DEVICE (int i, int j){

@@ -73,7 +73,7 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
     m_inv_k2 = amrex::MultiFab(spectralspace_ba, dm, 1, 0);
     // Loop over boxes and calculate inv_k2 in each box
     for (amrex::MFIter mfi(m_inv_k2, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
+        Array2<amrex::Real> inv_k2_arr = to2D(m_inv_k2.array(mfi));
         amrex::Box const& bx = mfi.validbox();  // The lower corner of the "2D" slice Box is zero.
         int const Ny = bx.length(1);
         int const mid_point_y = (Ny+1)/2;
@@ -120,8 +120,8 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     for ( amrex::MFIter mfi(m_tmpSpectralField, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by inv_k2
-        Array2<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
-        Array2<amrex::Real> inv_k2_arr = m_inv_k2.array(mfi);
+        Array2<amrex::GpuComplex<amrex::Real>> tmp_cmplx_arr = to2D(m_tmpSpectralField.array(mfi));
+        Array2<amrex::Real> inv_k2_arr = to2D(m_inv_k2.array(mfi));
         amrex::ParallelFor( to2D(mfi.growntilebox()),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 tmp_cmplx_arr(i,j) *= -inv_k2_arr(i,j);
@@ -135,8 +135,8 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 #endif
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Copy from the staging area to output array (and normalize)
-        Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
-        Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
+        Array2<amrex::Real> tmp_real_arr = to2D(m_stagingArea.array(mfi));
+        Array2<amrex::Real> lhs_arr = to2D(lhs_mf.array(mfi));
         const amrex::Box fft_box = m_stagingArea[mfi].box();
         const amrex::Real inv_N = 1./fft_box.numPts();
         amrex::ParallelFor( to2D(mfi.growntilebox()),

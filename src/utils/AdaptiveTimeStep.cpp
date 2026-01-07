@@ -285,7 +285,7 @@ AdaptiveTimeStep::GatherMinAccSlice (MultiBeam& beams, const amrex::Geometry& ge
 
         // Data required to gather the Ez field
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[0];
-        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        Array3<const amrex::Real> const slice_arr = to3D(slice_fab.const_array());
         const int ez_comp = Comps[WhichSlice::This]["Ez"];
         const amrex::Real dx_inv = geom.InvCellSize(0);
         const amrex::Real dy_inv = geom.InvCellSize(1);

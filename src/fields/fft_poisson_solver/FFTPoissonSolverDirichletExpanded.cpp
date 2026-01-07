@@ -48,8 +48,8 @@ void ExpandR2R (amrex::FArrayBox& dst, const amrex::FArrayBox& src)
     const int ny = bx.length(1);
     const int refx = dst.box().bigEnd(0)+lox+1;
     const int refy = dst.box().bigEnd(1)+loy+1;
-    const Array2<amrex::Real const> src_array = src.array();
-    const Array2<amrex::Real> dst_array = dst.array();
+    const Array2<amrex::Real const> src_array = to2D(src.array());
+    const Array2<amrex::Real> dst_array = to2D(dst.array());
 
     amrex::ParallelFor(to2D(bx),
         [=] AMREX_GPU_DEVICE(int i, int j)
@@ -87,9 +87,9 @@ void Shrink_Mult_Expand (amrex::FArrayBox& dst,
     const int ny = bx.length(1);
     const int refx = dst.box().bigEnd(0)+lox+1;
     const int refy = dst.box().bigEnd(1)+loy+1;
-    const Array2<amrex::GpuComplex<amrex::Real> const> src_array = src.array();
-    const Array2<amrex::Real> dst_array = dst.array();
-    const Array2<amrex::Real const> eigenvalue_array= eigenvalue.array();
+    const Array2<amrex::GpuComplex<amrex::Real> const> src_array = to2D(src.array());
+    const Array2<amrex::Real> dst_array = to2D(dst.array());
+    const Array2<amrex::Real const> eigenvalue_array = to2D(eigenvalue.array());
 
     amrex::ParallelFor(to2D(bx),
         [=] AMREX_GPU_DEVICE(int i, int j)
@@ -116,8 +116,8 @@ void Shrink_Mult_Expand (amrex::FArrayBox& dst,
 void ShrinkC2R (amrex::FArrayBox& dst, const amrex::BaseFab<amrex::GpuComplex<amrex::Real>>& src,
                 amrex::Box bx)
 {
-    const Array2<amrex::GpuComplex<amrex::Real> const> src_array = src.array();
-    const Array2<amrex::Real> dst_array = dst.array();
+    const Array2<amrex::GpuComplex<amrex::Real> const> src_array = to2D(src.array());
+    const Array2<amrex::Real> dst_array = to2D(dst.array());
     amrex::ParallelFor(to2D(bx),
         [=] AMREX_GPU_DEVICE(int i, int j)
         {
@@ -165,7 +165,7 @@ FFTPoissonSolverDirichletExpanded::define (amrex::BoxArray const& a_realspace_ba
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        const Array2<amrex::Real> eigenvalue_matrix = to2D(m_eigenvalue_matrix.array(mfi));
         amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
             to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept

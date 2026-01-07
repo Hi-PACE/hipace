@@ -296,7 +296,7 @@ struct derivative {
 
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<dir> array (amrex::MFIter& mfi) const {
-        return derivative_inner<dir>{f_view.array(mfi), 0.5_rt*geom.InvCellSize(dir)};
+        return derivative_inner<dir>{to2D(f_view.array(mfi)), 0.5_rt*geom.InvCellSize(dir)};
     }
 };
 
@@ -310,7 +310,7 @@ struct derivative<Direction::z> {
 
     // use .array(mfi) like with amrex::MultiFab
     derivative_inner<Direction::z> array (amrex::MFIter& mfi) const {
-        return derivative_inner<Direction::z>{f_view1.array(mfi), f_view2.array(mfi),
+        return derivative_inner<Direction::z>{to2D(f_view1.array(mfi)), to2D(f_view2.array(mfi)),
             0.5_rt*geom.InvCellSize(Direction::z)};
     }
 };
@@ -391,7 +391,7 @@ struct guarded_field_xy {
     // use .array(mfi) like with amrex::MultiFab
     guarded_field_xy_inner array (amrex::MFIter& mfi) const {
         const amrex::Box bx = mfab[mfi].box();
-        return guarded_field_xy_inner{mfab.const_array(mfi), bx.smallEnd(Direction::x),
+        return guarded_field_xy_inner{to3D(mfab.const_array(mfi)), bx.smallEnd(Direction::x),
             bx.bigEnd(Direction::x), bx.smallEnd(Direction::y), bx.bigEnd(Direction::y)};
     }
 };
@@ -414,7 +414,7 @@ LinCombination (amrex::MultiFab dst,
 #pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
-        const Array2<amrex::Real> dst_array = dst.array(mfi);
+        const Array2<amrex::Real> dst_array = to2D(dst.array(mfi));
         const auto src_a_array = to_array2(src_a.array(mfi));
         const auto src_b_array = to_array2(src_b.array(mfi));
         amrex::ParallelFor(to2D(mfi.growntilebox()),
@@ -439,7 +439,7 @@ Multiply (amrex::MultiFab dst, const amrex::Real factor, const FV& src)
 #pragma omp parallel
 #endif
     for ( amrex::MFIter mfi(dst, DfltMfiTlng); mfi.isValid(); ++mfi ){
-        const Array2<amrex::Real> dst_array = dst.array(mfi);
+        const Array2<amrex::Real> dst_array = to2D(dst.array(mfi));
         const auto src_array = to_array2(src.array(mfi));
         amrex::ParallelFor(to2D(mfi.growntilebox()),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept
@@ -757,7 +757,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
             "Open Boundaries only work for lev0 with everything in one box");
         amrex::FArrayBox& staging_area_fab = staging_area[0];
 
-        const Array2<amrex::Real> arr_staging_area = staging_area_fab.array();
+        const Array2<amrex::Real> arr_staging_area = to2D(staging_area_fab.array());
 
         const amrex::Real poff_x = GetPosOffset(0, geom[lev], staging_box);
         const amrex::Real poff_y = GetPosOffset(1, geom[lev], staging_box);
@@ -817,7 +817,7 @@ Fields::SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const 
         for (amrex::MFIter mfi(staging_area, DfltMfi); mfi.isValid(); ++mfi)
         {
             const auto arr_solution_interp = solution_interp.array(mfi);
-            const Array2<amrex::Real> arr_staging_area = staging_area.array(mfi);
+            const Array2<amrex::Real> arr_staging_area = to2D(staging_area.array(mfi));
 
             SetDirichletBoundaries(arr_staging_area, staging_box, geom[lev],
                                    offset, factor, arr_solution_interp);
@@ -842,7 +842,7 @@ Fields::LevelUpBoundary (amrex::Vector<amrex::Geometry> const& geom, const int l
     for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
     {
         auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
-        const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
+        const Array2<amrex::Real> arr_field_fine = to2D(field_fine.array(mfi));
         const amrex::Box fine_box_extended = mfi.growntilebox(outer_edge);
         const amrex::Box fine_box_narrow = mfi.growntilebox(inner_edge);
 
@@ -885,7 +885,7 @@ Fields::LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
     for (amrex::MFIter mfi( field_fine, DfltMfi); mfi.isValid(); ++mfi)
     {
         auto arr_field_coarse_interp = field_coarse_interp.array(mfi);
-        const Array2<amrex::Real> arr_field_fine = field_fine.array(mfi);
+        const Array2<amrex::Real> arr_field_fine = to2D(field_fine.array(mfi));
 
         const amrex::Real dx = geom[lev].CellSize(0);
         const amrex::Real dy = geom[lev].CellSize(1);
@@ -1002,7 +1002,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
 #pragma omp parallel
 #endif
         for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
-            const Array3<amrex::Real> arr = slicemf.array(mfi);
+            const Array3<amrex::Real> arr = to3D(slicemf.array(mfi));
             const int Psi   = Comps[WhichSlice::This]["Psi"];
             const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
             const int EypBx = Comps[WhichSlice::This]["EypBx"];
@@ -1153,7 +1153,7 @@ Fields::SymmetrizeFields (int field_comp, const int lev, const int symm_x, const
     amrex::MultiFab& slicemf = getSlices(lev);
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ) {
-        const Array2<amrex::Real> arr = slicemf.array(mfi, field_comp);
+        const Array2<amrex::Real> arr = to2D(slicemf.array(mfi, field_comp));
 
         const amrex::Box full_box = mfi.growntilebox();
 
@@ -1315,7 +1315,7 @@ Fields::ComputeRelBFieldError (const int which_slice, const int which_slice_iter
         for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
             const amrex::Box& bx = mfi.tilebox();
 
-            Array3<amrex::Real const> const arr = slicemf.const_array(mfi);
+            Array3<amrex::Real const> const arr = to3D(slicemf.const_array(mfi));
             const int Bx_comp = Comps[which_slice]["Bx"];
             const int By_comp = Comps[which_slice]["By"];
             const int Bx_iter_comp = Comps[which_slice_iter]["Bx"];
@@ -1384,7 +1384,7 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
     using ReduceTuple = typename decltype(reduce_data)::Type;
 
     for ( amrex::MFIter mfi(slicemf, DfltMfi); mfi.isValid(); ++mfi ) {
-        Array3<amrex::Real const> const arr = slicemf.const_array(mfi);
+        Array3<amrex::Real const> const arr = to3D(slicemf.const_array(mfi));
         reduce_op.eval(
             mfi.tilebox(), reduce_data,
             [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple

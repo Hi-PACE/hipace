@@ -64,7 +64,7 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        Array2<amrex::Real> eigenvalue_matrix = to2D(m_eigenvalue_matrix.array(mfi));
         amrex::IntVect lo = fft_box.smallEnd();
         amrex::ParallelFor(
             to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
@@ -110,8 +110,8 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Solve Poisson equation in Fourier space:
         // Multiply `tmpSpectralField` by eigenvalue_matrix
-        Array2<amrex::Real> tmp_cmplx_arr = m_tmpSpectralField.array(mfi);
-        Array2<amrex::Real> eigenvalue_matrix = m_eigenvalue_matrix.array(mfi);
+        Array2<amrex::Real> tmp_cmplx_arr = to2D(m_tmpSpectralField.array(mfi));
+        Array2<amrex::Real> eigenvalue_matrix = to2D(m_eigenvalue_matrix.array(mfi));
 
         amrex::ParallelFor( to2D(mfi.growntilebox()),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
@@ -126,8 +126,8 @@ FFTPoissonSolverDirichletDirect::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
 #endif
     for ( amrex::MFIter mfi(m_stagingArea, DfltMfiTlng); mfi.isValid(); ++mfi ){
         // Copy from the staging area to output array (and normalize)
-        Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
-        Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
+        Array2<amrex::Real> tmp_real_arr = to2D(m_stagingArea.array(mfi));
+        Array2<amrex::Real> lhs_arr = to2D(lhs_mf.array(mfi));
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(lhs_mf.size() == 1,
                                          "Slice MFs must be defined on one box only");
         amrex::ParallelFor( to2D(lhs_mf[mfi].box() & mfi.growntilebox()),

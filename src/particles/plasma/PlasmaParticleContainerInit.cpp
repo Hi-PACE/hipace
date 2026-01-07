@@ -110,7 +110,7 @@ InitParticles (const amrex::RealVect& a_u_std,
         if (use_fine_patch) {
             fab_fine.resize(tile_box, 2);
         }
-        const Array3<int> arr_fine = fab_fine.array();
+        const Array3<int> arr_fine = to3D(fab_fine.array());
         int comp_a = 0;
         int comp_b = 1;
         const int fine_transition_cells = m_fine_transition_cells;

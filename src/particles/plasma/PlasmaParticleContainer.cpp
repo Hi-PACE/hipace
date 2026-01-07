@@ -377,7 +377,7 @@ IonizationModule (const int lev,
     {
         // Extract field array from FabArray
         const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[mfi_ion];
-        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        Array3<const amrex::Real> const slice_arr = to3D(slice_fab.const_array());
         const int psi_comp = Comps[WhichSlice::This]["Psi"];
         const int ez_comp = Comps[WhichSlice::This]["Ez"];
         const int bx_comp = Comps[WhichSlice::This]["Bx"];
@@ -566,7 +566,7 @@ LaserIonization (const int islice,
     for (amrex::MFIter mfi_ion = MakeMFIter(0, DfltMfi); mfi_ion.isValid(); ++mfi_ion)
     {
         // Extract laser array
-        Array3<const amrex::Real> const laser_arr = laser.getSlices().const_array(mfi_ion);
+        Array3<const amrex::Real> const laser_arr = to3D(laser.getSlices().const_array(mfi_ion));
 
         const CheckDomainBounds laser_bounds {laser_geom};
 
@@ -827,7 +827,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
         const amrex::Geometry& gm = Hipace::GetInstance().m_3D_geom[0];
         const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
         amrex::FArrayBox& isl_fab = Hipace::GetInstance().m_fields.getSlices(0)[pti];
-        Array3<amrex::Real> arr = isl_fab.array();
+        Array3<amrex::Real> arr = to3D(isl_fab.array());
         const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
         const amrex::Real dx_inv = gm.InvCellSize(0);

@@ -202,7 +202,7 @@ SalameInitializeSxSyWithBeam (Hipace* hipace, const int lev)
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
-        Array3<amrex::Real> const arr = slicemf.array(mfi);
+        Array3<amrex::Real> const arr = to3D(slicemf.array(mfi));
 
         const int Sx = Comps[WhichSlice::Salame]["Sx"];
         const int Sy = Comps[WhichSlice::Salame]["Sy"];
@@ -241,7 +241,7 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
-        Array3<amrex::Real> const arr = slicemf.array(mfi);
+        Array3<amrex::Real> const arr = to3D(slicemf.array(mfi));
 
         const int Bx = Comps[WhichSlice::Salame]["Bx"];
         const int By = Comps[WhichSlice::Salame]["By"];
@@ -273,7 +273,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
         for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
         {
             const amrex::FArrayBox& slice_fab = hipace->m_fields.getSlices(lev)[pti];
-            Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+            Array3<const amrex::Real> const slice_arr = to3D(slice_fab.const_array());
             const int bx_comp = Comps[WhichSlice::Salame]["Bx"];
             const int by_comp = Comps[WhichSlice::Salame]["By"];
 
@@ -359,7 +359,7 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
             amrex::ReduceData<amrex::Real, amrex::Real,
                             amrex::Real, amrex::Real> reduce_data(reduce_op);
             using ReduceTuple = typename decltype(reduce_data)::Type;
-            Array3<amrex::Real> const arr = slicemf.array(mfi);
+            Array3<amrex::Real> const arr = to3D(slicemf.array(mfi));
 
             const int Ez = Comps[WhichSlice::Salame]["Ez"];
             const int Ez_target = Comps[WhichSlice::Salame]["Ez_target"];

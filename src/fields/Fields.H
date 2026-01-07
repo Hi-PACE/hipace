@@ -308,7 +308,7 @@ public:
 #pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real> array = mfab.array(mfi);
+            const Array3<amrex::Real> array = to3D(mfab.array(mfi));
             // only one Kernel for all fields
             amrex::ParallelFor(to2D(mfi.growntilebox()),
                 [=] AMREX_GPU_DEVICE(int i, int j)
@@ -337,7 +337,7 @@ public:
 #pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real> array = mfab.array(mfi);
+            const Array3<amrex::Real> array = to3D(mfab.array(mfi));
             // only one Kernel for all fields
             amrex::ParallelFor(to2D(mfi.growntilebox()),
                 [=] AMREX_GPU_DEVICE(int i, int j)
@@ -367,7 +367,7 @@ public:
 #pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real> array = mfab.array(mfi);
+            const Array3<amrex::Real> array = to3D(mfab.array(mfi));
             // only one Kernel for all fields
             amrex::ParallelFor(to2D(mfi.growntilebox()),
                 [=] AMREX_GPU_DEVICE(int i, int j)
@@ -404,7 +404,7 @@ public:
 #pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real> array = mfab.array(mfi);
+            const Array3<amrex::Real> array = to3D(mfab.array(mfi));
             // only one Kernel for all fields
             amrex::ParallelFor(to2D(mfi.growntilebox()),
                 [=] AMREX_GPU_DEVICE(int i, int j)
@@ -441,7 +441,7 @@ public:
 #pragma omp parallel
 #endif
         for (amrex::MFIter mfi(mfab, DfltMfiTlng); mfi.isValid(); ++mfi) {
-            const Array3<amrex::Real> array = mfab.array(mfi);
+            const Array3<amrex::Real> array = to3D(mfab.array(mfi));
             // only one Kernel for all fields
             amrex::ParallelFor(to2D(mfi.growntilebox()),
                 [=] AMREX_GPU_DEVICE(int i, int j)

@@ -130,12 +130,12 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), wp*uyp*uyp);
                 amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), wp*uzp*uzp);
             },
-            isl_fab.array(),
+            to3D(isl_fab.array()),
             isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
             amrex::GpuArray<int, 1>{aabs},
             amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq}
         );
-        Array3<amrex::Real> field_arr = isl_fab.array();
+        Array3<amrex::Real> field_arr = to3D(isl_fab.array());
 
         // Normalize the components of momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)
         // by dividing them by the total weight (w) in each cell. If the weight is zero, no division is performed.

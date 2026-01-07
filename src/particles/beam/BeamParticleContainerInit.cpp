@@ -234,12 +234,10 @@ InitBeamFixedPPCSlice (const int islice, const int which_beam_slice)
     // First: loop over all cells, and count the particles effectively injected.
 
     amrex::Gpu::DeviceVector<int> counts(slice_box.numPts(), 0);
-    const Array2<int> count_arr {{counts.dataPtr(), amrex::begin(slice_box),
-                                  amrex::end(slice_box), 1}};
+    const Array2<int> count_arr {counts.dataPtr(), to2D(slice_box)};
 
     amrex::Gpu::DeviceVector<int> offsets(slice_box.numPts());
-    const Array2<int> offset_arr {{offsets.dataPtr(), amrex::begin(slice_box),
-                                   amrex::end(slice_box), 1}};
+    const Array2<int> offset_arr {offsets.dataPtr(), to2D(slice_box)};
 
     amrex::ParallelForRNG(to2D(slice_box),
         [=] AMREX_GPU_DEVICE (int i, int j, const amrex::RandomEngine& engine) noexcept

@@ -55,9 +55,9 @@ AdvanceBeamParticlesSlice (
     const amrex::FArrayBox& slice_fab_lev1 = fields.getSlices(lev1_idx)[0];
     const amrex::FArrayBox& slice_fab_lev2 = fields.getSlices(lev2_idx)[0];
 
-    Array3<const amrex::Real> const slice_arr_lev0 = slice_fab_lev0.const_array();
-    Array3<const amrex::Real> const slice_arr_lev1 = slice_fab_lev1.const_array();
-    Array3<const amrex::Real> const slice_arr_lev2 = slice_fab_lev2.const_array();
+    Array3<const amrex::Real> const slice_arr_lev0 = to3D(slice_fab_lev0.const_array());
+    Array3<const amrex::Real> const slice_arr_lev1 = to3D(slice_fab_lev1.const_array());
+    Array3<const amrex::Real> const slice_arr_lev2 = to3D(slice_fab_lev2.const_array());
 
     // Extract properties associated with physical size of the box
     const amrex::Real dx_inv_lev0 = gm[lev0_idx].InvCellSize(0);

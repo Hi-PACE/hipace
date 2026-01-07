@@ -126,12 +126,12 @@ SharedMemoryDeposition (int num_particles,
                 const int tile_end_y = std::min(tile_begin_y + tile_s_y, hi_y + 1);
 
                 // make Array3 reference shared memory tile
-                Array3<amrex::Real> shared_arr{{
+                Array3<amrex::Real> shared_arr{
                     shared_ptr,
-                    {tile_begin_x, tile_begin_y, 0},
-                    {tile_end_x, tile_end_y, 1},
+                    amrex::IntVectND{tile_begin_x, tile_begin_y},
+                    amrex::IntVectND{tile_end_x, tile_end_y},
                     max_cache + max_depos
-                }};
+                };
 
                 for (int s = threadIdx.x; s < tile_s_x * tile_s_y; s+=threads_per_tile) {
                     int sy = s / tile_s_x;

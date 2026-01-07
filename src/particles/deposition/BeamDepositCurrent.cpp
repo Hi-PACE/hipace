@@ -97,7 +97,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
             constexpr int stencil_size = depos_order + 1;
             SharedMemoryDeposition<stencil_size, stencil_size, true>(
                 beam.getNumParticles(which_beam_slice), is_valid, get_cell, deposit,
-                isl_fab.array(), isl_fab.box(),
+                to3D(isl_fab.array()), isl_fab.box(),
                 beam.getBeamSlice(which_beam_slice).getParticleTileData(),
                 amrex::GpuArray<int, 0>{},
                 amrex::GpuArray<int, 4>{jxb_cmp, jyb_cmp, jzb_cmp, rhomjzb_cmp});
