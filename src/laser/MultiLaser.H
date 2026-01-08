@@ -130,7 +130,7 @@ public:
      * The complex phase of the envelope is evaluated on-axis only.
      *
      * \param[in] dt time step of the simulation
-     * \param[in]is_first_step if this is the first time step of the simulation
+     * \param[in] is_first_step if this is the first time step of the simulation
      */
     void AdvanceSliceFFT (amrex::Real dt, bool is_first_step);
 
