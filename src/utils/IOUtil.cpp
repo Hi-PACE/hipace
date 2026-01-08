@@ -72,13 +72,9 @@ utils::getReversedVec ( const amrex::Real* v )
 }
 
 bool
-utils::doDiagnostics (int output_period, int output_step, int max_step,
-               amrex::Real output_time, amrex::Real max_time)
+utils::doDiagnostics (int output_period, int output_step, bool is_last_step)
 {
-    return output_period > 0 && (
-        (output_time == max_time) ||
-        (output_step == max_step) ||
-        (output_step % output_period == 0) );
+    return output_period > 0 && (is_last_step || (output_step % output_period == 0));
 }
 
 std::ostream& operator<<(std::ostream& os, utils::format_time ft) {

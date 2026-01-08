@@ -50,12 +50,9 @@ namespace utils
      * returns whether output should be writen to file
      * \param[in] output_period period of the output
      * \param[in] output_step current step
-     * \param[in] max_step maximum step of simulation
-     * \param[in] output_time physical time of the current step
-     * \param[in] max_time maximum simulation time
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
-     bool doDiagnostics (int output_period, int output_step, int max_step,
-                    amrex::Real output_time, amrex::Real max_time);
+    bool doDiagnostics (int output_period, int output_step, bool is_last_step);
 
     struct format_time {
         double seconds = 0;

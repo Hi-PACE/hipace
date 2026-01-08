@@ -439,8 +439,8 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 }
 
 void
-MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step,
-                          amrex::Geometry const& geom_field_lev0)
+MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt,
+                          bool is_first_step, amrex::Geometry const& geom_field_lev0)
 {
 
     if (!UseLaser(islice)) return;
@@ -450,16 +450,16 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
     InterpolateChi(fields, geom_field_lev0);
 
     if (m_solver_type == "multigrid") {
-        AdvanceSliceMG(dt, step);
+        AdvanceSliceMG(dt, is_first_step);
     } else if (m_solver_type == "fft") {
-        AdvanceSliceFFT(dt, step);
+        AdvanceSliceFFT(dt, is_first_step);
     } else {
         amrex::Abort("laser.solver_type must be fft or multigrid");
     }
 }
 
 void
-MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
+MultiLaser::AdvanceSliceMG (amrex::Real dt, bool is_first_step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
@@ -555,9 +555,9 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
 
         // D_j^n as defined in Benedetti's 2017 paper
         djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
-        acoeff_real_scalar = step == 0 ? 6._rt/(c*dt*dz)
+        acoeff_real_scalar = is_first_step ? 6._rt/(c*dt*dz)
             : 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
-        acoeff_imag_scalar = step == 0 ? -4._rt * ( k0 + djn ) / (c*dt)
+        acoeff_imag_scalar = is_first_step ? -4._rt * ( k0 + djn ) / (c*dt)
             : -2._rt * ( k0 + djn ) / (c*dt);
 
         amrex::ParallelFor(
@@ -567,7 +567,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
-                if (step == 0) {
+                if (is_first_step) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
                         (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
                         (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
@@ -590,7 +590,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
                     acoeff_real_scalar + arr(i, j, chi) : acoeff_real_scalar;
 
                 Complex rhs;
-                if (step == 0) {
+                if (is_first_step) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
@@ -639,7 +639,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
 }
 
 void
-MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
+MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool is_first_step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");
@@ -742,7 +742,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
-                if (step == 0) {
+                if (is_first_step) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
                         (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
                         (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
@@ -762,7 +762,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                 const Complex anp1jp1 = arr(i, j, np1jp1_r) + I * arr(i, j, np1jp1_i);
                 const Complex anp1jp2 = arr(i, j, np1jp2_r) + I * arr(i, j, np1jp2_i);
                 Complex rhs;
-                if (step == 0) {
+                if (is_first_step) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
@@ -797,7 +797,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
-            step == 0 ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
+            is_first_step ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
              3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) - I * 2._rt * ( k0 + djn ) / (c*dt);
         amrex::ParallelFor(
             to2D(bx),
@@ -954,11 +954,10 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
 }
 
 void
-MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
-                                int max_step, amrex::Real max_time)
+MultiLaser::InSituComputeDiags (int step, int islice, bool is_last_step)
 {
     if (!UseLaser(islice)) return;
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!utils::doDiagnostics(m_insitu_period, step, is_last_step)) return;
     HIPACE_PROFILE("MultiLaser::InSituComputeDiags()");
 
     using namespace amrex::literals;
@@ -1044,10 +1043,10 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
 }
 
 void
-MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::Real max_time)
+MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
 {
     if (!m_use_laser) return;
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!utils::doDiagnostics(m_insitu_period, step, is_last_step)) return;
     HIPACE_PROFILE("MultiLaser::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD

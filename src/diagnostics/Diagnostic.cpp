@@ -331,8 +331,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
 
 void
 Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
-                            amrex::Geometry const& laser_geom, int output_step, int max_step,
-                            amrex::Real output_time, amrex::Real max_time)
+                            amrex::Geometry const& laser_geom, int output_step,
+                            bool is_last_step)
 {
     AMREX_ALWAYS_ASSERT(m_initialized);
 
@@ -402,8 +402,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 
         fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
-        fd.m_has_field = domain.ok()
-                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
+        fd.m_has_field = domain.ok() && hasFieldOutput(fd, output_step, is_last_step);
 
         if(fd.m_has_field) {
             HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");

@@ -170,7 +170,14 @@ General parameters
     Note that this will include some default AMReX parameters.
 
 * ``hipace.initial_time`` (`float`) optional (default `0.`)
-    Initial time of the simulation. Can be used to start at a chosen location in a custom density profile or to overwrite the initial time set e.g. with the ``from_file`` option of beam initialization.
+    Initial time of the simulation. Can be used to start at a chosen location
+    in a custom density profile or to overwrite the initial time set e.g.
+    with the ``from_file`` option of beam initialization.
+
+* ``hipace.initial_step`` (`integer`) optional (default `0`)
+    Initial step index of the simulation. Can be used to offset the iteration number of diagnostic
+    output as well as the output period calculation when restarting a simulation.
+    Should be used together with with ``hipace.initial_time``.
 
 * ``hipace.grid_external_fields(x,y,z,t)`` (5 `float`) optional (default `0. 0. 0. 0. 0.`)
     External fields applied to the field grid as a function of x, y, z and t.

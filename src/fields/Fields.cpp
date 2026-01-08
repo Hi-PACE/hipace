@@ -1352,10 +1352,10 @@ Fields::ComputeRelBFieldError (const int which_slice, const int which_slice_iter
 }
 
 void
-Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
-                            int max_step, amrex::Real max_time)
+Fields::InSituComputeDiags (int step, int islice, const amrex::Geometry& geom3D,
+                            bool is_last_step)
 {
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!utils::doDiagnostics(m_insitu_period, step, is_last_step)) return;
     HIPACE_PROFILE("Fields::InSituComputeDiags()");
 
     using namespace amrex::literals;
@@ -1414,9 +1414,9 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
 
 void
 Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
-                           int max_step, amrex::Real max_time)
+                           bool is_last_step)
 {
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!utils::doDiagnostics(m_insitu_period, step, is_last_step)) return;
     HIPACE_PROFILE("Fields::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD
