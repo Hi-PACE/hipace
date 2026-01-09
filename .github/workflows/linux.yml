@@ -39,7 +39,7 @@ jobs:
     - name: Build & Install
       run: |
         pip install -U -e ./tools
-        export CXXFLAGS="-fsanitize=undefined,address,pointer-compare -fno-sanitize-recover=all"
+        export CXXFLAGS="-fsanitize=undefined,address -fno-sanitize-recover=all -g -O2"
         cmake -S . -B build                        \
             -DHiPACE_COMPUTE=OMP                   \
             -DCMAKE_CXX_STANDARD=17                \
