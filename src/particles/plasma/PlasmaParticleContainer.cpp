@@ -467,9 +467,8 @@ IonizationModule (const int lev,
             const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
                                                            /* Assumes Aabssq == 0 */ 0._rt);
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
-            if (ion_lev_loc > max_ion_lev) {
-                std::cout << "max_ion_lev " <<  max_ion_lev << " ion_lev_loc " << ion_lev_loc << '\n';
-                // return;
+            if (ion_lev_loc >= max_ion_lev) {
+                return;
             }
             // gamma / (psi + 1) to complete dt for QSA
             amrex::Real w_dtau = gamma_psi * adk_prefactor[ion_lev_loc] *
@@ -666,9 +665,8 @@ LaserIonization (const int islice,
             const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
                                                            /* Assumes Aabssq == 0 */ 0._rt);
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
-            if (ion_lev_loc > max_ion_lev) {
-                std::cout << "max_ion_lev " <<  max_ion_lev << " ion_lev_loc " << ion_lev_loc << '\n';
-                // return;
+            if (ion_lev_loc >= max_ion_lev) {
+                return;
             }
             // gamma / (psi + 1) to complete dt for QSA
             amrex::Real w_dtau_dc = gamma_psi * adk_prefactor[ion_lev_loc] *

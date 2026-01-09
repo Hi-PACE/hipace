@@ -51,5 +51,3 @@ if [[ "$HIPACE_COMPUTE" != "CUDA" ]]; then
          --file_name $TEST_NAME/linear \
          --test-name $TEST_NAME
  fi
-
-exit 1;
