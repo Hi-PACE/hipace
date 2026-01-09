@@ -426,6 +426,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     // Get atomic number and ionization energies from file
     const int ion_element_id = ion_map_ids[physical_element];
     const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+    m_max_ion_lev = ion_atomic_number;
     amrex::Vector<amrex::Real> h_ionization_energies(ion_atomic_number);
     const int offset = ion_energy_offsets[ion_element_id];
     for(int i=0; i<ion_atomic_number; i++){
