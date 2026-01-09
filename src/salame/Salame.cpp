@@ -9,6 +9,7 @@
 #include "particles/particles_utils/FieldGather.H"
 #include "utils/GPUUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "utils/OMPUtil.H"
 
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
@@ -287,54 +288,41 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 
             const auto ptd = pti.GetParticleTile().getParticleTileData();
 
-            const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
+            const amrex::Real charge_mass_c_ratio =
+                plasma.m_charge / (plasma.m_mass * get_phys_const().c);
             const bool can_ionize = plasma.m_can_ionize;
 
-#ifdef AMREX_USE_OMP
-#pragma omp parallel
-#endif
-            {
-                amrex::Long const num_particles = pti.numParticles();
-#ifdef AMREX_USE_OMP
-                amrex::Long const idx_begin = (num_particles * omp_get_thread_num()) / omp_get_num_threads();
-                amrex::Long const idx_end = (num_particles * (omp_get_thread_num()+1)) / omp_get_num_threads();
-#else
-                amrex::Long constexpr idx_begin = 0;
-                amrex::Long const idx_end = num_particles;
-#endif
+            omp::ParallelFor(
+                amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
+                {Hipace::m_depos_order_xy},
+                pti.numParticles(),
+                [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
+                    // only push plasma particles on their according MR level
+                    if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
-                amrex::ParallelFor(
-                    amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
-                    {Hipace::m_depos_order_xy},
-                    int(idx_end - idx_begin),
-                    [=] AMREX_GPU_DEVICE (long idx, auto depos_order) {
-                        const int ip = idx + idx_begin;
-                        // only push plasma particles on their according MR level
-                        if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
+                    const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
+                    const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
 
-                        const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
-                        const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
+                    amrex::Real Bxp = 0._rt;
+                    amrex::Real Byp = 0._rt;
 
-                        amrex::Real Bxp = 0._rt;
-                        amrex::Real Byp = 0._rt;
+                    // Gather Bx and By
+                    doBxByGatherShapeN<depos_order.value>(xp, yp, Bxp, Byp, slice_arr,
+                        bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                        // Gather Bx and By
-                        doBxByGatherShapeN<depos_order.value>(xp, yp, Bxp, Byp, slice_arr,
-                            bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-
-                        const amrex::Real q_mass_ratio = can_ionize ?
-                            ptd.idata(PlasmaIdx::ion_lev)[ip] * charge_mass_ratio
-                            : charge_mass_ratio;
+                    const amrex::Real q_m_c_ratio = can_ionize ?
+                        ptd.idata(PlasmaIdx::ion_lev)[ip] * charge_mass_c_ratio
+                        : charge_mass_c_ratio;
 
 #ifdef HIPACE_USE_AB5_PUSH
-                        ptd.rdata(PlasmaIdx::ux)[ip] =  ( 1901._rt / 720._rt )*dz * q_mass_ratio * Byp;
-                        ptd.rdata(PlasmaIdx::uy)[ip] = -( 1901._rt / 720._rt )*dz * q_mass_ratio * Bxp;
+                    ptd.rdata(PlasmaIdx::ux)[ip] =  ( 1901._rt / 720._rt )*dz * q_m_c_ratio * Byp;
+                    ptd.rdata(PlasmaIdx::uy)[ip] = -( 1901._rt / 720._rt )*dz * q_m_c_ratio * Bxp;
 #else
-                        ptd.rdata(PlasmaIdx::ux)[ip] =  1.5_rt*dz * q_mass_ratio * Byp;
-                        ptd.rdata(PlasmaIdx::uy)[ip] = -1.5_rt*dz * q_mass_ratio * Bxp;
+                    ptd.rdata(PlasmaIdx::ux)[ip] =  1.5_rt*dz * q_m_c_ratio * Byp;
+                    ptd.rdata(PlasmaIdx::uy)[ip] = -1.5_rt*dz * q_m_c_ratio * Bxp;
 #endif
-                    });
-            }
+                });
+
         }
     }
 }
