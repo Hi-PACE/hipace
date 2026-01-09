@@ -39,8 +39,9 @@ jobs:
     - name: Build & Install
       run: |
         pip install -U -e ./tools
-        export CXXFLAGS="-fsanitize=undefined,address -fno-sanitize-recover=all -g -O2"
+        export CXXFLAGS="-fsanitize=undefined,address -fno-sanitize-recover=all"
         cmake -S . -B build                        \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo      \
             -DHiPACE_COMPUTE=OMP                   \
             -DCMAKE_CXX_STANDARD=17                \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
