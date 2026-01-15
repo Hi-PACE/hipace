@@ -317,7 +317,8 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
                 ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
-                ptd.rdata(PlasmaIdx::psi)[pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
+                ptd.rdata(PlasmaIdx::psi)[pidx] = plasma_psi(u[0], u[1], u[2],
+                                                             /* Assumes Aabssq == 0 */ 0._rt);
                 ptd.rdata(PlasmaIdx::x_prev)[pidx] = x;
                 ptd.rdata(PlasmaIdx::y_prev)[pidx] = y;
                 ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0];
