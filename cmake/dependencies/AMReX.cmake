@@ -146,10 +146,10 @@ set(HiPACE_amrex_src ""
     "Local path to AMReX source directory (preferred if set)")
 
 # Git fetcher
-set(HiPACE_amrex_repo "https://github.com/ankithadas/amrex.git"
+set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
     CACHE STRING
     "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
-set(HiPACE_amrex_branch "ArrayND"
+set(HiPACE_amrex_branch "development"
     CACHE STRING
     "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
 

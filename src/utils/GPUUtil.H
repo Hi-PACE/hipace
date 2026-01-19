@@ -12,10 +12,10 @@
 #include <AMReX_MFIter.H>
 
 template<class T>
-using Array2 = amrex::ArrayND<T, 2>;
+using Array2 = amrex::ArrayND<T, 2, false>;
 
 template<class T>
-using Array3 = amrex::ArrayND<T, 3>;
+using Array3 = amrex::ArrayND<T, 3, true>;
 
 template<class T> AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 Array2<T> to2D (const amrex::Array4<T>& arr) {
