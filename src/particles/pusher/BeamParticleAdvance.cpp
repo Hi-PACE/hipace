@@ -325,7 +325,7 @@ AdvanceBeamParticlesSlice (
                 if (do_z_push) zp += dt * clight * ( uz_next * gamma_next_inv - 1._rt );
                 ux = ux_next;
                 uy = uy_next;
-                if (do_uz_push) uz = uz_next;
+                uz = uz_next;
             } // end for loop over n_subcycles
             if (enforceBC(ptd, ip, xp, yp, ux, uy, BeamIdx::w)) return;
             ptd.pos(0, ip) = xp;
