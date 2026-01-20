@@ -18,6 +18,78 @@
 #include <AMReX_AmrCore.H>
 #include <map>
 
+/** compute gamma / (normalized psi + 1)
+ * \param[in] ux normalized momentum in x
+ * \param[in] uy normalized momentum in y
+ * \param[in] psi_inv 1 / (normalized psi + 1)
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_gamma_psi (amrex::Real ux, amrex::Real uy,
+                              amrex::Real psi_inv, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return 0.5_rt * (
+        (1._rt + 0.5_rt * Aabssq + ux * ux + uy * uy) * (psi_inv * psi_inv)
+        + 1._rt
+    );
+}
+
+/** compute gamma / (normalized psi + 1)
+ * \param[in] vx ux / (normalized psi + 1)
+ * \param[in] vy uy / (normalized psi + 1)
+ * \param[in] psi_inv 1 / (normalized psi + 1)
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_gamma_psi_v (amrex::Real vx, amrex::Real vy,
+                                amrex::Real psi_inv, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return 0.5_rt * (
+        (1._rt + 0.5_rt * Aabssq) * (psi_inv * psi_inv)
+        + vx * vx
+        + vy * vy
+        + 1._rt
+    );
+}
+
+/** compute gamma
+ * \param[in] ux normalized momentum in x
+ * \param[in] uy normalized momentum in y
+ * \param[in] psi normalized psi + 1
+ * \param[in] psi_inv 1 / (normalized psi + 1)
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_gamma (amrex::Real ux, amrex::Real uy, amrex::Real psi,
+                          amrex::Real psi_inv, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return 0.5_rt * (
+        (1._rt + 0.5_rt * Aabssq + ux * ux + uy * uy) * psi_inv
+        + psi
+    );
+}
+
+/** compute uz
+ * \param[in] gamma gamma of the plasma particle
+ * \param[in] psi normalized psi + 1
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_uz (amrex::Real gamma, amrex::Real psi) {
+    return gamma - psi;
+}
+
+/** compute normalized psi + 1
+ * \param[in] ux normalized momentum in x
+ * \param[in] uy normalized momentum in y
+ * \param[in] uz normalized momentum in z
+ * \param[in] Aabssq |a^2| of the laser envelope
+ */
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real plasma_psi (amrex::Real ux, amrex::Real uy, amrex::Real uz, amrex::Real Aabssq) {
+    using namespace amrex::literals;
+    return std::sqrt(1._rt + ux * ux + uy * uy + uz * uz + 0.5_rt * Aabssq) - uz;
+}
+
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
 {
@@ -48,12 +120,14 @@ struct PlasmaIdx
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
-    : public amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs, PlasmaIdx::int_nattribs>
+    : public amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs, PlasmaIdx::int_nattribs,
+                                             amrex::PolymorphicArenaAllocator>
 {
 public:
     /** Constructor */
     explicit PlasmaParticleContainer (std::string name) :
-        amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(),
+        amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs,
+                                        amrex::PolymorphicArenaAllocator>(),
         m_name(name)
     {}
 
@@ -205,6 +279,7 @@ public:
     bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
     bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
+    int m_max_ion_lev = 0; /**< maximum ionization level */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
     /** to calculate Ionization probability with ADK formula */
@@ -252,12 +327,14 @@ private:
 };
 
 /** \brief Iterator over boxes in a particle container */
-class PlasmaParticleIterator : public amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>
+class PlasmaParticleIterator : public amrex::ParIterSoA<
+    PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs, amrex::PolymorphicArenaAllocator>
 {
 public:
     /** Constructor */
     PlasmaParticleIterator (ContainerType& pc)
-        : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
+        : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs,
+                            amrex::PolymorphicArenaAllocator>(pc, 0, DfltMfi) {}
 };
 
 #endif

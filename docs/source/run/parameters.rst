@@ -341,7 +341,7 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
-* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletFast`)
+* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletQuick` or `FFTDirichletFast`)
     Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
     solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are:
 
@@ -357,6 +357,10 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
       * ``FFTDirichletFast`` Perform the discrete sine transformation using a fast sine transform
         algorithm that uses FFTs of the same size as the fields.
         Preferred resolution: :math:`2^N-1`.
+
+      * ``FFTDirichletQuick`` Similar to ``FFTDirichletFast`` but uses a different type of FFT that
+        works better for even resolutions.
+        Preferred resolution: :math:`2^N`.
 
       * ``MGDirichlet`` Use the HiPACE++ multigrid solver to solve the Poisson equation with
         Dirichlet boundary conditions.

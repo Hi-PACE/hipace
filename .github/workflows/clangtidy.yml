@@ -1,0 +1,25 @@
+
+name: 🧹 clang-tidy
+
+on:
+  push:
+    branches:
+      - development
+  pull_request:
+    branches:
+      - development
+
+jobs:
+
+  linux_clang_tidy:
+    name: clang-tidy
+    runs-on: ubuntu-latest
+    env: {CXXFLAGS: "-Wno-pass-failed"}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Dependencies
+      run: .github/workflows/setup/ubuntu_clang.sh
+    - name: Build & Install
+      run: |
+        ./tools/runClangTidy.sh
+

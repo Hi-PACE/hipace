@@ -185,8 +185,10 @@ public:
                 return 2;
             case 3:
                 return 1;
+            default:
+                amrex::Abort(std::to_string(system_type) + " is not a valid system_type!");
         }
-        return 0;
+        return 0; //unreachable
     }
 
     /** \brief Return the number of acf components used for a given system type
@@ -201,8 +203,10 @@ public:
                 return 2;
             case 3:
                 return 0;
+            default:
+                amrex::Abort(std::to_string(system_type) + " is not a valid system_type!");
         }
-        return 0;
+        return 0; //unreachable
     }
 
     /** When applying Dirichlet boundary conditions, shift boundary value by offset number of cells */
@@ -230,8 +234,11 @@ private:
     int m_num_mg_levels;
     /** Number of single-block-kernel levels */
     int m_num_single_block_levels;
+
+#if defined(AMREX_USE_GPU)
     /** If the single block kernel should be used */
     bool m_use_single_block_kernel = true;
+#endif
 
     /** Alias to the solution argument passed in solve() */
     amrex::FArrayBox m_sol;
