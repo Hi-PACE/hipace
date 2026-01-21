@@ -43,6 +43,7 @@ jobs:
         pip install -U -e ./tools
         export CXXFLAGS="-fsanitize=undefined,address -fno-sanitize-recover=all"
         cmake -S . -B build                        \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache   \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo      \
             -DHiPACE_COMPUTE=OMP                   \
             -DCMAKE_CXX_STANDARD=17                \
