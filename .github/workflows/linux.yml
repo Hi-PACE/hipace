@@ -37,14 +37,14 @@ jobs:
 
         export CCACHE_COMPRESS=1
         export CCACHE_COMPRESSLEVEL=10
-        export CCACHE_MAXSIZE=300M
+        export CCACHE_MAXSIZE=1G
         ccache -z
 
         pip install -U -e ./tools
-        export CXXFLAGS="-fsanitize=undefined,address -fno-sanitize-recover=all"
+        export CXXFLAGS="-g -fsanitize=undefined,address -fno-sanitize-recover=all"
         cmake -S . -B build                        \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache   \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo      \
+            -DCMAKE_BUILD_TYPE=Release             \
             -DHiPACE_COMPUTE=OMP                   \
             -DCMAKE_CXX_STANDARD=17                \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
