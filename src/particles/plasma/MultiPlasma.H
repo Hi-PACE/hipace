@@ -91,7 +91,7 @@ public:
      *
      * \param[in,out] fields the general field class, modified by this function
      * \param[in] which_slice slice in which the densities are deposited
-     * \param[in] gm Geometry of the simulation, to get the cell size etc.
+     * \param[in] gm Geometry of the simulation (to get the cell size etc.)
      * \param[in] lev MR level
      */
     void DepositNeutralizingBackground (
