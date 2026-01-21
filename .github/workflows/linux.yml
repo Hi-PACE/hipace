@@ -31,10 +31,12 @@ jobs:
       with:
         path: ~/.cache/ccache
         key: ccache-${{ github.workflow }}-${{ github.job }}-git-${{ github.sha }}
-        restore-keys: |
-          ccache-${{ github.workflow }}-${{ github.job }}-git-
+        restore-keys: ccache-${{ github.workflow }}-${{ github.job }}-git-
     - name: Build & Install
       run: |
+
+        du -hs ~/.cache/ccache
+
         export CCACHE_COMPRESS=1
         export CCACHE_COMPRESSLEVEL=10
         export CCACHE_MAXSIZE=300M
