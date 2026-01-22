@@ -26,16 +26,16 @@ struct Array2 {
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Array2 (const amrex::Array4<T>& rhs) noexcept
         : p(rhs.p),
-          jstride(rhs.jstride),
-          start(-rhs.begin.x - rhs.begin.y * rhs.jstride)
+          jstride(rhs.nstride[0]),
+          start(-rhs.begin[0] - rhs.begin[1] * rhs.nstride[0])
 #if defined(AMREX_DEBUG) || defined(AMREX_BOUND_CHECK)
-          ,begin(rhs.begin),
-          end(rhs.end),
-          ncomp(rhs.ncomp)
+          ,begin{rhs.begin[0], rhs.begin[1], rhs.begin[2]},
+          end{rhs.end[0], rhs.end[1], rhs.end[2]},
+          ncomp(rhs.end[3] - rhs.begin[3])
 #endif
     {
         // slice is only one cell thick if allocated
-        AMREX_IF_ON_HOST((AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin.z + 1 == rhs.end.z);));
+        AMREX_IF_ON_HOST((AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin[2] + 1 == rhs.end[2]);));
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
@@ -125,17 +125,17 @@ struct Array3 {
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Array3 (const amrex::Array4<T>& rhs) noexcept
         : p(rhs.p),
-          jstride(rhs.jstride),
-          nstride(rhs.nstride),
-          start(-rhs.begin.x - rhs.begin.y * rhs.jstride)
+          jstride(rhs.nstride[0]),
+          nstride(rhs.nstride[2]),
+          start(-rhs.begin[0] - rhs.begin[1] * rhs.nstride[0])
 #if defined(AMREX_DEBUG) || defined(AMREX_BOUND_CHECK)
-          ,begin(rhs.begin),
-          end(rhs.end),
-          ncomp(rhs.ncomp)
+          ,begin{rhs.begin[0], rhs.begin[1], rhs.begin[2]},
+          end{rhs.end[0], rhs.end[1], rhs.end[2]},
+          ncomp(rhs.end[3] - rhs.begin[3])
 #endif
     {
         // slice is only one cell thick if allocated
-        AMREX_IF_ON_HOST((AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin.z + 1 == rhs.end.z);));
+        AMREX_IF_ON_HOST((AMREX_ALWAYS_ASSERT(!rhs.p || rhs.begin[2] + 1 == rhs.end[2]);));
     }
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE

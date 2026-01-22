@@ -176,12 +176,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 }
 
                 // calculate gamma/psi for plasma particles
-                const amrex::Real gamma_psi = 0.5_rt * (
-                    (1._rt + 0.5_rt * Aabssqp) * psi_inv * psi_inv
-                    + vx * vx
-                    + vy * vy
-                    + 1._rt
-                );
+                const amrex::Real gamma_psi = plasma_gamma_psi_v(vx, vy, psi_inv, Aabssqp);
 
 #ifdef AMREX_USE_GPU
 #pragma unroll
