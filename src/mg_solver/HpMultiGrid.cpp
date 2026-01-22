@@ -1711,10 +1711,10 @@ MultiGrid::average_down_acoef ()
                                              amrex::Array4<amrex::Real> const& crse,
                                              amrex::Array4<amrex::Real> const& fine) noexcept
                         {
-                            if (i == crse.begin.x ||
-                                j == crse.begin.y ||
-                                i == crse.end.x-1 ||
-                                j == crse.end.y-1) {
+                            if (i == crse.begin[0] ||
+                                j == crse.begin[1] ||
+                                i == crse.end[0]-1 ||
+                                j == crse.end[1]-1) {
                                 crse(i,j,0,n) = amrex::Real(0.);
                             } else {
                                 restrict_nd(i,j,n,crse,fine);
