@@ -149,12 +149,9 @@ InitBeamFixedPPC3D ()
     amrex::ReduceOps<amrex::ReduceOpSum> reduce_op;
     amrex::ReduceData<uint64_t> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
-    reduce_op.eval(
-        domain_box.numPts(), reduce_data,
-        [=] AMREX_GPU_DEVICE (amrex::Long idx) -> ReduceTuple
+    reduce_op.eval(domain_box, reduce_data,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
         {
-            auto [i, j, k] = domain_box.atOffset3d(idx).arr;
-
             uint64_t count = 0;
 
             for (int i_part=0; i_part<num_ppc;i_part++)

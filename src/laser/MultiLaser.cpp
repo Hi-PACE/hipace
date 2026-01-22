@@ -517,8 +517,8 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
                 amrex::Real, amrex::Real, amrex::Real,
                 amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
             using ReduceTuple = typename decltype(reduce_data)::Type;
-            reduce_op.eval(bx, reduce_data,
-                [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            reduce_op.eval(to2D(bx), reduce_data,
+                [=] AMREX_GPU_DEVICE (int i, int j) -> ReduceTuple
                 {
                     using namespace WhichLaserSlice;
                     // Even number of transverse cells: average 2 cells
@@ -697,8 +697,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                 amrex::Real, amrex::Real, amrex::Real,
                 amrex::Real, amrex::Real, amrex::Real> reduce_data(reduce_op);
             using ReduceTuple = typename decltype(reduce_data)::Type;
-            reduce_op.eval(bx, reduce_data,
-                [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            reduce_op.eval(to2D(bx), reduce_data,
+                [=] AMREX_GPU_DEVICE (int i, int j) -> ReduceTuple
                 {
                     using namespace WhichLaserSlice;
                     // Even number of transverse cells: average 2 cells
@@ -991,8 +991,8 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ) {
         Array3<amrex::Real const> const arr = m_slices.const_array(mfi);
         reduce_op.eval(
-            mfi.tilebox(), reduce_data,
-            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            to2D(mfi.tilebox()), reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j) -> ReduceTuple
             {
                 using namespace WhichLaserSlice;
                 const amrex::Real areal = arr(i,j, n00j00_r);
