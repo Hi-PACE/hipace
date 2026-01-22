@@ -158,11 +158,11 @@ class InSituReader:
 
         """
         assert type in [None, "avg", "slice", "meta"]
-        if type is "avg":
+        if type == "avg":
             return list(self._avg_comps.keys())
-        elif type is "slice":
+        elif type == "slice":
             return list(self._slice_comps.keys())
-        elif type is "meta":
+        elif type == "meta":
             return [l for l in self.__dict__.keys() if not l.startswith("_")]
         else:
             print("Available average quantities:")

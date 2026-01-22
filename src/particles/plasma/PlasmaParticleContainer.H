@@ -121,12 +121,14 @@ struct PlasmaIdx
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
-    : public amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs, PlasmaIdx::int_nattribs>
+    : public amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs, PlasmaIdx::int_nattribs,
+                                             amrex::PolymorphicArenaAllocator>
 {
 public:
     /** Constructor */
     explicit PlasmaParticleContainer (std::string name) :
-        amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(),
+        amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs,
+                                        amrex::PolymorphicArenaAllocator>(),
         m_name(name)
     {}
 
@@ -278,6 +280,7 @@ public:
     bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
     bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
+    int m_max_ion_lev = 0; /**< maximum ionization level */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
     /** to calculate Ionization probability with ADK formula */
@@ -325,12 +328,14 @@ private:
 };
 
 /** \brief Iterator over boxes in a particle container */
-class PlasmaParticleIterator : public amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>
+class PlasmaParticleIterator : public amrex::ParIterSoA<
+    PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs, amrex::PolymorphicArenaAllocator>
 {
 public:
     /** Constructor */
     PlasmaParticleIterator (ContainerType& pc)
-        : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs>(pc, 0, DfltMfi) {}
+        : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs,
+                            amrex::PolymorphicArenaAllocator>(pc, 0, DfltMfi) {}
 };
 
 #endif
