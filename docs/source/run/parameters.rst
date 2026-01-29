@@ -457,7 +457,7 @@ When both are specified, the per-species value is used.
     contains the plasma density for each location of the simulation. Both Cartesian ``xyz`` and
     Cylidrical geometries ``rz`` with modes are supported, however not all dimensions need to be
     included. The mesh in the file can be chosen with
-    ``<plasma name> or plasmas.read_density_from_path`` (default ``density``) and must contain
+    ``<plasma name> or plasmas.density_mesh_name`` (default ``density``) and must contain
     a single ``SCALAR`` component. Examples of scripts to gernerete such files can be found in
     ``tools\write_plasma_density.py`` and ``tools\write_plasma_density_rz.py``.
 
