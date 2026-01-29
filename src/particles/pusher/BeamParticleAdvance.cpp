@@ -25,7 +25,7 @@ AdvanceBeamParticlesSlice (
     using namespace amrex::literals;
 
     const PhysConst phys_const = get_phys_const();
-    const bool do_uz_push = beam.m_do_uz_push;
+    const bool acc_z = beam.m_acc_z;
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
     const bool radiation_reaction = beam.m_do_radiation_reaction;
@@ -200,24 +200,23 @@ AdvanceBeamParticlesSlice (
                         compute_single_shape_factor<false, 2>(zmid, 2);
                     auto [shape_n, ncell] =
                         compute_single_shape_factor<false, 2>(zmid, 0);
-                    if (do_uz_push){
-                        Ezp *= (1._rt - shape_p - shape_n);
+                    Ezp *= (1._rt - shape_p - shape_n);
 
                         // Gather Ez field on particle from grid
-                        for (int iy=0; iy<=depos_order.value; iy++){
-                            for (int ix=0; ix<=depos_order.value; ix++){
+                    for (int iy=0; iy<=depos_order.value; iy++){
+                        for (int ix=0; ix<=depos_order.value; ix++){
                                 // Compute shape factors
-                                auto [shape_y, jcell] =
-                                    compute_single_shape_factor<false, depos_order.value>(ymid, iy);
-                                auto [shape_x, icell] =
-                                    compute_single_shape_factor<false, depos_order.value>(xmid, ix);
+                            auto [shape_y, jcell] =
+                                compute_single_shape_factor<false, depos_order.value>(ymid, iy);
+                            auto [shape_x, icell] =
+                                compute_single_shape_factor<false, depos_order.value>(xmid, ix);
 
-                                Ezp += shape_p * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_prev);
-                                Ezp += shape_n * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_next);
-                            }
+                            Ezp += shape_p * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_prev);
+                            Ezp += shape_n * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_next);
                         }
                     }
-                    else Ezp = 0;
+                }
+                if(!acc_z) Ezp = 0;
                 }
 
                 if (c_use_external_fields.value) {
