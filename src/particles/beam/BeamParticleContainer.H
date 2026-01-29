@@ -244,7 +244,7 @@ public:
     amrex::Real m_spin_anom = 0.00115965218128;
     /** ratio of beam particles that are written to the openPMD output */
     int m_output_ratio = 1;
-    bool m_do_uz_push = true; /**<if accelerator the beam on z */
+    bool m_acc_z = true; /**<if accelerator the beam on z */
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */
