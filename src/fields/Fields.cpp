@@ -1386,8 +1386,8 @@ Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex:
     for ( amrex::MFIter mfi(slicemf, DfltMfi); mfi.isValid(); ++mfi ) {
         Array3<amrex::Real const> const arr = slicemf.const_array(mfi);
         reduce_op.eval(
-            mfi.tilebox(), reduce_data,
-            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            to2D(mfi.tilebox()), reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j) -> ReduceTuple
             {
                 return {                                            // Tuple contains:
                     pow<2>(arr(i,j,ExmBy) + arr(i,j,By) * clight),  // 0    [Ex^2]
