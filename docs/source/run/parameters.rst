@@ -453,13 +453,7 @@ When both are specified, the per-species value is used.
     `<density function>` which is used for that time step.
 
 * ``<plasma name> or plasmas.read_density_from_path`` (`string`) optional (default "")
-    Alternative to ``<plasma name>.density(x,y,z)``. Specify the path to an openPMD file that
-    contains the plasma density for each location of the simulation. Both Cartesian ``xyz`` and
-    Cylidrical geometries ``rz`` with modes are supported, however not all dimensions need to be
-    included. The mesh in the file can be chosen with
-    ``<plasma name> or plasmas.density_mesh_name`` (default ``density``) and must contain
-    a single ``SCALAR`` component. Examples of scripts to gernerete such files can be found in
-    ``tools\write_plasma_density.py`` and ``tools\write_plasma_density_rz.py``.
+    Alternative to ``<plasma name>.density(x,y,z)``. Specify the path to an openPMD file that contains the species' number density for each location of the simulation. Both geometries (Cartesian ``xyz`` and Cylindrical ``rz`` + modes)  are supported, however not all dimensions need to be included. The mesh in the file can be chosen with ``<plasma name> or plasmas.density_mesh_name`` (default ``density``) and must contain a single ``SCALAR`` component. Examples of scripts to generate such files can be found in ``tools/write_plasma_density.py`` and ``tools/write_plasma_density_rz.py``.
 
 * ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
