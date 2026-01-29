@@ -452,6 +452,15 @@ When both are specified, the per-species value is used.
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
+* ``<plasma name> or plasmas.read_density_from_path`` (`string`) optional (default "")
+    Alternative to ``<plasma name>.density(x,y,z)``. Specify the path to an openPMD file that
+    contains the plasma density for each location of the simulation. Both Cartesian ``xyz`` and
+    Cylidrical geometries ``rz`` with modes are supported, however not all dimensions need to be
+    included. The mesh in the file can be chosen with
+    ``<plasma name> or plasmas.read_density_from_path`` (default ``density``) and must contain
+    a single ``SCALAR`` component. Examples of scripts to gernerete such files can be found in
+    ``tools\write_plasma_density.py`` and ``tools\write_plasma_density_rz.py``.
+
 * ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal

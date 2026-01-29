@@ -107,7 +107,10 @@ PlasmaParticleContainer::ReadParameters ()
     std::string density_path = "";
     bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", density_path, pp_alt);
     if (density_file_specified) {
-        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data);
+        std::string density_mesh_name = "density";
+        queryWithParserAlt(pp, "density_mesh_name", density_mesh_name, pp_alt);
+        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data,
+                                        density_mesh_name);
     }
 
     std::string density_table_file_name{};
