@@ -359,8 +359,8 @@ SalameGetW (Hipace* hipace, const int current_N_level, const int islice)
                 hipace->m_3D_geom[lev].CellSize(0) * hipace->m_3D_geom[lev].CellSize(1)
                 / (hipace->m_3D_geom[0].CellSize(0) * hipace->m_3D_geom[0].CellSize(1));
 
-            reduce_op.eval(mfi.tilebox(), reduce_data,
-                [=] AMREX_GPU_DEVICE (int i, int j, int) noexcept -> ReduceTuple
+            reduce_op.eval(to2D(mfi.tilebox()), reduce_data,
+                [=] AMREX_GPU_DEVICE (int i, int j) noexcept -> ReduceTuple
                 {
                     return {
                         factor * arr(i,j,jz) * arr(i,j,Ez_target),

@@ -126,7 +126,7 @@ macro(find_amrex)
         mark_as_advanced(AMReX_TP_PROFILE)
         mark_as_advanced(USE_XSDK_DEFAULTS)
 
-        message(STATUS "AMReX: Using version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})") 
+        message(STATUS "AMReX: Using version '${AMREX_PKG_VERSION}' (${AMREX_GIT_VERSION})")
     else()
         message(STATUS "Searching for pre-installed AMReX ...")
         set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
