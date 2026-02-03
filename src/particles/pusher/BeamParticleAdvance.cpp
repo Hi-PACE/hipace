@@ -200,8 +200,9 @@ AdvanceBeamParticlesSlice (
                         compute_single_shape_factor<false, 2>(zmid, 2);
                     auto [shape_n, ncell] =
                         compute_single_shape_factor<false, 2>(zmid, 0);
+                    
                     Ezp *= (1._rt - shape_p - shape_n);
-
+                    if(!acc_z) Ezp = 0;
                     // Gather Ez field on particle from grid
                     for (int iy=0; iy<=depos_order.value; iy++){
                         for (int ix=0; ix<=depos_order.value; ix++){
@@ -213,10 +214,9 @@ AdvanceBeamParticlesSlice (
 
                             Ezp += shape_p * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_prev);
                             Ezp += shape_n * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_next);
+                            }
                         }
                     }
-                }
-                if(!acc_z) Ezp = 0;
                 }
 
                 if (c_use_external_fields.value) {
