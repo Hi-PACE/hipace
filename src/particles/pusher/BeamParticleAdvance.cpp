@@ -214,10 +214,10 @@ AdvanceBeamParticlesSlice (
 
                             Ezp += shape_p * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_prev);
                             Ezp += shape_n * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_next);
-                            }
                         }
                     }
                 }
+
 
                 if (c_use_external_fields.value) {
                     ApplyExternalField(xp, yp, zp, time, clight, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
