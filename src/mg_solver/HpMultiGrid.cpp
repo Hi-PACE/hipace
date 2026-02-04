@@ -162,7 +162,7 @@ void interpolation_outofplace (amrex::Box const& box,
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-                Array3<amrex::Real> const& phi, amrex::Real facx, amrex::Real facy)
+                       Array3<amrex::Real> const& phi, amrex::Real facx, amrex::Real facy)
 {
     amrex::Real lap = amrex::Real(-2.)*(facx+facy)*phi(i,j,n);
     if (i == ilo) {
