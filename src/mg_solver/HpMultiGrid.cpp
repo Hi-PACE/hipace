@@ -415,7 +415,7 @@ void gsrb (int icolor, amrex::Box const& box, amrex::Array4<amrex::Real> const& 
 // Optimized Gauss-Seidel update combined with compute residual: ///////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+#if defined(AMREX_USE_GPU)
 
 // do multiple gsrb iterations in GPU shared memory with many ghost cells
 template<int system_type, bool zero_init, bool do_compute_residual, bool is_cell_centered>
@@ -455,17 +455,12 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
     int const jhi_loop = loop_box.bigEnd(1);
     const int num_blocks_x = (loop_box.length(0) + final_tilesize_x - 1)/final_tilesize_x;
     const int num_blocks_y = (loop_box.length(1) + final_tilesize_y - 1)/final_tilesize_y;
-    amrex::Math::FastDivmodU64 num_blocks_divmod {static_cast<std::uint64_t>(num_blocks_x)};
 
-    amrex::launch<num_threads>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
+    amrex::LaunchRaw<num_threads, amrex::Real>(
+        amrex::IntVectND<2>{num_blocks_x, num_blocks_y}, num_cells_in_tile,
+        [=] AMREX_GPU_DEVICE(auto lh) noexcept
         {
-            // allocate static shared memory
-            __shared__ amrex::Real phi_ptr[num_cells_in_tile];
-
-            std::uint64_t remainder = 0;
-            const int iblock_y = num_blocks_divmod.divmod(remainder, blockIdx.x);
-            const int iblock_x = remainder;
+            const auto [iblock_x, iblock_y] = lh.blockIdxND();
 
             const int tile_begin_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop;
             const int tile_begin_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop;
@@ -474,36 +469,31 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
             const int tile_end_y = tile_begin_y + tilesize_array_y;
 
             // make amrex::Array4 reference shared memory tile
-            amrex::Array4<amrex::Real> phi_shared(phi_ptr, {tile_begin_x, tile_begin_y, 0},
-                                             {tile_end_x, tile_end_y, 1}, num_comps);
+            amrex::Array4<amrex::Real> phi_shared(lh.shared_memory(),
+                                                  {tile_begin_x, tile_begin_y, 0},
+                                                  {tile_end_x, tile_end_y, 1}, num_comps);
 
             if (zero_init) {
                 // initialize shared memory to zero
-                for (int s = threadIdx.x; s < num_cells_in_tile; s+=blockDim.x) {
-                    phi_ptr[s] = amrex::Real(0.);
+                for (int s = lh.threadIdx1D(); s < num_cells_in_tile; s+=lh.blockDim1D()) {
+                    phi_shared.p[s] = amrex::Real(0.);
                 }
             } else {
                 // initialize shared memory to phi_in inside the domain, outside zero
-                for (int s = threadIdx.x; s < tilesize_array_x*tilesize_array_y; s+=blockDim.x) {
+                for (int s = lh.threadIdx1D(); s < tilesize_array_x*tilesize_array_y; s+=lh.blockDim1Drt()) {
                     int sy = s / tilesize_array_x;
                     int sx = s - sy * tilesize_array_x;
                     sx += tile_begin_x;
                     sy += tile_begin_y;
-                    if (ilo_loop <= sx && sx <= ihi_loop &&
-                        jlo_loop <= sy && sy <= jhi_loop) {
-                        for (int n=0; n<num_comps; ++n) {
-                            phi_shared(sx, sy, 0, n) = phi_in(sx, sy, 0, n);
-                        }
-                    } else {
-                        for (int n=0; n<num_comps; ++n) {
-                            phi_shared(sx, sy, 0, n) = amrex::Real(0.);
-                        }
+                    const bool is_inside = ilo_loop <= sx && sx <= ihi_loop &&
+                                           jlo_loop <= sy && sy <= jhi_loop;
+                    for (int n=0; n<num_comps; ++n) {
+                        phi_shared(sx, sy, 0, n) = is_inside ? phi_in(sx, sy, 0, n) : amrex::Real(0.);
                     }
                 }
             }
 
-            int ithread_y = threadIdx.x / tilesize_x;
-            const int ithread_x = threadIdx.x - ithread_y * tilesize_x;
+            auto [ithread_x, ithread_y] = lh.template threadIdxND<tilesize_x, tilesize_y / 2>();
             ithread_y *= 2;
 
             const int i = tile_begin_x + 1 + ithread_x;
@@ -525,7 +515,7 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
                 }
             }
 
-            __syncthreads();
+            lh.syncthreads();
 
             for (int icolor=0; icolor<niter; ++icolor) {
                 // Do 4 Gauss–Seidel iterations.
@@ -553,7 +543,7 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
                             rhs_loc[0], facx, facy);
                     }
                 }
-                __syncthreads();
+                lh.syncthreads();
             }
 
             for (int nj=0; nj<=1; ++nj) {
@@ -598,7 +588,7 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
         });
 }
 
-#elif !defined(AMREX_USE_GPU)
+#else
 
 // do multiple gsrb iterations in CPU cached memory with many ghost cells
 template<int system_type, bool zero_init, bool do_compute_residual, bool is_cell_centered>
@@ -770,7 +760,7 @@ void gsrb_4_residual (int system_type, amrex::Box const& box,
     // Compute 4 gsrb (Gauss-Seidel red-black) iterations using rhs and acf and
     // store the result in phi_out.
     // If do_compute_residual is set, store the residual in res.
-#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+#if defined(AMREX_USE_GPU)
     if (system_type == 1) {
         if (box.cellCentered()) {
             gsrb_shared<1, zero_init, do_compute_residual, true>(
@@ -856,12 +846,6 @@ void gsrb_4_residual (int system_type, amrex::Box const& box,
 
 #if defined(AMREX_USE_GPU)
 
-#if defined(AMREX_USE_DPCPP)
-#define HPMG_SYNCTHREADS item.barrier(sycl::access::fence_space::global_and_local)
-#else
-#define HPMG_SYNCTHREADS __syncthreads()
-#endif
-
 template <int NS, int system_type, typename FGS, typename FRES>
 void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Real> const* acf,
                       amrex::Array4<amrex::Real> const* res, amrex::Array4<amrex::Real> const* cor,
@@ -875,24 +859,15 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
     // Currently, this function does not use shared memory.
 
     static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
-#if defined(AMREX_USE_DPCPP)
-    amrex::launch(1, 1024, amrex::Gpu::gpuStream(),
-    [=] (sycl::nd_item<1> const& item) noexcept
-#else
-    amrex::launch_global<1024><<<1, 1024, 0, amrex::Gpu::gpuStream()>>>(
-    [=] AMREX_GPU_DEVICE () noexcept
-#endif
+    amrex::LaunchRaw<1024>(amrex::IntVectND<1>{1},
+    [=] AMREX_GPU_DEVICE (auto lh) noexcept
     {
         amrex::Real facx = amrex::Real(1.)/(dx0*dx0);
         amrex::Real facy = amrex::Real(1.)/(dy0*dy0);
         int lenx = cor[0].end[0] - cor[0].begin[0] - 2*corner_offset;
         int leny = cor[0].end[1] - cor[0].begin[1] - 2*corner_offset;
         int ncells = lenx*leny;
-#if defined(AMREX_USE_DPCPP)
-        const int icell = item.get_local_linear_id();
-#else
-        const int icell = threadIdx.x;
-#endif
+        const int icell = lh.threadIdx1D();
         int j = icell /   lenx;
         int i = icell - j*lenx;
         j += cor[0].begin[1] + corner_offset;
@@ -908,7 +883,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                     cor[ilev](i,j,0,0) = amrex::Real(0.);
                 }
             }
-            HPMG_SYNCTHREADS;
+            lh.syncthreads();
 
             // do 4 Gauss-Seidel red-black iterations
             for (int is = 0; is < 4; ++is) {
@@ -921,7 +896,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                             facx, facy);
                     }
                 }
-                HPMG_SYNCTHREADS;
+                lh.syncthreads();
             }
 
             // calculate the residual
@@ -934,7 +909,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                      res[ilev],
                      acf[ilev], facx, facy);
             }
-            HPMG_SYNCTHREADS;
+            lh.syncthreads();
 
             // interpolate residual to next level
             lenx = cor[ilev+1].end[0] - cor[ilev+1].begin[0] - 2*corner_offset;
@@ -961,7 +936,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                     }
                 }
             }
-            HPMG_SYNCTHREADS;
+            lh.syncthreads();
 
             facx *= amrex::Real(0.25);
             facy *= amrex::Real(0.25);
@@ -979,7 +954,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                     cor[ilev](i,j,0,0) = amrex::Real(0.);
                 }
             }
-            HPMG_SYNCTHREADS;
+            lh.syncthreads();
 
             // do NS Gauss-Seidel red-black iterations
             for (int is = 0; is < NS; ++is) {
@@ -992,7 +967,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                             facx, facy);
                     }
                 }
-                HPMG_SYNCTHREADS;
+                lh.syncthreads();
             }
         }
 
@@ -1028,7 +1003,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
 
             // do 4 Gauss-Seidel red-black iterations
             for (int is = 0; is < 4; ++is) {
-                HPMG_SYNCTHREADS;
+                lh.syncthreads();
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
                         fgs(i, j,
@@ -1634,26 +1609,15 @@ namespace {
     template <typename F>
     void avgdown_acf (amrex::Array4<amrex::Real> const* acf, int ncomp, int nlevels, F&& f)
     {
-#if defined(AMREX_USE_DPCPP)
-        amrex::launch(1, 1024, amrex::Gpu::gpuStream(),
-        [=] (sycl::nd_item<1> const& item) noexcept
-#else
-        amrex::launch_global<1024><<<1, 1024, 0, amrex::Gpu::gpuStream()>>>(
-        [=] AMREX_GPU_DEVICE () noexcept
-#endif
+        amrex::LaunchRaw<1024>(amrex::IntVectND<1>{1},
+        [=] AMREX_GPU_DEVICE (auto lh) noexcept
         {
             for (int ilev = 1; ilev < nlevels; ++ilev) {
                 const int lenx = acf[ilev].end[0] - acf[ilev].begin[0];
                 const int leny = acf[ilev].end[1] - acf[ilev].begin[1];
                 const int ncells = lenx*leny;
-#if defined(AMREX_USE_DPCPP)
-                for (int icell = item.get_local_range(0)*item.get_group_linear_id()
-                         + item.get_local_linear_id(),
-                         stride = item.get_local_range(0)*item.get_group_range(0);
-#else
-                for (int icell = blockDim.x*blockIdx.x+threadIdx.x, stride = blockDim.x*gridDim.x;
-#endif
-                     icell < ncells; icell += stride) {
+
+                for (int icell = lh.threadIdx1D(); icell < ncells; icell += lh.blockDim1D()) {
                     int j = icell /   lenx;
                     int i = icell - j*lenx;
                     j += acf[ilev].begin[1];
@@ -1662,7 +1626,7 @@ namespace {
                         f(i,j,n,acf[ilev],acf[ilev-1]);
                     }
                 }
-                HPMG_SYNCTHREADS;
+                lh.syncthreads();
             }
         });
     }

@@ -104,20 +104,14 @@ SharedMemoryDeposition (int num_particles,
                 }
             });
 
-        amrex::Math::FastDivmodU64 num_tiles_divmod {static_cast<std::uint64_t>(ntile_x)};
-
         // launch shared memory kernel to deposit the charge / current
         // use one block per tile and one thread per cell
-        amrex::launch<threads_per_tile>(ntile_x * ntile_y, amrex::Gpu::gpuStream(),
-            [=] AMREX_GPU_DEVICE () {
-                // allocate static shared memory
-                __shared__ amrex::Real shared_ptr[tile_s_x * tile_s_y * (max_cache + max_depos)];
+        amrex::LaunchRaw<threads_per_tile, amrex::Real>(
+            amrex::IntVectND<2>{ntile_x, ntile_y}, tile_s_x * tile_s_y * (max_cache + max_depos),
+            [=] AMREX_GPU_DEVICE (auto lh) {
+                const int tile_id = lh.blockIdx1D();
 
-                const int tile_id = blockIdx.x;
-
-                std::uint64_t remainder = 0;
-                const int tile_id_y = num_tiles_divmod.divmod(remainder, tile_id);
-                const int tile_id_x = remainder;
+                const auto [tile_id_x, tile_id_y] = lh.blockIdxND();
 
                 const int tile_begin_x = lo_x + tile_id_x * tile_x;
                 const int tile_begin_y = lo_y + tile_id_y * tile_y;
@@ -127,13 +121,13 @@ SharedMemoryDeposition (int num_particles,
 
                 // make Array3 reference shared memory tile
                 Array3<amrex::Real> shared_arr{{
-                    shared_ptr,
+                    lh.shared_memory(),
                     {tile_begin_x, tile_begin_y, 0},
                     {tile_end_x, tile_end_y, 1},
                     max_cache + max_depos
                 }};
 
-                for (int s = threadIdx.x; s < tile_s_x * tile_s_y; s+=threads_per_tile) {
+                for (int s = lh.threadIdx1D(); s < tile_s_x * tile_s_y; s+=threads_per_tile) {
                     int sy = s / tile_s_x;
                     int sx = s - sy * tile_s_x;
                     sx += tile_begin_x;
@@ -166,19 +160,19 @@ SharedMemoryDeposition (int num_particles,
                     loc_idx_depos[n] = (dynamic_comps && idx_depos[n]==-1) ? -1 : n+int(max_cache);
                 }
 
-                __syncthreads();
+                lh.syncthreads();
 
                 // deposit the charge / current of all particles in the linked list
-                int current_idx = p_ll_start[tile_id * threads_per_tile + threadIdx.x];
+                int current_idx = p_ll_start[tile_id * threads_per_tile + lh.threadIdx1D()];
                 while (current_idx != ll_guard) {
                     do_deposit(current_idx, ptd, shared_arr, loc_idx_cache, loc_idx_depos);
                     current_idx = p_ll_next[current_idx];
                 }
 
-                __syncthreads();
+                lh.syncthreads();
 
                 // add to local charge / current to the global one
-                for (int s = threadIdx.x; s < tile_s_x * tile_s_y; s+=threads_per_tile) {
+                for (int s = lh.threadIdx1D(); s < tile_s_x * tile_s_y; s+=threads_per_tile) {
                     int sy = s / tile_s_x;
                     int sx = s - sy * tile_s_x;
                     sx += tile_begin_x;
@@ -192,8 +186,6 @@ SharedMemoryDeposition (int num_particles,
                         }
                     }
                 }
-
-
             }
         );
 
