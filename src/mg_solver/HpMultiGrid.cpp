@@ -9,8 +9,6 @@
 #include "utils/GPUUtil.H"
 #include <algorithm>
 
-using namespace amrex;
-
 namespace hpmg {
 
 namespace {
@@ -19,9 +17,9 @@ namespace {
     constexpr int n_cell_single = 32; // switch to single block when box is smaller than this
 #endif
 
-Box valid_domain_box (Box const& domain)
+amrex::Box valid_domain_box (amrex::Box const& domain)
 {
-    return domain.cellCentered() ? domain : amrex::grow(domain, IntVect(-1,-1,0));
+    return domain.cellCentered() ? domain : amrex::grow(domain, amrex::IntVect(-1,-1,0));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -30,9 +28,9 @@ Box valid_domain_box (Box const& domain)
 
 template <typename T, typename U>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void restrict_cc (int i, int j, int n, Array4<T> const& crse, Array4<U> const& fine)
+void restrict_cc (int i, int j, int n, amrex::Array4<T> const& crse, amrex::Array4<U> const& fine)
 {
-    crse(i,j,0,n) = Real(0.25)*(fine(2*i  ,2*j  ,0,n) +
+    crse(i,j,0,n) = amrex::Real(0.25)*(fine(2*i  ,2*j  ,0,n) +
                                 fine(2*i+1,2*j  ,0,n) +
                                 fine(2*i  ,2*j+1,0,n) +
                                 fine(2*i+1,2*j+1,0,n));
@@ -40,22 +38,22 @@ void restrict_cc (int i, int j, int n, Array4<T> const& crse, Array4<U> const& f
 
 template <typename T, typename U>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void restrict_nd (int i, int j, int n, Array4<T> const& crse, Array4<U> const& fine)
+void restrict_nd (int i, int j, int n, amrex::Array4<T> const& crse, amrex::Array4<U> const& fine)
 {
-    crse(i,j,0,n) = Real(1./16.) * (fine(2*i-1,2*j-1,0,n) +
-                           Real(2.)*fine(2*i  ,2*j-1,0,n) +
+    crse(i,j,0,n) = amrex::Real(1./16.) * (fine(2*i-1,2*j-1,0,n) +
+                           amrex::Real(2.)*fine(2*i  ,2*j-1,0,n) +
                                     fine(2*i+1,2*j-1,0,n) +
-                           Real(2.)*fine(2*i-1,2*j  ,0,n) +
-                           Real(4.)*fine(2*i  ,2*j  ,0,n) +
-                           Real(2.)*fine(2*i+1,2*j  ,0,n) +
+                           amrex::Real(2.)*fine(2*i-1,2*j  ,0,n) +
+                           amrex::Real(4.)*fine(2*i  ,2*j  ,0,n) +
+                           amrex::Real(2.)*fine(2*i+1,2*j  ,0,n) +
                                     fine(2*i-1,2*j+1,0,n) +
-                           Real(2.)*fine(2*i  ,2*j+1,0,n) +
+                           amrex::Real(2.)*fine(2*i  ,2*j+1,0,n) +
                                     fine(2*i+1,2*j+1,0,n));
 }
 
 template <typename T, typename U>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void interpadd_cc (int i, int j, int n, Array4<T> const& fine, Array4<U> const& crse)
+void interpadd_cc (int i, int j, int n, amrex::Array4<T> const& fine, amrex::Array4<U> const& crse)
 {
     int ic = amrex::coarsen(i,2);
     int jc = amrex::coarsen(j,2);
@@ -64,7 +62,7 @@ void interpadd_cc (int i, int j, int n, Array4<T> const& fine, Array4<U> const& 
 
 template <typename T, typename U>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void interpadd_nd (int i, int j, int n, Array4<T> const& fine, Array4<U> const& crse)
+void interpadd_nd (int i, int j, int n, amrex::Array4<T> const& fine, amrex::Array4<U> const& crse)
 {
     int ic = amrex::coarsen(i,2);
     int jc = amrex::coarsen(j,2);
@@ -74,13 +72,13 @@ void interpadd_nd (int i, int j, int n, Array4<T> const& fine, Array4<U> const& 
         fine(i,j,0,n) += (crse(ic  ,jc  ,0,n) +
                           crse(ic+1,jc  ,0,n) +
                           crse(ic  ,jc+1,0,n) +
-                          crse(ic+1,jc+1,0,n))*Real(0.25);
+                          crse(ic+1,jc+1,0,n))*amrex::Real(0.25);
     } else if (i_is_odd) {
         fine(i,j,0,n) += (crse(ic  ,jc,0,n) +
-                          crse(ic+1,jc,0,n))*Real(0.5);
+                          crse(ic+1,jc,0,n))*amrex::Real(0.5);
     } else if (j_is_odd) {
         fine(i,j,0,n) += (crse(ic,jc  ,0,n) +
-                          crse(ic,jc+1,0,n))*Real(0.5);
+                          crse(ic,jc+1,0,n))*amrex::Real(0.5);
     } else {
         fine(i,j,0,n) += crse(ic,jc,0,n);
     }
@@ -89,8 +87,8 @@ void interpadd_nd (int i, int j, int n, Array4<T> const& fine, Array4<U> const& 
 // out of place version used before shared memory gsrb
 template <typename T, typename U, typename V>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void interpcpy_cc (int i, int j, int n, Array4<T> const& fine_in, Array4<U> const& crse,
-                Array4<V> const& fine_out)
+void interpcpy_cc (int i, int j, int n, amrex::Array4<T> const& fine_in,
+                   amrex::Array4<U> const& crse, amrex::Array4<V> const& fine_out)
 {
     int ic = amrex::coarsen(i,2);
     int jc = amrex::coarsen(j,2);
@@ -99,8 +97,8 @@ void interpcpy_cc (int i, int j, int n, Array4<T> const& fine_in, Array4<U> cons
 
 template <typename T, typename U, typename V>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-void interpcpy_nd (int i, int j, int n, Array4<T> const& fine_in, Array4<U> const& crse,
-                Array4<V> const& fine_out)
+void interpcpy_nd (int i, int j, int n, amrex::Array4<T> const& fine_in,
+                   amrex::Array4<U> const& crse, amrex::Array4<V> const& fine_out)
 {
     int ic = amrex::coarsen(i,2);
     int jc = amrex::coarsen(j,2);
@@ -110,20 +108,20 @@ void interpcpy_nd (int i, int j, int n, Array4<T> const& fine_in, Array4<U> cons
         fine_out(i,j,0,n) = fine_in(i,j,0,n) + (crse(ic  ,jc  ,0,n) +
                                                 crse(ic+1,jc  ,0,n) +
                                                 crse(ic  ,jc+1,0,n) +
-                                                crse(ic+1,jc+1,0,n))*Real(0.25);
+                                                crse(ic+1,jc+1,0,n))*amrex::Real(0.25);
     } else if (i_is_odd) {
         fine_out(i,j,0,n) = fine_in(i,j,0,n) + (crse(ic  ,jc,0,n) +
-                                                crse(ic+1,jc,0,n))*Real(0.5);
+                                                crse(ic+1,jc,0,n))*amrex::Real(0.5);
     } else if (j_is_odd) {
         fine_out(i,j,0,n) = fine_in(i,j,0,n) + (crse(ic,jc  ,0,n) +
-                                                crse(ic,jc+1,0,n))*Real(0.5);
+                                                crse(ic,jc+1,0,n))*amrex::Real(0.5);
     } else {
         fine_out(i,j,0,n) = fine_in(i,j,0,n) +  crse(ic,jc,0,n);
     }
 }
 
-void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> const& fine,
-                  int num_comps)
+void restriction (amrex::Box const& box, amrex::Array4<amrex::Real> const& crse,
+                  amrex::Array4<amrex::Real const> const& fine, int num_comps)
 {
     if (box.cellCentered()) {
         hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
@@ -139,9 +137,10 @@ void restriction (Box const& box, Array4<Real> const& crse, Array4<Real const> c
     }
 }
 
-void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in,
-                               Array4<Real const> const& crse, Array4<Real> const& fine_out,
-                               int num_comps)
+void interpolation_outofplace (amrex::Box const& box,
+                               amrex::Array4<amrex::Real const> const& fine_in,
+                               amrex::Array4<amrex::Real const> const& crse,
+                               amrex::Array4<amrex::Real> const& fine_out, int num_comps)
 {
     if (box.cellCentered()) {
         hpmg::ParallelFor(to2D(box), num_comps, [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept
@@ -162,21 +161,21 @@ void interpolation_outofplace (Box const& box, Array4<Real const> const& fine_in
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-                Array4<Real> const& phi, Real facx, Real facy)
+amrex::Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
+                amrex::Array4<amrex::Real> const& phi, amrex::Real facx, amrex::Real facy)
 {
-    Real lap = Real(-2.)*(facx+facy)*phi(i,j,0,n);
+    amrex::Real lap = amrex::Real(-2.)*(facx+facy)*phi(i,j,0,n);
     if (i == ilo) {
-        lap += facx * (Real(4./3.)*phi(i+1,j,0,n) - Real(2.)*phi(i,j,0,n));
+        lap += facx * (amrex::Real(4./3.)*phi(i+1,j,0,n) - amrex::Real(2.)*phi(i,j,0,n));
     } else if (i == ihi) {
-        lap += facx * (Real(4./3.)*phi(i-1,j,0,n) - Real(2.)*phi(i,j,0,n));
+        lap += facx * (amrex::Real(4./3.)*phi(i-1,j,0,n) - amrex::Real(2.)*phi(i,j,0,n));
     } else {
         lap += facx * (phi(i-1,j,0,n) + phi(i+1,j,0,n));
     }
     if (j == jlo) {
-        lap += facy * (Real(4./3.)*phi(i,j+1,0,n) - Real(2.)*phi(i,j,0,n));
+        lap += facy * (amrex::Real(4./3.)*phi(i,j+1,0,n) - amrex::Real(2.)*phi(i,j,0,n));
     } else if (j == jhi) {
-        lap += facy * (Real(4./3.)*phi(i,j-1,0,n) - Real(2.)*phi(i,j,0,n));
+        lap += facy * (amrex::Real(4./3.)*phi(i,j-1,0,n) - amrex::Real(2.)*phi(i,j,0,n));
     } else {
         lap += facy * (phi(i,j-1,0,n) + phi(i,j+1,0,n));
     }
@@ -184,52 +183,57 @@ Real laplacian (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-Real residual1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-                Array4<Real> const& phi, Real rhs, Real acf, Real facx, Real facy)
+amrex::Real residual1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
+                       amrex::Array4<amrex::Real> const& phi, amrex::Real rhs, amrex::Real acf,
+                       amrex::Real facx, amrex::Real facy)
 {
-    Real lap = laplacian(i,j,n,ilo,jlo,ihi,jhi,phi,facx,facy);
+    amrex::Real lap = laplacian(i,j,n,ilo,jlo,ihi,jhi,phi,facx,facy);
     return rhs + acf*phi(i,j,0,n) - lap;
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-Real residual2r (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                 Array4<Real> const& phi, Real rhs, Real acf_r, Real acf_i,
-                 Real facx, Real facy)
+amrex::Real residual2r (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                        amrex::Array4<amrex::Real> const& phi, amrex::Real rhs, amrex::Real acf_r,
+                        amrex::Real acf_i,
+                        amrex::Real facx, amrex::Real facy)
 {
-    Real lap = laplacian(i,j,0,ilo,jlo,ihi,jhi,phi,facx,facy);
+    amrex::Real lap = laplacian(i,j,0,ilo,jlo,ihi,jhi,phi,facx,facy);
     return rhs + acf_r*phi(i,j,0,0) - acf_i*phi(i,j,0,1) - lap;
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-Real residual2i (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                 Array4<Real> const& phi, Real rhs, Real acf_r, Real acf_i,
-                 Real facx, Real facy)
+amrex::Real residual2i (int i, int j, int ilo, int jlo, int ihi, int jhi,
+                        amrex::Array4<amrex::Real> const& phi, amrex::Real rhs, amrex::Real acf_r,
+                        amrex::Real acf_i,
+                        amrex::Real facx, amrex::Real facy)
 {
-    Real lap = laplacian(i,j,1,ilo,jlo,ihi,jhi,phi,facx,facy);
+    amrex::Real lap = laplacian(i,j,1,ilo,jlo,ihi,jhi,phi,facx,facy);
     return rhs + acf_i*phi(i,j,0,0) + acf_r*phi(i,j,0,1) - lap;
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-Real residual3 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-                Array4<Real> const& phi, Real rhs, Real facx, Real facy)
+amrex::Real residual3 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
+                       amrex::Array4<amrex::Real> const& phi, amrex::Real rhs, amrex::Real facx,
+                       amrex::Real facy)
 {
-    Real lap = laplacian(i,j,n,ilo,jlo,ihi,jhi,phi,facx,facy);
+    amrex::Real lap = laplacian(i,j,n,ilo,jlo,ihi,jhi,phi,facx,facy);
     return rhs - lap;
 }
 
 #if !defined(AMREX_USE_CUDA) && !defined(AMREX_USE_HIP) && defined(AMREX_USE_GPU)
 // res = rhs - L(phi)
-void compute_residual (Box const& box, Array4<Real> const& res,
-                       Array4<Real> const& phi, Array4<Real const> const& rhs,
-                       Array4<Real const> const& acf, Real dx, Real dy,
+void compute_residual (amrex::Box const& box, amrex::Array4<amrex::Real> const& res,
+                       amrex::Array4<amrex::Real> const& phi,
+                       amrex::Array4<amrex::Real const> const& rhs,
+                       amrex::Array4<amrex::Real const> const& acf, amrex::Real dx, amrex::Real dy,
                        int system_type)
 {
     int const ilo = box.smallEnd(0);
     int const jlo = box.smallEnd(1);
     int const ihi = box.bigEnd(0);
     int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
+    amrex::Real facx = amrex::Real(1.)/(dx*dx);
+    amrex::Real facy = amrex::Real(1.)/(dy*dy);
     if (system_type == 1) {
         hpmg::ParallelFor(to2D(valid_domain_box(box)),
         [=] AMREX_GPU_DEVICE (int i, int j) noexcept
@@ -267,29 +271,30 @@ void compute_residual (Box const& box, Array4<Real> const& res,
 template<bool is_cell_centered = true>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void gs1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-          Array4<Real> const& phi, Real rhs, Real acf, Real facx, Real facy)
+          amrex::Array4<amrex::Real> const& phi, amrex::Real rhs, amrex::Real acf, amrex::Real facx,
+          amrex::Real facy)
 {
-    Real lap;
-    Real c0 = -(acf+Real(2.)*(facx+facy));
+    amrex::Real lap;
+    amrex::Real c0 = -(acf+amrex::Real(2.)*(facx+facy));
     if (is_cell_centered && i == ilo) {
-        lap = facx * Real(4./3.)*phi(i+1,j,0,n);
-        c0 -= Real(2.)*facx;
+        lap = facx * amrex::Real(4./3.)*phi(i+1,j,0,n);
+        c0 -= amrex::Real(2.)*facx;
     } else if (is_cell_centered && i == ihi) {
-        lap = facx * Real(4./3.)*phi(i-1,j,0,n);
-        c0 -= Real(2.)*facx;
+        lap = facx * amrex::Real(4./3.)*phi(i-1,j,0,n);
+        c0 -= amrex::Real(2.)*facx;
     } else {
         lap = facx * (phi(i-1,j,0,n) + phi(i+1,j,0,n));
     }
     if (is_cell_centered && j == jlo) {
-        lap += facy * Real(4./3.)*phi(i,j+1,0,n);
-        c0 -= Real(2.)*facy;
+        lap += facy * amrex::Real(4./3.)*phi(i,j+1,0,n);
+        c0 -= amrex::Real(2.)*facy;
     } else if (is_cell_centered && j == jhi) {
-        lap += facy * Real(4./3.)*phi(i,j-1,0,n);
-        c0 -= Real(2.)*facy;
+        lap += facy * amrex::Real(4./3.)*phi(i,j-1,0,n);
+        c0 -= amrex::Real(2.)*facy;
     } else {
         lap += facy * (phi(i,j-1,0,n) + phi(i,j+1,0,n));
     }
-    const Real c0_inv = Real(1.) / c0;
+    const amrex::Real c0_inv = amrex::Real(1.) / c0;
     phi(i,j,0,n) = (rhs - lap) * c0_inv;
 }
 
@@ -298,37 +303,37 @@ void gs1 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
 template<bool is_cell_centered = true>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void gs2 (int i, int j, int ilo, int jlo, int ihi, int jhi,
-          Array4<Real> const& phi, Real rhs_r, Real rhs_i,
-          Real ar, Real ai, Real facx, Real facy)
+          amrex::Array4<amrex::Real> const& phi, amrex::Real rhs_r, amrex::Real rhs_i,
+          amrex::Real ar, amrex::Real ai, amrex::Real facx, amrex::Real facy)
 {
-    Real lap[2];
-    Real c0 = Real(-2.)*(facx+facy);
+    amrex::Real lap[2];
+    amrex::Real c0 = amrex::Real(-2.)*(facx+facy);
     if (is_cell_centered && i == ilo) {
-        lap[0] = facx * Real(4./3.)*phi(i+1,j,0,0);
-        lap[1] = facx * Real(4./3.)*phi(i+1,j,0,1);
-        c0 -= Real(2.)*facx;
+        lap[0] = facx * amrex::Real(4./3.)*phi(i+1,j,0,0);
+        lap[1] = facx * amrex::Real(4./3.)*phi(i+1,j,0,1);
+        c0 -= amrex::Real(2.)*facx;
     } else if (is_cell_centered && i == ihi) {
-        lap[0] = facx * Real(4./3.)*phi(i-1,j,0,0);
-        lap[1] = facx * Real(4./3.)*phi(i-1,j,0,1);
-        c0 -= Real(2.)*facx;
+        lap[0] = facx * amrex::Real(4./3.)*phi(i-1,j,0,0);
+        lap[1] = facx * amrex::Real(4./3.)*phi(i-1,j,0,1);
+        c0 -= amrex::Real(2.)*facx;
     } else {
         lap[0] = facx * (phi(i-1,j,0,0) + phi(i+1,j,0,0));
         lap[1] = facx * (phi(i-1,j,0,1) + phi(i+1,j,0,1));
     }
     if (is_cell_centered && j == jlo) {
-        lap[0] += facy * Real(4./3.)*phi(i,j+1,0,0);
-        lap[1] += facy * Real(4./3.)*phi(i,j+1,0,1);
-        c0 -= Real(2.)*facy;
+        lap[0] += facy * amrex::Real(4./3.)*phi(i,j+1,0,0);
+        lap[1] += facy * amrex::Real(4./3.)*phi(i,j+1,0,1);
+        c0 -= amrex::Real(2.)*facy;
     } else if (is_cell_centered && j == jhi) {
-        lap[0] += facy * Real(4./3.)*phi(i,j-1,0,0);
-        lap[1] += facy * Real(4./3.)*phi(i,j-1,0,1);
-        c0 -= Real(2.)*facy;
+        lap[0] += facy * amrex::Real(4./3.)*phi(i,j-1,0,0);
+        lap[1] += facy * amrex::Real(4./3.)*phi(i,j-1,0,1);
+        c0 -= amrex::Real(2.)*facy;
     } else {
         lap[0] += facy * (phi(i,j-1,0,0) + phi(i,j+1,0,0));
         lap[1] += facy * (phi(i,j-1,0,1) + phi(i,j+1,0,1));
     }
-    Real c[2] = {c0-ar, -ai};
-    Real cmag = Real(1.)/(c[0]*c[0] + c[1]*c[1]);
+    amrex::Real c[2] = {c0-ar, -ai};
+    amrex::Real cmag = amrex::Real(1.)/(c[0]*c[0] + c[1]*c[1]);
     c[0] *= cmag;
     c[1] *= cmag;
     phi(i,j,0,0) = (rhs_r-lap[0])*c[0] + (rhs_i-lap[1])*c[1];
@@ -340,42 +345,43 @@ void gs2 (int i, int j, int ilo, int jlo, int ihi, int jhi,
 template<bool is_cell_centered = true>
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void gs3 (int i, int j, int n, int ilo, int jlo, int ihi, int jhi,
-          Array4<Real> const& phi, Real rhs, Real facx, Real facy)
+          amrex::Array4<amrex::Real> const& phi, amrex::Real rhs, amrex::Real facx,
+          amrex::Real facy)
 {
-    Real lap;
-    Real c0 = -Real(2.)*(facx+facy);
+    amrex::Real lap;
+    amrex::Real c0 = -amrex::Real(2.)*(facx+facy);
     if (is_cell_centered && i == ilo) {
-        lap = facx * Real(4./3.)*phi(i+1,j,0,n);
-        c0 -= Real(2.)*facx;
+        lap = facx * amrex::Real(4./3.)*phi(i+1,j,0,n);
+        c0 -= amrex::Real(2.)*facx;
     } else if (is_cell_centered && i == ihi) {
-        lap = facx * Real(4./3.)*phi(i-1,j,0,n);
-        c0 -= Real(2.)*facx;
+        lap = facx * amrex::Real(4./3.)*phi(i-1,j,0,n);
+        c0 -= amrex::Real(2.)*facx;
     } else {
         lap = facx * (phi(i-1,j,0,n) + phi(i+1,j,0,n));
     }
     if (is_cell_centered && j == jlo) {
-        lap += facy * Real(4./3.)*phi(i,j+1,0,n);
-        c0 -= Real(2.)*facy;
+        lap += facy * amrex::Real(4./3.)*phi(i,j+1,0,n);
+        c0 -= amrex::Real(2.)*facy;
     } else if (is_cell_centered && j == jhi) {
-        lap += facy * Real(4./3.)*phi(i,j-1,0,n);
-        c0 -= Real(2.)*facy;
+        lap += facy * amrex::Real(4./3.)*phi(i,j-1,0,n);
+        c0 -= amrex::Real(2.)*facy;
     } else {
         lap += facy * (phi(i,j-1,0,n) + phi(i,j+1,0,n));
     }
-    const Real c0_inv = Real(1.) / c0;
+    const amrex::Real c0_inv = amrex::Real(1.) / c0;
     phi(i,j,0,n) = (rhs - lap) * c0_inv;
 }
 
-void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
-           Array4<Real const> const& rhs, Array4<Real const> const& acf,
-           Real dx, Real dy, int system_type)
+void gsrb (int icolor, amrex::Box const& box, amrex::Array4<amrex::Real> const& phi,
+           amrex::Array4<amrex::Real const> const& rhs, amrex::Array4<amrex::Real const> const& acf,
+           amrex::Real dx, amrex::Real dy, int system_type)
 {
     int const ilo = box.smallEnd(0);
     int const jlo = box.smallEnd(1);
     int const ihi = box.bigEnd(0);
     int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
+    amrex::Real facx = amrex::Real(1.)/(dx*dx);
+    amrex::Real facy = amrex::Real(1.)/(dy*dy);
     if (system_type == 1) {
         hpmg::ParallelFor(to2D(valid_domain_box(box)),
         [=] AMREX_GPU_DEVICE (int i, int j) noexcept
@@ -413,9 +419,10 @@ void gsrb (int icolor, Box const& box, Array4<Real> const& phi,
 
 // do multiple gsrb iterations in GPU shared memory with many ghost cells
 template<int system_type, bool zero_init, bool do_compute_residual, bool is_cell_centered>
-void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
-                  Array4<Real const> const& acf, Array4<Real> const& res,
-                  Array4<Real const> const& phi_in, Real dx, Real dy)
+void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_out,
+                  amrex::Array4<amrex::Real const> const& rhs,
+                  amrex::Array4<amrex::Real const> const& acf, amrex::Array4<amrex::Real> const& res,
+                  amrex::Array4<amrex::Real const> const& phi_in, amrex::Real dx, amrex::Real dy)
 {
     constexpr int num_comps = MultiGrid::get_num_comps(system_type);
     constexpr int num_comps_acf = MultiGrid::get_num_comps_acf(system_type);
@@ -437,11 +444,11 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
     int const jlo = box.smallEnd(1);
     int const ihi = box.bigEnd(0);
     int const jhi = box.bigEnd(1);
-    Real facx = Real(1.)/(dx*dx);
-    Real facy = Real(1.)/(dy*dy);
+    amrex::Real facx = amrex::Real(1.)/(dx*dx);
+    amrex::Real facy = amrex::Real(1.)/(dy*dy);
 
     // box for the bounds of the ParallelFor loop this kernel replaces
-    const Box loop_box = valid_domain_box(box);
+    const amrex::Box loop_box = valid_domain_box(box);
     int const ilo_loop = loop_box.smallEnd(0);
     int const jlo_loop = loop_box.smallEnd(1);
     int const ihi_loop = loop_box.bigEnd(0);
@@ -454,7 +461,7 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
         [=] AMREX_GPU_DEVICE() noexcept
         {
             // allocate static shared memory
-            __shared__ Real phi_ptr[num_cells_in_tile];
+            __shared__ amrex::Real phi_ptr[num_cells_in_tile];
 
             std::uint64_t remainder = 0;
             const int iblock_y = num_blocks_divmod.divmod(remainder, blockIdx.x);
@@ -466,14 +473,14 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
             const int tile_end_x = tile_begin_x + tilesize_array_x;
             const int tile_end_y = tile_begin_y + tilesize_array_y;
 
-            // make Array4 reference shared memory tile
-            Array4<Real> phi_shared(phi_ptr, {tile_begin_x, tile_begin_y, 0},
+            // make amrex::Array4 reference shared memory tile
+            amrex::Array4<amrex::Real> phi_shared(phi_ptr, {tile_begin_x, tile_begin_y, 0},
                                              {tile_end_x, tile_end_y, 1}, num_comps);
 
             if (zero_init) {
                 // initialize shared memory to zero
                 for (int s = threadIdx.x; s < num_cells_in_tile; s+=blockDim.x) {
-                    phi_ptr[s] = Real(0.);
+                    phi_ptr[s] = amrex::Real(0.);
                 }
             } else {
                 // initialize shared memory to phi_in inside the domain, outside zero
@@ -489,7 +496,7 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
                         }
                     } else {
                         for (int n=0; n<num_comps; ++n) {
-                            phi_shared(sx, sy, 0, n) = Real(0.);
+                            phi_shared(sx, sy, 0, n) = amrex::Real(0.);
                         }
                     }
                 }
@@ -502,8 +509,8 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
             const int i = tile_begin_x + 1 + ithread_x;
             const int j = tile_begin_y + 1 + ithread_y;
 
-            amrex::GpuArray<Real, num_comps> rhs_num[2] = {{}, {}};
-            amrex::GpuArray<Real, num_comps_acf> acf_num[2] = {{}, {}};
+            amrex::GpuArray<amrex::Real, num_comps> rhs_num[2] = {{}, {}};
+            amrex::GpuArray<amrex::Real, num_comps_acf> acf_num[2] = {{}, {}};
 
             for (int nj=0; nj<=1; ++nj) {
                 if (ilo_loop <= i && i <= ihi_loop &&
@@ -595,9 +602,11 @@ void gsrb_shared (Box const& box, Array4<Real> const& phi_out, Array4<Real const
 
 // do multiple gsrb iterations in CPU cached memory with many ghost cells
 template<int system_type, bool zero_init, bool do_compute_residual, bool is_cell_centered>
-void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const> const& rhs,
-                  Array4<Real const> const& acf, Array4<Real> const& res,
-                  Array4<Real const> const& phi_in, Real dx, Real dy)
+void gsrb_cached (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_out,
+                  amrex::Array4<amrex::Real const> const& rhs,
+                  amrex::Array4<amrex::Real const> const& acf,
+                  amrex::Array4<amrex::Real> const& res,
+                  amrex::Array4<amrex::Real const> const& phi_in, amrex::Real dx, amrex::Real dy)
 {
     constexpr int num_comps = MultiGrid::get_num_comps(system_type);
     constexpr int tilesize_x = 64;
@@ -616,11 +625,11 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
     int const jlo = box.smallEnd(1);
     int const ihi = box.bigEnd(0);
     int const jhi = box.bigEnd(1);
-    const Real facx = Real(1.)/(dx*dx);
-    const Real facy = Real(1.)/(dy*dy);
+    const amrex::Real facx = amrex::Real(1.)/(dx*dx);
+    const amrex::Real facy = amrex::Real(1.)/(dy*dy);
 
     // box for the bounds of the ParallelFor loop this kernel replaces
-    const Box loop_box = valid_domain_box(box);
+    const amrex::Box loop_box = valid_domain_box(box);
     int const ilo_loop = loop_box.smallEnd(0);
     int const jlo_loop = loop_box.smallEnd(1);
     int const ihi_loop = loop_box.bigEnd(0);
@@ -635,7 +644,7 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
         for (int iblock_x=0; iblock_x<num_blocks_x; ++iblock_x) {
 
             // allocate cached memory
-            Real phi_ptr[tilesize_array_x * tilesize_array_y * num_comps];
+            amrex::Real phi_ptr[tilesize_array_x * tilesize_array_y * num_comps];
 
             const int tile_begin_x = iblock_x * final_tilesize_x - edge_offset - 1 + ilo_loop;
             const int tile_begin_y = iblock_y * final_tilesize_y - edge_offset - 1 + jlo_loop;
@@ -643,14 +652,14 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
             const int tile_end_x = tile_begin_x + tilesize_array_x;
             const int tile_end_y = tile_begin_y + tilesize_array_y;
 
-            // make Array4 reference cached memory tile
-            Array4<Real> phi_cached(phi_ptr, {tile_begin_x, tile_begin_y, 0},
+            // make amrex::Array4 reference cached memory tile
+            amrex::Array4<amrex::Real> phi_cached(phi_ptr, {tile_begin_x, tile_begin_y, 0},
                                              {tile_end_x, tile_end_y, 1}, num_comps);
 
             if  (zero_init) {
                 // initialize cached memory to zero
                 for (int s = 0; s < tilesize_array_x * tilesize_array_y * num_comps; ++s) {
-                    phi_ptr[s] = Real(0.);
+                    phi_ptr[s] = amrex::Real(0.);
                 }
             } else {
                 // initialize cached memory to phi_in inside the domain, outside zero
@@ -663,7 +672,7 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
                             }
                         } else {
                             for (int n=0; n<num_comps; ++n) {
-                                phi_cached(i, j, 0, n) = Real(0.);
+                                phi_cached(i, j, 0, n) = amrex::Real(0.);
                             }
                         }
                     }
@@ -744,13 +753,13 @@ void gsrb_cached (Box const& box, Array4<Real> const& phi_out, Array4<Real const
 #endif
 
 template<bool zero_init, bool do_compute_residual>
-void gsrb_4_residual (int system_type, Box const& box,
-                      Array4<Real> const& phi_out,
-                      Array4<Real const> const& rhs,
-                      Array4<Real const> const& acf,
-                      Array4<Real> const& res,
-                      Array4<Real const> const& phi_in,
-                      Real dx, Real dy)
+void gsrb_4_residual (int system_type, amrex::Box const& box,
+                      amrex::Array4<amrex::Real> const& phi_out,
+                      amrex::Array4<amrex::Real const> const& rhs,
+                      amrex::Array4<amrex::Real const> const& acf,
+                      amrex::Array4<amrex::Real> const& res,
+                      amrex::Array4<amrex::Real const> const& phi_in,
+                      amrex::Real dx, amrex::Real dy)
 {
     // This function performs the main computation for the multigrid solver.
     // For CUDA / HIP it is implemented to use a single GPU kernel with shared memory
@@ -816,9 +825,9 @@ void gsrb_4_residual (int system_type, Box const& box,
 
 #else
     if (zero_init) {
-        Real * pcor_out = phi_out.dataPtr();
+        amrex::Real * pcor_out = phi_out.dataPtr();
         hpmg::ParallelFor(box.numPts()*MultiGrid::get_num_comps(system_type),
-            [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor_out[i] = Real(0.); });
+            [=] AMREX_GPU_DEVICE (Long i) noexcept { pcor_out[i] = amrex::Real(0.); });
     } else {
         const amrex::Box valid_domain = valid_domain_box(box);
         hpmg::ParallelFor(to2D(box), MultiGrid::get_num_comps(system_type),
@@ -826,7 +835,7 @@ void gsrb_4_residual (int system_type, Box const& box,
                 if (valid_domain.contains(i,j,0)) {
                     phi_out(i,j,0,n) = phi_in(i,j,0,n);
                 } else {
-                    phi_out(i,j,0,n) = Real(0.);
+                    phi_out(i,j,0,n) = amrex::Real(0.);
                 }
             });
     }
@@ -854,9 +863,9 @@ void gsrb_4_residual (int system_type, Box const& box,
 #endif
 
 template <int NS, int system_type, typename FGS, typename FRES>
-void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
-                      Array4<Real> const* res, Array4<Real> const* cor,
-                      Array4<Real> const* rescor, int nlevs, int corner_offset,
+void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Real> const* acf,
+                      amrex::Array4<amrex::Real> const* res, amrex::Array4<amrex::Real> const* cor,
+                      amrex::Array4<amrex::Real> const* rescor, int nlevs, int corner_offset,
                       FGS&& fgs, FRES&& fres)
 {
     // This function performs all the operations of a vcycle in a single GPU kernel by
@@ -867,15 +876,15 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 
     static_assert(n_cell_single*n_cell_single <= 1024, "n_cell_single is too big");
 #if defined(AMREX_USE_DPCPP)
-    amrex::launch(1, 1024, Gpu::gpuStream(),
+    amrex::launch(1, 1024, amrex::Gpu::gpuStream(),
     [=] (sycl::nd_item<1> const& item) noexcept
 #else
-    amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
+    amrex::launch_global<1024><<<1, 1024, 0, amrex::Gpu::gpuStream()>>>(
     [=] AMREX_GPU_DEVICE () noexcept
 #endif
     {
-        Real facx = Real(1.)/(dx0*dx0);
-        Real facy = Real(1.)/(dy0*dy0);
+        amrex::Real facx = amrex::Real(1.)/(dx0*dx0);
+        amrex::Real facy = amrex::Real(1.)/(dy0*dy0);
         int lenx = cor[0].end[0] - cor[0].begin[0] - 2*corner_offset;
         int leny = cor[0].end[1] - cor[0].begin[1] - 2*corner_offset;
         int ncells = lenx*leny;
@@ -893,10 +902,10 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             // set phi to zero
             if (icell < ncells) {
                 if (system_type == 1 || system_type == 2) {
-                    cor[ilev](i,j,0,0) = Real(0.);
-                    cor[ilev](i,j,0,1) = Real(0.);
+                    cor[ilev](i,j,0,0) = amrex::Real(0.);
+                    cor[ilev](i,j,0,1) = amrex::Real(0.);
                 } else {
-                    cor[ilev](i,j,0,0) = Real(0.);
+                    cor[ilev](i,j,0,0) = amrex::Real(0.);
                 }
             }
             HPMG_SYNCTHREADS;
@@ -954,8 +963,8 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             }
             HPMG_SYNCTHREADS;
 
-            facx *= Real(0.25);
-            facy *= Real(0.25);
+            facx *= amrex::Real(0.25);
+            facy *= amrex::Real(0.25);
         }
 
         // bottom
@@ -964,10 +973,10 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             const int ilev = nlevs-1;
             if (icell < ncells) {
                 if (system_type == 1 || system_type == 2) {
-                    cor[ilev](i,j,0,0) = Real(0.);
-                    cor[ilev](i,j,0,1) = Real(0.);
+                    cor[ilev](i,j,0,0) = amrex::Real(0.);
+                    cor[ilev](i,j,0,1) = amrex::Real(0.);
                 } else {
-                    cor[ilev](i,j,0,0) = Real(0.);
+                    cor[ilev](i,j,0,0) = amrex::Real(0.);
                 }
             }
             HPMG_SYNCTHREADS;
@@ -992,8 +1001,8 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
             lenx = cor[ilev].end[0] - cor[ilev].begin[0] - 2*corner_offset;
             leny = cor[ilev].end[1] - cor[ilev].begin[1] - 2*corner_offset;
             ncells = lenx*leny;
-            facx *= Real(4.);
-            facy *= Real(4.);
+            facx *= amrex::Real(4.);
+            facy *= amrex::Real(4.);
 
             if (icell < ncells) {
                 j = icell /   lenx;
@@ -1042,20 +1051,21 @@ void bottomsolve_gpu (Real dx0, Real dy0, Array4<Real> const* acf,
 // Initialization: /////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
-    : m_system_type(a_system_type), m_dx(dx), m_dy(dy)
+MultiGrid::MultiGrid (amrex::Real dx, amrex::Real dy, amrex::Box a_domain, int a_system_type)
+    : m_system_type(a_system_type),
+      m_num_comps(get_num_comps(a_system_type)),
+      m_num_comps_acf(get_num_comps_acf(a_system_type)),
+      m_dx(dx),
+      m_dy(dy)
 {
-    m_num_comps = get_num_comps(m_system_type);
-    m_num_comps_acf = get_num_comps_acf(m_system_type);
-
-    IntVect const a_domain_len = a_domain.length();
+    amrex::IntVect const a_domain_len = a_domain.length();
 
     AMREX_ALWAYS_ASSERT(a_domain_len[2] == 1 && a_domain.cellCentered() &&
                         a_domain_len[0]%2 == a_domain_len[1]%2);
 
-    IndexType const index_type = (a_domain_len[0]%2 == 0) ?
-        IndexType::TheCellType() : IndexType(IntVect(1,1,0));
-    m_domain.push_back(amrex::makeSlab(Box{{0,0,0}, a_domain_len-1, index_type}, 2, 0));
+    amrex::IndexType const index_type = (a_domain_len[0]%2 == 0) ?
+        amrex::IndexType::TheCellType() : amrex::IndexType(amrex::IntVect(1,1,0));
+    m_domain.push_back(amrex::makeSlab(amrex::Box{{0,0,0}, a_domain_len-1, index_type}, 2, 0));
     if (!index_type.cellCentered()) {
         m_domain[0].growHi(0,2).growHi(1,2);
         m_boundary_condition_offset = 1.;
@@ -1064,18 +1074,19 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         m_boundary_condition_offset = 0.5;
         m_boundary_condition_factor = 8./3.;
     }
-    IntVect const min_width = index_type.cellCentered() ? IntVect(2,2,1) : IntVect(4,4,1);
+    amrex::IntVect const min_width = index_type.cellCentered() ?
+        amrex::IntVect(2,2,1) : amrex::IntVect(4,4,1);
     for (int i = 0; i < 30; ++i) {
-        if (m_domain.back().coarsenable(IntVect(2,2,1), min_width)) {
-            m_domain.push_back(amrex::coarsen(m_domain.back(),IntVect(2,2,1)));
+        if (m_domain.back().coarsenable(amrex::IntVect(2,2,1), min_width)) {
+            m_domain.push_back(amrex::coarsen(m_domain.back(),amrex::IntVect(2,2,1)));
         } else {
             break;
         }
     }
-    m_max_level = m_domain.size()-1;
+    m_max_level = static_cast<int>(m_domain.size()-1);
 #if defined(AMREX_USE_GPU)
     auto r = std::find_if(std::begin(m_domain), std::end(m_domain),
-                          [=] (Box const& b) -> bool
+                          [=] (amrex::Box const& b) -> bool
                               { return b.volume() <= n_cell_single*n_cell_single; });
     m_single_block_level_begin = std::distance(std::begin(m_domain), r);
     m_single_block_level_begin = std::max(1, m_single_block_level_begin);
@@ -1087,7 +1098,8 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
             << " cannot be coarsened enough times to be solved efficiently.\n"
             << "hpmg: Size of the final MG level: "
             << m_domain[m_max_level].length(0) << " " << m_domain[m_max_level].length(1) << ".\n"
-            << "hpmg: Please consider using a domain size of the form '2^n', '3*2^n', '2^n-1' or '3*n^2-1'.\n";
+            << "hpmg: Please consider using a domain size of the form "
+            << "'2^n', '3*2^n', '2^n-1' or '3*n^2-1'.\n";
     }
 #else
     m_single_block_level_begin = m_max_level;
@@ -1120,7 +1132,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
         } else {
             m_res.emplace_back(m_domain[ilev], m_num_comps);
             if (!index_type.cellCentered()) {
-                m_res[ilev].template setVal<RunOn::Device>(0);
+                m_res[ilev].template setVal<amrex::RunOn::Device>(0);
             }
             if (ilev >= m_single_block_level_begin) {
                 m_array4.push_back(m_res[ilev].array());
@@ -1133,7 +1145,7 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_cor.emplace_back(m_domain[ilev], m_num_comps);
         if (!index_type.cellCentered()) {
-            m_cor[ilev].template setVal<RunOn::Device>(0);
+            m_cor[ilev].template setVal<amrex::RunOn::Device>(0);
         }
         if (ilev >= m_single_block_level_begin) {
             m_array4.push_back(m_cor[ilev].array());
@@ -1145,14 +1157,14 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
     for (int ilev = 0; ilev < m_num_mg_levels; ++ilev) {
         m_rescor.emplace_back(m_domain[ilev], m_num_comps);
         if (!index_type.cellCentered()) {
-            m_rescor[ilev].template setVal<RunOn::Device>(0);
+            m_rescor[ilev].template setVal<amrex::RunOn::Device>(0);
         }
         if (ilev >= m_single_block_level_begin) {
             m_array4.push_back(m_rescor[ilev].array());
         }
     }
 
-    // Copy Array4s to GPU for bottomsolve_gpu()
+    // Copy amrex::Array4s to GPU for bottomsolve_gpu()
     if (!m_array4.empty()) {
         m_array4.copyToDeviceAsync();
         m_acf_a = m_array4.data();
@@ -1167,14 +1179,14 @@ MultiGrid::MultiGrid (Real dx, Real dy, Box a_domain, int a_system_type)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
-MultiGrid::solve1 (FArrayBox& a_sol, FArrayBox const& a_rhs, FArrayBox const& a_acf,
-                   Real const tol_rel, Real const tol_abs, int const nummaxiter,
-                   int const verbose)
+MultiGrid::solve1 (amrex::FArrayBox& a_sol, amrex::FArrayBox const& a_rhs,
+                   amrex::FArrayBox const& a_acf, amrex::Real const tol_rel,
+                   amrex::Real const tol_abs, int const nummaxiter, int const verbose)
 {
     HIPACE_PROFILE("hpmg::MultiGrid::solve1()");
     AMREX_ALWAYS_ASSERT(m_system_type == 1);
 
-    FArrayBox afab(center_box(a_acf.box(), m_domain.front()), 1, a_acf.dataPtr());
+    amrex::FArrayBox afab(center_box(a_acf.box(), m_domain.front()), 1, a_acf.dataPtr());
 
     auto const& array_m_acf = m_acf[0].array();
     auto const& array_a_acf = afab.const_array();
@@ -1290,8 +1302,8 @@ MultiGrid::solve2 (amrex::FArrayBox& sol, amrex::FArrayBox const& rhs,
 }
 
 void
-MultiGrid::solve3 (FArrayBox& a_sol, FArrayBox const& a_rhs,
-                   Real const tol_rel, Real const tol_abs, int const nummaxiter,
+MultiGrid::solve3 (amrex::FArrayBox& a_sol, amrex::FArrayBox const& a_rhs,
+                   amrex::Real const tol_rel, amrex::Real const tol_abs, int const nummaxiter,
                    int const verbose)
 {
     HIPACE_PROFILE("hpmg::MultiGrid::solve3()");
@@ -1305,14 +1317,16 @@ MultiGrid::solve3 (FArrayBox& a_sol, FArrayBox const& a_rhs,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void
-MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
-                       Real const tol_rel, Real const tol_abs, int const nummaxiter,
+MultiGrid::solve_doit (amrex::FArrayBox& a_sol, amrex::FArrayBox const& a_rhs,
+                       amrex::Real const tol_rel, amrex::Real const tol_abs, int const nummaxiter,
                        int const verbose)
 {
     AMREX_ALWAYS_ASSERT(a_sol.nComp() >= m_num_comps && a_rhs.nComp() >= m_num_comps);
 
-    m_sol = FArrayBox(center_box(a_sol.box(), m_domain.front()), m_num_comps, a_sol.dataPtr());
-    m_rhs = FArrayBox(center_box(a_rhs.box(), m_domain.front()), m_num_comps, a_rhs.dataPtr());
+    m_sol = amrex::FArrayBox(center_box(a_sol.box(), m_domain.front()), m_num_comps,
+                                        a_sol.dataPtr());
+    m_rhs = amrex::FArrayBox(center_box(a_rhs.box(), m_domain.front()), m_num_comps,
+                                        a_rhs.dataPtr());
 
     // sol: initial solution guess
     // rhs: right hand side of differential equation to solve
@@ -1327,10 +1341,10 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
         m_acf[0].const_array(), m_rescor[0].array(), m_sol.array(), m_dx, m_dy);
 
     // Reduction on the right-hand side and residual to get convergence criteria
-    Real resnorm0, rhsnorm0;
+    amrex::Real resnorm0, rhsnorm0;
     {
-        ReduceOps<ReduceOpMax,ReduceOpMax> reduce_op;
-        ReduceData<Real,Real> reduce_data(reduce_op);
+        amrex::ReduceOps<amrex::ReduceOpMax,amrex::ReduceOpMax> reduce_op;
+        amrex::ReduceData<amrex::Real,amrex::Real> reduce_data(reduce_op);
         using ReduceTuple = typename decltype(reduce_data)::Type;
         const auto& array_res = m_rescor[0].const_array();
         const auto& array_rhs = m_rhs.const_array();
@@ -1349,7 +1363,7 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
                        << "hpmg: Initial residual (resid0) = " << resnorm0 << "\n";
     }
 
-    Real max_norm;
+    amrex::Real max_norm;
     std::string norm_name;
     if (rhsnorm0 >= resnorm0) {
         norm_name = "bnorm";
@@ -1358,28 +1372,26 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
         norm_name = "resid0";
         max_norm = resnorm0;
     }
-    const Real res_target = std::max(tol_abs, std::max(tol_rel,Real(1.e-16))*max_norm);
+    const amrex::Real res_target = std::max(tol_abs,std::max(tol_rel,amrex::Real(1.e-16))*max_norm);
 
     if (resnorm0 <= res_target) {
         if (verbose >= 1) {
             amrex::Print() << "hpmg: No iterations needed\n";
         }
     } else {
-        Real norminf = 0.;
+        amrex::Real norminf = 0.;
         bool converged = true;
 
         for (int iter = 0; iter < nummaxiter; ++iter) {
-
-            converged = false;
 
             // do one vcycle iteration with the fist 4 Gauss-Seidel iterations omitted
             // from the beginning and instead done after the vcycle to also get the residual
             vcycle();
 
             // check the residual for convergence
-            Real const* pres0 = m_rescor[0].dataPtr();
-            norminf = Reduce::Max<Real>(m_domain[0].numPts()*m_num_comps,
-                                        [=] AMREX_GPU_DEVICE (Long i) -> Real
+            amrex::Real const* pres0 = m_rescor[0].dataPtr();
+            norminf = amrex::Reduce::Max<amrex::Real>(m_domain[0].numPts()*m_num_comps,
+                                        [=] AMREX_GPU_DEVICE (amrex::Long i) -> amrex::Real
                                         {
                                             return std::abs(pres0[i]);
                                         });
@@ -1399,7 +1411,7 @@ MultiGrid::solve_doit (FArrayBox& a_sol, FArrayBox const& a_rhs,
             }
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                converged || (norminf <= Real(1.e20)*max_norm),
+                converged || (norminf <= amrex::Real(1.e20)*max_norm),
                 "hpmg: Failing to converge after " + amrex::ToString(iter+1)  + " iterations."
                 " resid, resid/" + norm_name + " = " + amrex::ToString(norminf) + ", " +
                 amrex::ToString(norminf/max_norm) + "\n"
@@ -1434,14 +1446,14 @@ MultiGrid::vcycle ()
     };
 
     if (m_cuda_graph_vcycle.count(key) == 0) {
-        cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
+        cudaStreamBeginCapture(amrex::Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 
     for (int ilev = 0; ilev < m_single_block_level_begin; ++ilev) {
 
-        Real fac = static_cast<Real>(1 << ilev);
-        Real dx = m_dx * fac;
-        Real dy = m_dy * fac;
+        amrex::Real fac = static_cast<amrex::Real>(1 << ilev);
+        amrex::Real dx = m_dx * fac;
+        amrex::Real dy = m_dy * fac;
 
         if (ilev > 0) {
             // cor and residual on ilev 0 are already calculated before the vcycle is started
@@ -1460,16 +1472,17 @@ MultiGrid::vcycle ()
         // interpolate residual to next level
 
         // res[ilev+1] = R(rescor[ilev])
-        restriction(m_domain[ilev+1], m_res[ilev+1].array(), m_rescor[ilev].const_array(), m_num_comps);
+        restriction(m_domain[ilev+1], m_res[ilev+1].array(), m_rescor[ilev].const_array(),
+                    m_num_comps);
     }
 
     bottomsolve();
 
     for (int ilev = m_single_block_level_begin-1; ilev >= 0; --ilev) {
 
-        Real fac = static_cast<Real>(1 << ilev);
-        Real dx = m_dx * fac;
-        Real dy = m_dy * fac;
+        amrex::Real fac = static_cast<amrex::Real>(1 << ilev);
+        amrex::Real dx = m_dx * fac;
+        amrex::Real dy = m_dy * fac;
 
         // interpolate solution from previous level to phi
 
@@ -1501,11 +1514,11 @@ MultiGrid::vcycle ()
         m_acf[0].const_array(), m_rescor[0].array(), m_sol.array(), m_dx, m_dy);
 
 #if defined(AMREX_USE_CUDA)
-        cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_vcycle[key].first);
+        cudaStreamEndCapture(amrex::Gpu::gpuStream(), &m_cuda_graph_vcycle[key].first);
         cudaGraphInstantiate(&m_cuda_graph_vcycle[key].second,
                             m_cuda_graph_vcycle[key].first, NULL, NULL, 0);
     }
-    cudaGraphLaunch(m_cuda_graph_vcycle[key].second, Gpu::gpuStream());
+    cudaGraphLaunch(m_cuda_graph_vcycle[key].second, amrex::Gpu::gpuStream());
 #endif
 }
 
@@ -1513,74 +1526,95 @@ void
 MultiGrid::bottomsolve ()
 {
     constexpr int nsweeps = 16;
-    Real fac = static_cast<Real>(1 << m_single_block_level_begin);
-    Real dx0 = m_dx * fac;
-    Real dy0 = m_dy * fac;
+    amrex::Real fac = static_cast<amrex::Real>(1 << m_single_block_level_begin);
+    amrex::Real dx0 = m_dx * fac;
+    amrex::Real dy0 = m_dy * fac;
 #if defined(AMREX_USE_GPU)
     if (m_use_single_block_kernel) {
         int nlevs = m_num_single_block_levels;
         int const corner_offset = m_domain[0].cellCentered() ? 0 : 1;
 
         if (m_system_type == 1) {
-            bottomsolve_gpu<nsweeps,1>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
+            bottomsolve_gpu<nsweeps,1>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs,
+                                       corner_offset,
                 [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                                      Array4<Real> const& phi, Array4<Real> const& rhs,
-                                      Array4<Real> const& acf, Real facx, Real facy)
+                                     amrex::Array4<amrex::Real> const& phi,
+                                     amrex::Array4<amrex::Real> const& rhs,
+                                     amrex::Array4<amrex::Real> const& acf,
+                                     amrex::Real facx, amrex::Real facy)
                 {
-                    Real a = acf(i,j,0);
+                    amrex::Real a = acf(i,j,0);
                     gs1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), a, facx, facy);
                     gs1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), a, facx, facy);
                 },
-                [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
-                                      int ilo, int jlo, int ihi, int jhi,
-                                      Array4<Real> const& phi, Array4<Real> const& rhs,
-                                      Array4<Real> const& acf, Real facx, Real facy)
+                [] AMREX_GPU_DEVICE (int i, int j, amrex::Array4<amrex::Real> const& res,
+                                     int ilo, int jlo, int ihi, int jhi,
+                                     amrex::Array4<amrex::Real> const& phi,
+                                     amrex::Array4<amrex::Real> const& rhs,
+                                     amrex::Array4<amrex::Real> const& acf,
+                                     amrex::Real facx, amrex::Real facy)
                 {
-                    Real a = acf(i,j,0);
-                    res(i,j,0,0) = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), a, facx, facy);
-                    res(i,j,0,1) = residual1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), a, facx, facy);
+                    amrex::Real a = acf(i,j,0);
+                    res(i,j,0,0) = residual1(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), a,
+                                             facx, facy);
+                    res(i,j,0,1) = residual1(i, j, 1, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), a,
+                                             facx, facy);
                 });
         } else if (m_system_type == 2) {
-            bottomsolve_gpu<nsweeps,2>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
+            bottomsolve_gpu<nsweeps,2>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs,
+                                       corner_offset,
                 [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                                      Array4<Real> const& phi, Array4<Real> const& rhs,
-                                      Array4<Real> const& acf, Real facx, Real facy)
+                                     amrex::Array4<amrex::Real> const& phi,
+                                     amrex::Array4<amrex::Real> const& rhs,
+                                     amrex::Array4<amrex::Real> const& acf,
+                                     amrex::Real facx, amrex::Real facy)
                 {
-                    Real ar = acf(i,j,0,0);
-                    Real ai = acf(i,j,0,1);
-                    gs2(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), rhs(i,j,0,1), ar, ai, facx, facy);
+                    amrex::Real ar = acf(i,j,0,0);
+                    amrex::Real ai = acf(i,j,0,1);
+                    gs2(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), rhs(i,j,0,1), ar, ai,
+                        facx, facy);
                 },
-                [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
-                                      int ilo, int jlo, int ihi, int jhi,
-                                      Array4<Real> const& phi, Array4<Real> const& rhs,
-                                      Array4<Real> const& acf, Real facx, Real facy)
+                [] AMREX_GPU_DEVICE (int i, int j, amrex::Array4<amrex::Real> const& res,
+                                     int ilo, int jlo, int ihi, int jhi,
+                                     amrex::Array4<amrex::Real> const& phi,
+                                     amrex::Array4<amrex::Real> const& rhs,
+                                     amrex::Array4<amrex::Real> const& acf,
+                                     amrex::Real facx, amrex::Real facy)
                 {
-                    Real ar = acf(i,j,0,0);
-                    Real ai = acf(i,j,0,1);
-                    res(i,j,0,0) = residual2r(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), ar, ai, facx, facy);
-                    res(i,j,0,1) = residual2i(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), ar, ai, facx, facy);
+                    amrex::Real ar = acf(i,j,0,0);
+                    amrex::Real ai = acf(i,j,0,1);
+                    res(i,j,0,0) = residual2r(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), ar, ai,
+                                              facx, facy);
+                    res(i,j,0,1) = residual2i(i, j, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,1), ar, ai,
+                                              facx, facy);
                 });
         } else {
-            bottomsolve_gpu<nsweeps,3>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs, corner_offset,
+            bottomsolve_gpu<nsweeps,3>(dx0, dy0, m_acf_a, m_res_a, m_cor_a, m_rescor_a, nlevs,
+                                       corner_offset,
                 [] AMREX_GPU_DEVICE (int i, int j, int ilo, int jlo, int ihi, int jhi,
-                                      Array4<Real> const& phi, Array4<Real> const& rhs,
-                                      Array4<Real> const&, Real facx, Real facy)
+                                     amrex::Array4<amrex::Real> const& phi,
+                                     amrex::Array4<amrex::Real> const& rhs,
+                                     amrex::Array4<amrex::Real> const&, amrex::Real facx,
+                                     amrex::Real facy)
                 {
                     gs3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), facx, facy);
                 },
-                [] AMREX_GPU_DEVICE (int i, int j, Array4<Real> const& res,
-                                      int ilo, int jlo, int ihi, int jhi,
-                                      Array4<Real> const& phi, Array4<Real> const& rhs,
-                                      Array4<Real> const&, Real facx, Real facy)
+                [] AMREX_GPU_DEVICE (int i, int j, amrex::Array4<amrex::Real> const& res,
+                                     int ilo, int jlo, int ihi, int jhi,
+                                     amrex::Array4<amrex::Real> const& phi,
+                                     amrex::Array4<amrex::Real> const& rhs,
+                                     amrex::Array4<amrex::Real> const&, amrex::Real facx,
+                                     amrex::Real facy)
                 {
-                    res(i,j,0,0) = residual3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0), facx, facy);
+                    res(i,j,0,0) = residual3(i, j, 0, ilo, jlo, ihi, jhi, phi, rhs(i,j,0,0),
+                                             facx, facy);
                 });
         }
     } else
 #endif
     {
         const int ilev = m_single_block_level_begin;
-        m_cor[ilev].setVal<amrex::RunOn::Device>(Real(0.));
+        m_cor[ilev].setVal<amrex::RunOn::Device>(amrex::Real(0.));
         // Use numsweeps equal to the box length rounded up to an even number for large boxes
         int numsweeps = std::max(nsweeps, (m_cor[ilev].box().length().max() + 1) / 2 * 2);
         for (int is = 0; is < numsweeps; ++is) {
@@ -1598,13 +1632,13 @@ MultiGrid::bottomsolve ()
 #if defined(AMREX_USE_GPU)
 namespace {
     template <typename F>
-    void avgdown_acf (Array4<Real> const* acf, int ncomp, int nlevels, F&& f)
+    void avgdown_acf (amrex::Array4<amrex::Real> const* acf, int ncomp, int nlevels, F&& f)
     {
 #if defined(AMREX_USE_DPCPP)
-        amrex::launch(1, 1024, Gpu::gpuStream(),
+        amrex::launch(1, 1024, amrex::Gpu::gpuStream(),
         [=] (sycl::nd_item<1> const& item) noexcept
 #else
-        amrex::launch_global<1024><<<1, 1024, 0, Gpu::gpuStream()>>>(
+        amrex::launch_global<1024><<<1, 1024, 0, amrex::Gpu::gpuStream()>>>(
         [=] AMREX_GPU_DEVICE () noexcept
 #endif
         {
@@ -1640,7 +1674,7 @@ MultiGrid::average_down_acoef ()
 {
 #if defined(AMREX_USE_CUDA)
     if (!m_cuda_graph_acf_created) {
-    cudaStreamBeginCapture(Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
+    cudaStreamBeginCapture(amrex::Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 
     for (int ilev = 1; ilev <= m_single_block_level_begin; ++ilev) {
@@ -1665,21 +1699,23 @@ MultiGrid::average_down_acoef ()
     if (m_num_single_block_levels > 1) {
         if (m_domain[0].cellCentered()) {
             avgdown_acf(m_acf_a, m_num_comps_acf, m_num_single_block_levels,
-                        [] AMREX_GPU_DEVICE (int i, int j, int n, Array4<Real> const& crse,
-                                             Array4<Real> const& fine) noexcept
+                        [] AMREX_GPU_DEVICE (int i, int j, int n,
+                                             amrex::Array4<amrex::Real> const& crse,
+                                             amrex::Array4<amrex::Real> const& fine) noexcept
                         {
                             restrict_cc(i,j,n,crse,fine);
                         });
         } else {
             avgdown_acf(m_acf_a, m_num_comps_acf, m_num_single_block_levels,
-                        [] AMREX_GPU_DEVICE (int i, int j, int n, Array4<Real> const& crse,
-                                             Array4<Real> const& fine) noexcept
+                        [] AMREX_GPU_DEVICE (int i, int j, int n,
+                                             amrex::Array4<amrex::Real> const& crse,
+                                             amrex::Array4<amrex::Real> const& fine) noexcept
                         {
                             if (i == crse.begin[0] ||
                                 j == crse.begin[1] ||
                                 i == crse.end[0]-1 ||
                                 j == crse.end[1]-1) {
-                                crse(i,j,0,n) = Real(0.);
+                                crse(i,j,0,n) = amrex::Real(0.);
                             } else {
                                 restrict_nd(i,j,n,crse,fine);
                             }
@@ -1689,11 +1725,11 @@ MultiGrid::average_down_acoef ()
 #endif
 
 #if defined(AMREX_USE_CUDA)
-    cudaStreamEndCapture(Gpu::gpuStream(), &m_cuda_graph_acf);
+    cudaStreamEndCapture(amrex::Gpu::gpuStream(), &m_cuda_graph_acf);
     cudaGraphInstantiate(&m_cuda_graph_exe_acf, m_cuda_graph_acf, NULL, NULL, 0);
     m_cuda_graph_acf_created = true;
     }
-    cudaGraphLaunch(m_cuda_graph_exe_acf, Gpu::gpuStream());
+    cudaGraphLaunch(m_cuda_graph_exe_acf, amrex::Gpu::gpuStream());
 #endif
 }
 
