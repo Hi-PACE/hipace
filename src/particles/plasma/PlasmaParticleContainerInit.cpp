@@ -317,7 +317,8 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
                 ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
-                ptd.rdata(PlasmaIdx::psi)[pidx] = std::sqrt(1._rt+u[0]*u[0]+u[1]*u[1]+u[2]*u[2])-u[2];
+                ptd.rdata(PlasmaIdx::psi)[pidx] = plasma_psi(u[0], u[1], u[2],
+                                                             /* Assumes Aabssq == 0 */ 0._rt);
                 ptd.rdata(PlasmaIdx::x_prev)[pidx] = x;
                 ptd.rdata(PlasmaIdx::y_prev)[pidx] = y;
                 ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0];
@@ -425,6 +426,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     // Get atomic number and ionization energies from file
     const int ion_element_id = ion_map_ids[physical_element];
     const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+    m_max_ion_lev = ion_atomic_number;
     amrex::Vector<amrex::Real> h_ionization_energies(ion_atomic_number);
     const int offset = ion_energy_offsets[ion_element_id];
     for(int i=0; i<ion_atomic_number; i++){
