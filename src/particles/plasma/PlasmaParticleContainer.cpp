@@ -107,7 +107,10 @@ PlasmaParticleContainer::ReadParameters ()
     std::string density_path = "";
     bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", density_path, pp_alt);
     if (density_file_specified) {
-        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data);
+        std::string density_mesh_name = "density";
+        queryWithParserAlt(pp, "density_mesh_name", density_mesh_name, pp_alt);
+        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data,
+                                        density_mesh_name);
     }
 
     std::string density_table_file_name{};
@@ -418,6 +421,7 @@ IonizationModule (const int lev,
         amrex::Real* AMREX_RESTRICT adk_prefactor = m_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_exp_prefactor = m_adk_exp_prefactor.data();
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
+        const int max_ion_lev = m_max_ion_lev;
 
         long num_ions = ptile_ion.numParticles();
 
@@ -466,6 +470,9 @@ IonizationModule (const int lev,
             const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
                                                            /* Assumes Aabssq == 0 */ 0._rt);
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
+            if (ion_lev_loc >= max_ion_lev) {
+                return;
+            }
             // gamma / (psi + 1) to complete dt for QSA
             amrex::Real w_dtau = gamma_psi * adk_prefactor[ion_lev_loc] *
                 std::pow(Ep, adk_power[ion_lev_loc]) *
@@ -611,6 +618,7 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
         amrex::Real* AMREX_RESTRICT laser_dp_second_prefactor = m_laser_dp_second_prefactor.data();
+        const int max_ion_lev = m_max_ion_lev;
 
         long num_ions = ptile_ion.numParticles();
 
@@ -660,6 +668,9 @@ LaserIonization (const int islice,
             const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
                                                            /* Assumes Aabssq == 0 */ 0._rt);
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
+            if (ion_lev_loc >= max_ion_lev) {
+                return;
+            }
             // gamma / (psi + 1) to complete dt for QSA
             amrex::Real w_dtau_dc = gamma_psi * adk_prefactor[ion_lev_loc] *
                 std::pow(Ep, adk_power[ion_lev_loc]) *
