@@ -59,7 +59,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         const int    chi = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
         const int rhomjz = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
         const int   aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
-        
+
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
         const amrex::Real y_pos_offset = GetPosOffset(1, gm[lev], isl_fab.box());
