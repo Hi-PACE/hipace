@@ -42,8 +42,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     // only deposit rho individual on WhichSlice::This
     const bool deposit_rho_individual = Hipace::m_deposit_rho_individual && which_slice == WhichSlice::This;
     const bool deposit_rho_ion_levels = Hipace::m_deposit_rho_ion_levels && which_slice == WhichSlice::This;
-    if (ion_lev == 0) const std::string rho_str = deposit_rho_individual ? "rho_" + plasma.GetName() : "rho";
-    else const std::string rho_str = "rho_" + plasma.GetName() + "_lev"+ std::to_string(ion_lev);
+    const std::string rho_str =
+    (ion_lev == 0)
+      ? (deposit_rho_individual ? "rho_" + plasma.GetName() : "rho")
+      : ("rho_" + plasma.GetName() + "_lev" + std::to_string(ion_lev));
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
@@ -179,7 +181,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
                 [[maybe_unused]] amrex::Real laser_norm_ion = laser_norm;
                 if constexpr (can_ionize) {
-                    p_ion_lev= ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    const int p_ion_lev= ptd.idata(PlasmaIdx::ion_lev)[ip];
                     if ( deposit_rho_ion_levels && ion_lev != p_ion_lev) return;
                     q_invvol *= p_ion_lev;
                     q_mu0_mass_ratio *=  p_ion_lev;
