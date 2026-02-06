@@ -24,6 +24,7 @@
  * \param[in] deposit_rhomjz if true, deposit rhomjz
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
+ * \param[in] ion_lev interation index for deposition rho of each ionization levels.
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const int which_slice,
