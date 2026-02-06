@@ -19,8 +19,6 @@
 #include "utils/GPUUtil.H"
 
 
-
-
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
