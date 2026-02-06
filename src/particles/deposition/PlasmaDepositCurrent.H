@@ -29,7 +29,7 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
-                amrex::Vector<amrex::Geometry> const& gm, int const lev);
+                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev = 0);
 
 
 #endif //  PLASMADEPOSITCURRENT_H_
