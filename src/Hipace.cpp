@@ -128,6 +128,7 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    queryWithParser(pph, "deposit_rho_ion_levels", m_deposit_rho_ion_levels);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
     queryWithParser(pph, "interpolate_neutralizing_background",
@@ -704,7 +705,7 @@ Hipace::SolveOneSlice (int islice, int step)
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
-                m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels, true, true, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
@@ -712,7 +713,7 @@ Hipace::SolveOneSlice (int islice, int step)
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
-                m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels, m_use_laser, true, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,

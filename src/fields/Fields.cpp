@@ -100,6 +100,15 @@ Fields::AllocData (
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
             }
+            if (Hipace::m_deposit_rho_ion_levels) {
+                for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas ) {
+                    const std::string& plasma_name = pc.GetName();
+                    if(pc.GetCharge()==-1){continue;}
+                    for (int ion_lev=1; ion_lev<=pc.m_max_ion_lev; ion_lev++){
+                        Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_lev"+ std::to_string(ion_lev));
+                    }
+                }
+            }
             if (Hipace::m_deposit_temp_individual) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                     Comps[isl].multi_emplace(N_Comps, "w_" + plasma_name, "ux_" + plasma_name, "uy_" + plasma_name,
