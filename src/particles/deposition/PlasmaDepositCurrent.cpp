@@ -184,7 +184,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int ion_lev_local = ion_lev;
                 if constexpr (can_ionize) {
                     const int p_ion_lev= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    if ( dep_rho_ion_levels && ion_lev_local != p_ion_lev) return;
+                    if (dep_rho_ion_levels && ion_lev_local != p_ion_lev) return;
                     q_invvol *= p_ion_lev;
                     q_mu0_mass_ratio *=  p_ion_lev;
                     laser_norm_ion *= p_ion_lev *  p_ion_lev;
@@ -194,7 +194,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 amrex::Real Aabssqp = 0._rt;
-
                 if constexpr (use_laser) {
                     doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, arr, cache_idx[0],
                                                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
