@@ -104,6 +104,7 @@ Fields::AllocData (
             if (Hipace::m_deposit_rho_ion_levels) {
                 for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas ) {
                     const std::string& plasma_name = pc.GetName();
+                    amrex::Print()<<"Plasma name is "<<plasma_name <<"the atomic number is " <<pc.m_max_ion_lev<<'\n';
                     if(pc.m_max_ion_lev == 0){continue;}
                     for (int ion_lev=1; ion_lev<=pc.m_max_ion_lev; ion_lev++){
                         Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_IL"+ std::to_string(ion_lev));
@@ -177,6 +178,7 @@ Fields::AllocData (
             if (Hipace::m_deposit_rho_ion_levels) {
                 for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas ) {
                     const std::string& plasma_name = pc.GetName();
+                    amrex::Print()<<"Plasma name is "<<plasma_name <<"the atomic number is " <<pc.m_max_ion_lev<<'\n';
                     if(pc.m_max_ion_lev == 0){continue;}
                     for (int ion_lev=1; ion_lev<=pc.m_max_ion_lev; ion_lev++){
                         Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_IL"+ std::to_string(ion_lev));
