@@ -480,15 +480,24 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
                 }
             } else {
                 // initialize shared memory to phi_in inside the domain, outside zero
-                for (int s = lh.threadIdx1D(); s < tilesize_array_x*tilesize_array_y; s+=lh.blockDim1Drt()) {
-                    int sy = s / tilesize_array_x;
-                    int sx = s - sy * tilesize_array_x;
-                    sx += tile_begin_x;
-                    sy += tile_begin_y;
-                    const bool is_inside = ilo_loop <= sx && sx <= ihi_loop &&
-                                           jlo_loop <= sy && sy <= jhi_loop;
-                    for (int n=0; n<num_comps; ++n) {
-                        phi_shared(sx, sy, 0, n) = is_inside ? phi_in(sx, sy, 0, n) : amrex::Real(0.);
+                constexpr int tilesize_array = tilesize_array_x * tilesize_array_y;
+                int s = lh.threadIdx1D();
+                // loop with compile time known bounds to help compiler
+                for (int sc = 0; sc < tilesize_array; sc+=lh.blockDim1D()) {
+                    // do runtime check only on last iteration
+                    if (sc + lh.blockDim1D() - 1 < tilesize_array ||
+                        s < tilesize_array) {
+                        int sy = s / tilesize_array_x;
+                        int sx = s - sy * tilesize_array_x;
+                        sx += tile_begin_x;
+                        sy += tile_begin_y;
+                        const bool is_inside = ilo_loop <= sx && sx <= ihi_loop &&
+                                               jlo_loop <= sy && sy <= jhi_loop;
+                        for (int n=0; n<num_comps; ++n) {
+                            phi_shared(sx, sy, 0, n) =
+                                is_inside ? phi_in(sx, sy, 0, n) : amrex::Real(0.);
+                        }
+                        s += lh.blockDim1D();
                     }
                 }
             }
