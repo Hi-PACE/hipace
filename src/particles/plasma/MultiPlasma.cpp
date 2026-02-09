@@ -96,6 +96,7 @@ MultiPlasma::DepositCurrent (
                 ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
                          0, 0, deposit_rho, 0, 0,
                          gm, lev, ion_lev);
+        }
     }
 }
 
