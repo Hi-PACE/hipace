@@ -128,6 +128,7 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    m_deposit_rho_ion_levels = m_diags.needsRhoIonlev();
     queryWithParser(pph, "deposit_rho_ion_levels", m_deposit_rho_ion_levels);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);

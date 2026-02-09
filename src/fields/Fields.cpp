@@ -100,12 +100,16 @@ Fields::AllocData (
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
             }
+            amrex::Print()<<"deposit_rho_ion_levels is "<<m_deposit_rho_ion_levels;
             if (Hipace::m_deposit_rho_ion_levels) {
                 for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas ) {
                     const std::string& plasma_name = pc.GetName();
                     if(pc.m_max_ion_lev == 0){continue;}
                     for (int ion_lev=1; ion_lev<=pc.m_max_ion_lev; ion_lev++){
-                        Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_lev"+ std::to_string(ion_lev));
+                        Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_IL"+ std::to_string(ion_lev));
+                        amrex::Print() << "Inserted? "
+                                        << Comps[isl].count(key)
+                                        << "  key=" << "rho_" + plasma_name + "_IL"+ std::to_string(ion_lev) << "\n";
                     }
                 }
             }
@@ -174,7 +178,7 @@ Fields::AllocData (
                     const std::string& plasma_name = pc.GetName();
                     if(pc.m_max_ion_lev == 0){continue;}
                     for (int ion_lev=1; ion_lev<=pc.m_max_ion_lev; ion_lev++){
-                        Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_lev"+ std::to_string(ion_lev));
+                        Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_IL"+ std::to_string(ion_lev));
                     }
                 }
             }

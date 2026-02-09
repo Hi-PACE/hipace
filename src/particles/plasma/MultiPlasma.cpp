@@ -82,7 +82,7 @@ MultiPlasma::DepositCurrent (
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        const int tag =deposit_rho && Hipace::m_deposit_rho_ion_levels? m_all_plasmas[i].m_max_ion_lev:0;
+        const int tag = Hipace::m_deposit_rho_ion_levels? m_all_plasmas[i].m_max_ion_lev:0;
         for (int ion_lev=0; ion_lev<=tag; ion_lev++){
             ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
                 ion_lev==0 ? deposit_jx_jy : 0, ion_lev==0 ? deposit_jz : 0,
