@@ -475,5 +475,4 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_adk_exp_prefactor.copyToDeviceAsync();
     m_laser_adk_prefactor.copyToDeviceAsync();
     m_laser_dp_prefactor.copyToDeviceAsync();
-    m_laser_dp_second_prefactor.copyToDeviceAsync();
 }
