@@ -290,7 +290,7 @@ Hipace::InitData ()
 #endif
 
     m_multi_laser.InitData();
-
+    m_multi_plasma.InitIonizationData ();
     for (int lev=0; lev<m_N_level; ++lev) {
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
     }
