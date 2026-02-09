@@ -617,7 +617,6 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
-        amrex::Real* AMREX_RESTRICT laser_dp_second_prefactor = m_laser_dp_second_prefactor.data();
         const int max_ion_lev = m_max_ion_lev;
 
         long num_ions = ptile_ion.numParticles();
@@ -760,7 +759,7 @@ LaserIonization (const int islice,
                     const amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc];
                     const amrex::Real delta2 = delta * delta;
                     const amrex::Real delta4 = delta2 * delta2;
-                    const amrex::Real alpha = laser_dp_second_prefactor[ion_lev_loc];
+                    const amrex::Real alpha = -adk_power[ion_lev_loc];
                     const amrex::Real s1 = - (7._rt/4._rt) + alpha / 2._rt;
                     const amrex::Real s2 = (1._rt/16._rt) * ( 8._rt * (alpha*alpha) - 68._rt*alpha + 131._rt );
                     const amrex::Real width_p = amrex::abs(A) * delta * (1._rt + s1*delta2 + s2*delta4);
