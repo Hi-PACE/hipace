@@ -88,16 +88,14 @@ MultiPlasma::DepositCurrent (
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        DepositCurrent(m_all_plasmas[i], fields, which_slice,
-                deposit_jx_jy, deposit_jz,
-                deposit_rho, deposit_chi, deposit_rhomjz,
-                gm, lev, -1);
+        ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
+                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
+                         gm, lev, -1);
         const int tag = Hipace::m_deposit_rho_ion_levels? m_all_plasmas[i].m_max_ion_lev:-1;
         for (int ion_lev=0; ion_lev<=tag; ion_lev++){
-                DepositCurrent(m_all_plasmas[i], fields, which_slice,
-                    0, 0,
-                    deposit_rho, 0, 0,
-                    gm, lev, ion_lev);}
+                ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
+                         0, 0, deposit_rho, 0, 0,
+                         gm, lev, ion_lev);
     }
 }
 
