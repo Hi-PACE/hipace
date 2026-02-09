@@ -106,7 +106,7 @@ Fields::AllocData (
                     const std::string& plasma_name = pc.GetName();
                     amrex::Print()<<"Plasma name is "<<plasma_name <<"the atomic number is " <<pc.m_max_ion_lev<<'\n';
                     if(pc.m_max_ion_lev == 0){continue;}
-                    for (int ion_lev=1; ion_lev<=pc.m_max_ion_lev; ion_lev++){
+                    for (int ion_lev=0; ion_lev<=pc.m_max_ion_lev; ion_lev++){
                         Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_IL"+ std::to_string(ion_lev));
                         amrex::Print() << "Inserted? "
                                         << Comps[isl].count("rho_" + plasma_name + "_IL"+ std::to_string(ion_lev))
@@ -180,7 +180,7 @@ Fields::AllocData (
                     const std::string& plasma_name = pc.GetName();
                     amrex::Print()<<"Plasma name is "<<plasma_name <<"the atomic number is " <<pc.m_max_ion_lev<<'\n';
                     if(pc.m_max_ion_lev == 0){continue;}
-                    for (int ion_lev=1; ion_lev<=pc.m_max_ion_lev; ion_lev++){
+                    for (int ion_lev=0; ion_lev<=pc.m_max_ion_lev; ion_lev++){
                         Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name + "_IL"+ std::to_string(ion_lev));
                         amrex::Print() << "Inserted? "
                                         << Comps[isl].count("rho_" + plasma_name + "_IL"+ std::to_string(ion_lev))

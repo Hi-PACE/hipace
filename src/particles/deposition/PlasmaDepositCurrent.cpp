@@ -43,7 +43,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     const bool deposit_rho_individual = Hipace::m_deposit_rho_individual && which_slice == WhichSlice::This;
     const bool deposit_rho_ion_levels = Hipace::m_deposit_rho_ion_levels && which_slice == WhichSlice::This;
     const std::string rho_str =
-    (ion_lev == 0)
+    (ion_lev == -1)
       ? (deposit_rho_individual ? "rho_" + plasma.GetName() : "rho")
       : ("rho_" + plasma.GetName() + "_IL" + std::to_string(ion_lev));
 

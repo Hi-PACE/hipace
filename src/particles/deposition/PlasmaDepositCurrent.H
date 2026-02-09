@@ -24,13 +24,13 @@
  * \param[in] deposit_rhomjz if true, deposit rhomjz
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
- * \param[in] ion_lev interation index for deposition rho of each ionization levels.
+ * \param[in] ion_lev interation index for deposition rho of each ionization levels. When ion_lev=-1 the total rho will be deposited.
  */
 void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields, const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
-                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev = 0);
+                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev = -1);
 
 
 #endif //  PLASMADEPOSITCURRENT_H_
