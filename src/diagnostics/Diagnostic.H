@@ -147,7 +147,7 @@ public:
      */
     [[nodiscard]] bool
     needsTempIndividual () const;
-    
+
     /** \brief determines if rho for every ionisation levels is requested as a diagnostic
      */
     [[nodiscard]] bool
