@@ -23,6 +23,11 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
     amrex::ParmParse ppd("diagnostic");
     amrex::ParmParse pph("hipace");
 
+    queryWithParser(ppd, "histogram_names", m_histogram_names);
+    if (m_histogram_names.size() > 0 && m_histogram_names[0] == "no_histogram") {
+        m_histogram_names.clear();
+    }
+
     // Make the default diagnostic objects, subset of: lev0, lev1, lev2, laser_diag
     amrex::Vector<std::string> field_diag_names{};
     for (int lev = 0; lev<nlev; ++lev) {
@@ -33,51 +38,19 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
         std::string diag_name = "laser_diag";
         field_diag_names.emplace_back(diag_name);
     }
+    for (auto& hist_name : m_histogram_names) {
+        field_diag_names.emplace_back(hist_name);
+    }
 
     queryWithParser(ppd, "names", field_diag_names);
     if (field_diag_names.size() > 0 && field_diag_names[0] == "no_field_diag") {
         field_diag_names.clear();
     }
 
-    m_field_data.resize(field_diag_names.size());
+    m_diag_data.resize(field_diag_names.size());
 
-    for(amrex::Long i = 0; i<m_field_data.size(); ++i) {
-        auto& fd = m_field_data[i];
-
-        fd.m_diag_name = field_diag_names[i];
-
-        amrex::ParmParse pp(fd.m_diag_name);
-
-        std::string str_type;
-        getWithParserAlt(pp, "diag_type", str_type, ppd);
-        if        (str_type == "xyz"){
-            fd.m_slice_dir = -1;
-        } else if (str_type == "xz") {
-            fd.m_slice_dir = 1;
-        } else if (str_type == "yz") {
-            fd.m_slice_dir = 0;
-        } else if (str_type == "xy_integrated") {
-            fd.m_slice_dir = 2;
-        } else {
-            amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
-        }
-
-        queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
-
-        fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
-        fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
-
-        amrex::Array<int,3> diag_coarsen_arr{1,1,1};
-        queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
-        if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1 || fd.m_slice_dir == 2) {
-            diag_coarsen_arr[fd.m_slice_dir] = 1;
-        }
-        fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( fd.m_diag_coarsen.min() >= 1,
-            "Coarsening ratio must be >= 1");
-
-        queryWithParser(pph, "output_period", fd.m_output_period);
-        queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
+    for(amrex::Long i = 0; i < m_diag_data.size(); ++i) {
+        m_diag_data[i].m_diag_name = field_diag_names[i];
     }
 
     if (queryWithParser(pph, "output_period", m_beam_output_period)) {
@@ -91,7 +64,7 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
 bool
 Diagnostic::needsRho () const {
     amrex::ParmParse ppd("diagnostic");
-    for (auto& fd : m_field_data) {
+    for (auto& fd : m_diag_data) {
         amrex::ParmParse pp(fd.m_diag_name);
         amrex::Vector<std::string> comps{};
         queryWithParserAlt(pp, "field_data", comps, ppd);
@@ -107,7 +80,7 @@ Diagnostic::needsRho () const {
 bool
 Diagnostic::needsRhoIndividual () const {
     amrex::ParmParse ppd("diagnostic");
-    for (auto& fd : m_field_data) {
+    for (auto& fd : m_diag_data) {
         amrex::ParmParse pp(fd.m_diag_name);
         amrex::Vector<std::string> comps{};
         queryWithParserAlt(pp, "field_data", comps, ppd);
@@ -124,7 +97,7 @@ Diagnostic::needsRhoIndividual () const {
 bool
 Diagnostic::needsTempIndividual () const {
     amrex::ParmParse ppd("diagnostic");
-    for (auto& fd : m_field_data) {
+    for (auto& fd : m_diag_data) {
         amrex::ParmParse pp(fd.m_diag_name);
         amrex::Vector<std::string> comps{};
         queryWithParserAlt(pp, "field_data", comps, ppd);
@@ -143,13 +116,14 @@ Diagnostic::needsTempIndividual () const {
 void
 Diagnostic::Initialize (int nlev, bool use_laser) {
     amrex::ParmParse ppd("diagnostic");
+    amrex::ParmParse pph("hipace");
 
     // for each diagnostic object, choose a geometry and assign field_data
 
     // for the default diagnostics, what is the default geometry
     std::map<std::string, std::string> diag_name_to_default_geometry{};
     // for each geometry name, is it based on fields or laser
-    std::map<std::string, FieldDiagnosticData::geom_type> geometry_name_to_geom_type{};
+    std::map<std::string, DiagnosticData::diag_type> geometry_name_to_diag_type{};
     // for each geometry name, if its for fields what MR level is it on
     std::map<std::string, int> geometry_name_to_level{};
     // for each geometry, to which index do output components map to
@@ -163,7 +137,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         std::string diag_name = "lev" + std::to_string(lev);
         std::string geom_name = "level_" + std::to_string(lev);
         diag_name_to_default_geometry.emplace(diag_name, geom_name);
-        geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::field);
+        geometry_name_to_diag_type.emplace(geom_name, DiagnosticData::diag_type::field);
         geometry_name_to_level.emplace(geom_name, lev);
         geometry_name_to_output_comps_map[geom_name] = Comps[WhichSlice::This];
         // add derived diagnostics for Ex and Ey
@@ -174,13 +148,20 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         std::string diag_name = "laser_diag";
         std::string geom_name = "laser";
         diag_name_to_default_geometry.emplace(diag_name, geom_name);
-        geometry_name_to_geom_type.emplace(geom_name, FieldDiagnosticData::geom_type::laser);
-        geometry_name_to_level.emplace(geom_name, 0);
+        geometry_name_to_diag_type.emplace(geom_name, DiagnosticData::diag_type::laser);
         geometry_name_to_output_comps_map[geom_name]["laserEnvelope"] = WhichLaserSlice::n00j00_r;
         // real=chi, imag=chi_initial
         geometry_name_to_output_comps_map[geom_name]["laserChi"] = WhichLaserSlice::chi;
         // add derived diagnostics for |a^2|
         geometry_name_to_output_comps_map[geom_name]["|a^2|"] = -1;
+    }
+    for (auto& hist_name : m_histogram_names) {
+        // each histogram uses a separate diag_data with one component
+        std::string diag_name = hist_name;
+        std::string geom_name = hist_name;
+        diag_name_to_default_geometry.emplace(diag_name, geom_name);
+        geometry_name_to_diag_type.emplace(geom_name, DiagnosticData::diag_type::histogram);
+        geometry_name_to_output_comps_map[geom_name]["histogram"] = 0;
     }
 
     for (const auto& [geom_name, comp_map] : geometry_name_to_output_comps_map) {
@@ -197,7 +178,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
     // keep track of all components from the input and later assert that they were all used
     std::map<std::string, bool> is_global_comp_used{};
 
-    for (auto& fd : m_field_data) {
+    for (auto& fd : m_diag_data) {
         amrex::ParmParse pp(fd.m_diag_name);
 
         std::string base_geom_name = "level_0";
@@ -206,15 +187,73 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             base_geom_name = diag_name_to_default_geometry.at(fd.m_diag_name);
         }
 
-        queryWithParserAlt(pp, "base_geometry", base_geom_name, ppd);
+        queryWithParserAlt(pp, "base_geometry", base_geom_name, ppd); // backward compatibility
+        queryWithParserAlt(pp, "diagnostic_type", base_geom_name, ppd);
         DeprecatedInput(fd.m_diag_name, "level", "base_geometry");
 
-        if (geometry_name_to_geom_type.count(base_geom_name) > 0) {
-            fd.m_base_geom_type = geometry_name_to_geom_type.at(base_geom_name);
-            fd.m_level = geometry_name_to_level.at(base_geom_name);
+        if (geometry_name_to_diag_type.count(base_geom_name) > 0) {
+            fd.m_base_diag_type = geometry_name_to_diag_type.at(base_geom_name);
         } else {
             amrex::Abort("Unknown diagnostics base_geometry: '" + base_geom_name + "'!\n" +
                          all_comps_error_str.str());
+        }
+
+        if (queryWithParser(pph, "output_period", fd.m_output_period)) {
+            amrex::Print() << "WARNING: 'hipace.output_period' is deprecated! "
+                "Use 'diagnostic.output_period' instead!\n";
+        }
+        queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
+
+        if (fd.m_base_diag_type == DiagnosticData::diag_type::field) {
+            fd.m_level = geometry_name_to_level.at(base_geom_name);
+        }
+
+        switch (fd.m_base_diag_type) {
+            case DiagnosticData::diag_type::field:
+            case DiagnosticData::diag_type::laser: {
+                std::string str_type;
+                getWithParserAlt(pp, "diag_type", str_type, ppd);
+                if        (str_type == "xyz"){
+                    fd.m_slice_dir = -1;
+                } else if (str_type == "xz") {
+                    fd.m_slice_dir = 1;
+                } else if (str_type == "yz") {
+                    fd.m_slice_dir = 0;
+                } else if (str_type == "xy_integrated") {
+                    fd.m_slice_dir = 2;
+                } else {
+                    amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
+                }
+
+                fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
+                fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
+
+                queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
+
+                amrex::Array<int,3> diag_coarsen_arr{1,1,1};
+                queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
+                if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1 || fd.m_slice_dir == 2) {
+                    diag_coarsen_arr[fd.m_slice_dir] = 1;
+                }
+                fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_diag_coarsen.min() >= 1,
+                    "Coarsening ratio must be >= 1");
+            }
+            break;
+            case DiagnosticData::diag_type::histogram: {
+                getWithParser(pp, "patch_lo", fd.m_diag_lo);
+                fd.m_use_custom_size_lo = true;
+                getWithParser(pp, "patch_hi", fd.m_diag_hi);
+                fd.m_use_custom_size_hi = true;
+                getWithParser(pp, "hist_num_cells", fd.m_hist_num_cells);
+                if (fd.m_hist_num_cells.size() == 1) {
+                    fd.m_hist_num_cells.push_back(1);
+                }
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_hist_num_cells.size() == 2,
+                    "hist_num_cells must have either one or two values");
+
+            }
+            break;
         }
 
         amrex::Vector<std::string> use_comps{};
@@ -286,11 +325,11 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         );
     }
 
-    // if there are multiple diagnostic objects with the same m_base_geom_type (colliding component
+    // if there are multiple diagnostic objects with the same m_base_diag_type (colliding component
     // names), append the name of the diagnostic object to the component name in the output
-    for (auto& fd : m_field_data) {
-        if (1 < std::count_if(m_field_data.begin(), m_field_data.end(), [&] (auto& fd2) {
-            return fd.m_base_geom_type == fd2.m_base_geom_type;
+    for (auto& fd : m_diag_data) {
+        if (1 < std::count_if(m_diag_data.begin(), m_diag_data.end(), [&] (auto& fd2) {
+            return fd.m_base_diag_type == fd2.m_base_diag_type;
         })) {
             for (auto& comp_name : fd.m_comps_output) {
                 comp_name += "_" + fd.m_diag_name;
@@ -325,8 +364,6 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             );
         }
     }
-
-    m_initialized = true;
 }
 
 void
@@ -334,18 +371,20 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                             amrex::Geometry const& laser_geom, int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time)
 {
-    AMREX_ALWAYS_ASSERT(m_initialized);
+    for (auto& fd : m_diag_data) {
 
-    for (auto& fd : m_field_data) {
+        if (fd.m_base_diag_type == DiagnosticData::diag_type::histogram) {
+            continue;
+        }
 
         amrex::Geometry geom;
 
         // choose the geometry of the diagnostic
-        switch (fd.m_base_geom_type) {
-            case FieldDiagnosticData::geom_type::field:
+        switch (fd.m_base_diag_type) {
+            case DiagnosticData::diag_type::field:
                 geom = field_geom[fd.m_level];
                 break;
-            case FieldDiagnosticData::geom_type::laser:
+            case DiagnosticData::diag_type::laser:
                 geom = laser_geom;
                 break;
         }
@@ -353,11 +392,11 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         amrex::Box domain = geom.Domain();
 
         if (fd.m_include_ghost_cells) {
-            switch (fd.m_base_geom_type) {
-                case FieldDiagnosticData::geom_type::field:
+            switch (fd.m_base_diag_type) {
+                case DiagnosticData::diag_type::field:
                     domain.grow(Hipace::GetInstance().m_fields.getSlices(fd.m_level).nGrowVect());
                     break;
-                case FieldDiagnosticData::geom_type::laser:
+                case DiagnosticData::diag_type::laser:
                     domain.grow(Hipace::GetInstance().m_multi_laser.getSlices().nGrowVect());
                     break;
             }
@@ -402,19 +441,19 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 
         fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
-        fd.m_has_field = domain.ok()
+        fd.m_has_output = domain.ok()
                          && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
 
-        if(fd.m_has_field) {
+        if(fd.m_has_output) {
             HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
-            switch (fd.m_base_geom_type) {
-                case FieldDiagnosticData::geom_type::field:
-                    fd.m_F.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
-                    fd.m_F.setVal<amrex::RunOn::Host>(0);
+            switch (fd.m_base_diag_type) {
+                case DiagnosticData::diag_type::field:
+                    fd.m_F_real.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
+                    fd.m_F_real.setVal<amrex::RunOn::Host>(0);
                     break;
-                case FieldDiagnosticData::geom_type::laser:
-                    fd.m_F_laser.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
-                    fd.m_F_laser.setVal<amrex::RunOn::Host>({0,0});
+                case DiagnosticData::diag_type::laser:
+                    fd.m_F_complex.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
+                    fd.m_F_complex.setVal<amrex::RunOn::Host>({0,0});
                     break;
             }
         }

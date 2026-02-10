@@ -450,7 +450,7 @@ Multiply (amrex::MultiFab dst, const amrex::Real factor, const FV& src)
 }
 
 void
-Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData& fd,
+Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
               const amrex::Vector<amrex::Geometry>& field_geom, MultiLaser& multi_laser)
 {
     HIPACE_PROFILE("Fields::Copy()");
@@ -515,9 +515,11 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         }
     }
     if (diag_box.isEmpty()) return;
-    auto& slice_mf = m_slices[fd.m_level];
+    const int field_lev = fd.m_base_diag_type == DiagnosticData::diag_type::field ? fd.m_level : 0;
+
+    auto& slice_mf = m_slices[field_lev];
     auto slice_func = interpolated_field_xy<depos_order_xy,
-        guarded_field_xy>{{slice_mf}, field_geom[fd.m_level]};
+        guarded_field_xy>{{slice_mf}, field_geom[field_lev]};
     auto& laser_mf = multi_laser.getSlices();
     auto laser_func = interpolated_field_xy<depos_order_xy,
         guarded_field_xy>{{laser_mf}, multi_laser.GetLaserGeom()};
@@ -531,10 +533,10 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         const amrex::Real dx = fd.m_geom_io.CellSize(0);
         const amrex::Real dy = fd.m_geom_io.CellSize(1);
 
-        if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::field &&
+        if (fd.m_base_diag_type == DiagnosticData::diag_type::field &&
             current_N_level > fd.m_level) {
             auto slice_array = slice_func.array(mfi);
-            amrex::Array4<amrex::Real> diag_array = fd.m_F.array();
+            amrex::Array4<amrex::Real> diag_array = fd.m_F_real.array();
             const int comp_ExmBy = Comps[WhichSlice::This]["ExmBy"];
             const int comp_EypBx = Comps[WhichSlice::This]["EypBx"];
             const int comp_Bx = Comps[WhichSlice::This]["Bx"];
@@ -556,10 +558,10 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
                         diag_array(i,j,k,n) += rel_z_data[k-k_min] * slice_array(x,y,m);
                     }
                 });
-        } else if (fd.m_base_geom_type == FieldDiagnosticData::geom_type::laser &&
+        } else if (fd.m_base_diag_type == DiagnosticData::diag_type::laser &&
                    multi_laser.UseLaser(i_slice)) {
             auto laser_array = laser_func.array(mfi);
-            amrex::Array4<amrex::GpuComplex<amrex::Real>> diag_array_laser = fd.m_F_laser.array();
+            amrex::Array4<amrex::GpuComplex<amrex::Real>> diag_array_laser = fd.m_F_complex.array();
             amrex::ParallelFor(diag_box, fd.m_nfields,
                 [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
                 {

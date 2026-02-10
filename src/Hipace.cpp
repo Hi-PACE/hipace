@@ -1299,7 +1299,7 @@ void
 Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
 {
     for (auto& fd : m_diags.getFieldData()) {
-        if (fd.m_has_field) {
+        if (fd.m_has_output) {
             m_fields.Copy(current_N_level, islice, fd, m_3D_geom, m_multi_laser);
         }
     }

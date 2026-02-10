@@ -11,4 +11,5 @@ target_sources(HiPACE
     TemperatureDeposition.cpp
     PlasmaDepositCurrent.cpp
     ExplicitDeposition.cpp
+    HistogramDeposition.cpp
 )

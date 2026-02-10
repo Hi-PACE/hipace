@@ -17,36 +17,60 @@
 
 
 /** \brief This struct holds data for one field diagnostic on one MR level */
-struct FieldDiagnosticData
+struct DiagnosticData
 {
     std::string m_diag_name; /**< name used for input parameters and in the output */
-    enum struct geom_type {
+    enum struct diag_type {
         field,
-        laser
-    } m_base_geom_type = geom_type::field;  /**< which geometry the diagnostics is based on */
-    int m_level = 0; /**< MR level when field_geom is used */
-    int m_slice_dir; /**< Slicing direction */
-    bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
+        laser,
+        histogram
+    } m_base_diag_type = diag_type::field;  /**< which geometry the diagnostics is based on */
+
+    // all
+
+    /** Number of iterations between consecutive output dumps.
+     * Default is 0, meaning no output */
+    int m_output_period = 0;
+    bool m_has_output; /**< if there is output to write */
     bool m_use_custom_size_lo = false; /**< if a user defined diagnostics size should be used (lo)*/
     bool m_use_custom_size_hi = false; /**< if a user defined diagnostics size should be used (hi)*/
     /** 3D array with lower ends of the diagnostics grid */
     amrex::RealVect m_diag_lo {0., 0., 0.};
     /** 3D array with upper ends of the diagnostics grid */
     amrex::RealVect m_diag_hi {0., 0., 0.};
-    amrex::IntVect m_diag_coarsen; /**< xyz coarsening ratio (positive) */
+    amrex::Geometry m_geom_io; /**< Diagnostics geometry */
     int m_nfields; /**< Number of physical fields to write */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
     /** Component indexes to Write to output file */
     amrex::Gpu::Buffer<int> m_comps_output_idx;
+
+    // field and histogram
+
     /** Vector over levels, all fields */
-    amrex::FArrayBox m_F;
+    amrex::FArrayBox m_F_real;
+
+    // laser
+
     /** FAB for laser */
-    amrex::BaseFab<amrex::GpuComplex<amrex::Real>> m_F_laser;
-    amrex::Geometry m_geom_io; /**< Diagnostics geometry */
-    bool m_has_field; /**< if there is field output to write */
-    /** Number of iterations between consecutive output dumps.
-     * Default is 0, meaning no output */
-    int m_output_period = 0;
+    amrex::BaseFab<amrex::GpuComplex<amrex::Real>> m_F_complex;
+
+    // field
+
+    int m_level = 0; /**< MR level */
+
+    // field and laser
+
+    int m_slice_dir; /**< Slicing direction */
+    bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
+    amrex::IntVect m_diag_coarsen; /**< xyz coarsening ratio (positive) */
+
+    // histogram
+
+    amrex::Vector<int> m_hist_num_cells;
+    amrex::FArrayBox m_hist_gpu_fab;
+    // parser q1
+    // parser q2
+    // parser w
 };
 
 
@@ -66,7 +90,7 @@ public:
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
 
     /** \brief return data for all field diagnostics */
-    amrex::Vector<FieldDiagnosticData>& getFieldData () { return m_field_data; }
+    amrex::Vector<DiagnosticData>& getFieldData () { return m_diag_data; }
 
     /** \brief determines if a single field diagnostic has any output on in this time step
      *
@@ -76,7 +100,7 @@ public:
      * \param[in] output_time physical time of current step
      * \param[in] max_time physical time of last step
      */
-    static bool hasFieldOutput (const FieldDiagnosticData& fd,
+    static bool hasFieldOutput (const DiagnosticData& fd,
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
     {
@@ -96,7 +120,7 @@ public:
     hasAnyFieldOutput (int output_step, int max_step,
                             amrex::Real output_time, amrex::Real max_time) const
     {
-        for (const auto& fd : m_field_data) {
+        for (const auto& fd : m_diag_data) {
             if (hasFieldOutput(fd, output_step, max_step, output_time, max_time)) return true;
         }
         return false;
@@ -174,8 +198,8 @@ private:
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
     int m_beam_output_period = 0;
-    amrex::Vector<FieldDiagnosticData> m_field_data; /**< individual field diag data */
-    bool m_initialized = false; /**< if this object is fully initialized */
+    amrex::Vector<DiagnosticData> m_diag_data; /**< individual field diag data */
+    amrex::Vector<std::string> m_histogram_names; /**< names of all the particle histograms */
 };
 
 #endif // DIAGNOSTIC_H_
