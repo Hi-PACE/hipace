@@ -92,7 +92,7 @@ MultiPlasma::DepositCurrent (
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
                          gm, lev, -1);
         const int tag = Hipace::m_deposit_rho_ion_levels? m_all_plasmas[i].m_max_ion_lev:-1;
-        f(m_all_plasmas[i].m_max_ion_lev == 0){continue;}
+        if(m_all_plasmas[i].m_max_ion_lev == 0){continue;}
         for (int ion_lev=0; ion_lev<=tag; ion_lev++){
                 ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
                          0, 0, deposit_rho, 0, 0,
