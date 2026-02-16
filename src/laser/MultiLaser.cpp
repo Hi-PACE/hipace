@@ -53,6 +53,16 @@ MultiLaser::ReadParameters ()
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
     }
 
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        m_solver_type != "fft" &&
+        m_MG_average_rhs == true,
+        "The equations used by the laser solver when 'MG_average_rhs = false' is set, "
+        "which is always the case for the FFT-based laser solver, have been shown to be "
+        "unstable for high plasma densities with a large time step. "
+        "Please use 'lasers.solver_type = multigrid' with 'lasers.MG_average_rhs = 1' and, "
+        "if necessary, 'lasers.MG_tolerance_rel = 1e-7'. "
+        "If for some reason you need to use the FFT-based solver plase open an issue on Github");
+
     queryWithParser(pp, "insitu_period", m_insitu_period);
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     const bool set_file_prefix = queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
