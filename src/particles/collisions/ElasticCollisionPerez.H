@@ -153,15 +153,15 @@ void ElasticCollisionPerez (
             // particle's Lorentz factor
             amrex::Real g1 = is_beam_coll ? std::sqrt( 1._rt
                 + u1x[I1[i1]]*u1x[I1[i1]] + u1y[I1[i1]]*u1y[I1[i1]] + psi1[I1[i1]]*psi1[I1[i1]] )
-                : (1.0_rt + u1x[I1[i1]]*u1x[I1[i1]] + u1y[I1[i1]]*u1y[I1[i1]] +
-                   psi1[I1[i1]]*psi1[I1[i1]]) / (2.0_rt * psi1[I1[i1]] );
+                : plasma_gamma(u1x[I1[i1]], u1y[I1[i1]], psi1[I1[i1]],
+                    1._rt / psi1[I1[i1]], /* Assumes Aabssq == 0 */ 0._rt);
             // particle's Lorentz factor
-            amrex::Real g2 = (1.0_rt + u2x[I2[i2]]*u2x[I2[i2]] + u2y[I2[i2]]*u2y[I2[i2]] +
-                   psi2[I2[i2]]*psi2[I2[i2]]) / (2.0_rt * psi2[I2[i2]] );
+            amrex::Real g2 = plasma_gamma(u2x[I2[i2]], u2y[I2[i2]], psi2[I2[i2]],
+                1._rt / psi2[I2[i2]], /* Assumes Aabssq == 0 */ 0._rt);
 
             // Convert from pseudo-potential to momentum
-            amrex::Real u1z = is_beam_coll ? psi1[I1[i1]] : g1 - psi1[I1[i1]];
-            amrex::Real u2z = g2 - psi2[I2[i2]];
+            amrex::Real u1z = is_beam_coll ? psi1[I1[i1]] : plasma_uz(g1, psi1[I1[i1]]);
+            amrex::Real u2z = plasma_uz(g2, psi2[I2[i2]]);
 
             // In the longitudinal push of plasma particles, the dt is different for each particle.
             // The dt applied for collision probability is the average (in the lab frame) of these

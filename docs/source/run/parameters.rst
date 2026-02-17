@@ -457,6 +457,9 @@ When both are specified, the per-species value is used.
     position :math:`time \cdot c` is rounded up to the nearest `<position>` in the file to get it's
     `<density function>` which is used for that time step.
 
+* ``<plasma name> or plasmas.read_density_from_path`` (`string`) optional (default "")
+    Alternative to ``<plasma name>.density(x,y,z)``. Specify the path to an openPMD file that contains the species' number density for each location of the simulation. Both geometries (Cartesian ``xyz`` and Cylindrical ``rz`` + modes)  are supported, however not all dimensions need to be included. The mesh in the file can be chosen with ``<plasma name> or plasmas.density_mesh_name`` (default ``density``) and must contain a single ``SCALAR`` component. Examples of scripts to generate such files can be found in ``tools/write_plasma_density.py`` and ``tools/write_plasma_density_rz.py``.
+
 * ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
@@ -542,17 +545,20 @@ When both are specified, the per-species value is used.
     the compromise option ``2 2`` can be chosen. This will however require more memory in the binning process.
 
 * ``<plasma name> or plasmas.fine_patch(x,y)`` (`int`) optional (default `0`)
-    When using mesh refinement it can be helpful to increase the number of particles per cell drastically
-    in a small part of the domain. For this parameter a function of ``x`` and ``y`` needs to be specified
-    that evaluates to ``1`` where the number of particles per cell should be higher and ``0`` everywhere else.
-    For example use ``plasmas.fine_patch(x,y) = "sqrt(x^2+y^2) < 10"`` to specify a circle around ``x=0, y=0``
-    with a radius of ``10``. Note that the function is evaluated at the cell centers of the level zero grid.
+    When using mesh refinement it can be helpful to increase the number of particles per cell drastically in a small part of the domain. For this parameter, a function of ``x`` and ``y`` must be specified and returns an integer refinement flag. The function may evaluate to:
 
-* ``<plasma name> or plasmas.fine_ppc`` (2 `int`) optional (default `0 0`)
+    * ``0`` use the default number of particles per cell (no fine patch),
+    * ``1`` apply the first fine-patch level,
+    * ``2`` apply the second fine-patch level.
+
+    This allows up to two nested or distinct fine-patch regions with different particle densities.
+    For example, using ``plasmas.fine_patch(x, y) = "sqrt(x^2 + y^2) < 10"`` specifies a circular region of radius ``10`` around ``x = 0, y = 0`` where the function evaluates to ``1`` and the first fine-patch level is applied, while it evaluates to ``0`` elsewhere. More complex expressions may be used to return ``2`` in selected regions to enable the second fine-patch level. Note that the function is evaluated at the cell centers of the level zero grid.
+
+* ``<plasma name> or plasmas.fine_ppc`` (2 or 4 `int`) optional (default `0 0 0 0`)
     The number of plasma particles per cell in x and y inside the fine plasma patch. This must be
     divisible by the ppc outside the fine patch in both directions. The ppc number is taken relative
     to the cell size of mesh refinement level 0 so it typically should be much larger than
-    ``<plasma name> or plasmas.ppc``.
+    ``<plasma name> or plasmas.ppc``. If two levels of fine patch are used the number of plasma particles per cell are specified as ``x1 y1 x2 y2``.
 
 * ``<plasma name> or plasmas.fine_transition_cells`` (`int`) optional (default `5`)
     Number of cells that are used just outside of the fine plasma patch to smoothly transition

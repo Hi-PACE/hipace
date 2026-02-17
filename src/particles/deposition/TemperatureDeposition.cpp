@@ -60,7 +60,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             * (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass);
 
         // Loop over particles
-        SharedMemoryDeposition<1, 1, true>(
+        SharedMemoryDeposition<3, 3, true>(
             int(pti.numParticles()),
             // is_valid
             // return whether the particle is valid and should deposit
@@ -83,7 +83,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 auto [shape_y, j] =
                 compute_single_shape_factor<false, 0>(ymid, 0);
 
-                return {i, j};
+                return {i-1, j-1};
             },
             // deposit of weight, momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
@@ -107,12 +107,11 @@ DepositTemperature (PlasmaParticleContainer& plasma,
 
                 const amrex::Real uxp = ptd.rdata(PlasmaIdx::ux)[ip];
                 const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip];
-                amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
-                const amrex::Real uzp = (1._rt + uxp*uxp + uyp*uyp - psi*psi
-                    + 0.5_rt*Aabssqp)/(2._rt*psi);
-                const amrex::Real gamma = (1._rt + uxp*uxp + uyp*uyp + psi*psi
-                    + 0.5_rt*Aabssqp)/(2._rt*psi);
-                const amrex::Real wp = ptd.rdata(PlasmaIdx::w)[ip] * gamma / psi;
+                const amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
+                const amrex::Real psi_inv = 1._rt / psi;
+                const amrex::Real gamma = plasma_gamma(uxp, uyp, psi, psi_inv, Aabssqp);
+                const amrex::Real uzp = plasma_uz(gamma, psi);
+                const amrex::Real wp = ptd.rdata(PlasmaIdx::w)[ip] * gamma * psi_inv;
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;

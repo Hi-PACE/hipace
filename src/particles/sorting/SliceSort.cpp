@@ -19,25 +19,53 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
 
     HIPACE_PROFILE("shiftSlippedParticles()");
 
-    // remove all invalid particles from WhichBeamSlice::This (including slipped)
-    amrex::removeInvalidParticles(beam.getBeamSlice(WhichBeamSlice::This));
-
+    const int num_particles = beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This);
+    const auto ptdr = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
     // min_z is the lower end of WhichBeamSlice::This
     const amrex::Real min_z = geom.ProbLo(2) + (slice-geom.Domain().smallEnd(2))*geom.CellSize(2);
 
-    // put non slipped particles at the start of the slice
-    const int num_stay = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),
-        [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
-            return ptd.pos(2, i) >= min_z;
+    amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
+    amrex::ReduceData<int, int> reduce_data(reduce_op);
+    using ReduceTuple = typename decltype(reduce_data)::Type;
+
+    // count the number of invalid and slipped particles
+    reduce_op.eval(
+        num_particles, reduce_data,
+        [=] AMREX_GPU_DEVICE (const int i) -> ReduceTuple
+        {
+            if (!ptdr.id(i).is_valid()) {
+                return {0, 0};
+            } else if (ptdr.pos(2, i) >= min_z) {
+                return {1, 0};
+            } else {
+                return {1, 1};
+            }
         });
 
-    const int num_slipped = beam.getBeamSlice(WhichBeamSlice::This).size() - num_stay;
+    const auto [num_valid, num_slipped] = reduce_data.value();
+    const int num_stay = num_valid - num_slipped;
+
+    if (num_valid != num_particles) {
+        // remove all invalid particles from WhichBeamSlice::This (including slipped)
+        amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This), num_valid,
+            [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
+                return ptd.id(i).is_valid();
+            });
+
+        beam.getBeamSlice(WhichBeamSlice::This).resize(num_valid);
+    }
 
     if (num_slipped == 0) {
         // nothing to do
         beam.resize(WhichBeamSlice::This, num_stay, 0);
         return;
     }
+
+    // put non slipped particles at the start of the slice
+    amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This), num_stay,
+        [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
+            return ptd.pos(2, i) >= min_z;
+        });
 
     const int next_size = beam.getNumParticles(WhichBeamSlice::Next);
 
