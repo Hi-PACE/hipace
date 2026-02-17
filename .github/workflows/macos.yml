@@ -83,8 +83,6 @@ jobs:
 
         set -e
 
-        brew uninstall cmake
-
     - name: build HiPACE++
       run: |
         export CCACHE_COMPRESS=1
