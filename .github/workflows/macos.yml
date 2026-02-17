@@ -85,9 +85,10 @@ jobs:
 
         brew uninstall cmake
 
-        brew install pybind11@3.0.1_1 --only-dependencies --force
-        brew install pybind11@3.0.1_1
-        brew link pybind11@3.0.1_1
+        brew search pybind11
+        brew install pybind11@3.0.1 --only-dependencies --force
+        brew install pybind11@3.0.1
+        brew link pybind11@3.0.1
 
         brew tap openpmd/openpmd
         brew install openpmd-api --only-dependencies --force
