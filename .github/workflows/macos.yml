@@ -88,9 +88,10 @@ jobs:
         brew tap-new $USER/local
         brew extract --version=3.0.1 pybind11 $USER/local
         brew install $USER/local/pybind11@3.0.1
+        brew pin pybind11
 
         brew tap openpmd/openpmd
-        brew install openpmd-api --only-dependencies --force
+        # brew install openpmd-api --only-dependencies --force
         brew install openpmd-api
         brew link openpmd-api
 
