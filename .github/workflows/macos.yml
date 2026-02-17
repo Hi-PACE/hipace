@@ -85,16 +85,6 @@ jobs:
 
         brew uninstall cmake
 
-        brew tap-new $USER/local
-        brew extract --version=3.0.1 pybind11 $USER/local
-        brew install $USER/local/pybind11@3.0.1
-        brew pin pybind11
-
-        brew tap openpmd/openpmd
-        # brew install openpmd-api --only-dependencies --force
-        brew install openpmd-api
-        brew link openpmd-api
-
     - name: build HiPACE++
       run: |
         export CCACHE_COMPRESS=1
@@ -105,7 +95,7 @@ jobs:
 
         cmake -S . -B build_sp          \
           -DCMAKE_VERBOSE_MAKEFILE=ON   \
-          -DHiPACE_openpmd_internal=OFF \
+          -DHiPACE_openpmd_internal=ON \
           -DHiPACE_PRECISION=SINGLE
         cmake --build build_sp -j 2
 
