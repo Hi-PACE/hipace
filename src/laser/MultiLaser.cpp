@@ -869,6 +869,8 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::RealVect laser_dx_inv = laser.m_dx_inv;
                 const amrex::Real laser_unitSI = laser.m_unitSI;
 
+                // Function to convert laser data on the fly from float or double to amex::Complex,
+                // return zero for out-of-bounds values, and multiply by unitSI.
                 auto laser_arr = [=] AMREX_GPU_DEVICE (int i, int j, int k) {
                     const amrex::IntVect iv {i, j, k};
                     if (!iv.allGE(amrex::IntVect(0)) || !iv.allLE(laser_bigend)) {

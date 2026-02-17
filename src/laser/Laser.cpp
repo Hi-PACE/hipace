@@ -131,7 +131,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
         const std::string field_type = mesh.getAttribute("envelopeField").get<std::string>();
         if (field_type == "electric_field") {
             amrex::Abort("Attribute 'envelopeField' in file '" + m_input_file_path +
-                "' is set to 'electric_field' which is not compatible with HiAPCE++. " +
+                "' is set to 'electric_field' which is not compatible with HiPACE++. " +
                 help_msg
             );
         } else if (field_type != "normalized_vector_potential") {
@@ -144,7 +144,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     if (units_file == units_electric_field) {
         amrex::Abort("unitDimension '" + amrex::ToString(units_file) + "' in file '"
             + m_input_file_path + "' is that of an electric field which is not compatible "
-            "with HiAPCE++. " + help_msg
+            "with HiPACE++. " + help_msg
         );
     } else if (units_file != units_norm_potential) {
         amrex::AllPrint() << "WARNING: unitDimension '" << amrex::ToString(units_file)
@@ -234,7 +234,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
         comp.loadChunk(m_cd_laser_data, {0u}, {-1u});
 
-        m_cd_ptr = reinterpret_cast<amrex::GpuComplex<double>*>(m_cd_laser_data.get());;
+        m_cd_ptr = reinterpret_cast<amrex::GpuComplex<double>*>(m_cd_laser_data.get());
     } else {
         amrex::Abort("Unknown Datatype used in Laser input file. Must use CDOUBLE or CFLOAT\n");
     }
