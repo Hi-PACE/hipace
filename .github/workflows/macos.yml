@@ -85,7 +85,7 @@ jobs:
 
         brew uninstall cmake
 
-        brew install --formula https://raw.githubusercontent.com/Homebrew/homebrew-core/6ba7842798add26b2df2c08dc108acda1370caa1/Formula/p/pybind11.rb
+        brew install https://raw.githubusercontent.com/Homebrew/homebrew-core/6ba7842798add26b2df2c08dc108acda1370caa1/Formula/p/pybind11.rb
         brew pin pybind11
 
         brew tap openpmd/openpmd
