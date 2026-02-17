@@ -60,7 +60,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             * (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass);
 
         // Loop over particles
-        SharedMemoryDeposition<1, 1, true>(
+        SharedMemoryDeposition<3, 3, true>(
             int(pti.numParticles()),
             // is_valid
             // return whether the particle is valid and should deposit
@@ -80,7 +80,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 auto [shape_x, i] = shape_factor<0>(xmid, 0);
                 auto [shape_y, j] = shape_factor<0>(ymid, 0);
 
-                return {i, j};
+                return {i-1, j-1};
             },
             // deposit of weight, momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
