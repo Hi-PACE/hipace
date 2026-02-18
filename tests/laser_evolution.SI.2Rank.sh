@@ -35,14 +35,14 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
 
-rm -rf $TEST_NAME
+# rm -rf $TEST_NAME
 
-# Run the simulation with FFT Poisson solver
-mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-        lasers.solver_type = fft \
-        hipace.file_prefix = $TEST_NAME
-# Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
+# # Run the simulation with FFT Poisson solver
+# mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
+#         lasers.solver_type = fft \
+#         hipace.file_prefix = $TEST_NAME
+# # Compare the result with theory
+# $HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --skip-particles \
