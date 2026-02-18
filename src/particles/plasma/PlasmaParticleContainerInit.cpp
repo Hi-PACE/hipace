@@ -456,7 +456,6 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_adk_exp_prefactor.resize(ion_atomic_number);
     m_laser_adk_prefactor.resize(ion_atomic_number);
     m_laser_dp_prefactor.resize(ion_atomic_number);
-    m_laser_dp_second_prefactor.resize(ion_atomic_number);
 
     for (int i=0; i<ion_atomic_number; ++i)
     {
@@ -470,7 +469,6 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
         m_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
         m_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
         m_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
-        m_laser_dp_second_prefactor[i] = 2.*ion_atomic_number * std::sqrt(UH/Uion) - 1.;
     }
 
     m_adk_power.copyToDeviceAsync();
@@ -478,5 +476,4 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_adk_exp_prefactor.copyToDeviceAsync();
     m_laser_adk_prefactor.copyToDeviceAsync();
     m_laser_dp_prefactor.copyToDeviceAsync();
-    m_laser_dp_second_prefactor.copyToDeviceAsync();
 }
