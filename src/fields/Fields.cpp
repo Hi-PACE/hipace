@@ -63,7 +63,7 @@ Fields::AllocData (
         // Need 1 extra guard cell transversally for transverse derivative
         int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
         // Check the temperature deposition order, if enabled
-        if (Hipace::m_deposit_temp_individual && 
+        if (Hipace::m_deposit_temp_individual &&
             Hipace::m_temp_depos_order>Hipace::m_depos_order_xy) {
             nguards_xy = (Hipace::m_temp_depos_order + 1) / 2 + 1;
         }

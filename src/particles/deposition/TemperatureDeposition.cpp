@@ -56,7 +56,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         const int aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
         const amrex::Real laser_norm = (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass)
             * (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass);
-        
+
         // Loop over particles
         amrex::AnyCTO(
             // use compile-time options
@@ -78,16 +78,23 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 constexpr int use_laser = ctos[2];
                 constexpr int stencil_size = depos_order + 1;
 
-                SharedMemoryDeposition<stencil_size, stencil_size, true>(
-                    int(pti.numParticles()), is_valid, get_start_cell, deposit, isl_fab.array(),
-                    isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-                    amrex::GpuArray<int, 1>{aabs},
-                    amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq});
+                if constexpr (use_laser) {
+                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
+                        int(pti.numParticles()), is_valid, get_start_cell, deposit, isl_fab.array(),
+                        isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
+                        amrex::GpuArray<int, 1>{aabs},
+                        amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq});
+                } else {
+                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
+                        int(pti.numParticles()), is_valid, get_start_cell, deposit, isl_fab.array(),
+                        isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
+                        amrex::GpuArray<int, 0>{},
+                        amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq});
+                }
             },
-
             // is_valid
             // return whether the particle is valid and should deposit
-            [=] AMREX_GPU_DEVICE (int ip, auto ptd, 
+            [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto /*depos_order*/,
                                   auto /*can_ionize*/,
                                   auto /*use_laser*/)
@@ -97,7 +104,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
             },
             // get_start_cell
             // return the lowest cell index that the particle deposits into
-            [=] AMREX_GPU_DEVICE (int ip, auto ptd, 
+            [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto depos_order,
                                   auto /*can_ionize*/,
                                   auto /*use_laser*/) -> amrex::IntVectND<2>
