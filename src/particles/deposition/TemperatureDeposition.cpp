@@ -65,7 +65,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 amrex::CompileTimeOptions<false, true>, // can_ionize
                 amrex::CompileTimeOptions<false, true>  // use_laser
             >{}, {
-                Hipace::m_temp_depos_order,
+                Hipace::m_temperature_depos_order,
                 plasma.m_can_ionize,
                 Hipace::m_use_laser
             },

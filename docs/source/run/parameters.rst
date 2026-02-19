@@ -1158,7 +1158,7 @@ Field diagnostics
     will be deposited into individual fields accessible as ``w``, ``ux_<plasma name>`` or
     ``ux^2_<plasma name>`` (similarly for ``uy`` and ``uz``) in ``diagnostic.field_data``.
 
-* ``hipace.temp_depos_order`` (`int`) optional (default `2`)
+* ``hipace.temperature_depos_order`` (`int`) optional (default `2`)
     When ``hipace.deposit_temp_individual`` is turned on,
     this option specifies the shape order of the deposited fields.
     Currently, 0,1,2,3 are implemented.

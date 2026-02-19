@@ -30,6 +30,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
     my_constants.a0 = 0.00885126 \
     plasmas.do_push = 0 \
     hipace.file_prefix=$TEST_NAME/linear \
+    hipace.temperature_depos_order = 0 \
     plasmas.insitu_file_prefix = $TEST_NAME/insitu_linear
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
@@ -37,6 +38,7 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_laser_ionization \
     lasers.polarization = circular \
     plasmas.do_push = 0 \
     hipace.file_prefix=$TEST_NAME/circular \
+    hipace.temperature_depos_order = 0 \
     plasmas.insitu_file_prefix = $TEST_NAME/insitu_circular
 
 # Compare the result with theory
