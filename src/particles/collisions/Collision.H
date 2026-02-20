@@ -5,17 +5,22 @@
 
 #include <AMReX.H>
 
+#include <string>
+
 /**
  * \brief This class handles Coulomb collisions between 2 particle species
  * (can be plasma-plasma or beam-plasma, the species can be the same)
  */
 class Collision
 {
-public:
-    int m_inout_species1_index = -1;
-    int m_inout_species2_index = -1;
-    int m_out_species3_index = -1;
+    std::string m_inout_species1_name = "";
+    std::string m_inout_species2_name = "";
+    std::string m_out_species3_name = "";
     std::string m_collision_type = "";
+    bool m_has_collision_product = false;
+    amrex::Gpu::Buffer<amrex::Real> m_crosssection_data;
+
+public:
 
     /** Read parameters from the input file */
     void ReadParameters (
@@ -28,7 +33,43 @@ public:
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
      **/
-    static void doCollision (
+    void doCollision (
+        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     * \param[in] collision_function return if a pair of particles collides
+     * \param[in] ionizaiton_function initialize product particle
+     **/
+    template <class F, class G>
+    void doCollisionImp (
+        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function);
+
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     **/
+    void doCollisionA (
+        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     **/
+    void doCollisionB (
         int lev, const amrex::Box& bx, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma);
 };
