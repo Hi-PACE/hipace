@@ -29,17 +29,15 @@ public:
 
     /**
      * \param[in] lev MR level
-     * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
      **/
     void doCollision (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma);
 
     /**
      * \param[in] lev MR level
-     * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
      * \param[in] collision_function return if a pair of particles collides
@@ -47,30 +45,27 @@ public:
      **/
     template <class F, class G>
     void doCollisionImp (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma,
         F const& collision_function,
         G const& ionizaiton_function);
 
-
     /**
      * \param[in] lev MR level
-     * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
      **/
     void doCollisionA (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma);
 
     /**
      * \param[in] lev MR level
-     * \param[in] bx transverse box (plasma particles will be sorted per-cell on this box)
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
      **/
     void doCollisionB (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma);
 };
 

@@ -40,25 +40,26 @@ Collision::ReadParameters(
 
 void
 Collision::doCollision (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma)
 {
     if (m_collision_type == "a") {
-        doCollisionA(lev, bx, geom, multi_plasma);
+        doCollisionA(lev, geom, multi_plasma);
     } else {
-        doCollisionB(lev, bx, geom, multi_plasma);
+        doCollisionB(lev, geom, multi_plasma);
     }
 }
 
 void
 Collision::doCollisionA (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma)
 {
     auto p_crosssection_data = m_crosssection_data.data();
 
-    doCollisionImp(lev, bx, geom, multi_plasma,
+    doCollisionImp(lev, geom, multi_plasma,
         [=] AMREX_GPU_DEVICE (auto ptd1, int i1, auto ptd2, int i2,
+                              amrex::Real cell_weight1, amrex::Real cell_weight2,
                               amrex::RandomEngine const& engine)
         {
             // do some calculation with the two particles to see if they should collide
@@ -84,11 +85,12 @@ Collision::doCollisionA (
 
 void
 Collision::doCollisionB (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma)
 {
-    doCollisionImp(lev, bx, geom, multi_plasma,
+    doCollisionImp(lev, geom, multi_plasma,
         [=] AMREX_GPU_DEVICE (auto ptd1, int i1, auto ptd2, int i2,
+                              amrex::Real cell_weight1, amrex::Real cell_weight2,
                               amrex::RandomEngine const& engine)
         {
             return false;
@@ -103,7 +105,7 @@ Collision::doCollisionB (
 template <class F, class G>
 void
 Collision::doCollisionImp (
-        int lev, const amrex::Box& bx, const amrex::Geometry& geom,
+        int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma,
         F const& collision_function,
         G const& ionizaiton_function)
@@ -117,8 +119,8 @@ Collision::doCollisionImp (
         amrex::removeInvalidParticles(species2.ParticlesAt(0, pti));
     }
 
-    PlasmaBins bins1 = findParticlesInEachTile(bx, 1, species1, geom);
-    PlasmaBins bins2 = findParticlesInEachTile(bx, 1, species2, geom);
+    PlasmaBins bins1 = findParticlesInEachTile(geom.Domain(), 1, species1, geom);
+    PlasmaBins bins2 = findParticlesInEachTile(geom.Domain(), 1, species2, geom);
 
     auto offset1 = bins1.offsetsPtr();
     auto offset2 = bins2.offsetsPtr();
@@ -160,11 +162,44 @@ Collision::doCollisionImp (
         const int np1 = ptile1.numParticles();
         const int np2 = ptile2.numParticles();
 
-        amrex::Gpu::DeviceVector<int> flag1(np1, 0);
-        amrex::Gpu::DeviceVector<int> flag2(np2, 0);
+        amrex::Gpu::DeviceVector<int> flag1;
+        amrex::Gpu::DeviceVector<int> flag2;
+
+        if (m_has_collision_product) {
+            flag1.resize(np1, 0);
+            flag2.resize(np2, 0);
+        }
 
         auto p_flag1 = flag1.dataPtr();
         auto p_flag2 = flag2.dataPtr();
+
+        amrex::Gpu::DeviceVector<amrex::Real> cell_weight1(num_cells);
+        amrex::Gpu::DeviceVector<amrex::Real> cell_weight2(num_cells);
+        auto p_cell_weight1 = cell_weight1.dataPtr();
+        auto p_cell_weight2 = cell_weight2.dataPtr();
+
+        amrex::ParallelFor(2*num_cells,
+            [=] AMREX_GPU_DEVICE (int icell) {
+                if (icell < num_cells) {
+                    auto start = offset1[icell];
+                    auto stop = offset1[icell+1];
+                    amrex::Real loc_cell_weight1 = 0;
+                    for (int idx1 = start; idx1 < stop; ++idx1) {
+                        loc_cell_weight1 += ptd1.rdata(PlasmaIdx::w)[perm1[idx1]];
+                    }
+                    p_cell_weight1[icell] = loc_cell_weight1;
+                } else {
+                    icell -= num_cells;
+                    auto start = offset2[icell];
+                    auto stop = offset2[icell+1];
+                    amrex::Real loc_cell_weight2 = 0;
+                    for (int idx2 = start; idx2 < stop; ++idx2) {
+                        loc_cell_weight2 += ptd2.rdata(PlasmaIdx::w)[perm2[idx2]];
+                    }
+                    p_cell_weight2[icell] = loc_cell_weight2;
+                }
+            }
+        );
 
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
@@ -180,6 +215,9 @@ Collision::doCollisionImp (
                 const int n1 = offset1_stop - offset1_start;
                 const int n2 = offset2_stop - offset2_start;
 
+                const amrex::Real loc_cell_weight1 = p_cell_weight1[icell];
+                const amrex::Real loc_cell_weight2 = p_cell_weight2[icell];
+
                 int idx1 = icoll;
                 int idx2 = icoll;
                 while (idx1 < n1 && idx2 < n2) {
@@ -187,7 +225,7 @@ Collision::doCollisionImp (
                     const int j2 = perm2[offset2_start + idx2];
 
                     const bool make_new_particle = collision_function(
-                        ptd1, j1, ptd2, j2, engine
+                        ptd1, j1, ptd2, j2, loc_cell_weight1, loc_cell_weight2, engine
                     );
 
                     if (n2 < n1) {
