@@ -604,7 +604,8 @@ void gsrb_shared (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_o
 template<int system_type, bool zero_init, bool do_compute_residual, bool is_cell_centered>
 void gsrb_cached (amrex::Box const& box, amrex::Array4<amrex::Real> const& phi_out,
                   amrex::Array4<amrex::Real const> const& rhs,
-                  amrex::Array4<amrex::Real const> const& acf, amrex::Array4<amrex::Real> const& res,
+                  amrex::Array4<amrex::Real const> const& acf,
+                  amrex::Array4<amrex::Real> const& res,
                   amrex::Array4<amrex::Real const> const& phi_in, amrex::Real dx, amrex::Real dy)
 {
     constexpr int num_comps = MultiGrid::get_num_comps(system_type);
@@ -884,8 +885,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
     {
         amrex::Real facx = amrex::Real(1.)/(dx0*dx0);
         amrex::Real facy = amrex::Real(1.)/(dy0*dy0);
-        int lenx = cor[0].end.x - cor[0].begin.x - 2*corner_offset;
-        int leny = cor[0].end.y - cor[0].begin.y - 2*corner_offset;
+        int lenx = cor[0].end[0] - cor[0].begin[0] - 2*corner_offset;
+        int leny = cor[0].end[1] - cor[0].begin[1] - 2*corner_offset;
         int ncells = lenx*leny;
 #if defined(AMREX_USE_DPCPP)
         const int icell = item.get_local_linear_id();
@@ -894,8 +895,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
 #endif
         int j = icell /   lenx;
         int i = icell - j*lenx;
-        j += cor[0].begin.y + corner_offset;
-        i += cor[0].begin.x + corner_offset;
+        j += cor[0].begin[1] + corner_offset;
+        i += cor[0].begin[0] + corner_offset;
 
         for (int ilev = 0; ilev < nlevs-1; ++ilev) {
             // set phi to zero
@@ -914,8 +915,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
                         fgs(i, j,
-                            cor[ilev].begin.x, cor[ilev].begin.y,
-                            cor[ilev].end.x-1, cor[ilev].end.y-1,
+                            cor[ilev].begin[0], cor[ilev].begin[1],
+                            cor[ilev].end[0]-1, cor[ilev].end[1]-1,
                             cor[ilev], res[ilev], acf[ilev],
                             facx, facy);
                     }
@@ -927,8 +928,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
             if (icell < ncells) {
                 fres(i, j,
                      rescor[ilev],
-                     cor[ilev].begin.x, cor[ilev].begin.y,
-                     cor[ilev].end.x-1, cor[ilev].end.y-1,
+                     cor[ilev].begin[0], cor[ilev].begin[1],
+                     cor[ilev].end[0]-1, cor[ilev].end[1]-1,
                      cor[ilev],
                      res[ilev],
                      acf[ilev], facx, facy);
@@ -936,14 +937,14 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
             HPMG_SYNCTHREADS;
 
             // interpolate residual to next level
-            lenx = cor[ilev+1].end.x - cor[ilev+1].begin.x - 2*corner_offset;
-            leny = cor[ilev+1].end.y - cor[ilev+1].begin.y - 2*corner_offset;
+            lenx = cor[ilev+1].end[0] - cor[ilev+1].begin[0] - 2*corner_offset;
+            leny = cor[ilev+1].end[1] - cor[ilev+1].begin[1] - 2*corner_offset;
             ncells = lenx*leny;
             if (icell < ncells) {
                 j = icell /   lenx;
                 i = icell - j*lenx;
-                j += cor[ilev+1].begin.y + corner_offset;
-                i += cor[ilev+1].begin.x + corner_offset;
+                j += cor[ilev+1].begin[1] + corner_offset;
+                i += cor[ilev+1].begin[0] + corner_offset;
                 if (corner_offset == 0) {
                     if (system_type == 1 || system_type == 2) {
                         restrict_cc(i,j,0,res[ilev+1],rescor[ilev]);
@@ -985,8 +986,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
                         fgs(i, j,
-                            cor[ilev].begin.x, cor[ilev].begin.y,
-                            cor[ilev].end.x-1, cor[ilev].end.y-1,
+                            cor[ilev].begin[0], cor[ilev].begin[1],
+                            cor[ilev].end[0]-1, cor[ilev].end[1]-1,
                             cor[ilev], res[ilev], acf[ilev],
                             facx, facy);
                     }
@@ -997,8 +998,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
 
         // interpolate solution from previous level to phi
         for (int ilev = nlevs-2; ilev >=0; --ilev) {
-            lenx = cor[ilev].end.x - cor[ilev].begin.x - 2*corner_offset;
-            leny = cor[ilev].end.y - cor[ilev].begin.y - 2*corner_offset;
+            lenx = cor[ilev].end[0] - cor[ilev].begin[0] - 2*corner_offset;
+            leny = cor[ilev].end[1] - cor[ilev].begin[1] - 2*corner_offset;
             ncells = lenx*leny;
             facx *= amrex::Real(4.);
             facy *= amrex::Real(4.);
@@ -1006,8 +1007,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
             if (icell < ncells) {
                 j = icell /   lenx;
                 i = icell - j*lenx;
-                j += cor[ilev].begin.y + corner_offset;
-                i += cor[ilev].begin.x + corner_offset;
+                j += cor[ilev].begin[1] + corner_offset;
+                i += cor[ilev].begin[0] + corner_offset;
                 if (corner_offset == 0) {
                     if (system_type == 1 || system_type == 2) {
                         interpadd_cc(i, j, 0, cor[ilev], cor[ilev+1]);
@@ -1031,8 +1032,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, amrex::Array4<amrex::Rea
                 if (icell < ncells) {
                     if ((i+j+is)%2 == 0) {
                         fgs(i, j,
-                            cor[ilev].begin.x, cor[ilev].begin.y,
-                            cor[ilev].end.x-1, cor[ilev].end.y-1,
+                            cor[ilev].begin[0], cor[ilev].begin[1],
+                            cor[ilev].end[0]-1, cor[ilev].end[1]-1,
                             cor[ilev], res[ilev], acf[ilev],
                             facx, facy);
                     }
@@ -1347,8 +1348,8 @@ MultiGrid::solve_doit (amrex::FArrayBox& a_sol, amrex::FArrayBox const& a_rhs,
         using ReduceTuple = typename decltype(reduce_data)::Type;
         const auto& array_res = m_rescor[0].const_array();
         const auto& array_rhs = m_rhs.const_array();
-        reduce_op.eval(valid_domain_box(m_domain[0]), m_num_comps, reduce_data,
-            [=] AMREX_GPU_DEVICE (int i, int j, int, int n) noexcept -> ReduceTuple
+        reduce_op.eval(to2D(valid_domain_box(m_domain[0])), m_num_comps, reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int n) noexcept -> ReduceTuple
             {
                 return {std::abs(array_res(i,j,0,n)), std::abs(array_rhs(i,j,0,n))};
             });
@@ -1642,8 +1643,8 @@ namespace {
 #endif
         {
             for (int ilev = 1; ilev < nlevels; ++ilev) {
-                const int lenx = acf[ilev].end.x - acf[ilev].begin.x;
-                const int leny = acf[ilev].end.y - acf[ilev].begin.y;
+                const int lenx = acf[ilev].end[0] - acf[ilev].begin[0];
+                const int leny = acf[ilev].end[1] - acf[ilev].begin[1];
                 const int ncells = lenx*leny;
 #if defined(AMREX_USE_DPCPP)
                 for (int icell = item.get_local_range(0)*item.get_group_linear_id()
@@ -1655,8 +1656,8 @@ namespace {
                      icell < ncells; icell += stride) {
                     int j = icell /   lenx;
                     int i = icell - j*lenx;
-                    j += acf[ilev].begin.y;
-                    i += acf[ilev].begin.x;
+                    j += acf[ilev].begin[1];
+                    i += acf[ilev].begin[0];
                     for (int n = 0; n < ncomp; ++n) {
                         f(i,j,n,acf[ilev],acf[ilev-1]);
                     }
@@ -1710,10 +1711,10 @@ MultiGrid::average_down_acoef ()
                                              amrex::Array4<amrex::Real> const& crse,
                                              amrex::Array4<amrex::Real> const& fine) noexcept
                         {
-                            if (i == crse.begin.x ||
-                                j == crse.begin.y ||
-                                i == crse.end.x-1 ||
-                                j == crse.end.y-1) {
+                            if (i == crse.begin[0] ||
+                                j == crse.begin[1] ||
+                                i == crse.end[0]-1 ||
+                                j == crse.end[1]-1) {
                                 crse(i,j,0,n) = amrex::Real(0.);
                             } else {
                                 restrict_nd(i,j,n,crse,fine);

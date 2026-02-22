@@ -50,7 +50,8 @@ using BeamTile = amrex::ParticleTile<
             BeamIdx::int_nattribs
         >,
         BeamIdx::real_nattribs,
-        BeamIdx::int_nattribs
+        BeamIdx::int_nattribs,
+        amrex::PolymorphicArenaAllocator
     >;
 
 using BeamTileInit = amrex::ParticleTile<

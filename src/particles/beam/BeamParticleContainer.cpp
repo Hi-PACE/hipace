@@ -106,14 +106,14 @@ BeamParticleContainer::ReadParameters ()
             getWithParserAlt(pp, "initial_spin", m_initial_spin, pp_alt);
         }
         queryWithParserAlt(pp, "spin_anom", m_spin_anom, pp_alt);
-        for (auto& beam_tile : m_slices) {
-            // Use 3 real and 0 int runtime components
-            beam_tile.define(3, 0);
-        }
     }
 
     getBeamInitSlice().define(m_do_spin_tracking ? 3 : 0, 0, nullptr, nullptr,
         m_initialize_on_cpu ? amrex::The_Pinned_Arena() : amrex::The_Arena());
+
+    for (auto& beam_tile : m_slices) {
+        beam_tile.define(m_do_spin_tracking ? 3 : 0, 0, nullptr, nullptr, amrex::The_Arena());
+    }
 }
 
 amrex::Real
@@ -450,8 +450,9 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
         auto& soa = ptile.GetStructOfArrays();
 
         {
-            typename BeamTile::SoA::IdCPU tmp_idcpu(np_total);
-
+            typename BeamTile::SoA::IdCPU tmp_idcpu;
+            tmp_idcpu.setArena(amrex::The_Arena());
+            tmp_idcpu.resize(np_total);
             auto src = soa.GetIdCPUData().data();
             uint64_t* dst = tmp_idcpu.data();
             amrex::ParallelFor(np_total,
@@ -464,7 +465,9 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
         }
 
         { // Create a scope for the temporary vector below
-            BeamTile::RealVector tmp_real(np_total);
+            BeamTile::RealVector tmp_real;
+            tmp_real.setArena(amrex::The_Arena());
+            tmp_real.resize(np_total);
             for (int comp = 0; comp < soa.NumRealComps(); ++comp) {
                 auto src = soa.GetRealData(comp).data();
                 amrex::ParticleReal* dst = tmp_real.data();
@@ -478,7 +481,9 @@ BeamParticleContainer::ReorderParticles (int beam_slice, int step, amrex::Geomet
             }
         }
 
-        BeamTile::IntVector tmp_int(np_total);
+        BeamTile::IntVector tmp_int;
+        tmp_int.setArena(amrex::The_Arena());
+        tmp_int.resize(np_total);
         for (int comp = 0; comp < soa.NumIntComps(); ++comp) {
             auto src = soa.GetIntData(comp).data();
             int* dst = tmp_int.data();

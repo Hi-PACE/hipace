@@ -47,7 +47,8 @@ PlasmaDensityAccessor::define_parser (const amrex::ParserExecutor<3>& exe) {
 
 void
 PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_ptr<float>& f_data,
-                                         std::shared_ptr<double>& d_data) {
+                                         std::shared_ptr<double>& d_data,
+                                         const std::string& density_mesh_name) {
 #ifdef HIPACE_USE_OPENPMD
 
     HIPACE_PROFILE("PlasmaParticleContainer::ReadDensityFile()");
@@ -56,11 +57,11 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
     auto iteration = series.iterations.begin()->second;
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        iteration.meshes.contains("density"),
-        "Could not find mesh 'density' in file " + path + "\n"
+        iteration.meshes.contains(density_mesh_name),
+        "Could not find mesh '" + density_mesh_name + "' in file " + path + "\n"
     );
 
-    auto mesh = iteration.meshes["density"];
+    auto mesh = iteration.meshes[density_mesh_name];
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         mesh.contains(openPMD::RecordComponent::SCALAR),
