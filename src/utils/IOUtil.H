@@ -56,6 +56,7 @@ namespace utils
 
         void compile ();
 
+        [[nodiscard]]
         bool isNonZero () const { return m_func_str != "0"; }
 
         /** \brief
@@ -64,6 +65,7 @@ namespace utils
          * \param[in] output_time physical time of the current step
          * \param[in] is_last_step if this is the last time step of the simulation
          */
+        [[nodiscard]]
         bool doDiagnostics (int output_step, amrex::Real output_time, bool is_last_step) const;
     };
 
