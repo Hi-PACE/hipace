@@ -587,7 +587,7 @@ Hipace::Evolve ()
         WriteDiagnostics(step, m_physical_time, is_last_step);
 
         m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
-        m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0],is_last_step);
+        m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
         m_multi_laser.InSituWriteToFile(step, m_physical_time, is_last_step);
 
@@ -1316,7 +1316,7 @@ Hipace::FillBeamDiagnostics (const int step, const amrex::Real time, const bool 
         m_openpmd_writer.CopyBeams(m_multi_beam, getDiagBeamNames());
     }
 #else
-    amrex::ignore_unused(step, is_last_step);
+    amrex::ignore_unused(step, time, is_last_step);
 #endif
 }
 
@@ -1334,7 +1334,7 @@ Hipace::WriteDiagnostics (const int step, const amrex::Real time, const bool is_
             getDiagBeamNames(), m_3D_geom);
     }
 #else
-    amrex::ignore_unused(step, is_last_step);
+    amrex::ignore_unused(step, time, is_last_step);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif
 }
