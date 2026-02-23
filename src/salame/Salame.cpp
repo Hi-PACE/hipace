@@ -311,7 +311,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                     const amrex::Real q_m_c_ratio = can_ionize ?
-                        ptd.idata(PlasmaIdx::ion_lev)[ip] * charge_mass_c_ratio
+                        amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]) * charge_mass_c_ratio
                         : charge_mass_c_ratio;
 
 #ifdef HIPACE_USE_AB5_PUSH

@@ -150,7 +150,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     }
 
     if (mesh.containsAttribute("angularFrequency")) {
-        m_init_lambda0 = 2.*MathConst::pi*PhysConstSI::c
+        m_init_lambda0 = amrex::Real(2.)*MathConst::pi*PhysConstSI::c
             / mesh.getAttribute("angularFrequency").get<double>();
     }
 
@@ -195,7 +195,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
         amrex::Abort("Incorrect axis labels in laser file, must be either tyx, zyx or tr");
     }
 
-    const int ndim = m_file_geometry.size();
+    const int ndim = static_cast<int>(m_file_geometry.size());
 
     for (int i=0; i<ndim; ++i) {
         const int rdim = ndim-1-i; // convert from C to F order

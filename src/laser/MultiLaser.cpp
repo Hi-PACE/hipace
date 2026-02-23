@@ -963,9 +963,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                                     compute_single_shape_factor<false, interp_order>(rmid, ir);
                                 val += (shape_r * shape_z) * laser_arr(ii, jj, 0);
                             for (int im=1; im<=laser_bigend[2]/2; im++) {
-                                val += (shape_r * shape_z) * std::cos(im*theta) *
+                                val += (shape_r * shape_z) * std::cos(amrex::Real(im)*theta) *
                                     laser_arr(ii, jj, 2*im-1);
-                                val += (shape_r * shape_z) * std::sin(im*theta) *
+                                val += (shape_r * shape_z) * std::sin(amrex::Real(im)*theta) *
                                     laser_arr(ii, jj, 2*im);
                             }}}
 
