@@ -909,9 +909,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     amrex::ParallelFor(to2D(bx),
                         [=] AMREX_GPU_DEVICE (int i, int j)
                         {
-                            const amrex::Real x = i * dx_arr[0] + poff_x;
-                            const amrex::Real y = j * dx_arr[1] + poff_y;
-                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+                            const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x;
+                            const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y;
+                            const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z;
 
                             const amrex::Real xmid = (x - laser_pos_offset[0]) * laser_dx_inv[0];
                             const amrex::Real ymid = (y - laser_pos_offset[1]) * laser_dx_inv[1];
@@ -941,9 +941,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     amrex::ParallelFor(to2D(bx),
                         [=] AMREX_GPU_DEVICE (int i, int j)
                         {
-                            const amrex::Real x = i * dx_arr[0] + poff_x;
-                            const amrex::Real y = j * dx_arr[1] + poff_y;
-                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+                            const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x;
+                            const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y;
+                            const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z;
 
                             const amrex::Real r = std::sqrt(x*x + y*y);
                             const amrex::Real theta = std::atan2(y, x);
@@ -981,9 +981,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 amrex::ParallelFor(to2D(bx),
                     [=] AMREX_GPU_DEVICE (int i, int j)
                     {
-                        const amrex::Real x = i * dx_arr[0] + poff_x;
-                        const amrex::Real y = j * dx_arr[1] + poff_y;
-                        const amrex::Real z = islice * dx_arr[2] + poff_z;
+                        const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x;
+                        const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y;
+                        const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z;
                         if (ilaser == 0) {
                             arr(i, j, comp) = 0._rt;
                             arr(i, j, comp + 1) = 0._rt;
@@ -1010,9 +1010,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 amrex::ParallelFor(to2D(bx),
                     [=] AMREX_GPU_DEVICE (int i, int j)
                     {
-                        const amrex::Real x = i * dx_arr[0] + poff_x - x0;
-                        const amrex::Real y = j * dx_arr[1] + poff_y - y0;
-                        const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
+                        const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x - x0;
+                        const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y - y0;
+                        const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z - z0;
                         // Coordinate rotation in yz plane for a laser propagating at an angle.
                         const amrex::Real yp = std::cos(propagation_angle_yz) * y
                             - std::sin( propagation_angle_yz ) * z;

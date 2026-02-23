@@ -465,13 +465,15 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
         const amrex::Real n_eff = amrex::Real(i+1) * std::sqrt(UH/h_ionization_energies[i]);
         const amrex::Real C2 = amrex::Real(std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
                          * std::tgamma(n_eff-l_eff)));
-        m_adk_power[i] = -amrex::Real(2. * n_eff - 1.);
+        m_adk_power[i] = -amrex::Real(2._rt * n_eff - 1._rt);
         const amrex::Real Uion = h_ionization_energies[i];
-        m_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2.*UH) )
-            * std::pow(2*std::pow((Uion/UH),3./2.)*Ea,2*n_eff - 1);
-        m_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
-        m_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
-        m_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
+        m_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2._rt * UH) )
+            * std::pow(2*std::pow((Uion/UH), amrex::Real(3./2.))*Ea, 2 * n_eff - 1);
+        m_adk_exp_prefactor[i] = amrex::Real(-2./3.) * std::pow( Uion/UH, amrex::Real(3./2.)) * Ea;
+        m_laser_adk_prefactor[i] = amrex::Real(3./MathConst::pi)
+            * std::pow(Uion/UH, amrex::Real(-3./2.)) / Ea;
+        m_laser_dp_prefactor[i] = std::sqrt(amrex::Real(3./2.)/Ea)
+            * std::pow(UH/Uion, amrex::Real(3./4.));
     }
 
     m_adk_power.copyToDeviceAsync();

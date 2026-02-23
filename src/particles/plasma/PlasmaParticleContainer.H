@@ -128,7 +128,7 @@ public:
     explicit PlasmaParticleContainer (std::string name) :
         amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs,
                                         amrex::PolymorphicArenaAllocator>(),
-        m_name(name)
+        m_name(std::move(name))
     {}
 
     /** Read parameters from the input file */
