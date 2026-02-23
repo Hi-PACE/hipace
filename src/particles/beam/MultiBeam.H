@@ -53,6 +53,7 @@ public:
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation
      * \param[in] islice current slice, on which diags are computed.
+     * \param[in] time physical time at the given step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
     void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step);
