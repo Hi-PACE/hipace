@@ -59,7 +59,8 @@ BeamParticleContainer::ReadParameters ()
     queryWithParser(pp, "do_z_push", m_do_z_push);
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
     queryWithParserAlt(pp, "do_radiation_reaction", m_do_radiation_reaction, pp_alt);
-    queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
+    queryWithParserAlt(pp, "insitu_period", m_insitu_period.m_func_str, pp_alt);
+    m_insitu_period.compile();
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     const bool set_file_prefix =
         queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
@@ -306,7 +307,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                              << "' will be initialized with no particles!\n";
     }
 
-    if (m_insitu_period > 0) {
+    if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
             Hipace::GetInstance().m_openpmd_writer.m_file_prefix,

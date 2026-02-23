@@ -46,7 +46,7 @@ struct FieldDiagnosticData
     bool m_has_field; /**< if there is field output to write */
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
-    int m_output_period = 0;
+    utils::DiagPeriod m_output_period = "0";
 };
 
 
@@ -80,9 +80,8 @@ public:
                          int output_step, int max_step,
                          amrex::Real output_time, amrex::Real max_time)
     {
-        return  (fd.m_nfields > 0) &&
-            utils::doDiagnostics(fd.m_output_period, output_step, max_step,
-                            output_time, max_time);
+        return (fd.m_nfields > 0) &&
+            fd.m_output_period.doDiagnostics(output_step, max_step, output_time, max_time);
     }
 
     /** \brief determines if any field diagnostic has any output on in this time step
@@ -114,8 +113,7 @@ public:
                         amrex::Real output_time, amrex::Real max_time) const
     {
         return m_output_beam_names.size() > 0 &&
-            utils::doDiagnostics(m_beam_output_period, output_step, max_step,
-                            output_time, max_time);
+            m_beam_output_period.doDiagnostics(output_step, max_step, output_time, max_time);
     }
 
     /** \brief determines if any field or beam diagnostic has any output on in this time step
@@ -173,7 +171,7 @@ private:
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
-    int m_beam_output_period = 0;
+    utils::DiagPeriod m_beam_output_period = "0";
     amrex::Vector<FieldDiagnosticData> m_field_data; /**< individual field diag data */
     bool m_initialized = false; /**< if this object is fully initialized */
 };

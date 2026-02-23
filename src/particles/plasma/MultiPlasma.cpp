@@ -183,8 +183,7 @@ MultiPlasma::InSituComputeDiags (int step, int islice, int max_step,
                                 amrex::Real physical_time, amrex::Real max_time)
 {
     for (auto& plasma : m_all_plasmas) {
-        if (utils::doDiagnostics(plasma.m_insitu_period, step,
-                            max_step, physical_time, max_time)) {
+        if (plasma.m_insitu_period.doDiagnostics(step, max_step, physical_time, max_time)) {
             plasma.InSituComputeDiags(islice);
         }
     }
@@ -195,8 +194,7 @@ MultiPlasma::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometr
                                 int max_step, amrex::Real max_time)
 {
     for (auto& plasma : m_all_plasmas) {
-        if (utils::doDiagnostics(plasma.m_insitu_period, step,
-                            max_step, time, max_time)) {
+        if (plasma.m_insitu_period.doDiagnostics(step, max_step, time, max_time)) {
             plasma.InSituWriteToFile(step, time, geom);
         }
     }

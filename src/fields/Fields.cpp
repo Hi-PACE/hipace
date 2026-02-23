@@ -34,7 +34,8 @@ Fields::ReadParameters (const int nlev)
 
     amrex::ParmParse ppf("fields");
     DeprecatedInput("fields", "do_dirichlet_poisson", "poisson_solver", "");
-    queryWithParser(ppf, "insitu_period", m_insitu_period);
+    queryWithParser(ppf, "insitu_period", m_insitu_period.m_func_str);
+    m_insitu_period.compile();
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     const bool set_file_prefix = queryWithParser(ppf, "insitu_file_prefix", m_insitu_file_prefix);
     if (set_file_prefix) {
@@ -234,7 +235,7 @@ Fields::AllocData (
             "'FFTDirichletQuick', 'FFTPeriodic' or 'MGDirichlet'");
     }
 
-    if (lev == 0 && m_insitu_period > 0) {
+    if (lev == 0 && m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
             Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
@@ -1353,7 +1354,7 @@ void
 Fields::InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
                             int max_step, amrex::Real max_time)
 {
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!m_insitu_period.doDiagnostics(step, max_step, time, max_time)) return;
     HIPACE_PROFILE("Fields::InSituComputeDiags()");
 
     using namespace amrex::literals;
@@ -1414,7 +1415,7 @@ void
 Fields::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
                            int max_step, amrex::Real max_time)
 {
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!m_insitu_period.doDiagnostics(step, max_step, time, max_time)) return;
     HIPACE_PROFILE("Fields::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD

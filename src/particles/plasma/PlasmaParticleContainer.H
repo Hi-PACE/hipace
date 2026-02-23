@@ -12,6 +12,7 @@
 #include "fields/Fields.H"
 #include "utils/Parser.H"
 #include "utils/GPUUtil.H"
+#include "utils/IOUtil.H"
 #include "particles/profiles/GetInitialDensity.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
@@ -304,7 +305,7 @@ public:
 
     /** How often the insitu plasma diagnostics should be computed and written
      * Default is 0, meaning no output */
-    int m_insitu_period {0};
+    utils::DiagPeriod m_insitu_period {"0"};
 private:
     std::string m_name; /**< name of the species */
     int m_nslices; /**< number of z slices of the domain */
