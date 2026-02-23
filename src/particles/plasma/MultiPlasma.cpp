@@ -179,10 +179,10 @@ MultiPlasma::TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometr
 }
 
 void
-MultiPlasma::InSituComputeDiags (int step, int islice, bool is_last_step)
+MultiPlasma::InSituComputeDiags (int step, int islice, amrex::Real physical_time, bool is_last_step)
 {
     for (auto& plasma : m_all_plasmas) {
-        if (utils::doDiagnostics(plasma.m_insitu_period, step, is_last_step)) {
+        if (plasma.m_insitu_period.doDiagnostics(step, physical_time, is_last_step)) {
             plasma.InSituComputeDiags(islice);
         }
     }
@@ -193,7 +193,7 @@ MultiPlasma::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometr
                                 bool is_last_step)
 {
     for (auto& plasma : m_all_plasmas) {
-        if (utils::doDiagnostics(plasma.m_insitu_period, step, is_last_step)) {
+        if (plasma.m_insitu_period.doDiagnostics(step, time, is_last_step)) {
             plasma.InSituWriteToFile(step, time, geom);
         }
     }

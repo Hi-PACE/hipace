@@ -92,10 +92,10 @@ MultiBeam::TagByLevel (
 }
 
 void
-MultiBeam::InSituComputeDiags (int step, int islice, bool is_last_step)
+MultiBeam::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step)
 {
     for (auto& beam : m_all_beams) {
-        if (utils::doDiagnostics(beam.m_insitu_period, step, is_last_step)) {
+        if (beam.m_insitu_period.doDiagnostics(step, time, is_last_step)) {
             beam.InSituComputeDiags(islice);
         }
     }
@@ -106,7 +106,7 @@ MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry&
                               bool is_last_step)
 {
     for (auto& beam : m_all_beams) {
-        if (utils::doDiagnostics(beam.m_insitu_period, step, is_last_step)) {
+        if (beam.m_insitu_period.doDiagnostics(step, time, is_last_step)) {
             beam.InSituWriteToFile(step, time, geom);
         }
     }

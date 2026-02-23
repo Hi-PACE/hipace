@@ -16,15 +16,16 @@
 #include "utils/Parser.H"
 #include <AMReX_MultiFab.H>
 
+#include <complex>
+
 class Laser
 {
 public:
     /** \brief Read in a laser from an openPMD file
      *\param[in] laser_geom_3D 3D laser geometry for level 0
      */
-    void GetEnvelopeFromFileHelper (amrex::Geometry laser_geom_3D);
-    template<typename input_type>
     void GetEnvelopeFromFile (amrex::Geometry laser_geom_3D);
+
     Laser (std::string name);
 
     /** Read parameters from the input file */
@@ -33,6 +34,11 @@ public:
     std::string m_name {""};
     /** The way to initialize a laser (from_file/gaussian/parser)*/
     std::string m_laser_init_type = "gaussian";
+    /** central wavelength of the laser */
+    amrex::Real m_init_lambda0 {0.};
+
+    // gaussian
+
     amrex::Real m_a0 {0.}; /**< Laser peak normalized amplitude */
     amrex::Real m_w0 {0.}; /**< Laser waist */
     amrex::Real m_CEP {0.}; /**< Laser carrier-envelope phase (CEP) */
@@ -48,6 +54,9 @@ public:
     amrex::Real m_focal_distance {0.};
     /** Average position of the Gaussian laser pulse */
     amrex::RealVect m_position_mean {0., 0., 0.};
+
+    // parser
+
     /** Custom profile*/
     amrex::Parser m_parser_lr;/**< owns data for profile_real_str */
     amrex::Parser m_parser_li;/**< owns data for profile_imag_str */
@@ -55,20 +64,28 @@ public:
     amrex::ParserExecutor<3> m_profile_real;
     /** stores the output function of makeFunctionWithParser for profile_imag_str */
     amrex::ParserExecutor<3> m_profile_imag;
-    /** if the lasers are initialized from openPMD file */
-    bool m_laser_from_file = false;
-    /** full 3D laser data stored on the host */
-    amrex::FArrayBox m_F_input_file;
+
+    // from_file
+
+    /** full fp32 laser data from the openPMD file */
+    std::shared_ptr<std::complex<float>> m_cf_laser_data;
+    /** full fp64 laser data from the openPMD file */
+    std::shared_ptr<std::complex<double>> m_cd_laser_data;
+    amrex::GpuComplex<float>* m_cf_ptr = nullptr; /**< pointer to fp32 laser data */
+    amrex::GpuComplex<double>* m_cd_ptr = nullptr; /**< pointer to fp64 laser data */
+    amrex::GpuArray<std::uint64_t, 2> m_strides {}; /**< strides of laser data */
+    amrex::IntVect m_bigend; /**< upper bound laser data */
+    amrex::RealVect m_pos_offset; /**< position offset */
+    amrex::RealVect m_dx_inv; /**< inverse cell size */
+    amrex::Real m_unitSI = 1; /**< SI conversion factor */
     /** path to input openPMD file */
     std::string m_input_file_path;
     /** name of the openPMD species in the file */
     std::string m_file_envelope_name = "laserEnvelope";
     /** index of the iteration in the openPMD file */
     int m_file_num_iteration = 0;
-    /** Geometry of the laser file, 'rt' or 'xyt' */
+    /** Geometry of the laser file, 'rt', 'xyt' or 'xyz' */
     std::string m_file_geometry = "";
-    /** central wavelength of the laser */
-    amrex::Real m_init_lambda0 {0.};
 };
 
 #endif // LASER_H_
