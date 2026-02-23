@@ -574,7 +574,7 @@ Hipace::Evolve ()
         // need correct physical time for this
         const bool is_first_step = step == m_initial_step;
         const bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
-        InitDiagnostics(step, is_last_step);
+        InitDiagnostics(step, m_physical_time, is_last_step);
 
         // Solve slices
         for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
@@ -584,7 +584,7 @@ Hipace::Evolve ()
         m_adaptive_time_step.CalculateFromMinUz(
             m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
 
-        WriteDiagnostics(step, is_last_step);
+        WriteDiagnostics(step, m_physical_time, is_last_step);
 
         m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0],is_last_step);
@@ -695,7 +695,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
 
     // has to be after aabs writing
-    m_multi_plasma.InSituComputeDiags(step, islice, is_last_step);
+    m_multi_plasma.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
     // deposit temperature
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -785,14 +785,14 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     }
 
     // get beam diagnostics after SALAME but before beam push
-    m_multi_beam.InSituComputeDiags(step, islice, is_last_step);
-    FillBeamDiagnostics(step, is_last_step);
+    m_multi_beam.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
+    FillBeamDiagnostics(step, m_physical_time, is_last_step);
 
     // get field insitu diagnostics after all fields are computed & SALAME
-    m_fields.InSituComputeDiags(step, islice, m_3D_geom[0], is_last_step);
+    m_fields.InSituComputeDiags(step, islice, m_3D_geom[0], m_physical_time, is_last_step);
 
     // get laser insitu diagnostics
-    m_multi_laser.InSituComputeDiags(step, islice, is_last_step);
+    m_multi_laser.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
     // copy fields (and laser) to diagnostic array
     FillFieldDiagnostics(current_N_level, islice);
@@ -1284,18 +1284,18 @@ Hipace::doCoulombCollision ()
 }
 
 void
-Hipace::InitDiagnostics (const int step, const bool is_last_step)
+Hipace::InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
     // need correct physical time for this check
-    if (m_diags.hasAnyOutput(step, is_last_step)) {
+    if (m_diags.hasAnyOutput(step, time, is_last_step)) {
         m_openpmd_writer.InitDiagnostics();
     }
-    if (m_diags.hasBeamOutput(step, is_last_step)) {
+    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
         m_openpmd_writer.InitBeamData(m_multi_beam, getDiagBeamNames());
     }
 #endif
-    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(), step, is_last_step);
+    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(), step, time, is_last_step);
 }
 
 void
@@ -1309,10 +1309,10 @@ Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
 }
 
 void
-Hipace::FillBeamDiagnostics (const int step, const bool is_last_step)
+Hipace::FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
-    if (m_diags.hasBeamOutput(step, is_last_step)) {
+    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
         m_openpmd_writer.CopyBeams(m_multi_beam, getDiagBeamNames());
     }
 #else
@@ -1321,15 +1321,15 @@ Hipace::FillBeamDiagnostics (const int step, const bool is_last_step)
 }
 
 void
-Hipace::WriteDiagnostics (const int step, const bool is_last_step)
+Hipace::WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
-    if (m_diags.hasAnyFieldOutput(step, is_last_step)) {
+    if (m_diags.hasAnyFieldOutput(step, time, is_last_step)) {
         m_openpmd_writer.WriteFieldDiagnostics(m_diags.getFieldData(),
             m_multi_laser, m_physical_time, step);
     }
 
-    if (m_diags.hasBeamOutput(step, is_last_step)) {
+    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
         m_openpmd_writer.WriteBeamDiagnostics(m_multi_beam, m_physical_time, step,
             getDiagBeamNames(), m_3D_geom);
     }

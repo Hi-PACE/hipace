@@ -55,11 +55,11 @@ public:
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituComputeDiags (int step, int islice, bool is_last_step);
+    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step);
     /** Write reduced beam diagnostics to file
      * \param[in] step time step of simulation
-     * \param[in] time physical time at the given step
      * \param[in] geom Simulation geometry
+     * \param[in] time physical time at the given step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,

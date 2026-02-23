@@ -275,10 +275,11 @@ public:
      * \param[in] step current time step
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] geom3D Geometry of the problem
+     * \param[in] time physical time at the given step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
     void InSituComputeDiags (int step, int islice, const amrex::Geometry& geom3D,
-                             bool is_last_step);
+                             amrex::Real time, bool is_last_step);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step

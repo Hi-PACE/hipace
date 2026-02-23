@@ -179,10 +179,10 @@ MultiPlasma::TagByLevel (const int current_N_level, amrex::Vector<amrex::Geometr
 }
 
 void
-MultiPlasma::InSituComputeDiags (int step, int islice, amrex::Real physical_time, bool is_last_step)
+MultiPlasma::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step)
 {
     for (auto& plasma : m_all_plasmas) {
-        if (plasma.m_insitu_period.doDiagnostics(step, physical_time, is_last_step)) {
+        if (plasma.m_insitu_period.doDiagnostics(step, time, is_last_step)) {
             plasma.InSituComputeDiags(islice);
         }
     }

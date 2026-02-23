@@ -146,9 +146,10 @@ public:
     /** Compute in-situ laser diagnostics of current slice, store in member variable
      * \param[in] step current time step
      * \param[in] islice current slice, on which diags are computed.
+     * \param[in] time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituComputeDiags (int step, int islice, bool is_last_step);
+    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step

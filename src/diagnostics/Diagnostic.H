@@ -75,7 +75,8 @@ public:
      * \param[in] output_time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
-    static bool hasFieldOutput (const FieldDiagnosticData& fd, int output_step, amrex::Real output_time, bool is_last_step)
+    static bool hasFieldOutput (const FieldDiagnosticData& fd, int output_step,
+                                amrex::Real output_time, bool is_last_step)
     {
         return (fd.m_nfields > 0) &&
             fd.m_output_period.doDiagnostics(output_step, output_time, is_last_step);
@@ -84,13 +85,14 @@ public:
     /** \brief determines if any field diagnostic has any output on in this time step
      *
      * \param[in] output_step current step index
+     * \param[in] output_time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
     [[nodiscard]] bool
-    hasAnyFieldOutput (int output_step, bool is_last_step) const
+    hasAnyFieldOutput (int output_step, amrex::Real output_time, bool is_last_step) const
     {
         for (const auto& fd : m_field_data) {
-            if (hasFieldOutput(fd, output_step, is_last_step)) return true;
+            if (hasFieldOutput(fd, output_step, output_time, is_last_step)) return true;
         }
         return false;
     }
@@ -111,13 +113,14 @@ public:
     /** \brief determines if any field or beam diagnostic has any output on in this time step
      *
      * \param[in] output_step current step index
+     * \param[in] output_time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
     [[nodiscard]] bool
-    hasAnyOutput (int output_step, bool is_last_step) const
+    hasAnyOutput (int output_step, amrex::Real output_time, bool is_last_step) const
     {
-        return hasAnyFieldOutput(output_step, is_last_step) ||
-               hasBeamOutput(output_step, is_last_step);
+        return hasAnyFieldOutput(output_step, output_time, is_last_step) ||
+               hasBeamOutput(output_step, output_time, is_last_step);
     }
 
     /** \brief determines if rho is requested as a diagnostic
@@ -148,10 +151,12 @@ public:
      * \param[in] field_geom geometry of the full simulation domain for all field MR levels
      * \param[in] laser_geom geometry of the full simulation domain for the laser
      * \param[in] output_step current step index
+     * \param[in] output_time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
     void ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
-                         amrex::Geometry const& laser_geom, int output_step, bool is_last_step);
+                         amrex::Geometry const& laser_geom, int output_step,
+                         amrex::Real output_time, bool is_last_step);
 
 private:
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
