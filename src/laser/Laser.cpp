@@ -150,8 +150,8 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
     }
 
     if (mesh.containsAttribute("angularFrequency")) {
-        m_init_lambda0 = amrex::Real(2.)*MathConst::pi*PhysConstSI::c
-            / mesh.getAttribute("angularFrequency").get<double>();
+        m_init_lambda0 = amrex::Real(2.*MathConst::pi*PhysConstSI::c
+            / mesh.getAttribute("angularFrequency").get<double>());
     }
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
