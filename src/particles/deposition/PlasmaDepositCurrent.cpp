@@ -24,7 +24,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
-                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev)
+                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev = -1)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -183,12 +183,15 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const bool dep_rho_ion_levels = deposit_rho_ion_levels;
                 const int ion_lev_local = ion_lev;
                 if constexpr (can_ionize) {
-                    const int p_ion_lev= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    if (dep_rho_ion_levels && ion_lev_local != p_ion_lev) return;
-                    q_invvol *= p_ion_lev;
-                    q_mu0_mass_ratio *=  p_ion_lev;
-                    laser_norm_ion *= p_ion_lev *  p_ion_lev;
+                    const int p_ion_lev = ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    if (dep_rho_ion_levels && ion_lev_local >= 0 && ion_lev_local != p_ion_lev) return;
+                    if (ion_lev_local < 0) {
+                        q_invvol *= p_ion_lev;
+                        q_mu0_mass_ratio *= p_ion_lev;
+                        laser_norm_ion *= p_ion_lev * p_ion_lev;
+                    }
                 }
+
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
