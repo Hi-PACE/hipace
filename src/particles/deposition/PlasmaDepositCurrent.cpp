@@ -24,7 +24,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
                 const bool deposit_chi, const bool deposit_rhomjz,
-                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev = -1)
+                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
     using namespace amrex::literals;
