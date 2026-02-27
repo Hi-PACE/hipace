@@ -574,8 +574,6 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
     }
     m_datanodes[slice].m_progress = comm_progress::in_use;
     m_datanodes[slice].m_metadata_progress = comm_progress::in_use;
-
-    std::stringstream ss;
 }
 
 void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice,
