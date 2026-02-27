@@ -960,8 +960,8 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, Array3<amrex::Real> cons
                     if (system_type == 1) {
                         restrict_nd(i,j,n,res[ilev+1],rescor[ilev]);
                     } else if (system_type == 2) {
-                        restrict_cc(i,j,0,res[ilev+1],rescor[ilev]);
-                        restrict_cc(i,j,1,res[ilev+1],rescor[ilev]);
+                        restrict_nd(i,j,0,res[ilev+1],rescor[ilev]);
+                        restrict_nd(i,j,1,res[ilev+1],rescor[ilev]);
                     } else {
                         restrict_nd(i,j,0,res[ilev+1],rescor[ilev]);
                     }

@@ -574,6 +574,18 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
     }
     m_datanodes[slice].m_progress = comm_progress::in_use;
     m_datanodes[slice].m_metadata_progress = comm_progress::in_use;
+
+    std::stringstream ss;
+
+    ss << "STATEDATA " << amrex::second() << " " << amrex::ParallelDescriptor::MyProc() << " ";
+    for (int i = m_datanodes.size()-1; i>=0; --i) {
+        if (i != m_datanodes.size()-1) {
+            ss << " ";
+        }
+        ss << m_datanodes[i].m_progress;
+    }
+    ss << "\n";
+    amrex::AllPrint() << ss.str();
 }
 
 void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice,
@@ -619,6 +631,18 @@ void MultiBuffer::put_data (int slice, MultiBeam& beams, MultiLaser& laser, int 
             m_datanodes[slice].m_progress = comm_progress::ready_to_send;
         }
     }
+
+    std::stringstream ss;
+
+    ss << "STATEDATA " << amrex::second() << " " << amrex::ParallelDescriptor::MyProc() << " ";
+    for (int i = m_datanodes.size()-1; i>=0; --i) {
+        if (i != m_datanodes.size()-1) {
+            ss << " ";
+        }
+        ss << m_datanodes[i].m_progress;
+    }
+    ss << "\n";
+    amrex::AllPrint() << ss.str();
 
     async_progress(slice);
 }
