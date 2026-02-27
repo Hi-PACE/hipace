@@ -12,6 +12,7 @@
 #include <AMReX_IntVect.H>
 #include <AMReX_RealVect.H>
 #include <AMReX_MultiFab.H>
+#include <AMReX_Parser.H>
 
 #include <cstdint>
 #include <iostream>
@@ -46,16 +47,27 @@ namespace utils
     std::vector<double>
     getReversedVec ( const amrex::Real* v );
 
-    /** \brief
-     * returns whether output should be writen to file
-     * \param[in] output_period period of the output
-     * \param[in] output_step current step
-     * \param[in] max_step maximum step of simulation
-     * \param[in] output_time physical time of the current step
-     * \param[in] max_time maximum simulation time
-     */
-     bool doDiagnostics (int output_period, int output_step, int max_step,
-                    amrex::Real output_time, amrex::Real max_time);
+    struct DiagPeriod {
+        std::string m_func_str;
+        amrex::Parser m_parser;
+        amrex::ParserExecutor<2> m_exe;
+
+        DiagPeriod (const char * str) : m_func_str{str} {}
+
+        void compile ();
+
+        bool isNonZero () const { return m_func_str != "0"; }
+
+        /** \brief
+         * returns whether output should be writen to file
+         * \param[in] output_step current step
+         * \param[in] max_step maximum step of simulation
+         * \param[in] output_time physical time of the current step
+         * \param[in] max_time maximum simulation time
+         */
+        bool doDiagnostics (int output_step, int max_step,
+                            amrex::Real output_time, amrex::Real max_time) const;
+    };
 
     struct format_time {
         double seconds = 0;

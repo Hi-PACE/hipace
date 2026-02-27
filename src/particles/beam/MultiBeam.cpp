@@ -96,7 +96,7 @@ MultiBeam::InSituComputeDiags (int step, int islice,
                                amrex::Real max_time)
 {
     for (auto& beam : m_all_beams) {
-        if (utils::doDiagnostics(beam.m_insitu_period, step, max_step, physical_time, max_time)) {
+        if (beam.m_insitu_period.doDiagnostics(step, max_step, physical_time, max_time)) {
             beam.InSituComputeDiags(islice);
         }
     }
@@ -107,7 +107,7 @@ MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry&
                               int max_step, amrex::Real max_time)
 {
     for (auto& beam : m_all_beams) {
-        if (utils::doDiagnostics(beam.m_insitu_period, step, max_step, time, max_time)) {
+        if (beam.m_insitu_period.doDiagnostics(step, max_step, time, max_time)) {
             beam.InSituWriteToFile(step, time, geom);
         }
     }

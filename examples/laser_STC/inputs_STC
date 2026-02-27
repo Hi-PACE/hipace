@@ -13,7 +13,7 @@ geometry.prob_hi     =  10e-6  10e-6  90e-6
 
 lasers.names = laser
 lasers.lambda0 = 800e-9
-lasers.solver_type = fft
+lasers.solver_type = multigrid
 laser.a0 = 10
 laser.position_mean = 0. 0. 0
 laser.w0 = 5e-6

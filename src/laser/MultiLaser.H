@@ -13,6 +13,7 @@
 #include "Laser.H"
 #include "mg_solver/HpMultiGrid.H"
 #include "fields/fft_poisson_solver/fft/AnyFFT.H"
+#include "utils/IOUtil.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -244,7 +245,7 @@ private:
     static constexpr int m_insitu_ncp = 1;
     /** How often the insitu laser diagnostics should be computed and written
      * Default is 0, meaning no output */
-    int m_insitu_period {0};
+    utils::DiagPeriod m_insitu_period {"0"};
     /** All per-slice real laser properties */
     amrex::Vector<amrex::Real> m_insitu_rdata;
     /** Sum of all per-slice real laser properties */
