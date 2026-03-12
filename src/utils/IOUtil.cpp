@@ -6,6 +6,7 @@
  * License: BSD-3-Clause-LBNL
  */
 #include "IOUtil.H"
+#include "Parser.H"
 
 #include <AMReX_IndexType.H>
 #include <AMReX_IOFormat.H>
@@ -71,10 +72,16 @@ utils::getReversedVec ( const amrex::Real* v )
   return u;
 }
 
+void
+utils::DiagPeriod::compile () {
+    m_exe = makeFunctionWithParser<2>(m_func_str, m_parser, {"current_step", "current_time"});
+}
+
 bool
-utils::doDiagnostics (int output_period, int output_step, int max_step,
-               amrex::Real output_time, amrex::Real max_time)
+utils::DiagPeriod::doDiagnostics (int output_step, int max_step,
+                                  amrex::Real output_time, amrex::Real max_time) const
 {
+    const auto output_period = static_cast<amrex::Long>(m_exe(output_step, output_time));
     return output_period > 0 && (
         (output_time == max_time) ||
         (output_step == max_step) ||
