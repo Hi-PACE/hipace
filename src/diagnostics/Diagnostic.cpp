@@ -413,7 +413,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
             "Box for diagnostic object '" + fd.m_diag_name + "' is empty. "
             "Make sure that it intersects with the simulation domain!\n"
             "Simulation: " + amrex::ToString(sim_domain) + "\n"
-            "Diagnositc: " + amrex::ToString(cut_domain) + "\n"
+            "Diagnostic: " + amrex::ToString(cut_domain) + "\n"
             "Intersection: " + amrex::ToString(domain)
         );
 
