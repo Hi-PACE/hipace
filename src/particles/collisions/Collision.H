@@ -54,6 +54,34 @@ public:
      * \param[in] lev MR level
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
+     * \param[in] collision_function return if a pair of particles collides
+     * \param[in] ionizaiton_function initialize product particle
+     **/
+    template <class F, class G>
+    void doCollisionImpSameSpecies (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     * \param[in] collision_function return if a pair of particles collides
+     * \param[in] ionizaiton_function initialize product particle
+     **/
+    template <class F, class G>
+    void doCollisionImpDifferentSpecies (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
      **/
     void doCollisionA (
         int lev, const amrex::Geometry& geom,

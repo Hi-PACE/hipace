@@ -110,7 +110,208 @@ Collision::doCollisionImp (
         F const& collision_function,
         G const& ionizaiton_function)
 {
-    // assume the two species are different for now
+    if (m_inout_species1_name == m_inout_species2_name) {
+        doCollisionImpSameSpecies(lev, geom, multi_plasma,
+                                  collision_function,
+                                  ionizaiton_function);
+    } else {
+        doCollisionImpDifferentSpecies(lev, geom, multi_plasma,
+                                       collision_function,
+                                       ionizaiton_function);
+    }
+}
+
+template <class F, class G>
+void
+Collision::doCollisionImpSameSpecies (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function)
+{
+    auto& species1 = multi_plasma.GetPlasma(m_inout_species1_name);
+
+    for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
+        amrex::removeInvalidParticles(species1.ParticlesAt(0, pti));
+    }
+
+    PlasmaBins bins1 = findParticlesInEachTile(geom.Domain(), 1, species1, geom);
+
+    auto offset1 = bins1.offsetsPtr();
+    auto perm1 = bins1.permutationPtr();
+
+    const int num_cells = bins1.numBins();
+
+    amrex::Gpu::DeviceVector<int> num_ind_pairs(num_cells, 0);
+    auto p_num_ind_pairs = num_ind_pairs.dataPtr();
+
+    const int total_ind_pairs = amrex::Scan::PrefixSum<int>(num_cells,
+        [=] AMREX_GPU_DEVICE (int i) {
+            int n = offset1[i+1] - offset1[i];
+            return n / 2;
+        },
+        [=] AMREX_GPU_DEVICE (int i, int s) {
+            p_num_ind_pairs[i] = s;
+        },
+        amrex::Scan::Type::exclusive, amrex::Scan::retSum
+    );
+
+    amrex::ParallelForRNG(num_cells,
+        [=] AMREX_GPU_DEVICE (int i, amrex::RandomEngine const& engine) {
+            ShuffleFisherYates(perm1, offset1[i], offset1[i+1], engine);
+        }
+    );
+
+    for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
+
+        auto& ptile1 = species1.ParticlesAt(0, pti);
+
+        auto ptd1 = ptile1.getParticleTileData();
+
+        const int np1 = ptile1.numParticles();
+
+        amrex::Gpu::DeviceVector<int> flag1;
+
+        if (m_has_collision_product) {
+            flag1.resize(np1, 0);
+        }
+
+        auto p_flag1 = flag1.dataPtr();
+
+        amrex::Gpu::DeviceVector<amrex::Real> cell_weight1(num_cells);
+        amrex::Gpu::DeviceVector<amrex::Real> cell_weight2(num_cells);
+        auto p_cell_weight1 = cell_weight1.dataPtr();
+        auto p_cell_weight2 = cell_weight2.dataPtr();
+
+        amrex::ParallelFor(2*num_cells,
+            [=] AMREX_GPU_DEVICE (int icell) {
+
+                if (icell < num_cells) {
+                    auto start = offset1[icell];
+                    auto stop = offset1[icell+1];
+                    auto mid = start + (stop - start + 1) / 2;
+                    amrex::Real loc_cell_weight1 = 0;
+                    for (int idx1 = start; idx1 < mid; ++idx1) {
+                        loc_cell_weight1 += ptd1.rdata(PlasmaIdx::w)[perm1[idx1]];
+                    }
+                    p_cell_weight1[icell] = loc_cell_weight1;
+                } else {
+                    icell -= num_cells;
+                    auto start = offset1[icell];
+                    auto stop = offset1[icell+1];
+                    auto mid = start + (stop - start + 1) / 2;
+                    amrex::Real loc_cell_weight2 = 0;
+                    for (int idx2 = mid; idx2 < stop; ++idx2) {
+                        loc_cell_weight2 += ptd1.rdata(PlasmaIdx::w)[perm1[idx2]];
+                    }
+                    p_cell_weight2[icell] = loc_cell_weight2;
+                }
+            }
+        );
+
+        amrex::ParallelForRNG(total_ind_pairs,
+            [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
+                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
+
+                const int offset1_start = offset1[icell];
+                const int offset1_stop = offset1[icell+1];
+                const int mid = offset1_start + (offset1_stop - offset1_start + 1) / 2;
+
+                const int icoll = ipair - p_num_ind_pairs[icell];
+
+                const int n1 = mid - offset1_start;
+                const int n2 = offset1_stop - mid;
+
+                const amrex::Real loc_cell_weight1 = p_cell_weight1[icell];
+                const amrex::Real loc_cell_weight2 = p_cell_weight2[icell];
+
+                int idx1 = icoll;
+                int idx2 = icoll;
+                while (idx1 < n1) {
+                    const int j1 = perm1[offset1_start + idx1];
+                    const int j2 = perm1[mid + idx2];
+
+                    const bool make_new_particle = collision_function(
+                        ptd1, j1, ptd1, j2, loc_cell_weight1, loc_cell_weight2, engine
+                    );
+
+                    idx1 += n2;
+                    if (make_new_particle) {
+                        p_flag1[j1] = 1;
+                    }
+                }
+            }
+        );
+
+        if (!m_has_collision_product) {
+            continue;
+        }
+
+        const int num_new_particles = amrex::Scan::PrefixSum<int>(np1,
+            [=] AMREX_GPU_DEVICE (int i) {
+                return p_flag1[i];
+            },
+            [=] AMREX_GPU_DEVICE (int i, int s) {
+                p_flag1[i] = p_flag1[i] == 0 ? -1 : s;
+            },
+            amrex::Scan::Type::exclusive, amrex::Scan::retSum
+        );
+
+        auto& species3 = multi_plasma.GetPlasma(m_out_species3_name);
+        auto& ptile3 = species3.ParticlesAt(0, pti);
+        int old_size3 = ptile3.size();
+        ptile3.resize(old_size3 + num_new_particles);
+
+        // get new ptd after resize in case species3 is the same as species1 or 2
+        ptd1 = ptile1.getParticleTileData();
+        auto ptd3 = ptile3.getParticleTileData();
+
+        amrex::ParallelForRNG(total_ind_pairs,
+            [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
+                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
+
+                const int offset1_start = offset1[icell];
+                const int offset1_stop = offset1[icell+1];
+                const int mid = offset1_start + (offset1_stop - offset1_start + 1) / 2;
+
+                const int icoll = ipair - p_num_ind_pairs[icell];
+
+                const int n1 = mid - offset1_start;
+                const int n2 = offset1_stop - mid;
+
+                int idx1 = icoll;
+                int idx2 = icoll;
+                while (idx1 < n1) {
+                    const int j1 = perm1[offset1_start + idx1];
+                    const int j2 = perm1[mid + idx2];
+                    const int new_part_idx = p_flag1[j1];
+
+                    if (new_part_idx >= 0) {
+                        ionizaiton_function(
+                            ptd1, j1,
+                            ptd1, j2,
+                            ptd3, old_size3 + new_part_idx,
+                            engine
+                        );
+                    }
+
+                    idx1 += n2;
+                }
+            }
+        );
+
+        amrex::Gpu::streamSynchronize();
+    }
+}
+
+template <class F, class G>
+void
+Collision::doCollisionImpDifferentSpecies (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function)
+{
     auto& species1 = multi_plasma.GetPlasma(m_inout_species1_name);
     auto& species2 = multi_plasma.GetPlasma(m_inout_species2_name);
 
@@ -231,12 +432,12 @@ Collision::doCollisionImp (
                     if (n2 < n1) {
                         idx1 += n2;
                         if (make_new_particle) {
-                            p_flag2[j2] = 1;
+                            p_flag1[j1] = 1;
                         }
                     } else {
                         idx2 += n1;
                         if (make_new_particle) {
-                            p_flag1[j1] = 1;
+                            p_flag2[j2] = 1;
                         }
                     }
                 }
@@ -272,6 +473,9 @@ Collision::doCollisionImp (
         int old_size3 = ptile3.size();
         ptile3.resize(old_size3 + num_new_particles);
 
+        // get new ptd after resize in case species3 is the same as species1 or 2
+        ptd1 = ptile1.getParticleTileData();
+        ptd2 = ptile2.getParticleTileData();
         auto ptd3 = ptile3.getParticleTileData();
 
         amrex::ParallelForRNG(total_ind_pairs,
@@ -293,7 +497,7 @@ Collision::doCollisionImp (
                 while (idx1 < n1 && idx2 < n2) {
                     const int j1 = perm1[offset1_start + idx1];
                     const int j2 = perm2[offset2_start + idx2];
-                    const int new_part_idx = n2 < n1 ? p_flag2[j2] : p_flag1[j1];
+                    const int new_part_idx = n2 < n1 ? p_flag1[j2] : p_flag2[j1];
 
                     if (new_part_idx >= 0) {
                         ionizaiton_function(
