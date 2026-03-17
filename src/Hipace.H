@@ -242,6 +242,8 @@ public:
     inline static bool m_deposit_rho_individual = false;
     /** Whether to deposit temperature for every individual plasma for diagnostics */
     inline static bool m_deposit_temp_individual = false;
+    /** Order of the temperature deposition shape factor */
+    inline static int m_temperature_depos_order = 2;
     /** Whether to interpolate the neutralizing background to MR levels 1 and 2 instead of depositing it */
     inline static bool m_interpolate_neutralizing_background = false;
     /** Whether to use tiling for particle operations */

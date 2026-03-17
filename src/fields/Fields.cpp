@@ -63,6 +63,11 @@ Fields::AllocData (
 
         // Need 1 extra guard cell transversally for transverse derivative
         int nguards_xy = (Hipace::m_depos_order_xy + 1) / 2 + 1;
+        // Check the temperature deposition order, if enabled
+        if (Hipace::m_deposit_temp_individual &&
+            Hipace::m_temperature_depos_order > Hipace::m_depos_order_xy) {
+            nguards_xy = (Hipace::m_temperature_depos_order + 1) / 2 + 1;
+        }
         m_slices_nguards = amrex::IntVect{nguards_xy, nguards_xy, 0};
 
         m_explicit = Hipace::m_explicit;
