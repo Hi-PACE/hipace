@@ -130,6 +130,7 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
+    queryWithParser(pph, "temperature_depos_order", m_temperature_depos_order);
     queryWithParser(pph, "interpolate_neutralizing_background",
         m_interpolate_neutralizing_background);
     bool do_mfi_sync = false;

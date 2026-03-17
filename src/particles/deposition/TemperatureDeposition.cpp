@@ -54,22 +54,60 @@ DepositTemperature (PlasmaParticleContainer& plasma,
         // extract laser properties and boolean for the presence of the laser and for ionization
         const PhysConst pc = get_phys_const();
         const int aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
-        const bool can_ionize = plasma.m_can_ionize;
-        const bool use_laser = Hipace::m_use_laser;
         const amrex::Real laser_norm = (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass)
             * (plasma.m_charge/pc.q_e) * (pc.m_e/plasma.m_mass);
 
         // Loop over particles
-        SharedMemoryDeposition<3, 3, true>(
-            int(pti.numParticles()),
+        amrex::AnyCTO(
+            // use compile-time options
+            amrex::TypeList<
+                amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
+                amrex::CompileTimeOptions<false, true>, // can_ionize
+                amrex::CompileTimeOptions<false, true>  // use_laser
+            >{}, {
+                Hipace::m_temperature_depos_order,
+                plasma.m_can_ionize,
+                Hipace::m_use_laser
+            },
+            // call deposition function
+            // The three functions passed as arguments to this lambda
+            // are defined below as the next arguments.
+            [&](auto is_valid, auto get_start_cell, auto deposit){
+                constexpr auto ctos = deposit.GetOptions();
+                constexpr int depos_order = ctos[0];
+                constexpr int use_laser = ctos[2];
+                constexpr int stencil_size = depos_order + 1;
+
+                if constexpr (use_laser) {
+                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
+                        int(pti.numParticles()), is_valid, get_start_cell, deposit, isl_fab.array(),
+                        isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
+                        amrex::GpuArray<int, 1>{aabs},
+                        amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq});
+                } else {
+                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
+                        int(pti.numParticles()), is_valid, get_start_cell, deposit, isl_fab.array(),
+                        isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
+                        amrex::GpuArray<int, 0>{},
+                        amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq});
+                }
+            },
             // is_valid
             // return whether the particle is valid and should deposit
-            [=] AMREX_GPU_DEVICE (int ip, auto ptd)
+            [=] AMREX_GPU_DEVICE (int ip, auto ptd,
+                                  auto /*depos_order*/,
+                                  auto /*can_ionize*/,
+                                  auto /*use_laser*/)
             {
             // only deposit on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
             },
-            [=] AMREX_GPU_DEVICE (int ip, auto ptd) -> amrex::IntVectND<2>
+            // get_start_cell
+            // return the lowest cell index that the particle deposits into
+            [=] AMREX_GPU_DEVICE (int ip, auto ptd,
+                                  auto depos_order,
+                                  auto /*can_ionize*/,
+                                  auto /*use_laser*/) -> amrex::IntVectND<2>
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
@@ -78,17 +116,21 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 auto [shape_x, i] =
-                compute_single_shape_factor<false, 0>(xmid, 0);
+                compute_single_shape_factor<false, depos_order>(xmid, 0);
 
                 auto [shape_y, j] =
-                compute_single_shape_factor<false, 0>(ymid, 0);
+                compute_single_shape_factor<false, depos_order>(ymid, 0);
 
                 return {i-1, j-1};
             },
+            // do_deposit
             // deposit of weight, momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  Array3<amrex::Real> arr,
-                                  auto cache_idx, auto depos_idx) noexcept
+                                Array3<amrex::Real> arr,
+                                auto cache_idx, auto depos_idx,
+                                auto depos_order,
+                                auto can_ionize,
+                                auto use_laser) noexcept
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
@@ -101,7 +143,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                             ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
                     }
                     doLaserGatherShapeN<2>(xp, yp, Aabssqp, arr, cache_idx[0],
-                                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                                        dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                     Aabssqp *= laser_norm_ion;
                 }
 
@@ -116,25 +158,24 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
-                // --- Compute shape factors
-                // x direction
-                auto [shape_x, i] = compute_single_shape_factor<false, 0>(xmid, 0);
-                // y direction
-                auto [shape_y, j] = compute_single_shape_factor<false, 0>(ymid, 0);
+                for (int iy=0; iy <= depos_order; ++iy) {
+                    for (int ix=0; ix <= depos_order; ++ix) {
+                        // --- Compute shape factors
+                        // x direction
+                        auto [shape_x, i] = compute_single_shape_factor<false, depos_order>(xmid, ix);
+                        // y direction
+                        auto [shape_y, j] = compute_single_shape_factor<false, depos_order>(ymid, iy);
 
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), wp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), wp*uxp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), wp*uyp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), wp*uzp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[4]), wp*uxp*uxp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), wp*uyp*uyp);
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), wp*uzp*uzp);
-            },
-            isl_fab.array(),
-            isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-            amrex::GpuArray<int, 1>{aabs},
-            amrex::GpuArray<int, 7>{w, ux, uy, uz, uxsq, uysq, uzsq}
-        );
+                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), shape_x*shape_y*wp);
+                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), shape_x*shape_y*wp*uxp);
+                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), shape_x*shape_y*wp*uyp);
+                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), shape_x*shape_y*wp*uzp);
+                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[4]), shape_x*shape_y*wp*uxp*uxp);
+                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), shape_x*shape_y*wp*uyp*uyp);
+                        amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), shape_x*shape_y*wp*uzp*uzp);
+                    }
+                }
+            });
         Array3<amrex::Real> field_arr = isl_fab.array();
 
         // Normalize the components of momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)
