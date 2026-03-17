@@ -76,16 +76,18 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( fd.m_diag_coarsen.min() >= 1,
             "Coarsening ratio must be >= 1");
 
-        queryWithParser(pph, "output_period", fd.m_output_period);
-        queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
+        queryWithParser(pph, "output_period", fd.m_output_period.m_func_str);
+        queryWithParserAlt(pp, "output_period", fd.m_output_period.m_func_str, ppd);
+        fd.m_output_period.compile();
     }
 
-    if (queryWithParser(pph, "output_period", m_beam_output_period)) {
+    if (queryWithParser(pph, "output_period", m_beam_output_period.m_func_str)) {
         amrex::Print() << "WARNING: 'hipace.output_period' is deprecated! "
             "Use 'diagnostic.output_period' instead!\n";
     }
-    queryWithParser(ppd, "output_period", m_beam_output_period);
-    queryWithParser(ppd, "beam_output_period", m_beam_output_period);
+    queryWithParser(ppd, "output_period", m_beam_output_period.m_func_str);
+    queryWithParser(ppd, "beam_output_period", m_beam_output_period.m_func_str);
+    m_beam_output_period.compile();
 }
 
 bool

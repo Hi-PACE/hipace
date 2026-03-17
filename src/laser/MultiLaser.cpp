@@ -63,7 +63,8 @@ MultiLaser::ReadParameters ()
         "if necessary, 'lasers.MG_tolerance_rel = 1e-7'. "
         "If for some reason you need to use the FFT-based solver plase open an issue on Github");
 
-    queryWithParser(pp, "insitu_period", m_insitu_period);
+    queryWithParser(pp, "insitu_period", m_insitu_period.m_func_str);
+    m_insitu_period.compile();
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     const bool set_file_prefix = queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
     if (set_file_prefix) {
@@ -193,7 +194,7 @@ MultiLaser::InitData ()
         m_rhs_mg.resize(amrex::grow(m_slice_box, amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
     }
 
-    if (m_insitu_period > 0) {
+    if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
             Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
@@ -1055,7 +1056,7 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
                                 int max_step, amrex::Real max_time)
 {
     if (!UseLaser(islice)) return;
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!m_insitu_period.doDiagnostics(step, max_step, time, max_time)) return;
     HIPACE_PROFILE("MultiLaser::InSituComputeDiags()");
 
     using namespace amrex::literals;
@@ -1144,7 +1145,7 @@ void
 MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::Real max_time)
 {
     if (!m_use_laser) return;
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!m_insitu_period.doDiagnostics(step, max_step, time, max_time)) return;
     HIPACE_PROFILE("MultiLaser::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD

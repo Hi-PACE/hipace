@@ -131,7 +131,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto /*depos_order*/,
                                   auto /*can_ionize*/,
-                                  auto /*use_laserr*/)
+                                  auto /*use_laser*/)
             {
                 // only deposit plasma currents on or below their according MR level
                 return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
