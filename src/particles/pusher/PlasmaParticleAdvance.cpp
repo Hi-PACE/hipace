@@ -239,7 +239,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         ( 251._rt / 720._rt ) * dz      // a5 times dz
                     };
 
-                    LOOP_UNROLL
+                    HIPACE_LOOP_UNROLL
                     for (int iab=0; iab<5; ++iab) {
                         xp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fx1   + iab)[ip];
                         yp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fy1   + iab)[ip];

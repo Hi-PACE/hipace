@@ -205,9 +205,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                     return;
                 }
 
-                LOOP_UNROLL
+                HIPACE_LOOP_UNROLL
                 for (int ix=0; ix <= depos_order; ++ix) {
-                    LOOP_UNROLL
+                    HIPACE_LOOP_UNROLL
                     for (int iy=0; iy <= depos_order; ++iy) {
 
                         // --- Compute shape factors

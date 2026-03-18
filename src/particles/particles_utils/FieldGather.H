@@ -69,9 +69,9 @@ void doGatherShapeN (const amrex::Real xp,
 
     // Gather field on particle from field on grid
 
-    LOOP_UNROLL
+    HIPACE_LOOP_UNROLL
     for (int iy=0; iy<=depos_order_xy; iy++){
-        LOOP_UNROLL
+        HIPACE_LOOP_UNROLL
         for (int ix=0; ix<=depos_order_xy; ix++){
 
             // Compute shape factors
@@ -87,9 +87,9 @@ void doGatherShapeN (const amrex::Real xp,
 
     constexpr int derivative_type = 1;
 
-    LOOP_UNROLL
+    HIPACE_LOOP_UNROLL
     for (int iy=0; iy<=depos_order_xy+derivative_type; iy++){
-        LOOP_UNROLL
+        HIPACE_LOOP_UNROLL
         for (int ix=0; ix<=depos_order_xy+derivative_type; ix++){
 
             // Compute shape factors

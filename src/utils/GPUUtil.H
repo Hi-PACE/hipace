@@ -212,11 +212,11 @@ amrex::BoxND<2> to2D (const amrex::BoxND<3>& box) {
 }
 
 #ifdef AMREX_USE_GPU
-#define LOOP_UNROLL _Pragma("unroll")
-#define LOOP_NO_UNROLL _Pragma("unroll 1")
+#define HIPACE_LOOP_UNROLL _Pragma("unroll")
+#define HIPACE_LOOP_NO_UNROLL _Pragma("unroll 1")
 #else
-#define LOOP_UNROLL
-#define LOOP_NO_UNROLL
+#define HIPACE_LOOP_UNROLL
+#define HIPACE_LOOP_NO_UNROLL
 #endif
 
 #endif
