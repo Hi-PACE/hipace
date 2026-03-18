@@ -149,11 +149,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
-                auto [shape_x, i] =
-                    compute_single_shape_factor<false, depos_order>(xmid, 0);
+                auto [shape_x, i] = shape_factor<depos_order>(xmid, 0);
 
-                auto [shape_y, j] =
-                    compute_single_shape_factor<false, depos_order>(ymid, 0);
+                auto [shape_y, j] = shape_factor<depos_order>(ymid, 0);
 
                 return {i, j};
             },
@@ -207,17 +205,17 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                     return;
                 }
 
-                for (int iy=0; iy <= depos_order; ++iy) {
-                    for (int ix=0; ix <= depos_order; ++ix) {
+                HIPACE_LOOP_UNROLL
+                for (int ix=0; ix <= depos_order; ++ix) {
+                    HIPACE_LOOP_UNROLL
+                    for (int iy=0; iy <= depos_order; ++iy) {
 
                         // --- Compute shape factors
                         // x direction
-                        auto [shape_x, i] =
-                            compute_single_shape_factor<false, depos_order>(xmid, ix);
+                        auto [shape_x, i] = shape_factor<depos_order>(xmid, ix);
 
                         // y direction
-                        auto [shape_y, j] =
-                            compute_single_shape_factor<false, depos_order>(ymid, iy);
+                        auto [shape_y, j] = shape_factor<depos_order>(ymid, iy);
 
                         const amrex::Real charge_density = q_invvol * shape_x * shape_y;
                         // wqx, wqy wqz are particle current in each direction
