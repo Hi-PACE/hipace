@@ -336,20 +336,15 @@ struct interpolated_field_xy_inner {
     template<class...Args> AMREX_GPU_DEVICE
     amrex::Real operator() (amrex::Real x, amrex::Real y, Args...args) const noexcept {
 
-        // x direction
         const amrex::Real xmid = (x - offset0)*dx_inv;
-        amrex::Real sx_cell[interp_order_xy + 1];
-        const int i_cell = compute_shape_factor<interp_order_xy>(sx_cell, xmid);
-
-        // y direction
         const amrex::Real ymid = (y - offset1)*dy_inv;
-        amrex::Real sy_cell[interp_order_xy + 1];
-        const int j_cell = compute_shape_factor<interp_order_xy>(sy_cell, ymid);
 
         amrex::Real field_value = 0._rt;
         for (int iy=0; iy<=interp_order_xy; iy++){
             for (int ix=0; ix<=interp_order_xy; ix++){
-                field_value += sx_cell[ix] * sy_cell[iy] * array(i_cell+ix, j_cell+iy, args...);
+                auto [shape_y, j] = shape_factor<interp_order_xy>(ymid, iy);
+                auto [shape_x, i] = shape_factor<interp_order_xy>(xmid, ix);
+                field_value += shape_x * shape_y * array(i, j, args...);
             }
         }
         return field_value;
@@ -487,12 +482,11 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
         for (int k=k_min; k<=k_max; ++k) {
             const amrex::Real pos = k * fd.m_geom_io.CellSize(2) + poff_diag_z;
             const amrex::Real mid_i_slice = (pos - poff_calc_z)*field_geom[0].InvCellSize(2);
-            amrex::Real sz_cell[depos_order_z + 1];
-            const int k_cell = compute_shape_factor<depos_order_z>(sz_cell, mid_i_slice);
             m_rel_z_vec[k-k_min] = 0;
             for (int i=0; i<=depos_order_z; ++i) {
-                if (k_cell+i == i_slice) {
-                    m_rel_z_vec[k-k_min] = sz_cell[i];
+                auto [shape_z, k_cell] = shape_factor<depos_order_z>(mid_i_slice, i);
+                if (k_cell == i_slice) {
+                    m_rel_z_vec[k-k_min] = shape_z;
                 }
             }
         }

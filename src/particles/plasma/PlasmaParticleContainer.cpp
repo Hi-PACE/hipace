@@ -537,9 +537,7 @@ IonizationModule (const int lev,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = 1._rt;
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                     ptd_elec.rdata(iforce)[pidx] = 0._rt;
                 }
@@ -798,9 +796,7 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = uy;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = psi;
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                     ptd_elec.rdata(iforce)[pidx] = 0._rt;
                 }

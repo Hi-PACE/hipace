@@ -308,9 +308,9 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
                 for (int iy=0; iy<=interp_order; ++iy) {
                     for (int ix=0; ix<=interp_order; ++ix) {
                         auto [shape_x, cell_x] =
-                            compute_single_shape_factor<false, interp_order>(xmid, ix);
+                            shape_factor<interp_order>(xmid, ix);
                         auto [shape_y, cell_y] =
-                            compute_single_shape_factor<false, interp_order>(ymid, iy);
+                            shape_factor<interp_order>(ymid, iy);
 
                         if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
                             aabs += shape_x*shape_y*abssq(laser_arr(cell_x, cell_y, n00j00_r),
@@ -431,9 +431,9 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
                     for (int iy=0; iy<=interp_order; ++iy) {
                         for (int ix=0; ix<=interp_order; ++ix) {
                             auto [shape_x, cell_x] =
-                                compute_single_shape_factor<false, interp_order>(xmid, ix);
+                                shape_factor<interp_order>(xmid, ix);
                             auto [shape_y, cell_y] =
-                                compute_single_shape_factor<false, interp_order>(ymid, iy);
+                                shape_factor<interp_order>(ymid, iy);
 
                             chi += shape_x*shape_y*field_arr_chi(cell_x, cell_y);
                         }
@@ -924,13 +924,13 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
 
                             for (int iz=0; iz<=interp_order; iz++) {
                                 auto [shape_z, kk] =
-                                    compute_single_shape_factor<false, interp_order>(zmid, iz);
+                                    shape_factor<interp_order>(zmid, iz);
                             for (int iy=0; iy<=interp_order; iy++) {
                                 auto [shape_y, jj] =
-                                    compute_single_shape_factor<false, interp_order>(ymid, iy);
+                                    shape_factor<interp_order>(ymid, iy);
                             for (int ix=0; ix<=interp_order; ix++) {
                                 auto [shape_x, ii] =
-                                    compute_single_shape_factor<false, interp_order>(xmid, ix);
+                                    shape_factor<interp_order>(xmid, ix);
                                 val += (shape_x * shape_y * shape_z) * laser_arr(ii, jj, kk);
                             }}}
 
@@ -957,10 +957,10 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
 
                             for (int iz=0; iz<=interp_order; iz++) {
                                 auto [shape_z, jj] =
-                                    compute_single_shape_factor<false, interp_order>(zmid, iz);
+                                    shape_factor<interp_order>(zmid, iz);
                             for (int ir=0; ir<=interp_order; ir++) {
                                 auto [shape_r, ii] =
-                                    compute_single_shape_factor<false, interp_order>(rmid, ir);
+                                    shape_factor<interp_order>(rmid, ir);
                                 val += (shape_r * shape_z) * laser_arr(ii, jj, 0);
                             for (int im=1; im<=laser_bigend[2]/2; im++) {
                                 val += (shape_r * shape_z) * std::cos(im*theta) *
