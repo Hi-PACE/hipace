@@ -31,11 +31,13 @@ public:
     void InitData (Fields& fields, const MultiPlasma& multi_plasma,
                    const amrex::Geometry& geom, int const lev);
 
-    /** calculate the adaptive time step based on the beam energy
+    /** calculate laser ionization using grid quantaties
      * \param[in,out] fields the general field class, modified by this function
+     * \param[in] multi_plasma plasma object
+     * \param[in] laser laser object
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
-     * \param[in] islice index of the slice on which the beam particles are pushed
+     * \param[in] laser_geom geometry of the laser
      */
     void
     IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma, const MultiLaser& laser,

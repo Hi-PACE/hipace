@@ -736,7 +736,7 @@ Hipace::SolveOneSlice (int islice, int step)
     // Psi ExmBy EypBx Ez Bz solve
     m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
 
-    // Calculate grid ionizaiton and update chi
+    // Calculate grid ionization and update chi
     for (int lev=0; lev<current_N_level; ++lev) {
         m_grid_ionization.IonizeGrid(m_fields, m_multi_plasma, m_multi_laser, m_slice_geom[lev],
             lev, m_multi_laser.GetLaserGeom());

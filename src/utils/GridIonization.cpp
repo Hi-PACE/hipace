@@ -15,7 +15,7 @@
 void
 GridIonization::ReadParameters ()
 {
-    amrex::ParmParse ppg("grid_ionizaiton");
+    amrex::ParmParse ppg("grid_ionization");
 
     queryWithParser(ppg, "plasma_names", m_names);
 
@@ -58,6 +58,8 @@ GridIonization::InitData (Fields& fields, const MultiPlasma& multi_plasma,
     if (!m_use_grid_ionization) {
         return;
     }
+
+    HIPACE_PROFILE("GridIonization::InitData()");
 
     for (auto& plasma_name : m_names) {
         const auto& plasma = multi_plasma.GetPlasma(plasma_name);
@@ -118,6 +120,8 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
     if (!m_use_grid_ionization) {
         return;
     }
+
+    HIPACE_PROFILE("GridIonization::IonizeGrid()");
 
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;
