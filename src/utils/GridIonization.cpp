@@ -35,11 +35,10 @@ GridIonization::GetFieldComponents (const MultiPlasma& multi_plasma)
         return ret;
     }
 
-    ret.push_back("grid_ionization_chi");
     ret.push_back("grid_ionization_w_elec");
-    ret.push_back("grid_ionization_uz_elec");
     ret.push_back("grid_ionization_ux^2_elec");
     ret.push_back("grid_ionization_uy^2_elec");
+    ret.push_back("grid_ionization_uz_elec");
     ret.push_back("grid_ionization_uz^2_elec");
 
     for (auto& plasma_name : m_names) {
@@ -125,22 +124,22 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
     constexpr Complex I(0.,1.);
     const PhysConst phys_const = get_phys_const();
 
+    amrex::MultiFab& S = fields.getSlices(lev);
+
+    const amrex::GpuArray<int, 6> comps {
+        Comps[WhichSlice::This]["chi"],
+        Comps[WhichSlice::This]["grid_ionization_w_elec"],
+        Comps[WhichSlice::This]["grid_ionization_ux^2_elec"],
+        Comps[WhichSlice::This]["grid_ionization_uy^2_elec"],
+        Comps[WhichSlice::This]["grid_ionization_uz_elec"],
+        Comps[WhichSlice::This]["grid_ionization_uz^2_elec"]
+    };
+
     for (auto& plasma_name : m_names) {
         const auto& plasma = multi_plasma.GetPlasma(plasma_name);
 
-        const amrex::GpuArray<int, 6> comps {
-            Comps[WhichSlice::This]["grid_ionization_chi"],
-            Comps[WhichSlice::This]["grid_ionization_w_elec"],
-            Comps[WhichSlice::This]["grid_ionization_ux^2_elec"],
-            Comps[WhichSlice::This]["grid_ionization_uy^2_elec"],
-            Comps[WhichSlice::This]["grid_ionization_uz_elec"],
-            Comps[WhichSlice::This]["grid_ionization_uz^2_elec"]
-        };
-
         const int ion_weight_comp =
             Comps[WhichSlice::This]["grid_ionization_w_" + plasma_name + "_0"];
-
-        amrex::MultiFab& S = fields.getSlices(lev);
 
         for (amrex::MFIter mfi(S, DfltMfi); mfi.isValid(); ++mfi ){
             const amrex::Box& bx = mfi.tilebox();
@@ -183,6 +182,11 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
             amrex::Real const x_pos_offset = GetPosOffset(0, laser_geom, laser_geom.Domain());
             amrex::Real const y_pos_offset = GetPosOffset(1, laser_geom, laser_geom.Domain());
 
+            const amrex::Real chi_factor_elec =
+                phys_const.q_e * (phys_const.q_e * phys_const.mu0 / phys_const.m_e);
+
+            const amrex::Real chi_factor_ion =
+                plasma.m_charge * (plasma.m_charge * phys_const.mu0 / plasma.m_mass);
 
             amrex::ParallelFor(to2D(bx),
                 [=] AMREX_GPU_DEVICE (int i, int j) {
@@ -204,6 +208,8 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                     amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
                     Ep *= phys_const.m_e * phys_const.c / phys_const.q_e * E0;
 
+                    amrex::Real chi = 0;
+
                     for (int ion_lev = 0; ion_lev < max_ion_lev; ++ion_lev) {
 
                         // ion has no momentum
@@ -219,17 +225,13 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
 
                         const amrex::Real old_weight = arr(i, j, ion_weight_comp + ion_lev);
                         const amrex::Real transferred_weight = old_weight * p;
+                        const amrex::Real new_weight = old_weight - transferred_weight;
+                        chi += new_weight * chi_factor_ion * ion_lev * ion_lev;
 
                         arr(i, j, ion_weight_comp + ion_lev) = old_weight - transferred_weight;
                         arr(i, j, ion_weight_comp + ion_lev + 1) += transferred_weight;
                         // w
                         arr(i, j, comps[1]) += transferred_weight;
-                        // chi
-                        // chi of new electrons does not depend on the laser field strength
-                        // or the the new random momentum
-                        arr(i, j, comps[0]) += transferred_weight * (
-                            phys_const.q_e * (phys_const.q_e * phys_const.mu0 / phys_const.m_e)
-                        );
 
                         if (linear_polarization) {
                             // transverse component
@@ -277,6 +279,17 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                             arr(i, j, comps[5]) += transferred_weight * a_fact * a_fact;
                         }
                     }
+
+                    // chi
+                    // chi of new electrons does not depend on the laser field strength
+                    // or the the new random momentum
+                    chi += arr(i, j, comps[1]) * chi_factor_elec;
+
+                    // last ion level
+                    chi += arr(i, j, ion_weight_comp + max_ion_lev) *
+                        chi_factor_ion * max_ion_lev * max_ion_lev;
+
+                    arr(i, j, comps[0]) += chi;
                 }
             );
         }
