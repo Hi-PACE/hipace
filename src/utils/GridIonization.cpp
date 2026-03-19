@@ -229,8 +229,10 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                         amrex::Real uz = 0._rt;
 
                         if (linear_polarization) {
-                            const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
-                            const Complex El = - A_dx * phys_const.c; // longitudinal component
+                            // transverse component
+                            const Complex Et = I * A * omega0 + A_dzeta * phys_const.c;
+                            // longitudinal component
+                            const Complex El = - A_dx * phys_const.c;
                             amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
                             Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
                             Ep *= E0;
@@ -239,29 +241,41 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                             const amrex::Real delta4 = delta2 * delta2;
                             const amrex::Real alpha = -adk_power[ion_lev];
                             const amrex::Real s1 = - (7._rt/4._rt) + alpha / 2._rt;
-                            const amrex::Real s2 = (1._rt/16._rt) * ( 8._rt * (alpha*alpha) - 68._rt*alpha + 131._rt );
-                            const amrex::Real width_p = amrex::abs(A) * delta * (1._rt + s1*delta2 + s2*delta4);
-                            // amrex::Real p_pol = amrex::RandomNormal(0.0, width_p, engine);
-                            // ux = p_pol;
-                            // uz = (amrex::abs(A * A) * 0.25_rt + p_pol * p_pol * 0.5_rt);
-
+                            const amrex::Real s2 = (1._rt/16._rt) * ( 8._rt * (alpha*alpha)
+                                - 68._rt*alpha + 131._rt );
+                            const amrex::Real width_p = amrex::abs(A) * delta *
+                                (1._rt + s1*delta2 + s2*delta4);
+                            const amrex::Real a_fact = amrex::abs(A * A) * 0.25_rt;
+                            // ux^2
                             arr(i, j, comps[3]) += transferred_weight * width_p * width_p;
-                            // ux^2 +=
+                            // uz
+                            arr(i, j, comps[2]) += transferred_weight *
+                                (a_fact + width_p * width_p * 0.5_rt);
+                            // ux^2
+                            arr(i, j, comps[5]) += transferred_weight * (
+                                a_fact * a_fact +
+                                a_fact * width_p * width_p +
+                                0.75_rt * width_p * width_p * width_p * width_p
+                            );
                         } else {
-                            // amrex::Real const angle = amrex::Random(engine) * 2._rt * MathConst::pi;
                             // A_t = A (e_x +/- i e_y) in circular polarization.
-                            // ux and uy differ from Massimo PRE 2020 by a factor of sqrt(2) due to different
-                            // convention for linear vs. circular polarization.
-                            // ux = std::sqrt(amrex::abs(A*A)) * std::cos(angle);
-                            // uy = std::sqrt(amrex::abs(A*A)) * std::sin(angle);
+                            // ux and uy differ from Massimo PRE 2020 by a factor of sqrt(2) due
+                            // to different convention for linear vs. circular polarization.
                             // uz differs from Massimo PRE 2020 by a factor of 2 due to different
                             // convention for linear vs. circular polarization.
-                            // uz = amrex::abs(A*A);
+                            amrex::Real a_fact = amrex::abs(A*A);
+                            // ux^2
+                            arr(i, j, comps[3]) += transferred_weight * 0.5_rt * a_fact;
+                            // uy^2
+                            arr(i, j, comps[4]) += transferred_weight * 0.5_rt * a_fact;
+                            // uz
+                            arr(i, j, comps[2]) += transferred_weight * a_fact;
+                            // uz^2
+                            arr(i, j, comps[5]) += transferred_weight * a_fact * a_fact;
                         }
                     }
                 }
             );
         }
-
     }
 }
