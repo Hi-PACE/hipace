@@ -238,13 +238,6 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                         arr(i, j, comps[1]) += transferred_weight;
 
                         if (linear_polarization) {
-                            // transverse component
-                            const Complex Et = I * A * omega0 + A_dzeta * phys_const.c;
-                            // longitudinal component
-                            const Complex El = - A_dx * phys_const.c;
-                            amrex::Real Ep = std::sqrt( amrex::abs(Et*Et) + amrex::abs(El*El) );
-                            Ep *= phys_const.m_e * phys_const.c / phys_const.q_e;
-                            Ep *= E0;
                             const amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev];
                             const amrex::Real delta2 = delta * delta;
                             const amrex::Real delta4 = delta2 * delta2;
