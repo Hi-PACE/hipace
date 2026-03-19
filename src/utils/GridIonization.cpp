@@ -131,9 +131,9 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
         const amrex::GpuArray<int, 6> comps {
             Comps[WhichSlice::This]["grid_ionization_chi"],
             Comps[WhichSlice::This]["grid_ionization_w_elec"],
-            Comps[WhichSlice::This]["grid_ionization_uz_elec"],
             Comps[WhichSlice::This]["grid_ionization_ux^2_elec"],
             Comps[WhichSlice::This]["grid_ionization_uy^2_elec"],
+            Comps[WhichSlice::This]["grid_ionization_uz_elec"],
             Comps[WhichSlice::This]["grid_ionization_uz^2_elec"]
         };
 
@@ -207,26 +207,29 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                     for (int ion_lev = 0; ion_lev < max_ion_lev; ++ion_lev) {
 
                         // ion has no momentum
-                        amrex::Real w_dtau_dc = adk_prefactor[ion_lev] *
+                        const amrex::Real w_dtau_dc = adk_prefactor[ion_lev] *
                             std::pow(Ep, adk_power[ion_lev]) *
                             std::exp( adk_exp_prefactor[ion_lev] / Ep );
 
-                        amrex::Real const w_dtau_ac = w_dtau_dc *
+                        const amrex::Real w_dtau_ac = w_dtau_dc *
                             (linear_polarization ?
                                 std::sqrt(Ep * laser_adk_prefactor[ion_lev]) : 1._rt);
 
-                        amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
+                        const amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
 
                         const amrex::Real old_weight = arr(i, j, ion_weight_comp + ion_lev);
                         const amrex::Real transferred_weight = old_weight * p;
 
                         arr(i, j, ion_weight_comp + ion_lev) = old_weight - transferred_weight;
                         arr(i, j, ion_weight_comp + ion_lev + 1) += transferred_weight;
+                        // w
                         arr(i, j, comps[1]) += transferred_weight;
-
-                        amrex::Real ux = 0._rt;
-                        amrex::Real uy = 0._rt;
-                        amrex::Real uz = 0._rt;
+                        // chi
+                        // chi of new electrons does not depend on the laser field strength
+                        // or the the new random momentum
+                        arr(i, j, comps[0]) += transferred_weight * (
+                            phys_const.q_e * (phys_const.q_e * phys_const.mu0 / phys_const.m_e)
+                        );
 
                         if (linear_polarization) {
                             // transverse component
@@ -247,11 +250,11 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                                 (1._rt + s1*delta2 + s2*delta4);
                             const amrex::Real a_fact = amrex::abs(A * A) * 0.25_rt;
                             // ux^2
-                            arr(i, j, comps[3]) += transferred_weight * width_p * width_p;
+                            arr(i, j, comps[2]) += transferred_weight * width_p * width_p;
                             // uz
-                            arr(i, j, comps[2]) += transferred_weight *
+                            arr(i, j, comps[4]) += transferred_weight *
                                 (a_fact + width_p * width_p * 0.5_rt);
-                            // ux^2
+                            // uz^2
                             arr(i, j, comps[5]) += transferred_weight * (
                                 a_fact * a_fact +
                                 a_fact * width_p * width_p +
@@ -265,11 +268,11 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                             // convention for linear vs. circular polarization.
                             amrex::Real a_fact = amrex::abs(A*A);
                             // ux^2
-                            arr(i, j, comps[3]) += transferred_weight * 0.5_rt * a_fact;
+                            arr(i, j, comps[2]) += transferred_weight * 0.5_rt * a_fact;
                             // uy^2
-                            arr(i, j, comps[4]) += transferred_weight * 0.5_rt * a_fact;
+                            arr(i, j, comps[3]) += transferred_weight * 0.5_rt * a_fact;
                             // uz
-                            arr(i, j, comps[2]) += transferred_weight * a_fact;
+                            arr(i, j, comps[4]) += transferred_weight * a_fact;
                             // uz^2
                             arr(i, j, comps[5]) += transferred_weight * a_fact * a_fact;
                         }
