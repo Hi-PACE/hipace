@@ -201,8 +201,10 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                     Complex A_dx = 0;
                     Complex A_dzeta = 0;
 
-                    doLaserGatherShapeN<2>(x, y, A, A_dx, A_dzeta, laser_arr,
-                        dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+                    if (laser_bounds.contains(x, y)) {
+                        doLaserGatherShapeN<2>(x, y, A, A_dx, A_dzeta, laser_arr,
+                            dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
+                    }
 
                     // Convert from vector potential to electric field. Units are fixed later.
                     const Complex Et = I * A * omega0 + A_dzeta * phys_const.c; // transverse component
@@ -217,15 +219,18 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                     for (int ion_lev = 0; ion_lev < max_ion_lev; ++ion_lev) {
 
                         // ion has no momentum
-                        const amrex::Real w_dtau_dc = adk_prefactor[ion_lev] *
-                            std::pow(Ep, adk_power[ion_lev]) *
-                            std::exp( adk_exp_prefactor[ion_lev] / Ep );
+                        amrex::Real p = 0;
+                        if (Ep > 1e-30_rt) {
+                            const amrex::Real w_dtau_dc = adk_prefactor[ion_lev] *
+                                std::pow(Ep, adk_power[ion_lev]) *
+                                std::exp( adk_exp_prefactor[ion_lev] / Ep );
 
-                        const amrex::Real w_dtau_ac = w_dtau_dc *
-                            (linear_polarization ?
-                                std::sqrt(Ep * laser_adk_prefactor[ion_lev]) : 1._rt);
+                            const amrex::Real w_dtau_ac = w_dtau_dc *
+                                (linear_polarization ?
+                                    std::sqrt(Ep * laser_adk_prefactor[ion_lev]) : 1._rt);
 
-                        const amrex::Real p = 1._rt - std::exp( - w_dtau_ac );
+                            p = 1._rt - std::exp( - w_dtau_ac );
+                        }
 
                         const amrex::Real old_weight = arr(i, j, ion_weight_comp + ion_lev);
                         const amrex::Real transferred_weight = old_weight * p;

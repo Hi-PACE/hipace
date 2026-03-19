@@ -47,7 +47,13 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
         // make it think there is only level 0
         plasma.SetParGDB(slice_gm[0], slice_dm[0], slice_ba[0]);
         plasma.InitData(gm);
+    }
+}
 
+void
+MultiPlasma::InitIonization (amrex::Vector<amrex::Geometry> gm)
+{
+    for (auto& plasma : m_all_plasmas) {
         if(plasma.m_can_ionize) {
             for (int i=0; i<m_names.size(); ++i) {
                 if(m_names[i] == plasma.m_product_name) {

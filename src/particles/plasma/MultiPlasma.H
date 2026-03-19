@@ -31,6 +31,11 @@ public:
                    amrex::Vector<amrex::DistributionMapping> slice_dm,
                    amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm);
 
+    /** \brief Loop over plasma species and initialize them.
+     *
+     * \param[in] gm Geometry of the simulation, to get the cell size
+     */
+    void InitIonization (amrex::Vector<amrex::Geometry> gm);
 
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *
