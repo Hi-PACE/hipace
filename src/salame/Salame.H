@@ -18,14 +18,14 @@
  * \param[in,out] last_islice the slice index of the previous slice with SALAME
  * \param[in,out] overloaded if the SALAME beam was overloaded in the last slice
  * \param[in] current_N_level number of MR levels active on the current slice
- * \param[in] step time step of simulation
+ * \param[in] is_first_step if this is the first time step of the simulation
  * \param[in] islice slice index of the whole domain
  * \param[in] relative_tolerance relative error tolerance to finish SALAME iterations early
  */
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int current_N_level, const int step, const int islice,
-              const amrex::Real relative_tolerance);
+              bool& overloaded, const int current_N_level, const bool is_first_step,
+              const int islice, const amrex::Real relative_tolerance);
 
 /** Initialize Sx and Sy with the contribution from the SALAME beam
  * \param[in] hipace pointer to Hipace instance

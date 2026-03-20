@@ -12,6 +12,7 @@
 #include "fields/Fields.H"
 #include "utils/Parser.H"
 #include "utils/GPUUtil.H"
+#include "utils/IOUtil.H"
 #include "particles/profiles/GetInitialDensity.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
@@ -278,6 +279,7 @@ public:
     bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
     bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
+    int m_max_ion_lev = 0; /**< maximum ionization level */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
     PlasmaParticleContainer* m_product_pc = nullptr; /**< Ionization product plasma */
     /** to calculate Ionization probability with ADK formula */
@@ -290,8 +292,6 @@ public:
     amrex::Gpu::Buffer<amrex::Real> m_laser_adk_prefactor;
     /** to calculate laser ionization momentum width for linear polarization */
     amrex::Gpu::Buffer<amrex::Real> m_laser_dp_prefactor;
-    /** to calculate laser ionization momentum width at the second order for linear polarization */
-    amrex::Gpu::Buffer<amrex::Real> m_laser_dp_second_prefactor;
 
     // plasma sorting/reordering:
 
@@ -304,7 +304,7 @@ public:
 
     /** How often the insitu plasma diagnostics should be computed and written
      * Default is 0, meaning no output */
-    int m_insitu_period {0};
+    utils::DiagPeriod m_insitu_period {"0"};
 private:
     std::string m_name; /**< name of the species */
     int m_nslices; /**< number of z slices of the domain */

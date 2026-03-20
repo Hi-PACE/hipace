@@ -324,9 +324,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1];
                 ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                     ptd.rdata(iforce)[pidx] = 0._rt;
                 }
@@ -354,9 +352,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 const amrex::Real ux_arr[3] = {-1._rt, 1._rt, -1._rt};
                 const amrex::Real uy_arr[3] = {1._rt, -1._rt, -1._rt};
 
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int imirror=0; imirror<3; ++imirror) {
                     const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
 
@@ -378,9 +374,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                     ptd.rdata(PlasmaIdx::psi_half_step)[midx] =
                         ptd.rdata(PlasmaIdx::psi_half_step)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                    HIPACE_LOOP_UNROLL
                     for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                         ptd.rdata(iforce)[midx] = 0._rt;
                     }
@@ -425,6 +419,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     // Get atomic number and ionization energies from file
     const int ion_element_id = ion_map_ids[physical_element];
     const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+    m_max_ion_lev = ion_atomic_number;
     amrex::Vector<amrex::Real> h_ionization_energies(ion_atomic_number);
     const int offset = ion_energy_offsets[ion_element_id];
     for(int i=0; i<ion_atomic_number; i++){
@@ -454,7 +449,6 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_adk_exp_prefactor.resize(ion_atomic_number);
     m_laser_adk_prefactor.resize(ion_atomic_number);
     m_laser_dp_prefactor.resize(ion_atomic_number);
-    m_laser_dp_second_prefactor.resize(ion_atomic_number);
 
     for (int i=0; i<ion_atomic_number; ++i)
     {
@@ -468,7 +462,6 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
         m_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
         m_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
         m_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
-        m_laser_dp_second_prefactor[i] = 2.*ion_atomic_number * std::sqrt(UH/Uion) - 1.;
     }
 
     m_adk_power.copyToDeviceAsync();
@@ -476,5 +469,4 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     m_adk_exp_prefactor.copyToDeviceAsync();
     m_laser_adk_prefactor.copyToDeviceAsync();
     m_laser_dp_prefactor.copyToDeviceAsync();
-    m_laser_dp_second_prefactor.copyToDeviceAsync();
 }

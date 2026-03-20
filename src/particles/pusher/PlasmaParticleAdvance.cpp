@@ -240,9 +240,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         ( 251._rt / 720._rt ) * dz      // a5 times dz
                     };
 
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                    HIPACE_LOOP_UNROLL
                     for (int iab=0; iab<5; ++iab) {
                         int p = ab5_permutation + iab;
                         if (p >= 5) {
