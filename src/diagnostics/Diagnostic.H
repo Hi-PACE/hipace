@@ -99,7 +99,7 @@ public:
      * \param[in] output_time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
-    static bool hasFieldOutput (const FieldDiagnosticData& fd, int output_step,
+    static bool hasFieldOutput (const DiagnosticData& fd, int output_step,
                                 amrex::Real output_time, bool is_last_step)
     {
         return (fd.m_nfields > 0) &&
@@ -115,7 +115,7 @@ public:
     [[nodiscard]] bool
     hasAnyFieldOutput (int output_step, amrex::Real output_time, bool is_last_step) const
     {
-        for (const auto& fd : m_field_data) {
+        for (const auto& fd : m_diag_data) {
             if (hasFieldOutput(fd, output_step, output_time, is_last_step)) return true;
         }
         return false;

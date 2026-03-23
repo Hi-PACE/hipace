@@ -446,7 +446,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 
         domain.coarsen(fd.m_diag_coarsen);
 
-        fd.m_has_field = hasFieldOutput(fd, output_step, output_time, is_last_step);
+        fd.m_has_output = hasFieldOutput(fd, output_step, output_time, is_last_step);
 
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(domain.ok(),
             "Box for diagnostic object '" + fd.m_diag_name + "' is empty. "
@@ -461,8 +461,8 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 
             fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
 
-            switch (fd.m_base_geom_type) {
-                case DiagnosticData::geom_type::field:
+            switch (fd.m_base_diag_type) {
+                case DiagnosticData::diag_type::field:
                     fd.m_F_real.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_real.setVal<amrex::RunOn::Host>(0);
                     break;

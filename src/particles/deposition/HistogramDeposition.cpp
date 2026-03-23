@@ -56,8 +56,8 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
                 const amrex::Real h1mid = (hist1() - h1_pos_offset) * d1_inv;
                 const amrex::Real h2mid = (hist2() - h2_pos_offset) * d2_inv;
 
-                auto [shape_h1, i] = compute_single_shape_factor<false, 0>(h1mid, 0);
-                auto [shape_h2, j] = compute_single_shape_factor<false, 0>(h2mid, 0);
+                auto [shape_h1, i] = shape_factor<0>(h1mid, 0);
+                auto [shape_h2, j] = shape_factor<0>(h2mid, 0);
 
                 return {i, j};
             },
@@ -75,8 +75,8 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
                 const amrex::Real h2mid = (hist2() - h2_pos_offset) * d2_inv;
 
                 // --- Compute shape factors
-                auto [shape_h1, i] = compute_single_shape_factor<false, 0>(h1mid, 0);
-                auto [shape_h2, j] = compute_single_shape_factor<false, 0>(h2mid, 0);
+                auto [shape_h1, i] = shape_factor<0>(h1mid, 0);
+                auto [shape_h2, j] = shape_factor<0>(h2mid, 0);
 
                 amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), shape_h1*shape_h2*wp);
             },
