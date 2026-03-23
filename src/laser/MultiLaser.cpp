@@ -53,7 +53,18 @@ MultiLaser::ReadParameters ()
         amrex::Print()<<"WARNING: parameters laser.MG_... only active if laser.solver_type = multigrid\n";
     }
 
-    queryWithParser(pp, "insitu_period", m_insitu_period);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        m_solver_type != "fft" &&
+        m_MG_average_rhs == true,
+        "The equations used by the laser solver when 'MG_average_rhs = false' is set, "
+        "which is always the case for the FFT-based laser solver, have been shown to be "
+        "unstable for high plasma densities with a large time step. "
+        "Please use 'lasers.solver_type = multigrid' with 'lasers.MG_average_rhs = 1' and, "
+        "if necessary, 'lasers.MG_tolerance_rel = 1e-7'. "
+        "If for some reason you need to use the FFT-based solver plase open an issue on Github");
+
+    queryWithParser(pp, "insitu_period", m_insitu_period.m_func_str);
+    m_insitu_period.compile();
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     const bool set_file_prefix = queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
     if (set_file_prefix) {
@@ -183,7 +194,7 @@ MultiLaser::InitData ()
         m_rhs_mg.resize(amrex::grow(m_slice_box, amrex::IntVect{1, 1, 0}), 2, amrex::The_Arena());
     }
 
-    if (m_insitu_period > 0) {
+    if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
             Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
@@ -201,7 +212,6 @@ MultiLaser::InitSliceEnvelope (const int islice, const int comp)
 {
     if (!UseLaser(islice)) return;
 
-    HIPACE_PROFILE("MultiLaser::InitSliceEnvelope()");
     InitLaserSlice(islice, comp);
 }
 
@@ -298,9 +308,9 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
                 for (int iy=0; iy<=interp_order; ++iy) {
                     for (int ix=0; ix<=interp_order; ++ix) {
                         auto [shape_x, cell_x] =
-                            compute_single_shape_factor<false, interp_order>(xmid, ix);
+                            shape_factor<interp_order>(xmid, ix);
                         auto [shape_y, cell_y] =
-                            compute_single_shape_factor<false, interp_order>(ymid, iy);
+                            shape_factor<interp_order>(ymid, iy);
 
                         if (x_lo <= cell_x && cell_x <= x_hi && y_lo <= cell_y && cell_y <= y_hi) {
                             aabs += shape_x*shape_y*abssq(laser_arr(cell_x, cell_y, n00j00_r),
@@ -421,9 +431,9 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
                     for (int iy=0; iy<=interp_order; ++iy) {
                         for (int ix=0; ix<=interp_order; ++ix) {
                             auto [shape_x, cell_x] =
-                                compute_single_shape_factor<false, interp_order>(xmid, ix);
+                                shape_factor<interp_order>(xmid, ix);
                             auto [shape_y, cell_y] =
-                                compute_single_shape_factor<false, interp_order>(ymid, iy);
+                                shape_factor<interp_order>(ymid, iy);
 
                             chi += shape_x*shape_y*field_arr_chi(cell_x, cell_y);
                         }
@@ -439,8 +449,8 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
 }
 
 void
-MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step,
-                          amrex::Geometry const& geom_field_lev0)
+MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt,
+                          bool is_first_step, amrex::Geometry const& geom_field_lev0)
 {
 
     if (!UseLaser(islice)) return;
@@ -450,16 +460,16 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
     InterpolateChi(fields, geom_field_lev0);
 
     if (m_solver_type == "multigrid") {
-        AdvanceSliceMG(dt, step);
+        AdvanceSliceMG(dt, is_first_step);
     } else if (m_solver_type == "fft") {
-        AdvanceSliceFFT(dt, step);
+        AdvanceSliceFFT(dt, is_first_step);
     } else {
         amrex::Abort("laser.solver_type must be fft or multigrid");
     }
 }
 
 void
-MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
+MultiLaser::AdvanceSliceMG (amrex::Real dt, bool is_first_step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
@@ -555,9 +565,9 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
 
         // D_j^n as defined in Benedetti's 2017 paper
         djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
-        acoeff_real_scalar = step == 0 ? 6._rt/(c*dt*dz)
+        acoeff_real_scalar = is_first_step ? 6._rt/(c*dt*dz)
             : 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
-        acoeff_imag_scalar = step == 0 ? -4._rt * ( k0 + djn ) / (c*dt)
+        acoeff_imag_scalar = is_first_step ? -4._rt * ( k0 + djn ) / (c*dt)
             : -2._rt * ( k0 + djn ) / (c*dt);
 
         amrex::ParallelFor(
@@ -567,7 +577,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
-                if (step == 0) {
+                if (is_first_step) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
                         (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
                         (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
@@ -590,7 +600,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
                     acoeff_real_scalar + arr(i, j, chi) : acoeff_real_scalar;
 
                 Complex rhs;
-                if (step == 0) {
+                if (is_first_step) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
@@ -639,7 +649,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, int step)
 }
 
 void
-MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
+MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool is_first_step)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");
@@ -742,7 +752,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
-                if (step == 0) {
+                if (is_first_step) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
                         (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
                         (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
@@ -762,7 +772,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
                 const Complex anp1jp1 = arr(i, j, np1jp1_r) + I * arr(i, j, np1jp1_i);
                 const Complex anp1jp2 = arr(i, j, np1jp2_r) + I * arr(i, j, np1jp2_i);
                 Complex rhs;
-                if (step == 0) {
+                if (is_first_step) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
@@ -797,7 +807,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, int step)
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
-            step == 0 ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
+            is_first_step ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
              3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) - I * 2._rt * ( k0 + djn ) / (c*dt);
         amrex::ParallelFor(
             to2D(bx),
@@ -841,7 +851,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
     using Complex = amrex::GpuComplex<amrex::Real>;
 
     // Basic laser parameters and constants
-    Complex I(0,1);
+    constexpr Complex I(0,1);
     const amrex::Real k0 = 2._rt*MathConst::pi/m_lambda0;
 
     // Get grid properties
@@ -855,45 +865,133 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
 #endif
     for ( amrex::MFIter mfi(m_slices, DfltMfiTlng); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
-        amrex::Array4<amrex::Real> const & arr = m_slices.array(mfi);
+        Array3<amrex::Real> const arr = m_slices.array(mfi);
         // Initialize a laser envelope on slice islice
         for (int ilaser = 0; ilaser < m_nlasers; ilaser++) {
             auto& laser = m_all_lasers[ilaser];
             if (laser.m_laser_init_type == "from_file"){
-                amrex::Array4<amrex::Real> const& arr_ff = laser.m_F_input_file.array();
-                amrex::ParallelFor(
-                bx,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                {
-                    if (ilaser == 0) {
-                        arr(i, j, k, comp ) = 0._rt;
-                        arr(i, j, k, comp + 1 ) = 0._rt;
+                static constexpr int interp_order = 1;
+
+                const amrex::GpuComplex<float>* cf_ptr = laser.m_cf_ptr;
+                const amrex::GpuComplex<double>* cd_ptr = laser.m_cd_ptr;;
+                const amrex::GpuArray<std::uint64_t, 2> laser_strides = laser.m_strides;
+                const amrex::IntVect laser_bigend = laser.m_bigend;
+                const amrex::RealVect laser_pos_offset = laser.m_pos_offset;
+                const amrex::RealVect laser_dx_inv = laser.m_dx_inv;
+                const amrex::Real laser_unitSI = laser.m_unitSI;
+
+                // Function to convert laser data on the fly from float or double to amex::Complex,
+                // return zero for out-of-bounds values, and multiply by unitSI.
+                auto laser_arr = [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+                    const amrex::IntVect iv {i, j, k};
+                    if (!iv.allGE(amrex::IntVect(0)) || !iv.allLE(laser_bigend)) {
+                        return Complex{0, 0};
                     }
-                    arr(i, j, k, comp ) += arr_ff(i, j, islice, 0 );
-                    arr(i, j, k, comp + 1 ) += arr_ff(i, j, islice, 1 );
+
+                    const uint64_t offset = i + j * laser_strides[0] + k * laser_strides[1];
+
+                    if (cf_ptr) {
+                        const auto val = cf_ptr[offset];
+                        return Complex {
+                            static_cast<amrex::Real>(val.real()) * laser_unitSI,
+                            static_cast<amrex::Real>(val.imag()) * laser_unitSI
+                        };
+                    } else {
+                        const auto val = cd_ptr[offset];
+                        return Complex {
+                            static_cast<amrex::Real>(val.real()) * laser_unitSI,
+                            static_cast<amrex::Real>(val.imag()) * laser_unitSI
+                        };
+                    }
+                };
+
+                if (laser.m_file_geometry == "xyt" || laser.m_file_geometry == "xyz") {
+                    amrex::ParallelFor(to2D(bx),
+                        [=] AMREX_GPU_DEVICE (int i, int j)
+                        {
+                            const amrex::Real x = i * dx_arr[0] + poff_x;
+                            const amrex::Real y = j * dx_arr[1] + poff_y;
+                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+
+                            const amrex::Real xmid = (x - laser_pos_offset[0]) * laser_dx_inv[0];
+                            const amrex::Real ymid = (y - laser_pos_offset[1]) * laser_dx_inv[1];
+                            const amrex::Real zmid = (z - laser_pos_offset[2]) * laser_dx_inv[2];
+
+                            Complex val{0, 0};
+                            if (ilaser != 0) {
+                                val = {arr(i, j, comp), arr(i, j, comp + 1)};
+                            }
+
+                            for (int iz=0; iz<=interp_order; iz++) {
+                                auto [shape_z, kk] =
+                                    shape_factor<interp_order>(zmid, iz);
+                            for (int iy=0; iy<=interp_order; iy++) {
+                                auto [shape_y, jj] =
+                                    shape_factor<interp_order>(ymid, iy);
+                            for (int ix=0; ix<=interp_order; ix++) {
+                                auto [shape_x, ii] =
+                                    shape_factor<interp_order>(xmid, ix);
+                                val += (shape_x * shape_y * shape_z) * laser_arr(ii, jj, kk);
+                            }}}
+
+                            arr(i, j, comp) = val.real();
+                            arr(i, j, comp + 1) = val.imag();
+                        });
+                } else if (laser.m_file_geometry == "rt") {
+                    amrex::ParallelFor(to2D(bx),
+                        [=] AMREX_GPU_DEVICE (int i, int j)
+                        {
+                            const amrex::Real x = i * dx_arr[0] + poff_x;
+                            const amrex::Real y = j * dx_arr[1] + poff_y;
+                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+
+                            const amrex::Real r = std::sqrt(x*x + y*y);
+                            const amrex::Real theta = std::atan2(y, x);
+                            const amrex::Real rmid = (r - laser_pos_offset[0]) * laser_dx_inv[0];
+                            const amrex::Real zmid = (z - laser_pos_offset[1]) * laser_dx_inv[1];
+
+                            Complex val{0, 0};
+                            if (ilaser != 0) {
+                                val = {arr(i, j, comp), arr(i, j, comp + 1)};
+                            }
+
+                            for (int iz=0; iz<=interp_order; iz++) {
+                                auto [shape_z, jj] =
+                                    shape_factor<interp_order>(zmid, iz);
+                            for (int ir=0; ir<=interp_order; ir++) {
+                                auto [shape_r, ii] =
+                                    shape_factor<interp_order>(rmid, ir);
+                                val += (shape_r * shape_z) * laser_arr(ii, jj, 0);
+                            for (int im=1; im<=laser_bigend[2]/2; im++) {
+                                val += (shape_r * shape_z) * std::cos(im*theta) *
+                                    laser_arr(ii, jj, 2*im-1);
+                                val += (shape_r * shape_z) * std::sin(im*theta) *
+                                    laser_arr(ii, jj, 2*im);
+                            }}}
+
+                            arr(i, j, comp) = val.real();
+                            arr(i, j, comp + 1) = val.imag();
+                        });
+                } else {
+                    amrex::Abort("Invalid laser geometry");
                 }
-                );
-            }
-            if (laser.m_laser_init_type == "parser") {
+            } else if (laser.m_laser_init_type == "parser") {
                 auto profile_real = laser.m_profile_real;
                 auto profile_imag = laser.m_profile_imag;
-                amrex::ParallelFor(
-                bx,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                {
-                    const amrex::Real x = i * dx_arr[0] + poff_x;
-                    const amrex::Real y = j * dx_arr[1] + poff_y;
-                    const amrex::Real z = islice * dx_arr[2] + poff_z;
-                    if (ilaser == 0) {
-                        arr(i, j, k, comp ) = 0._rt;
-                        arr(i, j, k, comp + 1 ) = 0._rt;
-                    }
-                    arr(i, j, k, comp ) += profile_real(x,y,z);
-                    arr(i, j, k, comp + 1 ) += profile_imag(x,y,z);
-                }
-                );
-            }
-            else if (laser.m_laser_init_type == "gaussian") {
+                amrex::ParallelFor(to2D(bx),
+                    [=] AMREX_GPU_DEVICE (int i, int j)
+                    {
+                        const amrex::Real x = i * dx_arr[0] + poff_x;
+                        const amrex::Real y = j * dx_arr[1] + poff_y;
+                        const amrex::Real z = islice * dx_arr[2] + poff_z;
+                        if (ilaser == 0) {
+                            arr(i, j, comp) = 0._rt;
+                            arr(i, j, comp + 1) = 0._rt;
+                        }
+                        arr(i, j, comp) += profile_real(x,y,z);
+                        arr(i, j, comp + 1) += profile_imag(x,y,z);
+                    });
+            } else if (laser.m_laser_init_type == "gaussian") {
                 const amrex::Real a0 = laser.m_a0;
                 const amrex::Real w0_2 = laser.m_w0 * laser.m_w0;
                 const amrex::Real inv_tau2 = 1/(laser.m_tau*laser.m_tau);
@@ -909,56 +1007,55 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 const amrex::Real phi2 = laser.m_phi2;
                 const amrex::Real clight = get_phys_const().c;
                 const amrex::Real theta_xy = laser.m_STC_theta_xy;
-                amrex::ParallelFor(
-                bx,
-                [=] AMREX_GPU_DEVICE(int i, int j, int k)
-                {
-                    const amrex::Real x = i * dx_arr[0] + poff_x - x0;
-                    const amrex::Real y = j * dx_arr[1] + poff_y - y0;
-                    const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
-                    // Coordinate rotation in yz plane for a laser propagating at an angle.
-                    const amrex::Real yp = std::cos(propagation_angle_yz) * y \
-                        - std::sin( propagation_angle_yz ) * z;
-                    const amrex::Real zp = std::sin(propagation_angle_yz) * y \
-                        + std::cos(propagation_angle_yz) * z;
-                    // For first laser, setval to 0.
-                    if (ilaser == 0) {
-                        arr(i, j, k, comp ) = 0._rt;
-                        arr(i, j, k, comp + 1 ) = 0._rt;
-                    }
-                    // Compute envelope for time step 0
-                    Complex diffract_factor = 1._rt + I * (zp - zfoc + z0 * std::cos(propagation_angle_yz)) \
-                       * 2._rt/(k0 * w0_2);
-                    Complex inv_complex_waist_2 = 1._rt /(w0_2 * diffract_factor);
-                    // Time stretching due to STCs and phi2 complex envelope
-                    // (1 if zeta=0, beta=0, phi2=0)
-                    Complex stretch_factor = 1._rt \
-                        + 4._rt * (zeta - beta * zfoc) * inv_tau2 * (zeta - beta * zfoc) * inv_complex_waist_2 \
-                        + 2._rt * I * (-phi2 - beta * beta * k0 * zfoc) * inv_tau2;
-                    Complex prefactor = a0 / diffract_factor;
-                    Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
-                        amrex::pow(zp + beta * k0 * (x * std::cos(theta_xy) + yp * std::sin(theta_xy)) * clight \
-                        -2._rt * I * (x * std::cos(theta_xy) + yp * std::sin(theta_xy))\
-                        * (zeta + beta * zfoc) * clight * inv_complex_waist_2, 2);
-                    Complex stcfactor = prefactor * amrex::exp( - time_exponent);
-                    Complex exp_argument = - (x * x + yp * yp) * inv_complex_waist_2;
-                    Complex envelope = stcfactor * amrex::exp(exp_argument) * \
-                       amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
-                    arr(i, j, k, comp ) += envelope.real();
-                    arr(i, j, k, comp + 1 ) += envelope.imag();
-                    }
-                );
+                amrex::ParallelFor(to2D(bx),
+                    [=] AMREX_GPU_DEVICE (int i, int j)
+                    {
+                        const amrex::Real x = i * dx_arr[0] + poff_x - x0;
+                        const amrex::Real y = j * dx_arr[1] + poff_y - y0;
+                        const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
+                        // Coordinate rotation in yz plane for a laser propagating at an angle.
+                        const amrex::Real yp = std::cos(propagation_angle_yz) * y
+                            - std::sin( propagation_angle_yz ) * z;
+                        const amrex::Real zp = std::sin(propagation_angle_yz) * y
+                            + std::cos(propagation_angle_yz) * z;
+                        // For first laser, setval to 0.
+                        if (ilaser == 0) {
+                            arr(i, j, comp) = 0._rt;
+                            arr(i, j, comp + 1) = 0._rt;
+                        }
+                        // Compute envelope for time step 0
+                        Complex diffract_factor = 1._rt + I * (zp - zfoc + z0 *
+                            std::cos(propagation_angle_yz)) * 2._rt/(k0 * w0_2);
+                        Complex inv_complex_waist_2 = 1._rt /(w0_2 * diffract_factor);
+                        // Time stretching due to STCs and phi2 complex envelope
+                        // (1 if zeta=0, beta=0, phi2=0)
+                        Complex stretch_factor = 1._rt
+                            + 4._rt * (zeta - beta * zfoc) * inv_tau2 * (zeta - beta * zfoc)
+                                    * inv_complex_waist_2
+                            + 2._rt * I * (-phi2 - beta * beta * k0 * zfoc) * inv_tau2;
+                        Complex prefactor = a0 / diffract_factor;
+                        Complex time_exponent = 1._rt / ( stretch_factor * L0 * L0 ) *
+                            amrex::Math::powi<2>(zp +
+                            beta * k0 * (x * std::cos(theta_xy) + yp * std::sin(theta_xy)) * clight
+                            -2._rt * I * (x * std::cos(theta_xy) + yp * std::sin(theta_xy))
+                            * (zeta + beta * zfoc) * clight * inv_complex_waist_2);
+                        Complex stcfactor = prefactor * amrex::exp( - time_exponent);
+                        Complex exp_argument = - (x * x + yp * yp) * inv_complex_waist_2;
+                        Complex envelope = stcfactor * amrex::exp(exp_argument) *
+                            amrex::exp(I * yp * k0 * propagation_angle_yz + cep);
+                        arr(i, j, comp) += envelope.real();
+                        arr(i, j, comp + 1) += envelope.imag();
+                    });
             }
         }
     }
 }
 
 void
-MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
-                                int max_step, amrex::Real max_time)
+MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step)
 {
     if (!UseLaser(islice)) return;
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!m_insitu_period.doDiagnostics(step, time, is_last_step)) return;
     HIPACE_PROFILE("MultiLaser::InSituComputeDiags()");
 
     using namespace amrex::literals;
@@ -1044,10 +1141,10 @@ MultiLaser::InSituComputeDiags (int step, amrex::Real time, int islice,
 }
 
 void
-MultiLaser::InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::Real max_time)
+MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
 {
     if (!m_use_laser) return;
-    if (!utils::doDiagnostics(m_insitu_period, step, max_step, time, max_time)) return;
+    if (!m_insitu_period.doDiagnostics(step, time, is_last_step)) return;
     HIPACE_PROFILE("MultiLaser::InSituWriteToFile()");
 
 #ifdef HIPACE_USE_OPENPMD

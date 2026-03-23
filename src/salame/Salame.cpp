@@ -13,8 +13,8 @@
 
 void
 SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last_islice,
-              bool& overloaded, const int current_N_level, const int step, const int islice,
-              const amrex::Real relative_tolerance)
+              bool& overloaded, const int current_N_level, const bool is_first_step,
+              const int islice, const amrex::Real relative_tolerance)
 {
     HIPACE_PROFILE("SalameModule()");
 
@@ -78,8 +78,8 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
         for (int lev=0; lev<current_N_level; ++lev) {
             // deposit SALAME beam jz
-            hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
-                false, true, false, WhichSlice::Salame, WhichBeamSlice::This);
+            hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev,
+                is_first_step, false, true, false, WhichSlice::Salame, WhichBeamSlice::This);
         }
 
         for (int lev=0; lev<current_N_level; ++lev) {
@@ -129,8 +129,8 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             hipace->m_fields.setVal(0., lev, WhichSlice::Salame, "jz_beam");
             // deposit SALAME beam jz only on the highest level of each particle for SalameGetW,
             // since the most accurate field (on the highest level) is supposed to be flattened
-            hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
-                false, true, false, WhichSlice::Salame, WhichBeamSlice::This, true);
+            hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev,
+                is_first_step, false, true, false, WhichSlice::Salame, WhichBeamSlice::This, true);
         }
 
         // W = (Ez_target - Ez_no_salame) / Ez_only_salame + 1
@@ -167,8 +167,8 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
             hipace->m_fields.setVal(0., lev, WhichSlice::This, "jz_beam", "Sy", "Sx");
 
             // deposit beam jz
-            hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev, step,
-                false, true, false, WhichSlice::This, WhichBeamSlice::This);
+            hipace->m_multi_beam.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom, lev,
+                is_first_step, false, true, false, WhichSlice::This, WhichBeamSlice::This);
 
             hipace->m_grid_current.DepositCurrentSlice(hipace->m_fields, hipace->m_3D_geom[lev], lev, islice);
         }

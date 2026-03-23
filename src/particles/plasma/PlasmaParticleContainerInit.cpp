@@ -325,9 +325,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1];
                 ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                     ptd.rdata(iforce)[pidx] = 0._rt;
                 }
@@ -355,9 +353,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 const amrex::Real ux_arr[3] = {-1._rt, 1._rt, -1._rt};
                 const amrex::Real uy_arr[3] = {1._rt, -1._rt, -1._rt};
 
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int imirror=0; imirror<3; ++imirror) {
                     const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
 
@@ -379,9 +375,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                     ptd.rdata(PlasmaIdx::psi_half_step)[midx] =
                         ptd.rdata(PlasmaIdx::psi_half_step)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                    HIPACE_LOOP_UNROLL
                     for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                         ptd.rdata(iforce)[midx] = 0._rt;
                     }

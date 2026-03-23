@@ -257,13 +257,15 @@ private:
     amrex::Vector<amrex::FArrayBox> m_rescor;
 
     /** Device pointer to Array4s used by the single-block kernel at the bottom */
-    amrex::Array4<amrex::Real> const* m_acf_a = nullptr;
-    amrex::Array4<amrex::Real> const* m_res_a = nullptr;
-    amrex::Array4<amrex::Real> const* m_cor_a = nullptr;
-    amrex::Array4<amrex::Real> const* m_rescor_a = nullptr;
+    Array3<amrex::Real> const* m_acf_a = nullptr;
+    Array3<amrex::Real> const* m_res_a = nullptr;
+    Array3<amrex::Real> const* m_cor_a = nullptr;
+    Array3<amrex::Real> const* m_rescor_a = nullptr;
 
     /** Device vector of Array4s used by the single-block kernel at the bottom */
-    amrex::Gpu::Buffer<amrex::Array4<amrex::Real> > m_array4;
+    amrex::Gpu::Buffer<Array3<amrex::Real>> m_array3;
+    /** Device vector of Boxes used by the single-block kernel at the bottom */
+    amrex::Gpu::Buffer<amrex::BoxND<2>> m_lev_domain;
 
 #if defined(AMREX_USE_CUDA)
     /** CUDA graphs for average-down */
