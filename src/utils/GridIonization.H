@@ -20,14 +20,17 @@ private:
 
     /** Whether to use a grid ionization */
     bool m_use_grid_ionization = false;
+    /** Names of plasma species used in grid ionization */
     amrex::Vector<std::string> m_names {"no_gridplasma"};
 
 public:
     /** Read parameters from the input file */
     void ReadParameters ();
 
+    /** Return a vector of component names that need to be used by grid ionization */
     std::vector<std::string> GetFieldComponents (const MultiPlasma& multi_plasma);
 
+    /** Initialize gridion fields. Must be called after Plasma initialize for every time step */
     void InitData (Fields& fields, const MultiPlasma& multi_plasma,
                    const amrex::Geometry& geom, int const lev);
 

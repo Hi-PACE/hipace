@@ -63,6 +63,21 @@ GridIonization::InitData (Fields& fields, const MultiPlasma& multi_plasma,
 
     for (auto& plasma_name : m_names) {
         const auto& plasma = multi_plasma.GetPlasma(plasma_name);
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            plasma.m_can_laser_ionize,
+            "Plasma '" + plasma_name +
+            "' used by grid ionization must have laser ionization enabled (can_laser_ionize = 1)"
+        );
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            plasma.m_ppc[0] == 0 && plasma.m_ppc[1] == 0 &&
+            plasma.m_ppc_fine[0] == 0 && plasma.m_ppc_fine[1] == 0 &&
+            plasma.m_ppc_fine2[0] == 0 && plasma.m_ppc_fine2[1] == 0,
+            "Plasma '" + plasma_name +
+            "' used by grid ionization must have 0 0 particles per cell (ppc = 0 0)"
+        );
+
         const int weight_comp = Comps[WhichSlice::This][
             "grid_ionization_w_" + plasma_name + "_" + std::to_string(plasma.m_init_ion_lev)
         ];
