@@ -76,16 +76,18 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( fd.m_diag_coarsen.min() >= 1,
             "Coarsening ratio must be >= 1");
 
-        queryWithParser(pph, "output_period", fd.m_output_period);
-        queryWithParserAlt(pp, "output_period", fd.m_output_period, ppd);
+        queryWithParser(pph, "output_period", fd.m_output_period.m_func_str);
+        queryWithParserAlt(pp, "output_period", fd.m_output_period.m_func_str, ppd);
+        fd.m_output_period.compile();
     }
 
-    if (queryWithParser(pph, "output_period", m_beam_output_period)) {
+    if (queryWithParser(pph, "output_period", m_beam_output_period.m_func_str)) {
         amrex::Print() << "WARNING: 'hipace.output_period' is deprecated! "
             "Use 'diagnostic.output_period' instead!\n";
     }
-    queryWithParser(ppd, "output_period", m_beam_output_period);
-    queryWithParser(ppd, "beam_output_period", m_beam_output_period);
+    queryWithParser(ppd, "output_period", m_beam_output_period.m_func_str);
+    queryWithParser(ppd, "beam_output_period", m_beam_output_period.m_func_str);
+    m_beam_output_period.compile();
 }
 
 bool
@@ -331,8 +333,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
 
 void
 Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
-                            amrex::Geometry const& laser_geom, int output_step, int max_step,
-                            amrex::Real output_time, amrex::Real max_time)
+                            amrex::Geometry const& laser_geom, int output_step,
+                            amrex::Real output_time, bool is_last_step)
 {
     AMREX_ALWAYS_ASSERT(m_initialized);
 
@@ -363,12 +365,13 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
             }
         }
 
+        const amrex::Box sim_domain = domain;
+        amrex::Box cut_domain = domain;
         {
             // shrink box to user specified bounds m_diag_lo and m_diag_hi (in real space)
             const amrex::Real poff_x = GetPosOffset(0, geom, geom.Domain());
             const amrex::Real poff_y = GetPosOffset(1, geom, geom.Domain());
             const amrex::Real poff_z = GetPosOffset(2, geom, geom.Domain());
-            amrex::Box cut_domain = domain;
             if (fd.m_use_custom_size_lo) {
                 cut_domain.setSmall({
                     static_cast<int>(std::round((fd.m_diag_lo[0] - poff_x)/geom.CellSize(0))),
@@ -382,6 +385,10 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                     static_cast<int>(std::round((fd.m_diag_hi[1] - poff_y)/geom.CellSize(1))),
                     static_cast<int>(std::round((fd.m_diag_hi[2] - poff_z)/geom.CellSize(2)))
                 });
+            }
+            // sometimes the cut_domain is off by one cell due to rounding errors
+            if (!(domain & cut_domain).ok()) {
+                cut_domain.grow(1);
             }
             // calculate intersection of boxes to prevent them getting larger
             domain &= cut_domain;
@@ -400,13 +407,21 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 
         domain.coarsen(fd.m_diag_coarsen);
 
-        fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
+        fd.m_has_field = hasFieldOutput(fd, output_step, output_time, is_last_step);
 
-        fd.m_has_field = domain.ok()
-                         && hasFieldOutput(fd, output_step, max_step, output_time, max_time);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(domain.ok(),
+            "Box for diagnostic object '" + fd.m_diag_name + "' is empty. "
+            "Make sure that it intersects with the simulation domain!\n"
+            "Simulation: " + amrex::ToString(sim_domain) + "\n"
+            "Diagnostic: " + amrex::ToString(cut_domain) + "\n"
+            "Intersection: " + amrex::ToString(domain)
+        );
 
         if(fd.m_has_field) {
             HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
+
+            fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
+
             switch (fd.m_base_geom_type) {
                 case FieldDiagnosticData::geom_type::field:
                     fd.m_F.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());

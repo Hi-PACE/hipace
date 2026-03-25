@@ -13,6 +13,7 @@
 #include "diagnostics/Diagnostic.H"
 #include "laser/MultiLaser.H"
 #include "utils/GPUUtil.H"
+#include "utils/IOUtil.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
@@ -272,24 +273,22 @@ public:
 
     /** Compute in-situ field diagnostics of current slice, store in member variable
      * \param[in] step current time step
-     * \param[in] time physical time
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] geom3D Geometry of the problem
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] max_time maximum time of simulation
+     * \param[in] time physical time at the given step
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
-                             int max_step, amrex::Real max_time);
+    void InSituComputeDiags (int step, int islice, const amrex::Geometry& geom3D,
+                             amrex::Real time, bool is_last_step);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
      * \param[in] geom3D Geometry object for the whole domain
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] max_time maximum time of simulation
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
-                            int max_step, amrex::Real max_time);
+                            bool is_last_step);
 
     /** \brief set all selected fields to a value
      *
@@ -475,7 +474,7 @@ private:
     static constexpr int m_insitu_nrp = 10;
     /** How often the insitu field diagnostics should be computed and written
      * Default is 0, meaning no output */
-    int m_insitu_period {0};
+    utils::DiagPeriod m_insitu_period {"0"};
     /** All per-slice real field properties */
     amrex::Vector<amrex::Real> m_insitu_rdata;
     /** Sum of all per-slice real field properties */
