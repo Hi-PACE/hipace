@@ -143,21 +143,18 @@ public:
     /** Compute reduced plasma diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] physical_time physical time at the given step
-     * \param[in] max_time maximum time of simulation
+     * \param[in] time physical time at the given step
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituComputeDiags (int step, int islice, int max_step,
-                             amrex::Real physical_time, amrex::Real max_time);
+    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step);
     /** Write reduced beam diagnostics to file
      * \param[in] step time step of simulation
      * \param[in] time physical time at the given step
      * \param[in] geom Simulation geometry
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] max_time maximum time of simulation
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
-                            int max_step, amrex::Real max_time);
+                            bool is_last_step);
 
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
     int m_nplasmas = 0; /**< number of plasma containers */

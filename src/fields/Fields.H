@@ -273,24 +273,22 @@ public:
 
     /** Compute in-situ field diagnostics of current slice, store in member variable
      * \param[in] step current time step
-     * \param[in] time physical time
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] geom3D Geometry of the problem
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] max_time maximum time of simulation
+     * \param[in] time physical time at the given step
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituComputeDiags (int step, amrex::Real time, int islice, const amrex::Geometry& geom3D,
-                             int max_step, amrex::Real max_time);
+    void InSituComputeDiags (int step, int islice, const amrex::Geometry& geom3D,
+                             amrex::Real time, bool is_last_step);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
      * \param[in] geom3D Geometry object for the whole domain
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] max_time maximum time of simulation
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom3D,
-                            int max_step, amrex::Real max_time);
+                            bool is_last_step);
 
     /** \brief set all selected fields to a value
      *

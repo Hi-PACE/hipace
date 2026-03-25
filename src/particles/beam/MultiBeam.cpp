@@ -42,14 +42,15 @@ MultiBeam::InitData (const amrex::Geometry& geom)
 
 void
 MultiBeam::DepositCurrentSlice (
-    Fields& fields, amrex::Vector<amrex::Geometry> const& geom, const int lev, const int step,
+    Fields& fields, amrex::Vector<amrex::Geometry> const& geom,
+    const int lev, const bool is_first_step,
     const bool do_beam_jx_jy_deposition, const bool do_beam_jz_deposition,
     const bool do_beam_rhomjz_deposition, const int which_slice, const int which_beam_slice,
     const bool only_highest)
 
 {
     for (int i=0; i<m_nbeams; i++) {
-        const bool is_salame = m_all_beams[i].m_do_salame && (step == 0);
+        const bool is_salame = m_all_beams[i].m_do_salame && is_first_step;
         if ( is_salame || (which_slice != WhichSlice::Salame) ) {
             ::DepositCurrentSlice(m_all_beams[i], fields, geom, lev,
                                   do_beam_jx_jy_deposition && !is_salame,
@@ -91,12 +92,10 @@ MultiBeam::TagByLevel (
 }
 
 void
-MultiBeam::InSituComputeDiags (int step, int islice,
-                               int max_step, amrex::Real physical_time,
-                               amrex::Real max_time)
+MultiBeam::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step)
 {
     for (auto& beam : m_all_beams) {
-        if (beam.m_insitu_period.doDiagnostics(step, max_step, physical_time, max_time)) {
+        if (beam.m_insitu_period.doDiagnostics(step, time, is_last_step)) {
             beam.InSituComputeDiags(islice);
         }
     }
@@ -104,10 +103,10 @@ MultiBeam::InSituComputeDiags (int step, int islice,
 
 void
 MultiBeam::InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
-                              int max_step, amrex::Real max_time)
+                              bool is_last_step)
 {
     for (auto& beam : m_all_beams) {
-        if (beam.m_insitu_period.doDiagnostics(step, max_step, time, max_time)) {
+        if (beam.m_insitu_period.doDiagnostics(step, time, is_last_step)) {
             beam.InSituWriteToFile(step, time, geom);
         }
     }
@@ -130,9 +129,9 @@ bool MultiBeam::AnySpeciesSalame () {
     return false;
 }
 
-bool MultiBeam::isSalameNow (const int step)
+bool MultiBeam::isSalameNow (const bool is_first_step)
 {
-    if (step != 0) return false;
+    if (!is_first_step) return false;
 
     for (int i = 0; i < m_nbeams; ++i) {
         if (m_all_beams[i].m_do_salame) {
