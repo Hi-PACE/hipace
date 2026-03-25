@@ -109,12 +109,33 @@ MultiPlasma::ExplicitDeposition (Fields& fields, amrex::Vector<amrex::Geometry> 
 
 void
 MultiPlasma::AdvanceParticles (
-    const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev,
+    const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice,
     int const current_N_level)
 {
     for (int i=0; i<m_nplasmas; i++) {
-        if (m_all_plasmas[i].m_do_push){
-            AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice, lev, current_N_level);
+
+        if (m_all_plasmas[i].m_do_push) {
+
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                m_all_plasmas[i].m_n_subcycles == 1 || !temp_slice,
+                "Plasma must have n_subcycles set to 1 when using SALAME or the "
+                "Predictor-Corrector solver"
+            );
+
+            for (int isubcycle = 0; isubcycle < m_all_plasmas[i].m_n_subcycles; ++isubcycle) {
+
+                if (isubcycle > 0 && Hipace::GetInstance().m_N_level > 1) {
+                    m_all_plasmas[i].TagByLevel(current_N_level, gm, false);
+                }
+
+                for (int lev=0; lev<current_N_level; ++lev) {
+                    AdvancePlasmaParticles(m_all_plasmas[i], fields, gm, temp_slice, lev);
+                }
+            }
+
+            if (!temp_slice) {
+                ShiftForceTerms(m_all_plasmas[i]);
+            }
         }
     }
 }

@@ -807,9 +807,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     m_multi_plasma.DoLaserIonization(islice, m_multi_laser.GetLaserGeom(), m_multi_laser);
 
     // Push plasma particles
-    for (int lev=0; lev<current_N_level; ++lev) {
-        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
-    }
+    m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, current_N_level);
 
     if (m_depos_order_z == 2) {
         CalculateEzNext(current_N_level, is_first_step);
@@ -1110,10 +1108,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
         i_iter++;
         m_predcorr_avg_iterations += 1.0;
 
-        for (int lev=0; lev<current_N_level; ++lev) {
-            // Push particles to the next temp slice
-            m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, true, lev, current_N_level);
-        }
+        // Push particles to the next temp slice
+        m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, true, current_N_level);
 
         if (m_N_level > 1) {
             // tag to temp slice for deposition
