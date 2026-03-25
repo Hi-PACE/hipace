@@ -30,7 +30,12 @@ public:
     void InitData (amrex::Vector<amrex::BoxArray> slice_ba,
                    amrex::Vector<amrex::DistributionMapping> slice_dm,
                    amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm);
-    void InitIonizationData(amrex::Vector<amrex::Geometry> const& gm);
+
+    /** \brief Loop over plasma species and initialize values used for ionization.
+     *
+     * \param[in] gm Geometry of the simulation, to get the cell size
+     */
+    void InitIonization (amrex::Vector<amrex::Geometry> gm);
 
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *

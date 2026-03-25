@@ -291,7 +291,9 @@ Hipace::InitData ()
 #endif
 
     m_multi_laser.InitData();
-    m_multi_plasma.InitIonizationData (m_3D_geom);
+
+    m_multi_plasma.InitIonization(m_3D_geom);
+
     for (int lev=0; lev<m_N_level; ++lev) {
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
     }
@@ -711,7 +713,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
-                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels, true, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels,
+                true, true, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
@@ -719,7 +722,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
-                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels, m_use_laser, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels,
+                m_use_laser, true, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,

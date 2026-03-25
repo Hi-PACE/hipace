@@ -1168,9 +1168,10 @@ Field diagnostics
     accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
 
 * ``hipace.deposit_rho_ion_levels`` (`bool`) optional (default `0`)
-    This option works similarly to ``hipace.deposit_rho_individual``,
-    but the charge density be splited according to the ionization level ``N`` from every plasma species will be deposited into individual fields
-    accessible as ``rho_<plasma name>_ILN`` in ``diagnostic.field_data``.
+    This option works similarly to ``hipace.deposit_rho_individual``, but the charge density will
+    be split according to the ionization level. Every plasma species that is ionizable will be
+    deposited into individual fields accessible as ``rho_<plasma name>_IL<ionization level>``
+    in ``diagnostic.field_data``.
 
 * ``hipace.deposit_temp_individual`` (`bool`) optional (default `0`)
     The weights, momentum, and their squares from every plasma species

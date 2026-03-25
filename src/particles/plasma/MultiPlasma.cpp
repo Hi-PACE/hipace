@@ -51,7 +51,7 @@ MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
 }
 
 void
-MultiPlasma::InitIonizationData (amrex::Vector<amrex::Geometry> const& gm)
+MultiPlasma::InitIonization (amrex::Vector<amrex::Geometry> gm)
 {
     for (auto& plasma : m_all_plasmas) {
         if(plasma.m_can_ionize) {
@@ -91,12 +91,15 @@ MultiPlasma::DepositCurrent (
         ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
                          deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
                          gm, lev, -1);
-        const int tag = Hipace::m_deposit_rho_ion_levels? m_all_plasmas[i].m_max_ion_lev:-1;
-        if(m_all_plasmas[i].m_max_ion_lev == 0){continue;}
-        for (int ion_lev=0; ion_lev<=tag; ion_lev++){
+
+        if (Hipace::m_deposit_rho_ion_levels &&
+            deposit_rho &&
+            m_all_plasmas[i].m_max_ion_lev > 0) {
+            for (int ion_lev = 0; ion_lev <= m_all_plasmas[i].m_max_ion_lev; ++ion_lev) {
                 ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
-                         0, 0, deposit_rho, 0, 0,
-                         gm, lev, ion_lev);
+                    false, false, true, false, false,
+                    gm, lev, ion_lev);
+            }
         }
     }
 }
