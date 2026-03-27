@@ -149,8 +149,8 @@ InitParticles (const amrex::RealVect& a_u_std,
 
             if (!do_init) return {false, 0, 0, 0};
 
-            const amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-            const amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
+            const amrex::Real x = plo[0] + (amrex::Real(i) + r[0] + x_offset)*dx[0];
+            const amrex::Real y = plo[1] + (amrex::Real(j) + r[1] + y_offset)*dx[1];
 
             const amrex::Real rsq = x*x + y*y;
             const amrex::Real density = density_func(x, y, c_t);
@@ -276,8 +276,8 @@ InitParticles (const amrex::RealVect& a_u_std,
                     }
 
                     pidx += current_size;
-                    ptd.id(pidx) = 1; // plasma id is only used to distinguish between valid/invalid
-                    ptd.cpu(pidx) = 0; // level 0
+                    ptd.id(static_cast<int>(pidx)) = 1; // plasma id is only used to distinguish between valid/invalid
+                    ptd.cpu(static_cast<int>(pidx)) = 0; // level 0
                     ptd.rdata(PlasmaIdx::x)[pidx] = x;
                     ptd.rdata(PlasmaIdx::y)[pidx] = y;
 
@@ -347,8 +347,8 @@ InitParticles (const amrex::RealVect& a_u_std,
                 for (int imirror=0; imirror<3; ++imirror) {
                     const amrex::Long midx = (imirror+1)*total_non_mirrored_particles + pidx;
 
-                    ptd.id(midx) = 1; // plasma id is only used to distinguish between valid/invalid
-                    ptd.cpu(midx) = 0; // level 0
+                    ptd.id(static_cast<int>(midx)) = 1; // plasma id is only used to distinguish between valid/invalid
+                    ptd.cpu(static_cast<int>(midx)) = 0; // level 0
                     ptd.rdata(PlasmaIdx::x)[midx] = x_arr[imirror];
                     ptd.rdata(PlasmaIdx::y)[midx] = y_arr[imirror];
 
