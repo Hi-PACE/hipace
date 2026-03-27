@@ -24,7 +24,9 @@ enum struct FFTType {
     C2C_2D_bkw,
     C2R_2D,
     R2C_2D,
-    R2R_2D,
+    R2R_2D_DST1,
+    R2R_2D_DST2,
+    R2R_2D_DST3,
     C2R_1D_batched,
     R2C_1D_batched
 };

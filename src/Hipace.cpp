@@ -130,6 +130,7 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
+    queryWithParser(pph, "temperature_depos_order", m_temperature_depos_order);
     queryWithParser(pph, "interpolate_neutralizing_background",
         m_interpolate_neutralizing_background);
     bool do_mfi_sync = false;
@@ -309,6 +310,8 @@ Hipace::InitData ()
 
     amrex::ParmParse pph("hipace");
     queryWithParser(pph, "initial_time", m_initial_time);
+    queryWithParser(pph, "initial_step", m_initial_step);
+
     bool do_output_input = false;
     queryWithParser(pph, "output_input", do_output_input);
     if (do_output_input && amrex::ParallelDescriptor::IOProcessor()) {
@@ -493,7 +496,7 @@ Hipace::Evolve ()
     const int rank = amrex::ParallelDescriptor::MyProc();
 
     // now each rank starts with its own time step and writes to its own file. The first rank starts with step 0
-    for (int step = rank; step <= m_max_step; step += m_numprocs)
+    for (int step = m_initial_step + rank; step <= m_max_step; step += m_numprocs)
     {
         ResetAllQuantities();
 
@@ -506,7 +509,7 @@ Hipace::Evolve ()
             );
         }
 
-        m_physical_time = step == 0 ? m_initial_time : m_multi_buffer.get_time();
+        m_physical_time = step == m_initial_step ? m_initial_time : m_multi_buffer.get_time();
 
         if (m_physical_time == std::numeric_limits<amrex::Real>::max()) {
             if (step+1 <= m_max_step && !m_has_last_step) {
@@ -570,22 +573,24 @@ Hipace::Evolve ()
         }
 
         // need correct physical time for this
-        InitDiagnostics(step);
+        const bool is_first_step = step == m_initial_step;
+        const bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
+        InitDiagnostics(step, m_physical_time, is_last_step);
 
         // Solve slices
         for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
-            SolveOneSlice(isl, step);
+            SolveOneSlice(isl, step, is_first_step, is_last_step);
         };
 
         m_adaptive_time_step.CalculateFromMinUz(
             m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
 
-        WriteDiagnostics(step);
+        WriteDiagnostics(step, m_physical_time, is_last_step);
 
-        m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
-        m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
-        m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], m_max_step, m_max_time);
-        m_multi_laser.InSituWriteToFile(step, m_physical_time, m_max_step, m_max_time);
+        m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
+        m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
+        m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
+        m_multi_laser.InSituWriteToFile(step, m_physical_time, is_last_step);
 
         if (!m_explicit) {
             // averaging predictor corrector loop diagnostics
@@ -652,7 +657,7 @@ Hipace::Evolve ()
 }
 
 void
-Hipace::SolveOneSlice (int islice, int step)
+Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_step)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
@@ -691,7 +696,7 @@ Hipace::SolveOneSlice (int islice, int step)
     m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
 
     // has to be after aabs writing
-    m_multi_plasma.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
+    m_multi_plasma.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
     // deposit temperature
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -707,7 +712,7 @@ Hipace::SolveOneSlice (int islice, int step)
                 m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
                 false, true, m_do_beam_jz_minus_rho, WhichSlice::This, WhichBeamSlice::This);
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
@@ -715,7 +720,7 @@ Hipace::SolveOneSlice (int islice, int step)
                 m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
                 m_do_beam_jx_jy_deposition, true, m_do_beam_jz_minus_rho,
                 WhichSlice::This, WhichBeamSlice::This);
         }
@@ -731,7 +736,7 @@ Hipace::SolveOneSlice (int islice, int step)
 
     // Advance laser slice by 1 step using chi
     // no MR for laser
-    m_multi_laser.AdvanceSlice(islice, m_fields, m_dt, step, m_3D_geom[0]);
+    m_multi_laser.AdvanceSlice(islice, m_fields, m_dt, is_first_step, m_3D_geom[0]);
 
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
         m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
@@ -750,7 +755,7 @@ Hipace::SolveOneSlice (int islice, int step)
             // it is implemented in the WAND-PIC quasistatic PIC code.
 
             // deposit jx_beam and jy_beam in the Next slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
                 m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
 
             // Set Sx and Sy to beam contribution
@@ -764,14 +769,15 @@ Hipace::SolveOneSlice (int islice, int step)
         }
     } else {
         // Solves Bx and By in the current slice and modifies the force terms of the plasma particles
-        PredictorCorrectorLoopToSolveBxBy(islice, current_N_level, step);
+        PredictorCorrectorLoopToSolveBxBy(islice, current_N_level, is_first_step);
     }
 
-    if (m_multi_beam.isSalameNow(step)) {
+    if (m_multi_beam.isSalameNow(is_first_step)) {
         // Modify the beam particle weights on this slice to flatten Ez.
         // As the beam current is modified, Bx and By are also recomputed.
         SalameModule(this, m_salame_n_iter, m_salame_do_advance, m_salame_last_slice,
-                    m_salame_overloaded, current_N_level, step, islice, m_salame_relative_tolerance);
+                     m_salame_overloaded, current_N_level, is_first_step, islice,
+                     m_salame_relative_tolerance);
     }
 
     // add external fields to the field grid
@@ -780,14 +786,14 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     // get beam diagnostics after SALAME but before beam push
-    m_multi_beam.InSituComputeDiags(step, islice, m_max_step, m_physical_time, m_max_time);
-    FillBeamDiagnostics(step);
+    m_multi_beam.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
+    FillBeamDiagnostics(step, m_physical_time, is_last_step);
 
     // get field insitu diagnostics after all fields are computed & SALAME
-    m_fields.InSituComputeDiags(step, m_physical_time, islice, m_3D_geom[0], m_max_step, m_max_time);
+    m_fields.InSituComputeDiags(step, islice, m_3D_geom[0], m_physical_time, is_last_step);
 
     // get laser insitu diagnostics
-    m_multi_laser.InSituComputeDiags(step, m_physical_time, islice, m_max_step, m_max_time);
+    m_multi_laser.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
     // copy fields (and laser) to diagnostic array
     FillFieldDiagnostics(current_N_level, islice);
@@ -806,7 +812,7 @@ Hipace::SolveOneSlice (int islice, int step)
     }
 
     if (m_depos_order_z == 2) {
-        CalculateEzNext(current_N_level, step);
+        CalculateEzNext(current_N_level, is_first_step);
     }
 
     // get minimum beam acceleration on level 0
@@ -823,7 +829,6 @@ Hipace::SolveOneSlice (int islice, int step)
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
-    bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
     m_multi_buffer.put_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This, is_last_step);
 
     // shift all levels
@@ -837,7 +842,7 @@ Hipace::SolveOneSlice (int islice, int step)
 }
 
 void
-Hipace::CalculateEzNext (const int current_N_level, const int step)
+Hipace::CalculateEzNext (const int current_N_level, const bool is_first_step)
 {
     if (m_N_level > 1) {
         // tag to next slice for deposition
@@ -852,7 +857,7 @@ Hipace::CalculateEzNext (const int current_N_level, const int step)
                                     WhichSlice::Next, {"jx_beam", "jy_beam"});
         } else {
             // beams deposit jx jy to the next slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
                 m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
         }
 
@@ -1076,7 +1081,7 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
 
 void
 Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N_level,
-                                           const int step)
+                                           const bool is_first_step)
 {
     HIPACE_PROFILE("Hipace::PredictorCorrectorLoopToSolveBxBy()");
 
@@ -1121,7 +1126,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
                 true, false, false, false, false, m_3D_geom, lev);
 
             // beams deposit jx jy to the next slice
-            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, step,
+            m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
                 m_do_beam_jx_jy_deposition, false, false, WhichSlice::Next, WhichBeamSlice::Next);
         }
 
@@ -1280,19 +1285,18 @@ Hipace::doCoulombCollision ()
 }
 
 void
-Hipace::InitDiagnostics (const int step)
+Hipace::InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
     // need correct physical time for this check
-    if (m_diags.hasAnyOutput(step, m_max_step, m_physical_time, m_max_time)) {
+    if (m_diags.hasAnyOutput(step, time, is_last_step)) {
         m_openpmd_writer.InitDiagnostics();
     }
-    if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
+    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
         m_openpmd_writer.InitBeamData(m_multi_beam, getDiagBeamNames());
     }
 #endif
-    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(),
-                           step, m_max_step, m_physical_time, m_max_time);
+    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(), step, time, is_last_step);
 }
 
 void
@@ -1306,32 +1310,32 @@ Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
 }
 
 void
-Hipace::FillBeamDiagnostics (const int step)
+Hipace::FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
-    if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
+    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
         m_openpmd_writer.CopyBeams(m_multi_beam, getDiagBeamNames());
     }
 #else
-    amrex::ignore_unused(step);
+    amrex::ignore_unused(step, time, is_last_step);
 #endif
 }
 
 void
-Hipace::WriteDiagnostics (const int step)
+Hipace::WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
-    if (m_diags.hasAnyFieldOutput(step, m_max_step, m_physical_time, m_max_time)) {
+    if (m_diags.hasAnyFieldOutput(step, time, is_last_step)) {
         m_openpmd_writer.WriteFieldDiagnostics(m_diags.getFieldData(),
             m_multi_laser, m_physical_time, step);
     }
 
-    if (m_diags.hasBeamOutput(step, m_max_step, m_physical_time, m_max_time)) {
+    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
         m_openpmd_writer.WriteBeamDiagnostics(m_multi_beam, m_physical_time, step,
             getDiagBeamNames(), m_3D_geom);
     }
 #else
-    amrex::ignore_unused(step);
+    amrex::ignore_unused(step, time, is_last_step);
     amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
 #endif
 }

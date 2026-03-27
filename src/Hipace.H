@@ -107,8 +107,10 @@ public:
      *
      * \param[in] islice slice number
      * \param[in] step current time step
+     * \param[in] is_first_step if this is the first time step of the simulation
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void SolveOneSlice (int islice, int step);
+    void SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_step);
 
     /**
      * \brief Initialize Sx and Sy with the beam contributions
@@ -129,9 +131,9 @@ public:
      * \brief Compute Ez on the Next slice
      *
      * \param[in] current_N_level number of MR levels
-     * \param[in] step current time step
+     * \param[in] is_first_step if this is the first time step of the simulation
      */
-    void CalculateEzNext (const int current_N_level, const int step);
+    void CalculateEzNext (const int current_N_level, const bool is_first_step);
 
     /** \brief Reset plasma and field slice quantities to initial value.
      *
@@ -213,6 +215,8 @@ public:
     inline static amrex::Real m_physical_time = 0.0;
     /** Physical time at the beginning of the simulation */
     inline static amrex::Real m_initial_time = 0.0;
+    /** step index at the beginning of the simulation */
+    int m_initial_step = 0;
 
     bool m_has_last_step = false;
     /** Level of verbosity */
@@ -242,6 +246,8 @@ public:
     inline static bool m_deposit_rho_individual = false;
     /** Whether to deposit temperature for every individual plasma for diagnostics */
     inline static bool m_deposit_temp_individual = false;
+    /** Order of the temperature deposition shape factor */
+    inline static int m_temperature_depos_order = 2;
     /** Whether to interpolate the neutralizing background to MR levels 1 and 2 instead of depositing it */
     inline static bool m_interpolate_neutralizing_background = false;
     /** Whether to use tiling for particle operations */
@@ -351,10 +357,10 @@ private:
     /** Vector of binary collisions */
     amrex::Vector< CoulombCollision > m_all_collisions;
 
-    void InitDiagnostics (const int step);
+    void InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void FillFieldDiagnostics (const int current_N_level, int islice);
-    void FillBeamDiagnostics (const int step);
-    void WriteDiagnostics (const int step);
+    void FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
+    void WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void FlushDiagnostics ();
 
     /** \brief get diagnostics Component names of Fields to output */
@@ -373,10 +379,10 @@ private:
      *
      * \param[in] islice longitudinal slice
      * \param[in] current_N_level number of MR levels active on the current slice
-     * \param[in] step current time step
+     * \param[in] is_first_step if this is the first time step of the simulation
      */
     void PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N_level,
-                                            const int step);
+                                            const bool is_first_step);
 };
 
 #endif
