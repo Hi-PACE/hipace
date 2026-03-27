@@ -26,7 +26,7 @@ HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 RTOL=2e-3
 
 
-for solver_type in FFTDirichletDirect FFTDirichletExpanded FFTDirichletFast FFTDirichletQuick MGDirichlet
+for solver_type in FFTDirichletDirectOdd FFTDirichletDirectEven FFTDirichletExpanded FFTDirichletFast FFTDirichletQuick MGDirichlet
 do
 
     echo "Testing $solver_type"
