@@ -348,11 +348,16 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
-* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletQuick` or `FFTDirichletFast`)
+* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirectEven` or `FFTDirichletDirectOdd`, GPU: `FFTDirichletQuick` or `FFTDirichletFast`)
     Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
     solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are:
 
-      * ``FFTDirichletDirect`` Use the discrete sine transformation that is directly implemented
+      * ``FFTDirichletDirectEven`` Use the discrete sine transformation that is directly implemented
+        by FFTW to solve the Poisson equation with Dirichlet boundary conditions.
+        This option is only available when compiling for CPUs with FFTW.
+        Preferred resolution: :math:`2^N`.
+
+      * ``FFTDirichletDirectOdd`` Use the discrete sine transformation that is directly implemented
         by FFTW to solve the Poisson equation with Dirichlet boundary conditions.
         This option is only available when compiling for CPUs with FFTW.
         Preferred resolution: :math:`2^N-1`.
