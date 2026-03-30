@@ -114,7 +114,7 @@ Fields::AllocData (
                     }
                     for (int ion_lev=0; ion_lev <= pc.m_max_ion_lev; ++ion_lev) {
                         Comps[isl].multi_emplace(N_Comps,
-                            "rho_" + plasma_name + "_ionlev_" + std::to_string(ion_lev));
+                            "n_" + plasma_name + "_ionlev_" + std::to_string(ion_lev));
                     }
                 }
             }
@@ -186,7 +186,7 @@ Fields::AllocData (
                     }
                     for (int ion_lev=0; ion_lev <= pc.m_max_ion_lev; ++ion_lev) {
                         Comps[isl].multi_emplace(N_Comps,
-                            "rho_" + plasma_name + "_ionlev_" + std::to_string(ion_lev));
+                            "n_" + plasma_name + "_ionlev_" + std::to_string(ion_lev));
                     }
                 }
             }
@@ -672,7 +672,7 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
             }
             for (int ion_lev=0; ion_lev <= pc.m_max_ion_lev; ++ion_lev) {
                 setVal(0., lev, WhichSlice::This,
-                    "rho_" + plasma_name + "_ionlev_" + std::to_string(ion_lev));
+                    "n_" + plasma_name + "_ionlev_" + std::to_string(ion_lev));
             }
         }
     }
