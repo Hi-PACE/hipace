@@ -45,7 +45,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     const bool deposit_n_ion_levels =
         Hipace::m_deposit_n_ion_levels && which_slice == WhichSlice::This;
     const std::string rho_str = deposit_rho_individual ? "rho_" + plasma.GetName() : "rho";
-    const std::n_str = "n_"+ plasma.GetName() + "_ionlev_" + std::to_string(ion_lev): "n";
+    const std::string n_str = deposit_n_ion_levels? "n_"+ plasma.GetName() + "_ionlev_" + std::to_string(ion_lev): "n";
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
@@ -60,7 +60,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         const int    rho = deposit_rho    ? Comps[which_slice][rho_str]  : -1;
         const int    chi = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
         const int rhomjz = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
-        const int      n = deposit_n      ? Comps[which_slice]["n"]        : -1;
+        const int      n = deposit_n      ? Comps[which_slice][n_str ]        : -1;
         const int   aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
 
         // Offset for converting positions to indexes
@@ -246,7 +246,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), wqz);
                         }
                         if (depos_idx[3] != -1) { // deposit_rho
-                            if (ion_lev != -1) wq /=-pc.q_e;
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), wq);
                         }
                         if (depos_idx[4] != -1) { // deposit_chi
