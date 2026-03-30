@@ -150,8 +150,8 @@ Diagnostic::needsRhoIonlev () const {
         amrex::Vector<std::string> comps{};
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
-            // we don't know the names of all the plasmas here so just look for "_IL..."
-            if (c.find("_IL") != c.npos) {
+            // we don't know the names of all the plasmas here so just look for "_ionlev_..."
+            if (c.find("_ionlev_") != c.npos) {
                 return true;
             }
         }

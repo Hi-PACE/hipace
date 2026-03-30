@@ -128,8 +128,8 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
-    m_deposit_rho_ion_levels = m_diags.needsRhoIonlev();
-    queryWithParser(pph, "deposit_rho_ion_levels", m_deposit_rho_ion_levels);
+    m_deposit_n_ion_levels = m_diags.needsRhoIonlev();
+    queryWithParser(pph, "deposit_n_ion_levels", m_deposit_n_ion_levels);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
     queryWithParser(pph, "temperature_depos_order", m_temperature_depos_order);
@@ -713,7 +713,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
-                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels,
+                m_deposit_rho || m_deposit_rho_individual || m_deposit_n_ion_levels,
                 true, true, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
@@ -722,7 +722,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
-                m_deposit_rho || m_deposit_rho_individual || m_deposit_rho_ion_levels,
+                m_deposit_rho || m_deposit_rho_individual || m_deposit_n_ion_levels,
                 m_use_laser, true, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice

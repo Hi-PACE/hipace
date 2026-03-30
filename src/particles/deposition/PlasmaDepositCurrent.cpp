@@ -47,7 +47,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         rho_str = rho_str + "_" + plasma.GetName();
     }
     if (ion_lev != -1) {
-        rho_str = rho_str + "_IL" + std::to_string(ion_lev);
+        rho_str = "n"+ plasma.GetName() + "_ionlev_" + std::to_string(ion_lev);
     }
 
     // Loop over particle boxes
@@ -245,6 +245,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), wqz);
                         }
                         if (depos_idx[3] != -1) { // deposit_rho
+                            if (ion_lev != -1) wq /=-pc.e;
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), wq);
                         }
                         if (depos_idx[4] != -1) { // deposit_chi
