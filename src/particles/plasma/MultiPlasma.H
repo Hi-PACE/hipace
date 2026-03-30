@@ -46,12 +46,13 @@ public:
      * \param[in] deposit_rho if true, deposit to rho
      * \param[in] deposit_chi if true, deposit chi
      * \param[in] deposit_rhomjz if true, deposit rhomjz
+      * \param[in] deposit_n if true, deposit n
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] lev MR level
      */
     void DepositCurrent (
         Fields & fields, int which_slice, bool deposit_jx_jy,
-        bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
+        bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,const bool deposit_n,
         amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Loop over plasma species and deposit their temperature into the current 2D slice in fields
