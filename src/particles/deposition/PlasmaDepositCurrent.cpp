@@ -245,7 +245,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), wqz);
                         }
                         if (depos_idx[3] != -1) { // deposit_rho
-                            if (ion_lev != -1) wq /=-pc.e;
+                            if (ion_lev != -1) wq /=-pc.q_e;
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[3]), wq);
                         }
                         if (depos_idx[4] != -1) { // deposit_chi
