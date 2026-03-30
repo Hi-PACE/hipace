@@ -101,6 +101,9 @@ Fields::AllocData (
             if (Hipace::m_deposit_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rho");
             }
+            if (Hipace::m_deposit_n) {
+                Comps[isl].multi_emplace(N_Comps, "n");
+            }
             if (Hipace::m_deposit_rho_individual) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
@@ -109,9 +112,6 @@ Fields::AllocData (
             if (Hipace::m_deposit_n_ion_levels) {
                 for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas) {
                     const std::string& plasma_name = pc.GetName();
-                    if (pc.m_max_ion_lev == 0){
-                        continue;
-                    }
                     for (int ion_lev=0; ion_lev <= pc.m_max_ion_lev; ++ion_lev) {
                         Comps[isl].multi_emplace(N_Comps,
                             "n_" + plasma_name + "_ionlev_" + std::to_string(ion_lev));
@@ -177,6 +177,9 @@ Fields::AllocData (
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                     Comps[isl].multi_emplace(N_Comps, "rho_" + plasma_name);
                 }
+            }
+            if (Hipace::m_deposit_n) {
+                Comps[isl].multi_emplace(N_Comps, "n");
             }
             if (Hipace::m_deposit_n_ion_levels) {
                 for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas) {
@@ -663,6 +666,9 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
         for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
             setVal(0., lev, WhichSlice::This, "rho_" + plasma_name);
         }
+    }
+    if (Hipace::m_deposit_n) {
+        setVal(0., lev, WhichSlice::This, "n");
     }
     if (Hipace::m_deposit_n_ion_levels) {
         for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas) {
