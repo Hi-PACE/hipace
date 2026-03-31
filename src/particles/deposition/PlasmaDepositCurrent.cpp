@@ -45,7 +45,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     const bool deposit_n_ion_levels =
         Hipace::m_deposit_n_ion_levels && which_slice == WhichSlice::This;
     const std::string rho_str = deposit_rho_individual ? "rho_" + plasma.GetName() : "rho";
-    const std::string n_str = deposit_n_ion_levels? "n_"+ plasma.GetName() + "_ionlev_" + std::to_string(ion_lev): "n";
+    const std::string n_str =
+        (ion_lev >= 0 && deposit_n_ion_levels)
+            ? "n_" + plasma.GetName() + "_ionlev_" + std::to_string(ion_lev)
+            : "n";
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
