@@ -103,7 +103,7 @@ Fields::AllocData (
             }
             if (Hipace::m_deposit_n) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-                    Comps[isl].multi_emplace(N_Comps, "n" + plasma_name);
+                    Comps[isl].multi_emplace(N_Comps, "n_" + plasma_name);
                 }
             }
             if (Hipace::m_deposit_rho_individual) {
