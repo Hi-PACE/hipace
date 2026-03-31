@@ -22,6 +22,7 @@
  * \param[in] deposit_rho if true, deposit to rho
  * \param[in] deposit_chi if true, deposit chi
  * \param[in] deposit_rhomjz if true, deposit rhomjz
+ * \param[in] deposit_n if true, deposit n
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
  * \param[in] lev MR level
  * \param[in] ion_lev interation index for deposition rho of each ionization levels.
