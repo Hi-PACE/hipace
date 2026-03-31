@@ -104,6 +104,7 @@ Fields::AllocData (
             if (Hipace::m_deposit_n) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                     Comps[isl].multi_emplace(N_Comps, "n" + plasma_name);
+                }
             }
             if (Hipace::m_deposit_rho_individual) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
@@ -183,6 +184,7 @@ Fields::AllocData (
             if (Hipace::m_deposit_n) {
                 for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
                     Comps[isl].multi_emplace(N_Comps, "n" + plasma_name);
+                }
             }
             if (Hipace::m_deposit_n_ion_levels) {
                 for (auto& pc : Hipace::GetInstance().m_multi_plasma.m_all_plasmas) {
