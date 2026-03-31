@@ -949,7 +949,7 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
     With the multigrid solver, we could drop this assumption.
     For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
-    If set ``disable``, the laser will not evolve and remain as the initial profile through the simulation.
+    If set ``off``, the laser will not evolve and remain as the initial profile through the simulation.
 
 * ``lasers.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solver used for the laser pulse.
