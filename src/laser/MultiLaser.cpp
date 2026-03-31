@@ -40,7 +40,7 @@ MultiLaser::ReadParameters ()
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "solver_type", m_solver_type);
     AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft" ||
-                        m_solver_type == "disable");
+                        m_solver_type == "off");
     queryWithParser(pp, "interp_order", m_interp_order);
     AMREX_ALWAYS_ASSERT(m_interp_order <= 3 && m_interp_order >= 0);
 
