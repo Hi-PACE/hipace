@@ -48,7 +48,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     const std::string n_str =
         (ion_lev >= 0 && deposit_n_ion_levels)
             ? "n_" + plasma.GetName() + "_ionlev_" + std::to_string(ion_lev)
-            : "n";
+            : "n_" + plasma.GetName();
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
