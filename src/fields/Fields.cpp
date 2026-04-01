@@ -672,7 +672,7 @@ Fields::InitializeSlices (int lev, int islice, const amrex::Vector<amrex::Geomet
     }
     if (Hipace::m_deposit_n) {
         for (auto& plasma_name : Hipace::GetInstance().m_multi_plasma.GetNames()) {
-            setVal(0., lev, WhichSlice::This, "n"+ plasma_name);
+            setVal(0., lev, WhichSlice::This, "n_"+ plasma_name);
         }
     }
     if (Hipace::m_deposit_n_ion_levels) {
