@@ -32,6 +32,7 @@ struct DiagnosticData
     utils::DiagPeriod m_output_period = "0";
     bool m_has_output = false; /**< if there is output to write */
     amrex::Geometry m_geom_io; /**< Diagnostics geometry */
+    int m_output_slice_dir = -1;
 
     // field and laser
 
@@ -61,9 +62,8 @@ struct DiagnosticData
     amrex::Vector<int> m_hist_num_bins;
     amrex::Vector<amrex::Real> m_hist_bins_lo;
     amrex::Vector<amrex::Real> m_hist_bins_hi;
-    amrex::Geometry m_hist_bins_geom;
+    amrex::Geometry m_hist_realspace_geom;
     amrex::FArrayBox m_hist_gpu_fab;
-    amrex::FArrayBox m_F_hist;
     // parser funcitons for histogram
     amrex::Parser m_hist_parser_q1;
     amrex::ParserExecutor<8> m_hist_exe_q1;

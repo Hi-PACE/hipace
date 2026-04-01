@@ -169,8 +169,6 @@ OpenPMDWriter::WriteFieldData (
     // loop over field components
     for ( int icomp = 0; icomp < fd.m_nfields; ++icomp )
     {
-        const bool is_laser_comp = fd.m_base_diag_type == DiagnosticData::diag_type::laser;
-
         //                      "B"                "x" (todo)
         //                      "Bx"               ""  (just for now)
         openPMD::Mesh field = meshes[fd.m_comps_output[icomp]];
@@ -192,27 +190,24 @@ OpenPMDWriter::WriteFieldData (
         const amrex::IntVect box_offset {0, 0, data_box.smallEnd(2) - geom.Domain().smallEnd(2)};
         openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
         openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
-        if (fd.m_base_diag_type == DiagnosticData::diag_type::field ||
-            fd.m_base_diag_type == DiagnosticData::diag_type::laser) {
-            if (fd.m_slice_dir >= 0) {
-                const int remove_dir = 2 - fd.m_slice_dir;
-                // User requested slice IO
-                // remove the slicing direction in position, label, resolution, offset
-                relative_cell_pos.erase(relative_cell_pos.begin() + remove_dir);
-                axisLabels.erase(axisLabels.begin() + remove_dir);
-                dCells.erase(dCells.begin() + remove_dir);
-                offWindow.erase(offWindow.begin() + remove_dir);
-                global_size.erase(global_size.begin() + remove_dir);
-                chunk_offset.erase(chunk_offset.begin() + remove_dir);
-                chunk_size.erase(chunk_size.begin() + remove_dir);
-            }
+        if (fd.m_output_slice_dir >= 0) {
+            const int remove_dir = 2 - fd.m_output_slice_dir;
+            // User requested slice IO
+            // remove the slicing direction in position, label, resolution, offset
+            relative_cell_pos.erase(relative_cell_pos.begin() + remove_dir);
+            axisLabels.erase(axisLabels.begin() + remove_dir);
+            dCells.erase(dCells.begin() + remove_dir);
+            offWindow.erase(offWindow.begin() + remove_dir);
+            global_size.erase(global_size.begin() + remove_dir);
+            chunk_offset.erase(chunk_offset.begin() + remove_dir);
+            chunk_size.erase(chunk_size.begin() + remove_dir);
         }
         field_comp.setPosition(relative_cell_pos);
         field.setAxisLabels(axisLabels);
         field.setGridSpacing(dCells);
         field.setGridGlobalOffset(offWindow);
 
-        openPMD::Datatype datatype = is_laser_comp ?
+        openPMD::Datatype datatype = fd.m_base_diag_type == DiagnosticData::diag_type::laser ?
             openPMD::determineDatatype< std::complex<amrex::Real> >() :
             openPMD::determineDatatype< amrex::Real >();
         // set data type and global size of the simulation

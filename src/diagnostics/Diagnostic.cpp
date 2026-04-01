@@ -219,6 +219,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 } else {
                     amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
                 }
+                fd.m_output_slice_dir = fd.m_slice_dir;
 
                 queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
 
@@ -260,12 +261,17 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     getWithParser(pp, "hist_function2", func2);
                     fd.m_hist_exe_q2 = makeFunctionWithParser<8>(func2, fd.m_hist_parser_q2,
                         {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+                } else {
+                    fd.m_output_slice_dir = 1;
                 }
 
                 std::string funcw = "ga_psi * w";
                 queryWithParser(pp, "hist_weight", funcw);
                 fd.m_hist_exe_w = makeFunctionWithParser<8>(funcw, fd.m_hist_parser_w,
                     {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+
+                fd.m_nfields = 1;
+                fd.m_comps_output.push_back(fd.m_diag_name);
             }
             break;
         }
@@ -493,26 +499,28 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                     fd.m_F_complex.setVal<amrex::RunOn::Host>({0,0});
                     break;
                 case DiagnosticData::diag_type::histogram: {
+                    fd.m_hist_realspace_geom = amrex::Geometry(domain, &diag_domain, geom.Coord());
                     amrex::Box hist_domain = domain;
                     amrex::RealBox hist_bounds = diag_domain;
-                    hist_domain.setRange(0, 0, fd.m_hist_num_bins[0] - 1);
+                    hist_domain.setRange(0, 0, fd.m_hist_num_bins[0]);
                     hist_bounds.setLo(0, fd.m_hist_bins_lo[0]);
                     hist_bounds.setHi(0, fd.m_hist_bins_hi[0]);
                     if (fd.m_hist_num_dims == 1) {
-                        hist_domain.setRange(1, 0, 0);
-                        hist_bounds.setLo(1, amrex::Real(1));
+                        hist_domain.setRange(1, 0, 1);
+                        hist_bounds.setLo(1, amrex::Real(0));
                         hist_bounds.setHi(1, amrex::Real(1));
                     } else {
-                        hist_domain.setRange(1, 0, fd.m_hist_num_bins[1] - 1);
+                        hist_domain.setRange(1, 0, fd.m_hist_num_bins[1]);
                         hist_bounds.setLo(1, fd.m_hist_bins_lo[1]);
                         hist_bounds.setHi(1, fd.m_hist_bins_hi[1]);
                     }
-                    fd.m_hist_bins_geom = amrex::Geometry(hist_domain, &hist_bounds, geom.Coord());
-                    fd.m_F_hist.resize(hist_domain, 1, amrex::The_Pinned_Arena());
-                    fd.m_F_hist.setVal<amrex::RunOn::Host>(0);
-                    hist_domain.setRange(2, 0, 0);
-                    fd.m_hist_gpu_fab.resize(hist_domain, 1, amrex::The_Arena());
-                    fd.m_F_hist.setVal<amrex::RunOn::Device>(0);
+
+                    fd.m_geom_io = amrex::Geometry(hist_domain, &hist_bounds, geom.Coord());
+                    fd.m_F_real.resize(hist_domain, fd.m_nfields, amrex::The_Pinned_Arena());
+                    fd.m_F_real.setVal<amrex::RunOn::Host>(0);
+                    hist_domain.setRange(2, 0, 1);
+                    fd.m_hist_gpu_fab.resize(hist_domain, fd.m_nfields, amrex::The_Arena());
+                    fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0);
                 }
                 break;
             }
