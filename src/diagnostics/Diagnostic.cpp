@@ -23,11 +23,6 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
     amrex::ParmParse ppd("diagnostic");
     amrex::ParmParse pph("hipace");
 
-    queryWithParser(ppd, "histogram_names", m_histogram_names);
-    if (m_histogram_names.size() > 0 && m_histogram_names[0] == "no_histogram") {
-        m_histogram_names.clear();
-    }
-
     // Make the default diagnostic objects, subset of: lev0, lev1, lev2, laser_diag
     amrex::Vector<std::string> field_diag_names{};
     for (int lev = 0; lev<nlev; ++lev) {
@@ -37,9 +32,6 @@ Diagnostic::ReadParameters (int nlev, bool use_laser)
     if (use_laser) {
         std::string diag_name = "laser_diag";
         field_diag_names.emplace_back(diag_name);
-    }
-    for (auto& hist_name : m_histogram_names) {
-        field_diag_names.emplace_back(hist_name);
     }
 
     queryWithParser(ppd, "names", field_diag_names);
@@ -156,17 +148,15 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         // add derived diagnostics for |a^2|
         geometry_name_to_output_comps_map[geom_name]["|a^2|"] = -1;
     }
-    for (auto& hist_name : m_histogram_names) {
-        // each histogram uses a separate diag_data with one component
-        std::string diag_name = hist_name;
-        std::string geom_name = hist_name;
-        diag_name_to_default_geometry.emplace(diag_name, geom_name);
+    { // histogram
+        std::string geom_name = "histogram";
         geometry_name_to_diag_type.emplace(geom_name, DiagnosticData::diag_type::histogram);
-        geometry_name_to_output_comps_map[geom_name]["histogram"] = 0;
+        geometry_name_to_output_comps_map[geom_name]; // insert empty map
     }
 
     for (const auto& [geom_name, comp_map] : geometry_name_to_output_comps_map) {
-        all_comps_error_str << "Available components in base_geometry '" << geom_name << "':\n    ";
+        all_comps_error_str << "Available components for  '"
+            << geom_name << "':\n    ";
         for (const auto& [comp, idx] : comp_map) {
             geometry_name_to_output_comps[geom_name].insert(comp);
             all_comps_error_str << comp << " ";
@@ -188,8 +178,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             base_geom_name = diag_name_to_default_geometry.at(fd.m_diag_name);
         }
 
-        queryWithParserAlt(pp, "base_geometry", base_geom_name, ppd); // backward compatibility
-        queryWithParserAlt(pp, "diagnostic_type", base_geom_name, ppd);
+        // backward compatibility
+        queryWithParserAlt(pp, "base_geometry", base_geom_name, ppd);
         DeprecatedInput(fd.m_diag_name, "level", "base_geometry");
 
         if (geometry_name_to_diag_type.count(base_geom_name) > 0) {
@@ -210,6 +200,9 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             fd.m_level = geometry_name_to_level.at(base_geom_name);
         }
 
+        fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
+        fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
+
         switch (fd.m_base_diag_type) {
             case DiagnosticData::diag_type::field:
             case DiagnosticData::diag_type::laser: {
@@ -227,9 +220,6 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
                 }
 
-                fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
-                fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
-
                 queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
 
                 amrex::Array<int,3> diag_coarsen_arr{1,1,1};
@@ -243,19 +233,46 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             }
             break;
             case DiagnosticData::diag_type::histogram: {
-                getWithParser(pp, "patch_lo", fd.m_diag_lo);
-                fd.m_use_custom_size_lo = true;
-                getWithParser(pp, "patch_hi", fd.m_diag_hi);
-                fd.m_use_custom_size_hi = true;
-                getWithParser(pp, "hist_num_cells", fd.m_hist_num_cells);
-                if (fd.m_hist_num_cells.size() == 1) {
-                    fd.m_hist_num_cells.push_back(1);
-                }
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_hist_num_cells.size() == 2,
-                    "hist_num_cells must have either one or two values");
+                getWithParser(pp, "hist_species_name", fd.m_hist_species_name);
+                getWithParser(pp, "hist_num_bins", fd.m_hist_num_bins);
+                getWithParser(pp, "hist_bins_lo", fd.m_hist_bins_lo);
+                getWithParser(pp, "hist_bins_hi", fd.m_hist_bins_hi);
 
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    fd.m_hist_num_bins.size() == 1 || fd.m_hist_num_bins.size() == 2,
+                    "hist_num_bins must have either one or two values"
+                );
+                fd.m_hist_num_dims = fd.m_hist_num_bins.size();
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    fd.m_hist_bins_lo.size() == fd.m_hist_num_dims &&
+                    fd.m_hist_bins_hi.size() == fd.m_hist_num_dims,
+                    "hist_bins_lo and hist_bins_hi must have the same "
+                    "number of values as hist_num_bins"
+                );
+
+                std::string func1;
+                getWithParser(pp, "hist_function", func1);
+                fd.m_hist_exe_q1 = makeFunctionWithParser<8>(func1, fd.m_hist_parser_q1,
+                    {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+
+                if (fd.m_hist_num_dims == 2) {
+                    std::string func2;
+                    getWithParser(pp, "hist_function2", func2);
+                    fd.m_hist_exe_q2 = makeFunctionWithParser<8>(func2, fd.m_hist_parser_q2,
+                        {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+                }
+
+                std::string funcw = "ga_psi * w";
+                queryWithParser(pp, "hist_weight", funcw);
+                fd.m_hist_exe_w = makeFunctionWithParser<8>(funcw, fd.m_hist_parser_w,
+                    {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
             }
             break;
+        }
+
+        if (fd.m_base_diag_type == DiagnosticData::diag_type::histogram) {
+            // no need to have field_data with histogram
+            continue;
         }
 
         amrex::Vector<std::string> use_comps{};
@@ -389,6 +406,9 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
             case DiagnosticData::diag_type::laser:
                 geom = laser_geom;
                 break;
+            case DiagnosticData::diag_type::histogram:
+                // plasma is based on field level 0 geom
+                geom = field_geom[0];
         }
 
         amrex::Box domain = geom.Domain();
@@ -400,6 +420,8 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                     break;
                 case DiagnosticData::diag_type::laser:
                     domain.grow(Hipace::GetInstance().m_multi_laser.getSlices().nGrowVect());
+                    break;
+                case DiagnosticData::diag_type::histogram:
                     break;
             }
         }
@@ -470,6 +492,29 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                     fd.m_F_complex.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_complex.setVal<amrex::RunOn::Host>({0,0});
                     break;
+                case DiagnosticData::diag_type::histogram: {
+                    amrex::Box hist_domain = domain;
+                    amrex::RealBox hist_bounds = diag_domain;
+                    hist_domain.setRange(0, 0, fd.m_hist_num_bins[0] - 1);
+                    hist_bounds.setLo(0, fd.m_hist_bins_lo[0]);
+                    hist_bounds.setHi(0, fd.m_hist_bins_hi[0]);
+                    if (fd.m_hist_num_dims == 1) {
+                        hist_domain.setRange(1, 0, 0);
+                        hist_bounds.setLo(1, amrex::Real(1));
+                        hist_bounds.setHi(1, amrex::Real(1));
+                    } else {
+                        hist_domain.setRange(1, 0, fd.m_hist_num_bins[1] - 1);
+                        hist_bounds.setLo(1, fd.m_hist_bins_lo[1]);
+                        hist_bounds.setHi(1, fd.m_hist_bins_hi[1]);
+                    }
+                    fd.m_hist_bins_geom = amrex::Geometry(hist_domain, &hist_bounds, geom.Coord());
+                    fd.m_F_hist.resize(hist_domain, 1, amrex::The_Pinned_Arena());
+                    fd.m_F_hist.setVal<amrex::RunOn::Host>(0);
+                    hist_domain.setRange(2, 0, 0);
+                    fd.m_hist_gpu_fab.resize(hist_domain, 1, amrex::The_Arena());
+                    fd.m_F_hist.setVal<amrex::RunOn::Device>(0);
+                }
+                break;
             }
         }
     }

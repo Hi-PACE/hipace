@@ -19,58 +19,58 @@
 /** \brief This struct holds data for one field diagnostic on one MR level */
 struct DiagnosticData
 {
+    // all
+
     std::string m_diag_name; /**< name used for input parameters and in the output */
     enum struct diag_type {
         field,
         laser,
         histogram
     } m_base_diag_type = diag_type::field;  /**< which geometry the diagnostics is based on */
-
-    // all
-
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
     utils::DiagPeriod m_output_period = "0";
-    bool m_has_output; /**< if there is output to write */
+    bool m_has_output = false; /**< if there is output to write */
+    amrex::Geometry m_geom_io; /**< Diagnostics geometry */
+
+    // field and laser
+
+    int m_level = 0; /**< MR level */
+    int m_slice_dir = -1; /**< Slicing direction */
+    bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
     bool m_use_custom_size_lo = false; /**< if a user defined diagnostics size should be used (lo)*/
     bool m_use_custom_size_hi = false; /**< if a user defined diagnostics size should be used (hi)*/
     /** 3D array with lower ends of the diagnostics grid */
     amrex::RealVect m_diag_lo {0., 0., 0.};
     /** 3D array with upper ends of the diagnostics grid */
     amrex::RealVect m_diag_hi {0., 0., 0.};
-    amrex::Geometry m_geom_io; /**< Diagnostics geometry */
-    int m_nfields; /**< Number of physical fields to write */
+    amrex::IntVect m_diag_coarsen {1, 1, 1}; /**< xyz coarsening ratio (positive) */
+    int m_nfields = 0; /**< Number of physical fields to write */
     amrex::Vector<std::string> m_comps_output; /**< Component names to Write to output file */
     /** Component indexes to Write to output file */
     amrex::Gpu::Buffer<int> m_comps_output_idx;
-
-    // field and histogram
-
-    /** Vector over levels, all fields */
+    /** All fields */
     amrex::FArrayBox m_F_real;
-
-    // laser
-
     /** FAB for laser */
     amrex::BaseFab<amrex::GpuComplex<amrex::Real>> m_F_complex;
 
-    // field
-
-    int m_level = 0; /**< MR level */
-
-    // field and laser
-
-    int m_slice_dir; /**< Slicing direction */
-    bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
-    amrex::IntVect m_diag_coarsen; /**< xyz coarsening ratio (positive) */
-
     // histogram
 
-    amrex::Vector<int> m_hist_num_cells;
+    std::string m_hist_species_name = "";
+    int m_hist_num_dims = 1;
+    amrex::Vector<int> m_hist_num_bins;
+    amrex::Vector<amrex::Real> m_hist_bins_lo;
+    amrex::Vector<amrex::Real> m_hist_bins_hi;
+    amrex::Geometry m_hist_bins_geom;
     amrex::FArrayBox m_hist_gpu_fab;
-    // parser q1
-    // parser q2
-    // parser w
+    amrex::FArrayBox m_F_hist;
+    // parser funcitons for histogram
+    amrex::Parser m_hist_parser_q1;
+    amrex::ParserExecutor<8> m_hist_exe_q1;
+    amrex::Parser m_hist_parser_q2;
+    amrex::ParserExecutor<8> m_hist_exe_q2;
+    amrex::Parser m_hist_parser_w;
+    amrex::ParserExecutor<8> m_hist_exe_w;
 };
 
 
@@ -188,7 +188,6 @@ private:
      * Default is 0, meaning no output */
     utils::DiagPeriod m_beam_output_period = "0";
     amrex::Vector<DiagnosticData> m_diag_data; /**< individual field diag data */
-    amrex::Vector<std::string> m_histogram_names; /**< names of all the particle histograms */
 };
 
 #endif // DIAGNOSTIC_H_
