@@ -306,8 +306,8 @@ public:
     /** How often the insitu plasma diagnostics should be computed and written
      * Default is 0, meaning no output */
     utils::DiagPeriod m_insitu_period {"0"};
-private:
     std::string m_name; /**< name of the species */
+private:
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real plasma properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nrp = 14;

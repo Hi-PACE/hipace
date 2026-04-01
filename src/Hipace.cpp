@@ -11,6 +11,7 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "particles/sorting/SliceSort.H"
 #include "particles/sorting/BoxSort.H"
+#include "particles/deposition/HistogramDeposition.H"
 #include "salame/Salame.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/IOUtil.H"
@@ -1304,7 +1305,19 @@ Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
 {
     for (auto& fd : m_diags.getFieldData()) {
         if (fd.m_has_output) {
-            m_fields.Copy(current_N_level, islice, fd, m_3D_geom, m_multi_laser);
+            switch (fd.m_base_diag_type) {
+                case DiagnosticData::diag_type::field:
+                case DiagnosticData::diag_type::laser:
+                    m_fields.Copy(current_N_level, islice, fd, m_3D_geom, m_multi_laser);
+                    break;
+                case DiagnosticData::diag_type::histogram:
+                    for (auto& plasma : m_multi_plasma.m_all_plasmas) {
+                        if (plasma.m_name == fd.m_hist_species_name) {
+                            HistogramDeposition(plasma, fd);
+                        }
+                    }
+                    break;
+            }
         }
     }
 }
