@@ -29,7 +29,8 @@ public:
     /** Constructor */
     FFTPoissonSolverDirichletDirect ( amrex::BoxArray const& a_realspace_ba,
                                       amrex::DistributionMapping const& dm,
-                                      amrex::Geometry const& gm);
+                                      amrex::Geometry const& gm,
+                                      bool is_even);
 
     /** virtual destructor */
     virtual ~FFTPoissonSolverDirichletDirect () override final {}
@@ -42,10 +43,12 @@ public:
      * \param[in] realspace_ba BoxArray on which the FFT is executed.
      * \param[in] dm DistributionMapping for the BoxArray.
      * \param[in] gm Geometry, contains the box dimensions.
+     * \param[in] is_even True: use DST-2 / DST-3; False: use DST-1
      */
     void define ( amrex::BoxArray const& realspace_ba,
                   amrex::DistributionMapping const& dm,
-                  amrex::Geometry const& gm);
+                  amrex::Geometry const& gm,
+                  bool is_even);
 
     /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
@@ -55,8 +58,8 @@ public:
     virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
 
     /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
-    virtual amrex::Real BoundaryOffset() override final { return 1.; }
-    virtual amrex::Real BoundaryFactor() override final { return 1.; }
+    virtual amrex::Real BoundaryOffset() override final { return m_is_even ? 0.5 : 1.; }
+    virtual amrex::Real BoundaryFactor() override final { return m_is_even ? 2. : 1.; }
 
 private:
     /** Spectral fields, contains (real) field in Fourier space */
@@ -69,6 +72,8 @@ private:
     AnyFFT m_backward_fft;
     /** work area for both DST plans */
     amrex::Gpu::DeviceVector<char> m_fft_work_area;
+    /** True: use DST-2 / DST-3; False: use DST-1 */
+    bool m_is_even;
 };
 
 #endif

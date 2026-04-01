@@ -204,11 +204,11 @@ Fields::AllocData (
     }
 
     // set default Poisson solver based on the platform and resolution
-#ifdef AMREX_USE_GPU
     const bool is_even = std::max(slice_ba[0].length(0), slice_ba[0].length(1)) % 2 == 0;
+#ifdef AMREX_USE_GPU
     std::string poisson_solver_str = is_even ? "FFTDirichletQuick" : "FFTDirichletFast";
 #else
-    std::string poisson_solver_str = "FFTDirichletDirect";
+    std::string poisson_solver_str = is_even ? "FFTDirichletDirectEven" : "FFTDirichletDirectOdd";
 #endif
     amrex::ParmParse ppf("fields");
     queryWithParser(ppf, "poisson_solver", poisson_solver_str);
@@ -216,11 +216,16 @@ Fields::AllocData (
     // The Poisson solver operates on transverse slices only.
     // The constructor takes the BoxArray and the DistributionMap of a slice,
     // so the FFTPlans are built on a slice.
-    if (poisson_solver_str == "FFTDirichletDirect"){
+    if (poisson_solver_str == "FFTDirichletDirectEven"){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletDirect>(
             new FFTPoissonSolverDirichletDirect(getSlices(lev).boxArray(),
                                                 getSlices(lev).DistributionMap(),
-                                                geom)) );
+                                                geom, true)));
+    } else if (poisson_solver_str == "FFTDirichletDirectOdd"){
+        m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletDirect>(
+            new FFTPoissonSolverDirichletDirect(getSlices(lev).boxArray(),
+                                                getSlices(lev).DistributionMap(),
+                                                geom, false)));
     } else if (poisson_solver_str == "FFTDirichletExpanded"){
         m_poisson_solver.push_back(std::unique_ptr<FFTPoissonSolverDirichletExpanded>(
             new FFTPoissonSolverDirichletExpanded(getSlices(lev).boxArray(),
@@ -248,8 +253,8 @@ Fields::AllocData (
                                          geom))  );
     } else {
         amrex::Abort("Unknown poisson solver '" + poisson_solver_str +
-            "', must be 'FFTDirichletDirect', 'FFTDirichletExpanded', 'FFTDirichletFast', " +
-            "'FFTDirichletQuick', 'FFTPeriodic' or 'MGDirichlet'");
+            "', must be 'FFTDirichletDirectEven', 'FFTDirichletDirectOdd', 'FFTDirichletExpanded', "
+            "'FFTDirichletFast', 'FFTDirichletQuick', 'FFTPeriodic' or 'MGDirichlet'");
     }
 
     if (lev == 0 && m_insitu_period.isNonZero()) {

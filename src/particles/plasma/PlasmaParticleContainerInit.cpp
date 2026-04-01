@@ -79,20 +79,6 @@ InitParticles (const amrex::RealVect& a_u_std,
     {
         amrex::Box tile_box  = mfi.tilebox(box_nodal, box_grow);
 
-        if (a_radius != std::numeric_limits<amrex::Real>::max()) {
-            amrex::IntVect lo_limit {
-                static_cast<int>(std::round((-a_radius - plo[0])/dx[0] - 2)),
-                static_cast<int>(std::round((-a_radius - plo[1])/dx[1] - 2)),
-                tile_box.smallEnd(2)
-            };
-            amrex::IntVect hi_limit {
-                static_cast<int>(std::round(( a_radius - plo[0])/dx[0] + 2)),
-                static_cast<int>(std::round(( a_radius - plo[1])/dx[1] + 2)),
-                tile_box.bigEnd(2)
-            };
-            tile_box &= amrex::Box(lo_limit, hi_limit, box_nodal);
-        }
-
         const amrex::Real radius_sq = a_radius == std::numeric_limits<amrex::Real>::max() ?
             std::numeric_limits<amrex::Real>::max() : a_radius * a_radius;
 
@@ -104,7 +90,6 @@ InitParticles (const amrex::RealVect& a_u_std,
         auto density_func = m_density_func;
         const amrex::Real c_t = c_light * Hipace::m_physical_time;
         const amrex::Real min_density = m_min_density;
-
 
         amrex::BaseFab<int> fab_fine{};
         if (use_fine_patch) {
@@ -151,37 +136,98 @@ InitParticles (const amrex::RealVect& a_u_std,
             }
         }
 
-        // Count the total number of particles so only one resize is needed
-        amrex::Long total_num_particles = amrex::Reduce::Sum<amrex::Long>(tile_box.numPts(),
-            [=] AMREX_GPU_DEVICE (amrex::Long idx) noexcept
-            {
-                auto [i,j,k] = tile_box.atOffset3d(idx).arr;
+        auto check_position = [=] AMREX_GPU_DEVICE (int i, int j, int i_part)
+            -> amrex::GpuTuple<bool, amrex::Real, amrex::Real, amrex::Real>
+        {
+            amrex::Real r[2];
+            bool do_init = false;
+            ParticleUtil::get_position_unit_cell_fine(r, do_init, i_part,
+                ppc_lev, fine_transition_cells,
+                use_fine_patch ? arr_fine(i, j, comp_a) : 0);
 
+            if (!do_init) return {false, 0, 0, 0};
+
+            const amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
+            const amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
+
+            const amrex::Real rsq = x*x + y*y;
+            const amrex::Real density = density_func(x, y, c_t);
+            if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
+                y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
+                rsq > radius_sq ||
+                rsq < a_hollow_core_radius*a_hollow_core_radius ||
+                density <= min_density) return {false, 0, 0, 0};
+
+            return {true, x, y, density};
+        };
+
+        amrex::TypeMultiplier<amrex::ReduceOps,
+            amrex::ReduceOpSum,
+            amrex::ReduceOpMin[2*n_lev],
+            amrex::ReduceOpMax[2*n_lev]> reduce_op;
+        amrex::TypeMultiplier<amrex::ReduceData,
+            amrex::Long,
+            int[4*n_lev]> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+
+        // Count the total number of particles so only one resize is needed
+        reduce_op.eval(tile_box, reduce_data,
+            [=] AMREX_GPU_DEVICE (int i, int j, int) -> ReduceTuple
+            {
                 amrex::Long num_particles_cell = 0;
                 for (int i_part=0; i_part<max_ppc; ++i_part)
                 {
-                    amrex::Real r[2];
-                    bool do_init = false;
-                    ParticleUtil::get_position_unit_cell_fine(r, do_init, i_part,
-                        ppc_lev, fine_transition_cells,
-                        use_fine_patch ? arr_fine(i, j, comp_a) : 0);
+                    auto [do_init, x, y, density] = check_position(i, j, i_part);
 
-                    if (!do_init) continue;
-
-                    amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-                    amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
-
-                    const amrex::Real rsq = x*x + y*y;
-                    if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
-                        y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                        rsq > radius_sq ||
-                        rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                        density_func(x, y, c_t) <= min_density) continue;
-
-                    num_particles_cell += 1;
+                    if (do_init) {
+                        num_particles_cell += 1;
+                    }
                 }
-                return num_particles_cell;
+                const bool is_lev_0 = num_particles_cell > 0;
+                const bool is_lev_1 = num_particles_cell > ppc_lev[0][0] * ppc_lev[0][1];
+                const bool is_lev_2 = num_particles_cell > ppc_lev[1][0] * ppc_lev[1][1];
+                return {
+                    num_particles_cell,
+                    is_lev_0 ? i : tile_box.bigEnd(0), is_lev_0 ? j : tile_box.bigEnd(1),
+                    is_lev_1 ? i : tile_box.bigEnd(0), is_lev_1 ? j : tile_box.bigEnd(1),
+                    is_lev_2 ? i : tile_box.bigEnd(0), is_lev_2 ? j : tile_box.bigEnd(1),
+                    is_lev_0 ? i : tile_box.smallEnd(0), is_lev_0 ? j : tile_box.smallEnd(1),
+                    is_lev_1 ? i : tile_box.smallEnd(0), is_lev_1 ? j : tile_box.smallEnd(1),
+                    is_lev_2 ? i : tile_box.smallEnd(0), is_lev_2 ? j : tile_box.smallEnd(1)
+                };
             });
+
+        auto [np_tup, lo_tup, hi_tup] = amrex::TupleSplit<1, 2*n_lev, 2*n_lev>(reduce_data.value());
+
+        amrex::Long total_num_particles = amrex::get<0>(np_tup);
+        const amrex::Long total_non_mirrored_particles = total_num_particles;
+        auto lo_arr = amrex::tupleToArray(lo_tup);
+        auto hi_arr = amrex::tupleToArray(hi_tup);
+
+        amrex::Array<amrex::Box, n_lev> lev_bounds;
+
+#ifdef AMREX_USE_GPU
+        // The loop over particles is outside the loop over cells
+        // so that particles in the same cell are far apart.
+        // This makes current deposition faster.
+        constexpr int idx_x = 0;
+        constexpr int idx_y = 1;
+        constexpr int idx_ppc = 2;
+#else
+        constexpr int idx_ppc = 0;
+        constexpr int idx_x = 1;
+        constexpr int idx_y = 2;
+#endif
+
+        for (int ilev=0; ilev < n_lev; ++ilev) {
+            lev_bounds[ilev].setSmall(idx_x, lo_arr[2*ilev]);
+            lev_bounds[ilev].setSmall(idx_y, lo_arr[2*ilev+1]);
+            lev_bounds[ilev].setSmall(idx_ppc,
+                ilev == 0 ? 0 : ppc_lev[ilev-1][0] * ppc_lev[ilev-1][1]);
+            lev_bounds[ilev].setBig(idx_x, hi_arr[2*ilev]);
+            lev_bounds[ilev].setBig(idx_y, hi_arr[2*ilev+1]);
+            lev_bounds[ilev].setBig(idx_ppc, ppc_lev[ilev][0] * ppc_lev[ilev][1] - 1);
+        }
 
         if (m_do_symmetrize) {
             total_num_particles *= 4;
@@ -190,130 +236,75 @@ InitParticles (const amrex::RealVect& a_u_std,
             }
         }
 
-        auto& particles = GetParticles(0);
-        auto& particle_tile = particles[std::make_pair(mfi.index(), mfi.LocalTileIndex())];
+        auto& particle_tile = DefineAndReturnParticleTile(0, mfi);
 
-        auto old_size = particle_tile.size();
-        const auto new_size = old_size + total_num_particles;
-        particle_tile.resize(new_size);
+        AMREX_ALWAYS_ASSERT(particle_tile.size() == 0);
+        unsigned int current_size = 0;
+        particle_tile.resize(total_num_particles);
 
         auto ptd = particle_tile.getParticleTileData();
         const int init_ion_lev = m_init_ion_lev;
 
-        // The loop over particles is outside the loop over cells
-        // so that particles in the same cell are far apart.
-        // This makes current deposition faster.
-        for (int i_part=0; i_part<max_ppc; ++i_part)
-        {
-            amrex::Gpu::DeviceVector<unsigned int> counts(tile_box.numPts(), 0);
-            unsigned int* pcount = counts.dataPtr();
+        for (int ilev=0; ilev < n_lev; ++ilev) {
+            const amrex::Box bx = lev_bounds[ilev];
+            if (!bx.ok()) {
+                continue;
+            }
+            const amrex::BoxIndexer bxi{bx};
 
-            amrex::Gpu::DeviceVector<unsigned int> offsets(tile_box.numPts());
-            unsigned int* poffset = offsets.dataPtr();
+            current_size += amrex::Scan::PrefixSum<unsigned int>(bx.numPts(),
+                [=] AMREX_GPU_DEVICE (amrex::Long idx) -> unsigned int {
+                    const auto iv = bxi.intVect(idx);
+                    const int i = iv[idx_x];
+                    const int j = iv[idx_y];
+                    const int i_part = iv[idx_ppc];
 
-            amrex::ParallelFor(tile_box,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-            {
-                amrex::Real r[2];
-                bool do_init = false;
-                ParticleUtil::get_position_unit_cell_fine(r, do_init, i_part,
-                    ppc_lev, fine_transition_cells,
-                    use_fine_patch ? arr_fine(i, j, comp_a) : 0);
+                    auto [do_init, x, y, density] = check_position(i, j, i_part);
+                    return do_init;
+                },
+                [=] AMREX_GPU_DEVICE (amrex::Long idx, unsigned int pidx) {
+                    const auto iv = bxi.intVect(idx);
+                    const int i = iv[idx_x];
+                    const int j = iv[idx_y];
+                    const int i_part = iv[idx_ppc];
 
-                if (!do_init) return;
+                    auto [do_init, x, y, density] = check_position(i, j, i_part);
+                    if (!do_init) {
+                        return;
+                    }
 
-                amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-                amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
+                    pidx += current_size;
+                    ptd.id(pidx) = 1; // plasma id is only used to distinguish between valid/invalid
+                    ptd.cpu(pidx) = 0; // level 0
+                    ptd.rdata(PlasmaIdx::x)[pidx] = x;
+                    ptd.rdata(PlasmaIdx::y)[pidx] = y;
 
-                const amrex::Real rsq = x*x + y*y;
-                if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
-                    y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    rsq > radius_sq ||
-                    rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                    density_func(x, y, c_t) <= min_density) return;
+                    if (use_fine_patch) {
+                        const int fine_loc = arr_fine(i, j, comp_a);
+                        if (fine_loc == 0) {
+                            ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
+                        } else if (fine_loc <= fine_transition_cells + 1) {
+                            ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[1];
+                        } else {
+                            ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[2];
+                        }
+                    } else {
+                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
+                    }
+                },
+                amrex::Scan::Type::exclusive,
+                amrex::Scan::retSum);
+        }
 
-                int ix = i - lo.x;
-                int iy = j - lo.y;
-                int iz = k - lo.z;
-                int nx = hi.x-lo.x+1;
-                int ny = hi.y-lo.y+1;
-                int nz = hi.z-lo.z+1;
-                unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
-                unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
-                unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
+        AMREX_ALWAYS_ASSERT(total_non_mirrored_particles == current_size);
 
-                // Ordering of axes from fastest to slowest:
-                // x
-                // y
-                // z (not used)
-                // ppc
-                unsigned int cellid = (uiz * ny + uiy) * nx + uix;
-
-                pcount[cellid] = 1;
-            });
-
-            unsigned int num_to_add =
-                amrex::Scan::ExclusiveSum(counts.size(), counts.data(), offsets.data());
-
-            if (num_to_add == 0) continue;
-
-            amrex::ParallelForRNG(tile_box,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k, const amrex::RandomEngine& engine) noexcept
-            {
-                int ix = i - lo.x;
-                int iy = j - lo.y;
-                int iz = k - lo.z;
-                int nx = hi.x-lo.x+1;
-                int ny = hi.y-lo.y+1;
-                int nz = hi.z-lo.z+1;
-                unsigned int uix = amrex::min(nx-1,amrex::max(0,ix));
-                unsigned int uiy = amrex::min(ny-1,amrex::max(0,iy));
-                unsigned int uiz = amrex::min(nz-1,amrex::max(0,iz));
-
-                unsigned int cellid = (uiz * ny + uiy) * nx + uix;
-
-                const amrex::Long pidx = poffset[cellid] - poffset[0] + old_size;
-
-                amrex::Real r[2] = {0.,0.};
-                bool do_init = false;
-                ParticleUtil::get_position_unit_cell_fine(r, do_init, i_part,
-                    ppc_lev, fine_transition_cells,
-                    use_fine_patch ? arr_fine(i, j, comp_a) : 0);
-
-                if (!do_init) return;
-
-                amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-                amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
-
-                const amrex::Real density = density_func(x, y, c_t);
-
-                const amrex::Real rsq = x*x + y*y;
-                if (x >= a_bounds.hi(0) || x < a_bounds.lo(0) ||
-                    y >= a_bounds.hi(1) || y < a_bounds.lo(1) ||
-                    rsq > radius_sq ||
-                    rsq < a_hollow_core_radius*a_hollow_core_radius ||
-                    density <= min_density) return;
+        amrex::ParallelForRNG(current_size,
+            [=] AMREX_GPU_DEVICE (unsigned int pidx, const amrex::RandomEngine& engine) {
+                const amrex::Real x = ptd.rdata(PlasmaIdx::x)[pidx];
+                const amrex::Real y = ptd.rdata(PlasmaIdx::y)[pidx];
 
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
-
-                ptd.id(pidx) = 1; // plasma id is only used to distinguish between valid/invalid
-                ptd.cpu(pidx) = 0; // level 0
-                ptd.rdata(PlasmaIdx::x)[pidx] = x;
-                ptd.rdata(PlasmaIdx::y)[pidx] = y;
-
-                if (use_fine_patch) {
-                    const int fine_loc = arr_fine(i, j, comp_a);
-                    if (fine_loc == 0) {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
-                    } else if (fine_loc <= fine_transition_cells + 1) {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[1];
-                    } else {
-                        ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[2];
-                    }
-                } else {
-                    ptd.rdata(PlasmaIdx::w)[pidx] = density * scale_fac_lev[0];
-                }
 
                 ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
                 ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
@@ -333,14 +324,11 @@ InitParticles (const amrex::RealVect& a_u_std,
                 ptd.idata(PlasmaIdx::ion_lev)[pidx] = init_ion_lev;
             });
 
-            old_size += num_to_add;
-        }
         if (m_do_symmetrize) {
 
             const amrex::Real x_mid2 = (a_bounds.lo(0) + a_bounds.hi(0));
             const amrex::Real y_mid2 = (a_bounds.lo(1) + a_bounds.hi(1));
-            const amrex::Long mirror_offset = total_num_particles/4;
-            amrex::ParallelFor(mirror_offset,
+            amrex::ParallelFor(total_non_mirrored_particles,
             [=] AMREX_GPU_DEVICE (amrex::Long pidx) noexcept
             {
                 const amrex::Real x = ptd.rdata(PlasmaIdx::x)[pidx];
@@ -355,7 +343,7 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 HIPACE_LOOP_UNROLL
                 for (int imirror=0; imirror<3; ++imirror) {
-                    const amrex::Long midx = (imirror+1)*mirror_offset +pidx;
+                    const amrex::Long midx = (imirror+1)*total_non_mirrored_particles + pidx;
 
                     ptd.id(midx) = 1; // plasma id is only used to distinguish between valid/invalid
                     ptd.cpu(midx) = 0; // level 0
@@ -386,12 +374,6 @@ InitParticles (const amrex::RealVect& a_u_std,
             });
         }
     }
-#ifndef AMREX_USE_GPU
-    // The index order for initializing plasma particles is optimized for GPU.
-    // On CPU, especially with multiple particles per cell,
-    // reordering particles by cell gives better performance for plasma deposition and push.
-    SortParticlesByCell();
-#endif
 }
 
 void
