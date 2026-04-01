@@ -8,8 +8,8 @@
 #include <string>
 
 /**
- * \brief This class handles Coulomb collisions between 2 particle species
- * (can be plasma-plasma or beam-plasma, the species can be the same)
+ * \brief This class handles inelastic Coulomb collisions between 2 plasma species,
+ * and eventually leads to an ionization event.
  */
 class Collision
 {
@@ -17,8 +17,10 @@ class Collision
     std::string m_inout_species2_name = "";
     std::string m_out_species3_name = "";
     std::string m_collision_type = "";
+    std::string m_physical_element ="";
     bool m_has_collision_product = false;
-    amrex::Gpu::Buffer<amrex::Real> m_crosssection_data;
+    amrex::Gpu::Buffer<amrex::Real> m_binding_energies;
+    amrex::Gpu::Buffer<amrex::Real> m_ionization_energies;
 
 public:
 

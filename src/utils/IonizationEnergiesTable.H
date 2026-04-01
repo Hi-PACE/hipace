@@ -21,7 +21,7 @@
 //
 // The Data written below is a reformatting of the data referenced form NIST.
 
-std::map<std::string, int> ion_map_ids = {
+inline std::map<std::string, int> ion_map_ids = {
     {"H", 0},
     {"He", 1},
     {"Li", 2},
