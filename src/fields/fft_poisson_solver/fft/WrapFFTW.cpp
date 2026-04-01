@@ -74,11 +74,23 @@ void AnyFFT::SetBuffers (void* in, void* out, [[maybe_unused]] void* work_area) 
                     reinterpret_cast<float*>(in), reinterpret_cast<fftwf_complex*>(out),
                     FFTW_MEASURE);
                 break;
-            case FFTType::R2R_2D:
+            case FFTType::R2R_2D_DST1:
                 m_plan->m_fftwf_plan = fftwf_plan_r2r_2d(
                     m_plan->m_ny, m_plan->m_nx,
                     reinterpret_cast<float*>(in), reinterpret_cast<float*>(out),
                     FFTW_RODFT00, FFTW_RODFT00, FFTW_MEASURE);
+                break;
+            case FFTType::R2R_2D_DST2:
+                m_plan->m_fftwf_plan = fftwf_plan_r2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<float*>(in), reinterpret_cast<float*>(out),
+                    FFTW_RODFT10, FFTW_RODFT10, FFTW_MEASURE);
+                break;
+            case FFTType::R2R_2D_DST3:
+                m_plan->m_fftwf_plan = fftwf_plan_r2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<float*>(in), reinterpret_cast<float*>(out),
+                    FFTW_RODFT01, FFTW_RODFT01, FFTW_MEASURE);
                 break;
             case FFTType::C2R_1D_batched:
                 {
@@ -127,11 +139,23 @@ void AnyFFT::SetBuffers (void* in, void* out, [[maybe_unused]] void* work_area) 
                     reinterpret_cast<double*>(in), reinterpret_cast<fftw_complex*>(out),
                     FFTW_MEASURE);
                 break;
-            case FFTType::R2R_2D:
+            case FFTType::R2R_2D_DST1:
                 m_plan->m_fftw_plan = fftw_plan_r2r_2d(
                     m_plan->m_ny, m_plan->m_nx,
                     reinterpret_cast<double*>(in), reinterpret_cast<double*>(out),
                     FFTW_RODFT00, FFTW_RODFT00, FFTW_MEASURE);
+                break;
+            case FFTType::R2R_2D_DST2:
+                m_plan->m_fftw_plan = fftw_plan_r2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<double*>(in), reinterpret_cast<double*>(out),
+                    FFTW_RODFT10, FFTW_RODFT10, FFTW_MEASURE);
+                break;
+            case FFTType::R2R_2D_DST3:
+                m_plan->m_fftw_plan = fftw_plan_r2r_2d(
+                    m_plan->m_ny, m_plan->m_nx,
+                    reinterpret_cast<double*>(in), reinterpret_cast<double*>(out),
+                    FFTW_RODFT01, FFTW_RODFT01, FFTW_MEASURE);
                 break;
             case FFTType::C2R_1D_batched:
                 {

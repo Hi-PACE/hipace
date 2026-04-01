@@ -102,7 +102,9 @@ std::size_t AnyFFT::Initialize (FFTType type, int nx, int ny) {
             n[1] = nx;
             batch = 1;
             break;
-        case FFTType::R2R_2D:
+        case FFTType::R2R_2D_DST1:
+        case FFTType::R2R_2D_DST2:
+        case FFTType::R2R_2D_DST3:
             amrex::Abort("R2R FFT not supported by cufft");
             return 0;
         case FFTType::C2R_1D_batched:
@@ -189,7 +191,9 @@ void AnyFFT::Execute () {
                     reinterpret_cast<cufftComplex*>(m_plan->m_out));
                 assert_cufft_status("cufftExecR2C", result);
                 break;
-            case FFTType::R2R_2D:
+            case FFTType::R2R_2D_DST1:
+            case FFTType::R2R_2D_DST2:
+            case FFTType::R2R_2D_DST3:
                 amrex::Abort("R2R FFT not supported by cufft");
                 break;
             case FFTType::C2R_1D_batched:
@@ -233,7 +237,9 @@ void AnyFFT::Execute () {
                     reinterpret_cast<cufftDoubleComplex*>(m_plan->m_out));
                 assert_cufft_status("cufftExecD2Z", result);
                 break;
-            case FFTType::R2R_2D:
+            case FFTType::R2R_2D_DST1:
+            case FFTType::R2R_2D_DST2:
+            case FFTType::R2R_2D_DST3:
                 amrex::Abort("R2R FFT not supported by cufft");
                 break;
             case FFTType::C2R_1D_batched:
