@@ -24,7 +24,7 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
     if (!(fd.m_base_diag_type == DiagnosticData::diag_type::histogram)) {
         return;
     }
-    HIPACE_PROFILE("TemperatureDeposition_PlasmaParticleContainer()");
+    HIPACE_PROFILE("HistogramDeposition()");
     using namespace amrex::literals;
 
     auto hist1 = fd.m_hist_exe_q1;
@@ -43,6 +43,8 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
 
     const bool can_ionize = plasma.m_can_ionize;
 
+    fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0.);
+
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
     {
@@ -51,6 +53,10 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
+                if (!ptd.id(ip).is_valid()) {
+                    return;
+                }
+
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
 
@@ -82,8 +88,8 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
                 const int i = static_cast<int>(std::floor(h1_mid + 0.5_rt));
                 const int j = static_cast<int>(std::floor(h2_mid + 0.5_rt));
 
-                if (bin_box.smallEnd(0) <= i && bin_box.bigEnd(0) <= i &&
-                    bin_box.smallEnd(1) <= j && bin_box.bigEnd(1) <= j) {
+                if (bin_box.smallEnd(0) <= i && bin_box.bigEnd(0) >= i &&
+                    bin_box.smallEnd(1) <= j && bin_box.bigEnd(1) >= j) {
                     amrex::Gpu::Atomic::Add(arr.ptr(i, j), hw);
                 }
             }

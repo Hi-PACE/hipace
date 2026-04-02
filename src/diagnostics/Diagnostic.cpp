@@ -398,10 +398,6 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 {
     for (auto& fd : m_diag_data) {
 
-        if (fd.m_base_diag_type == DiagnosticData::diag_type::histogram) {
-            continue;
-        }
-
         amrex::Geometry geom;
 
         // choose the geometry of the diagnostic
@@ -415,6 +411,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
             case DiagnosticData::diag_type::histogram:
                 // plasma is based on field level 0 geom
                 geom = field_geom[0];
+                break;
         }
 
         amrex::Box domain = geom.Domain();
@@ -487,14 +484,14 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         if(fd.m_has_output) {
             HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
 
-            fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
-
             switch (fd.m_base_diag_type) {
                 case DiagnosticData::diag_type::field:
+                    fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
                     fd.m_F_real.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_real.setVal<amrex::RunOn::Host>(0);
                     break;
                 case DiagnosticData::diag_type::laser:
+                    fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
                     fd.m_F_complex.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_complex.setVal<amrex::RunOn::Host>({0,0});
                     break;
