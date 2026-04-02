@@ -32,7 +32,7 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
     auto histw = fd.m_hist_exe_w;
 
     const amrex::Real h1_pos_offset = GetPosOffset(0, fd.m_geom_io, fd.m_geom_io.Domain());
-    const amrex::Real h2_pos_offset = GetPosOffset(0, fd.m_geom_io, fd.m_geom_io.Domain());
+    const amrex::Real h2_pos_offset = GetPosOffset(1, fd.m_geom_io, fd.m_geom_io.Domain());
     const amrex::Real d1_inv = fd.m_geom_io.InvCellSize(0);
     const amrex::Real d2_inv = fd.m_geom_io.InvCellSize(1);
 
@@ -88,8 +88,8 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
                 const int i = static_cast<int>(std::floor(h1_mid + 0.5_rt));
                 const int j = static_cast<int>(std::floor(h2_mid + 0.5_rt));
 
-                if (bin_box.smallEnd(0) <= i && bin_box.bigEnd(0) >= i &&
-                    bin_box.smallEnd(1) <= j && bin_box.bigEnd(1) >= j) {
+                if (bin_box.smallEnd(0) <= i && i <= bin_box.bigEnd(0) &&
+                    bin_box.smallEnd(1) <= j && j <= bin_box.bigEnd(1)) {
                     amrex::Gpu::Atomic::Add(arr.ptr(i, j), hw);
                 }
             }
