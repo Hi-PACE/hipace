@@ -78,13 +78,11 @@ utils::DiagPeriod::compile () {
 }
 
 bool
-utils::DiagPeriod::doDiagnostics (int output_step, int max_step,
-                                  amrex::Real output_time, amrex::Real max_time) const
+utils::DiagPeriod::doDiagnostics (int output_step, amrex::Real output_time, bool is_last_step) const
 {
     const auto output_period = static_cast<amrex::Long>(m_exe(output_step, output_time));
     return output_period > 0 && (
-        (output_time == max_time) ||
-        (output_step == max_step) ||
+        is_last_step ||
         (output_step % output_period == 0) );
 }
 

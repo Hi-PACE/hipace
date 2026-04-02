@@ -16,18 +16,22 @@
 FFTPoissonSolverDirichletDirect::FFTPoissonSolverDirichletDirect (
     amrex::BoxArray const& realspace_ba,
     amrex::DistributionMapping const& dm,
-    amrex::Geometry const& gm )
+    amrex::Geometry const& gm,
+    bool is_even)
 {
-    define(realspace_ba, dm, gm);
+    define(realspace_ba, dm, gm, is_even);
 }
 
 void
 FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
                                          amrex::DistributionMapping const& dm,
-                                         amrex::Geometry const& gm )
+                                         amrex::Geometry const& gm,
+                                         bool is_even)
 {
     HIPACE_PROFILE("FFTPoissonSolverDirichletDirect::define()");
     using namespace amrex::literals;
+
+    m_is_even = is_even;
 
     // If we are going to support parallel FFT, the constructor needs to take a communicator.
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(a_realspace_ba.size() == 1, "Parallel FFT not supported yet");
@@ -52,15 +56,17 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
     const amrex::IntVect fft_size = fft_box.length();
     const int nx = fft_size[0];
     const int ny = fft_size[1];
+    const int logical_nx = is_even ? nx : nx + 1;
+    const int logical_ny = is_even ? ny : ny + 1;
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( nx + 1 ));
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( ny + 1 ));
+    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * logical_nx);
+    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * logical_ny);
 
     // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
     // This normalization is used regardless of the sine transform library
-    const amrex::Real norm_fac = 0.5 / ( 2 * (( nx + 1 ) * ( ny + 1 )));
+    const amrex::Real norm_fac = 0.5 / ( 2 * (logical_nx * logical_ny));
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
@@ -84,8 +90,10 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
     }
 
     // Allocate and initialize the FFT plans
-    std::size_t fwd_area = m_forward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
-    std::size_t bkw_area = m_backward_fft.Initialize(FFTType::R2R_2D, fft_size[0], fft_size[1]);
+    std::size_t fwd_area = m_forward_fft.Initialize(
+        is_even ? FFTType::R2R_2D_DST2 : FFTType::R2R_2D_DST1, fft_size[0], fft_size[1]);
+    std::size_t bkw_area = m_backward_fft.Initialize(
+        is_even ? FFTType::R2R_2D_DST3 : FFTType::R2R_2D_DST1, fft_size[0], fft_size[1]);
 
     // Allocate work area for both FFTs
     m_fft_work_area.resize(std::max(fwd_area, bkw_area));

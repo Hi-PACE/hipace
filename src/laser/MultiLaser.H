@@ -113,27 +113,27 @@ public:
      * \param[in] islice slice index
      * \param[in] fields Field object
      * \param[in] dt time step of the simulation
-     * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
+     * \param[in] is_first_step if this is the first time step of the simulation
      * \param[in] geom_field_lev0 Geometry of the fields on MR level 0
      */
-    void AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt, int step,
-                       amrex::Geometry const& geom_field_lev0);
+    void AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt,
+                       bool is_first_step, amrex::Geometry const& geom_field_lev0);
 
     /** Advance a laser slice by 1 time step using a multigrid solver.
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
      *
      * \param[in] dt time step of the simulation
-     * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
+     * \param[in] is_first_step if this is the first time step of the simulation
      */
-    void AdvanceSliceMG (amrex::Real dt, int step);
+    void AdvanceSliceMG (amrex::Real dt, bool is_first_step);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
      *
      * \param[in] dt time step of the simulation
-     * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
+     * \param[in] is_first_step if this is the first time step of the simulation
      */
-    void AdvanceSliceFFT (amrex::Real dt, int step);
+    void AdvanceSliceFFT (amrex::Real dt, bool is_first_step);
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).
@@ -145,21 +145,18 @@ public:
 
     /** Compute in-situ laser diagnostics of current slice, store in member variable
      * \param[in] step current time step
-     * \param[in] time physical time
      * \param[in] islice current slice, on which diags are computed.
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] max_time maximum time of simulation
+     * \param[in] time physical time of the current step
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituComputeDiags (int step, amrex::Real time, int islice,
-                             int max_step, amrex::Real max_time);
+    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
      * \param[in] time physical time
-     * \param[in] max_step maximum time step of simulation
-     * \param[in] max_time maximum time of simulation
+     * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituWriteToFile (int step, amrex::Real time, int max_step, amrex::Real max_time);
+    void InSituWriteToFile (int step, amrex::Real time, bool is_last_step);
 
     /** Get the central wavelength */
     amrex::Real GetLambda0 () const { return m_lambda0; }
