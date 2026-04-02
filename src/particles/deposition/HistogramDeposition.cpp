@@ -36,6 +36,11 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
     const amrex::Real d1_inv = fd.m_geom_io.InvCellSize(0);
     const amrex::Real d2_inv = fd.m_geom_io.InvCellSize(1);
 
+    const amrex::Box bin_box = fd.m_geom_io.Domain();
+    const CheckDomainBounds realspace_bounds{fd.m_hist_realspace_geom};
+
+    const bool use_second_dim = fd.m_hist_num_dims == 2;
+
     const bool can_ionize = plasma.m_can_ionize;
 
     // Loop over particle boxes
@@ -48,6 +53,11 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
             [=] AMREX_GPU_DEVICE (int ip) {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
+
+                if (!realspace_bounds.contains(xp, yp)) {
+                    return;
+                }
+
                 const amrex::Real uxp = ptd.rdata(PlasmaIdx::ux)[ip];
                 const amrex::Real uyp = ptd.rdata(PlasmaIdx::uy)[ip];
                 const amrex::Real psi = ptd.rdata(PlasmaIdx::psi)[ip];
@@ -60,16 +70,22 @@ HistogramDeposition (PlasmaParticleContainer& plasma,
                 const amrex::Real uzp = plasma_uz(gamma, psi);
 
                 const amrex::Real h1 = hist1(xp, yp, uxp, uyp, uzp, gamma * psi_inv, wp, ion_level);
-                const amrex::Real h2 = hist2(xp, yp, uxp, uyp, uzp, gamma * psi_inv, wp, ion_level);
                 const amrex::Real hw = histw(xp, yp, uxp, uyp, uzp, gamma * psi_inv, wp, ion_level);
+                amrex::Real h2 = 0.5_rt;
+                if (use_second_dim) {
+                    h2 = hist2(xp, yp, uxp, uyp, uzp, gamma * psi_inv, wp, ion_level);
+                }
 
                 const amrex::Real h1_mid = (h1 - h1_pos_offset) * d1_inv;
                 const amrex::Real h2_mid = (h2 - h2_pos_offset) * d2_inv;
 
-                auto [shape_h1, i] = shape_factor<0>(h1_mid, 0);
-                auto [shape_h2, j] = shape_factor<0>(h2_mid, 0);
+                const int i = static_cast<int>(std::floor(h1_mid + 0.5_rt));
+                const int j = static_cast<int>(std::floor(h2_mid + 0.5_rt));
 
-                amrex::Gpu::Atomic::Add(arr.ptr(i, j), hw);
+                if (bin_box.smallEnd(0) <= i && bin_box.bigEnd(0) <= i &&
+                    bin_box.smallEnd(1) <= j && bin_box.bigEnd(1) <= j) {
+                    amrex::Gpu::Atomic::Add(arr.ptr(i, j), hw);
+                }
             }
         );
     }

@@ -216,6 +216,7 @@ OpenPMDWriter::WriteFieldData (
 
         switch (fd.m_base_diag_type) {
             case DiagnosticData::diag_type::field:
+            case DiagnosticData::diag_type::histogram:
                 field_comp.storeChunkRaw(fd.m_F_real.dataPtr(icomp), chunk_offset, chunk_size);
                 break;
             case DiagnosticData::diag_type::laser:
