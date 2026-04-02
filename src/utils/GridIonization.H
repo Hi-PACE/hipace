@@ -30,7 +30,12 @@ public:
     /** Return a vector of component names that need to be used by grid ionization */
     std::vector<std::string> GetFieldComponents (const MultiPlasma& multi_plasma);
 
-    /** Initialize gridion fields. Must be called after Plasma initialize for every time step */
+    /** Initialize gridion fields. Must be called after Plasma initialize for every time step
+     * \param[in,out] fields the general field class, modified by this function
+     * \param[in] multi_plasma plasma object
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] lev MR level
+     */
     void InitData (Fields& fields, const MultiPlasma& multi_plasma,
                    const amrex::Geometry& geom, int const lev);
 

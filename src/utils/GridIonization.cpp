@@ -20,10 +20,6 @@ GridIonization::ReadParameters ()
     queryWithParser(ppg, "plasma_names", m_names);
 
     m_use_grid_ionization = m_names.size() > 0 && m_names[0] != "no_gridplasma";
-
-    if (!m_use_grid_ionization) {
-        return;
-    }
 }
 
 std::vector<std::string>
@@ -217,7 +213,7 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                     Complex A_dzeta = 0;
 
                     if (laser_bounds.contains(x, y)) {
-                        doLaserGatherShapeN<2>(x, y, A, A_dx, A_dzeta, laser_arr,
+                        doLaserGatherShapeN<1>(x, y, A, A_dx, A_dzeta, laser_arr,
                             dx_inv, dy_inv, dzeta_inv, x_pos_offset, y_pos_offset);
                     }
 
@@ -252,7 +248,7 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                         const amrex::Real new_weight = old_weight - transferred_weight;
                         chi += new_weight * chi_factor_ion * ion_lev * ion_lev;
 
-                        arr(i, j, ion_weight_comp + ion_lev) = old_weight - transferred_weight;
+                        arr(i, j, ion_weight_comp + ion_lev) = new_weight;
                         arr(i, j, ion_weight_comp + ion_lev + 1) += transferred_weight;
                         // w
                         arr(i, j, comps[1]) += transferred_weight;
