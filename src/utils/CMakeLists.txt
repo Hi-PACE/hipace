@@ -11,6 +11,7 @@ target_sources(HiPACE
     AdaptiveTimeStep.cpp
     IOUtil.cpp
     GridCurrent.cpp
+    GridIonization.cpp
     MultiBuffer.cpp
     Parser.cpp
 )

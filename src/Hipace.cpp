@@ -82,6 +82,7 @@ Hipace::Hipace () :
     m_adaptive_time_step.ReadParameters(m_multi_beam.get_nbeams());
     m_multi_laser.ReadParameters();
     m_grid_current.ReadParameters();
+    m_grid_ionization.ReadParameters();
     m_diags.ReadParameters(m_N_level, m_multi_laser.UseLaser());
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.ReadParameters();
@@ -289,6 +290,8 @@ Hipace::InitData ()
 #endif
 
     m_multi_laser.InitData();
+
+    m_multi_plasma.InitIonization(m_3D_geom);
 
     for (int lev=0; lev<m_N_level; ++lev) {
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
@@ -550,6 +553,11 @@ Hipace::Evolve ()
         // Only reset plasma after receiving time step, to use proper density
         m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
 
+        // Initialize grid inoization after multi plasma
+        for (int lev=0; lev<m_N_level; ++lev) {
+            m_grid_ionization.InitData(m_fields, m_multi_plasma, m_slice_geom[lev], lev);
+        }
+
         m_multi_laser.SetInitialChi(m_multi_plasma);
 
         // deposit neutralizing background
@@ -733,6 +741,12 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // Psi ExmBy EypBx Ez Bz solve
     m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
+
+    // Calculate grid ionization and update chi
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_grid_ionization.IonizeGrid(m_fields, m_multi_plasma, m_multi_laser, m_slice_geom[lev],
+            lev, m_multi_laser.GetLaserGeom());
+    }
 
     // Advance laser slice by 1 step using chi
     // no MR for laser
