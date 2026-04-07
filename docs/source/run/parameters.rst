@@ -348,11 +348,16 @@ The default is to use the explicit solver. **We strongly recommend to use the ex
     Which solver to use.
     Possible values: ``explicit`` and ``predictor-corrector``.
 
-* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirect`, GPU: `FFTDirichletQuick` or `FFTDirichletFast`)
+* ``fields.poisson_solver`` (`string`) optional (default CPU: `FFTDirichletDirectEven` or `FFTDirichletDirectOdd`, GPU: `FFTDirichletQuick` or `FFTDirichletFast`)
     Which Poisson solver to use for ``Psi``, ``Ez`` and ``Bz``. The ``predictor-corrector`` BxBy
     solver also uses this poisson solver for ``Bx`` and ``By`` internally. Available solvers are:
 
-      * ``FFTDirichletDirect`` Use the discrete sine transformation that is directly implemented
+      * ``FFTDirichletDirectEven`` Use the discrete sine transformation that is directly implemented
+        by FFTW to solve the Poisson equation with Dirichlet boundary conditions.
+        This option is only available when compiling for CPUs with FFTW.
+        Preferred resolution: :math:`2^N`.
+
+      * ``FFTDirichletDirectOdd`` Use the discrete sine transformation that is directly implemented
         by FFTW to solve the Poisson equation with Dirichlet boundary conditions.
         This option is only available when compiling for CPUs with FFTW.
         Preferred resolution: :math:`2^N-1`.
@@ -1327,7 +1332,7 @@ Whether the energy loss due to classical radiation reaction of beam particles is
     In normalized units, `hipace.background_density_SI` must be specified.
 
 Spin tracking
--------------
+^^^^^^^^^^^^^
 
 Track the spin of each beam particle as it is rotated by the electromagnetic fields using the
 Thomas-Bargmann-Michel-Telegdi (TBMT) model, see
@@ -1346,6 +1351,30 @@ or beam in-situ diagnostic as ``[sx], [sx^2], [sy], [sy^2], [sz], [sz^2]``.
 * ``<beam name> or beams.spin_anom`` (`bool`) optional (default `0.00115965218128`)
     The anomalous magnetic moment. The default value is the moment for electrons.
 
+Grid Ionization
+^^^^^^^^^^^^^^^
+
+For weak laser pulses that ionize neutral gas to make a plasma channel but do not form an electron
+wake, the ionization fraction and resulting electron temperature can be computed directly on the
+grid without using plasma particles. This results in significantly faster computation and eliminates
+statistical noise. However, ions and electrons remain stationary with this approach.
+
+To use this feature, start with a normal input script that contains all the plasma species with
+plasma laser ionization fully set up. Then set the particles per cell for all plasmas to zero
+``<plasma name>.ppc = 0 0`` and add all the ionizable plasma species to
+``grid_ionization.plasma_names``. The ``ionization_product`` species of the plasmas will be
+ignored and instead generic electrons will be produced by grid ionization.
+
+When enabled, the fields ``grid_ionization_w_elec``, ``grid_ionization_ux^2_elec``,
+``grid_ionization_uy^2_elec``, ``grid_ionization_uz_elec``, ``grid_ionization_uz^2_elec``
+and ``grid_ionization_w_<plasma name>_<ion level>`` will be available in the diagnostic to
+compute the electron temperature and ionization fraction. Additionally, the refractive index
+chi is updated by the ionized electrons.
+
+* ``grid_ionization.plasma_names`` (list of `strings`) optional (default `no_gridplasma`)
+    Names of existing plasma species that will be modeled by the grid instead of particles.
+    All of these species should be atoms with laser ionization enabled and with
+    zero particles per cell ``ppc = 0 0``.
 
 Parser
 ------

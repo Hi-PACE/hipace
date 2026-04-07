@@ -162,6 +162,26 @@ public:
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
                             bool is_last_step);
 
+    PlasmaParticleContainer& GetPlasma (const std::string& name) {
+        for (int i = 0; i < m_nplasmas; ++i) {
+            if (m_names[i] == name) {
+                return m_all_plasmas[i];
+            }
+        }
+        amrex::Abort("Unknown plasma name " + name);
+        return m_all_plasmas[0];
+    }
+
+    const PlasmaParticleContainer& GetPlasma (const std::string& name) const {
+        for (int i = 0; i < m_nplasmas; ++i) {
+            if (m_names[i] == name) {
+                return m_all_plasmas[i];
+            }
+        }
+        amrex::Abort("Unknown plasma name " + name);
+        return m_all_plasmas[0];
+    }
+
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
     int m_nplasmas = 0; /**< number of plasma containers */
     amrex::Vector<std::string> m_names {"no_plasma"}; /**< names of all plasma containers */
