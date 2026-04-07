@@ -765,7 +765,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
             m_multi_plasma.ExplicitDeposition(m_fields, m_3D_geom, lev);
 
             // Solves Bx, By using Sx, Sy and chi
-            ExplicitMGSolveBxBy(lev, WhichSlice::This);
+            // ExplicitMGSolveBxBy(lev, WhichSlice::This);
         }
     } else {
         // Solves Bx and By in the current slice and modifies the force terms of the plasma particles

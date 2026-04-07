@@ -306,9 +306,9 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
-                u[0] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
-                u[1] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
-                u[2] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
+                // u[0] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
+                // u[1] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
+                // u[2] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
 
                 ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
                 ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];

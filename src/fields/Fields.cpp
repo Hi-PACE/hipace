@@ -996,13 +996,13 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         //     -phys_const.mu0,
         //     derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
 
-        Multiply(getStagingArea(lev),
-            phys_const.mu0, getField(lev, WhichSlice::This, "jy"));
+        // Multiply(getStagingArea(lev),
+        //     phys_const.mu0, getField(lev, WhichSlice::This, "jy"));
 
-        SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev),
-            m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
+        // SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev),
+        //     m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
-        m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
+        // m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
     }
 
     EnforcePeriodic(false, {Comps[WhichSlice::This]["Psi"],
