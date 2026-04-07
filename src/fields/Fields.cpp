@@ -663,8 +663,20 @@ Fields::ShiftSlices (int lev)
     // only shift the slices that are allocated
     if (explicit_solve) {
         shift(lev, WhichSlice::Previous, WhichSlice::This, "jx_beam", "jy_beam");
-        duplicate(lev, WhichSlice::This, {"jx_beam", "jy_beam", "jx"     , "jy"     },
-                       WhichSlice::Next, {"jx_beam", "jy_beam", "jx_beam", "jy_beam"});
+        duplicate(lev, WhichSlice::This, {"jx_beam", "jy_beam"},
+                       WhichSlice::Next, {"jx_beam", "jy_beam"});
+        auto& geom = Hipace::GetInstance().m_3D_geom;
+        LinCombination(getField(lev, WhichSlice::This, "jx"),
+            1._rt,
+            derivative<Direction::x>{getField(lev, WhichSlice::Next, "jx_beam"), geom[lev]},
+            1._rt,
+            derivative<Direction::y>{getField(lev, WhichSlice::Next, "jy_beam"), geom[lev]});
+
+        LinCombination(getField(lev, WhichSlice::This, "jy"),
+            1._rt,
+            derivative<Direction::y>{getField(lev, WhichSlice::Next, "jx_beam"), geom[lev]},
+            -1._rt,
+            derivative<Direction::x>{getField(lev, WhichSlice::Next, "jy_beam"), geom[lev]});
     } else {
         shift(lev, WhichSlice::PCPrevIter, WhichSlice::Previous, "Bx", "By");
         shift(lev, WhichSlice::Previous, WhichSlice::This, "Bx", "By", "jx", "jy");
@@ -964,11 +976,13 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Psi);
 
         // Ez: right-hand side 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
-        LinCombination(getStagingArea(lev),
-            1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
-            1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+        // LinCombination(getStagingArea(lev),
+        //     1._rt/(phys_const.ep0*phys_const.c),
+        //     derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+        //     1._rt/(phys_const.ep0*phys_const.c),
+        //     derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+        Multiply(getStagingArea(lev),
+            1._rt/(phys_const.ep0*phys_const.c), getField(lev, WhichSlice::This, "jx"));
 
         SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
@@ -976,11 +990,14 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
 
         // Bz: right-hand side mu_0*(d_y(jx) - d_x(jy))
-        LinCombination(getStagingArea(lev),
-            phys_const.mu0,
-            derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
-            -phys_const.mu0,
-            derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+        // LinCombination(getStagingArea(lev),
+        //     phys_const.mu0,
+        //     derivative<Direction::y>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+        //     -phys_const.mu0,
+        //     derivative<Direction::x>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+
+        Multiply(getStagingArea(lev),
+            phys_const.mu0, getField(lev, WhichSlice::This, "jy"));
 
         SetBoundaryCondition(geom, lev, WhichSlice::This, "Bz", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());

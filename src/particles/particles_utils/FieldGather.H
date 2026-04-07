@@ -85,7 +85,84 @@ void doGatherShapeN (const amrex::Real xp,
         }
     }
 
-    constexpr int derivative_type = 1;
+    constexpr int derivative_type = 0;
+
+    HIPACE_LOOP_UNROLL
+    for (int iy=0; iy<=depos_order_xy+derivative_type; iy++){
+        HIPACE_LOOP_UNROLL
+        for (int ix=0; ix<=depos_order_xy+derivative_type; ix++){
+
+            // Compute shape factors
+            auto [shape_y, shape_dy, j] =
+                derivative_shape_factor<derivative_type, depos_order_xy>(y, iy);
+            auto [shape_x, shape_dx, i] =
+                derivative_shape_factor<derivative_type, depos_order_xy>(x, ix);
+
+            const amrex::Real psip = slice_arr(i, j, psi_comp);
+            ExmByp += (shape_dx * shape_y) * psip * dx_inv;
+            EypBxp += (shape_x * shape_dy) * psip * dy_inv;
+        }
+    }
+}
+
+
+/**
+ * \brief Field gather for a single particle
+ *
+ * \tparam depos_order_xy Order of the transverse shape factor for the field gather
+ * \param[in] xp Particle position x
+ * \param[in] yp Particle position y
+ * \param[in,out] ExmByp Field on particle: Ex - c*By
+ * \param[in,out] EypBxp Field on particle: Ey + c*Bx
+ * \param[in,out] Ezp Field on particle: Ez
+ * \param[in,out] Bzp Magnetic field on particles: Bz
+ * \param[in] slice_arr slice array for WhichSlice::This
+ * \param[in] psi_comp field component for field Psi
+ * \param[in] ez_comp field array for field  Ez
+ * \param[in] bz_comp field array for field  Bz
+ * \param[in] dx_inv inverse cell spacing in x direction
+ * \param[in] dy_inv inverse cell spacing in y direction
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ */
+template <int depos_order_xy>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void doExplicitGatherShapeN (const amrex::Real xp,
+                             const amrex::Real yp,
+                             amrex::Real& ExmByp,
+                             amrex::Real& EypBxp,
+                             amrex::Real& Ezp,
+                             amrex::Real& Bzp,
+                             Array3<amrex::Real> const& slice_arr,
+                             const int psi_comp,
+                             const int ez_comp,
+                             const int bz_comp,
+                             const amrex::Real dx_inv,
+                             const amrex::Real dy_inv,
+                             const amrex::Real x_pos_offset,
+                             const amrex::Real y_pos_offset)
+{
+    // x,y direction
+    const amrex::Real x = (xp-x_pos_offset)*dx_inv;
+    const amrex::Real y = (yp-y_pos_offset)*dy_inv;
+
+    // Gather field on particle from field on grid
+
+    HIPACE_LOOP_UNROLL
+    for (int iy=0; iy<=depos_order_xy; iy++){
+        HIPACE_LOOP_UNROLL
+        for (int ix=0; ix<=depos_order_xy; ix++){
+
+            // Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            Ezp += (shape_x * shape_y) * slice_arr(i, j, ez_comp);
+            Bzp += (shape_x * shape_y) * slice_arr(i, j, bz_comp);
+        }
+    }
+
+    constexpr int derivative_type = 0;
 
     HIPACE_LOOP_UNROLL
     for (int iy=0; iy<=depos_order_xy+derivative_type; iy++){

@@ -30,8 +30,9 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const int Sx = Comps[WhichSlice::This]["Sx"];
         const int Sy = Comps[WhichSlice::This]["Sy"];
 
-        const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
-        const int EypBx = Comps[WhichSlice::This]["EypBx"];
+        // const int ExmBy = Comps[WhichSlice::This]["ExmBy"];
+        // const int EypBx = Comps[WhichSlice::This]["EypBx"];
+        const int Psi = Comps[WhichSlice::This]["Psi"];
         const int Ez = Comps[WhichSlice::This]["Ez"];
         const int Bz = Comps[WhichSlice::This]["Bz"];
         const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
@@ -83,14 +84,14 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                     SharedMemoryDeposition<stencil_size, stencil_size, false>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-                        amrex::GpuArray<int, 5>{Bz, Ez, ExmBy, EypBx, aabs_comp},
+                        amrex::GpuArray<int, 5>{Bz, Ez, Psi, Psi, aabs_comp},
                         amrex::GpuArray<int, 2>{Sy, Sx});
                 } else {
                     constexpr int stencil_size = depos_order + derivative_type + 1;
                     SharedMemoryDeposition<stencil_size, stencil_size, false>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-                        amrex::GpuArray<int, 4>{Bz, Ez, ExmBy, EypBx},
+                        amrex::GpuArray<int, 4>{Bz, Ez, Psi, Psi},
                         amrex::GpuArray<int, 2>{Sy, Sx});
                 }
             },
@@ -178,6 +179,15 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 // calculate gamma/psi for plasma particles
                 const amrex::Real gamma_psi = plasma_gamma_psi_v(vx, vy, psi_inv, Aabssqp);
 
+                amrex::Real Bz_v = 0;
+                amrex::Real Ez_v = 0;
+                amrex::Real ExmBy_v = 0;
+                amrex::Real EypBx_v = 0;
+
+                doExplicitGatherShapeN<depos_order>(xp, yp, ExmBy_v, EypBx_v, Ez_v, Bz_v, arr,
+                    cache_idx[2], cache_idx[1], cache_idx[0],
+                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
                 for (int iy=0; iy <= depos_order+derivative_type; ++iy) {
                     for (int ix=0; ix <= depos_order+derivative_type; ++ix) {
 
@@ -194,10 +204,10 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                             derivative_shape_factor<derivative_type, depos_order>(xmid, ix);
 
                         // get fields per cell instead of gathering them to avoid blurring
-                        const amrex::Real Bz_v = arr(i, j, cache_idx[0]);
-                        const amrex::Real Ez_v = arr(i, j, cache_idx[1]);
-                        const amrex::Real ExmBy_v = arr(i, j, cache_idx[2]);
-                        const amrex::Real EypBx_v = arr(i, j, cache_idx[3]);
+                        // const amrex::Real Bz_v = arr(i, j, cache_idx[0]);
+                        // const amrex::Real Ez_v = arr(i, j, cache_idx[1]);
+                        // const amrex::Real ExmBy_v = arr(i, j, cache_idx[2]);
+                        // const amrex::Real EypBx_v = arr(i, j, cache_idx[3]);
 
                         amrex::Real AabssqDxp = 0._rt;
                         amrex::Real AabssqDyp = 0._rt;
