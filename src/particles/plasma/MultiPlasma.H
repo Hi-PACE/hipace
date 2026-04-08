@@ -52,7 +52,7 @@ public:
      */
     void DepositCurrent (
         Fields & fields, int which_slice, bool deposit_jx_jy,
-        bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,const bool deposit_n,
+        bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz, const bool deposit_n,
         amrex::Vector<amrex::Geometry> const& gm, int const lev);
 
     /** Loop over plasma species and deposit their temperature into the current 2D slice in fields
