@@ -40,13 +40,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
     // only deposit rho individual on WhichSlice::This
-    const bool deposit_rho_individual =
-        Hipace::m_deposit_rho_individual && which_slice == WhichSlice::This;
-    const bool deposit_n_ion_levels =
-        Hipace::m_deposit_n_ion_levels && which_slice == WhichSlice::This;
+    const bool deposit_rho_individual = Hipace::m_deposit_rho_individual && which_slice == WhichSlice::This;
     const std::string rho_str = deposit_rho_individual ? "rho_" + plasma.GetName() : "rho";
     const std::string n_str =
-        (ion_lev >= 0 && deposit_n_ion_levels)
+        (ion_lev >= 0 && deposit_n)
             ? "n_" + plasma.GetName() + "_ionlev_" + std::to_string(ion_lev)
             : "n_" + plasma.GetName();
 
