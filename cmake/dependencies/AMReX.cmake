@@ -130,7 +130,7 @@ macro(find_amrex)
     else()
         message(STATUS "Searching for pre-installed AMReX ...")
         set(COMPONENT_PRECISION ${HiPACE_PRECISION} P${HiPACE_PRECISION})
-        find_package(AMReX 25.09 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES)
+        find_package(AMReX 26.04 CONFIG REQUIRED COMPONENTS 3D ${COMPONENT_PRECISION} PARTICLES)
         # note: TINYP skipped because user-configured and optional
 
         # AMReX CMake helper scripts
@@ -149,7 +149,7 @@ set(HiPACE_amrex_src ""
 set(HiPACE_amrex_repo "https://github.com/AMReX-Codes/amrex.git"
     CACHE STRING
     "Repository URI to pull and build AMReX from if(HiPACE_amrex_internal)")
-set(HiPACE_amrex_branch "development"
+set(HiPACE_amrex_branch "26.04"
     CACHE STRING
     "Repository branch for HiPACE_amrex_repo if(HiPACE_amrex_internal)")
 
