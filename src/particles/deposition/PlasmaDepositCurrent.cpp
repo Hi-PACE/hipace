@@ -270,7 +270,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         }
     }
 
-    if (deposit_rho && deposit_rho_individual && Hipace::m_deposit_rho && ion_lev == -1) {
+    if (deposit_rho && deposit_rho_individual && Hipace::m_deposit_rho) {
         fields.add(lev, which_slice, {"rho"}, which_slice, {rho_str.c_str()});
     }
 }
