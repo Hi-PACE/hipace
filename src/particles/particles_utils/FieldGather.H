@@ -105,6 +105,37 @@ void doGatherShapeN (const amrex::Real xp,
     }
 }
 
+template <int depos_order_xy>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void doGatherPsi (const amrex::Real xp,
+                  const amrex::Real yp,
+                  amrex::Real& Psip,
+                  Array3<amrex::Real const> const& slice_arr,
+                  const int psi_comp,
+                  const amrex::Real dx_inv,
+                  const amrex::Real dy_inv,
+                  const amrex::Real x_pos_offset,
+                  const amrex::Real y_pos_offset)
+{
+    // x,y direction
+    const amrex::Real x = (xp-x_pos_offset)*dx_inv;
+    const amrex::Real y = (yp-y_pos_offset)*dy_inv;
+
+    // Gather Psi on particle from field on grid
+
+    HIPACE_LOOP_UNROLL
+    for (int iy=0; iy<=depos_order_xy; iy++){
+        HIPACE_LOOP_UNROLL
+        for (int ix=0; ix<=depos_order_xy; ix++){
+
+            // Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            Psip += (shape_x * shape_y) * slice_arr(i, j, psi_comp);
+        }
+    }
+}
 
 /**
  * \brief Field gather for a single particle

@@ -92,6 +92,9 @@ public:
         const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev,
         int const current_N_level);
 
+    void GatherPsi (
+        const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, int lev);
+
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
      * \param[in,out] fields the general field class, modified by this function

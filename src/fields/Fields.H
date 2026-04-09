@@ -194,6 +194,15 @@ public:
     void LevelUp (amrex::Vector<amrex::Geometry> const& geom, const int lev,
                   const int which_slice, const std::string& component);
 
+    /** \brief Compute Psi, ExmBy and EypBy on the slice container from J by solving three
+     * poisson equations. ExmBy and EypBx computed from grad(-Psi).
+     * This function does all the necessary boundary interpolation between MR levels
+     *
+     * \param[in] geom Geometry
+     * \param[in] current_N_level number of MR levels active on the current slice
+     */
+    void SolvePoissonPsiExmByEypBx (amrex::Vector<amrex::Geometry> const& geom,
+                                    const int current_N_level);
     /** \brief Compute Psi, ExmBy, EypBx, Ez and Bz on the slice container from J by solving three
      * poisson equations. ExmBy and EypBx computed from grad(-Psi).
      * This function does all the necessary boundary interpolation between MR levels

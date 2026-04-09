@@ -26,4 +26,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         amrex::Vector<amrex::Geometry> const& gm, const bool temp_slice,
                         int const lev, int const current_N_level);
 
+void
+GatherPsiPlasma (PlasmaParticleContainer& plasma, const Fields & fields,
+                 amrex::Vector<amrex::Geometry> const& gm,
+                 int const lev);
+
 #endif //  PLASMAPARTICLEADVANCE_H_

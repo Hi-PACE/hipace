@@ -99,6 +99,7 @@ struct PlasmaIdx
         w,                  // weight, this will be returned by pos(2)
         ux, uy,             // momentum
         psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
+        const_of_motion,
         x_prev, y_prev,     // positions on the last non-temp slice
 
         ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
@@ -109,7 +110,6 @@ struct PlasmaIdx
         Fy1, Fy2, Fy3, Fy4, Fy5,             //
         Fux1, Fux2, Fux3, Fux4, Fux5,        //
         Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
-        Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
 #endif
         real_nattribs
     };
