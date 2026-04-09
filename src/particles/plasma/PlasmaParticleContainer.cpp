@@ -434,7 +434,7 @@ IonizationModule (const int lev,
         // It also constructs a mask with 1 boolean per macro-ion: 1 if ionized, 0 otherwise.
         amrex::AnyCTO(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>
             >{}, {
                 Hipace::m_depos_order_xy
             },
@@ -627,7 +627,7 @@ LaserIonization (const int islice,
         // It also constructs a mask with 1 boolean per macro-ion: 1 if ionized, 0 otherwise.
         amrex::AnyCTO(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>
             >{}, {
                 Hipace::m_depos_order_xy
             },
@@ -718,7 +718,7 @@ LaserIonization (const int islice,
         // (momentum, position, etc.) to newly created electrons in the plasma container.
         amrex::AnyCTO(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>
             >{}, {
                 Hipace::m_depos_order_xy
             },

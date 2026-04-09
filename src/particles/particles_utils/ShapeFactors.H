@@ -29,7 +29,8 @@ inline static constexpr amrex::GpuTuple<
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 1>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 2>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 3>,
-    amrex::GpuArray<amrex::GpuArray<amrex::Real, 4>, 4>
+    amrex::GpuArray<amrex::GpuArray<amrex::Real, 4>, 4>,
+    amrex::GpuArray<amrex::GpuArray<amrex::Real, 5>, 5>
 > depos_prefactor {
     {{
         {       1.},
@@ -45,6 +46,12 @@ inline static constexpr amrex::GpuTuple<
         {    1./2.,      -1.,       0.,    2./3.},
         {   -1./2.,    1./2.,    1./2.,    1./6.},
         {    1./6.,       0.,       0.,       0.}
+    }}, {{
+        {   1./24.,   -1./6.,    1./4.,   -1./6.,   1./24.},
+        {   -1./6.,    1./2.,   -1./4.,   -1./2.,  11./24.},
+        {    1./4.,   -1./2.,   -1./4.,    1./2.,  11./24.},
+        {   -1./6.,    1./6.,    1./4.,    1./6.,   1./24.},
+        {   1./24.,       0.,       0.,       0.,       0.}
     }}
 };
 
@@ -99,7 +106,8 @@ inline static constexpr amrex::GpuTuple<
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 1>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 1>, 2>,
     amrex::GpuArray<amrex::GpuArray<amrex::Real, 2>, 3>,
-    amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 4>
+    amrex::GpuArray<amrex::GpuArray<amrex::Real, 3>, 4>,
+    amrex::GpuArray<amrex::GpuArray<amrex::Real, 4>, 5>
 > ds_0_prefactor {
     {{
         {       0.}
@@ -115,6 +123,12 @@ inline static constexpr amrex::GpuTuple<
         {   -3./2.,       2.,       0.},
         {    3./2.,      -1.,   -1./2.},
         {   -1./2.,       0.,       0.}
+    }}, {{
+        {   -1./6.,    1./2.,   -1./2.,    1./6.},
+        {    2./3.,   -3./2.,    1./2.,    1./2.},
+        {      -1.,    3./2.,    1./2.,   -1./2.},
+        {    2./3.,   -1./2.,   -1./2.,   -1./6.},
+        {   -1./6.,       0.,       0.,       0.}
     }}
 };
 

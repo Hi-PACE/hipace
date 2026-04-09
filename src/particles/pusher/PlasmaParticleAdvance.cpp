@@ -81,7 +81,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         // Use OMP ParallelFor to use multiple threads when running on CPU
         omp::ParallelFor(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>,
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>,
                 amrex::CompileTimeOptions<false, true>
             >{}, {
                 Hipace::m_depos_order_xy,
@@ -163,6 +163,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         uy += sdz*dz_uy + 0.5_rt*sdz*sdz*dz_uy_dual.epsilon;
 
                     }
+
+                    // const amrex::Real dz_psi = (q_mass_clight_ratio *
+                    //     (( ux * ExmByp + uy * EypBxp ) * psi_inv - Ezp ));
+                    // const amrex::Real psi_half_inv = 1._rt / (psi + 0.5_rt * dz * dz_psi);
 
                     // full push in position
                     // from t to t+1
@@ -323,7 +327,7 @@ GatherPsiPlasma (PlasmaParticleContainer& plasma, const Fields & fields,
         // Use OMP ParallelFor to use multiple threads when running on CPU
         omp::ParallelFor(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>
             >{}, {
                 Hipace::m_depos_order_xy
             },

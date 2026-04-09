@@ -96,7 +96,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::AnyCTO(
             // use compile-time options
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>,  // depos_order
                 amrex::CompileTimeOptions<false, true>, // can_ionize
                 amrex::CompileTimeOptions<false, true>  // use_laser
             >{}, {

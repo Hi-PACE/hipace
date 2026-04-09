@@ -986,6 +986,8 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
 
+    BxBy.setVal(0.);
+
     if (lev==0) {
         m_fields.EnforcePeriodic(true, {Comps[which_slice]["Sy"],
                                         Comps[which_slice]["Sx"],

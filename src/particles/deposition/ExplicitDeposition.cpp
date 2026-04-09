@@ -57,16 +57,16 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 
+        static constexpr int derivative_type = 0;
+
         amrex::AnyCTO(
             // use compile-time options
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
-                amrex::CompileTimeOptions<0, 1, 2>,     // derivative_type
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>,  // depos_order
                 amrex::CompileTimeOptions<false, true>, // can_ionize
                 amrex::CompileTimeOptions<false, true>  // use_laser
             >{}, {
                 Hipace::m_depos_order_xy,
-                Hipace::m_depos_derivative_type,
                 plasma.m_can_ionize,
                 Hipace::m_use_laser
             },
@@ -76,8 +76,7 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
             [&](auto is_valid, auto get_cell, auto deposit){
                 constexpr auto ctos = deposit.GetOptions();
                 constexpr int depos_order = ctos[0];
-                constexpr int derivative_type = ctos[1];
-                constexpr int use_laser = ctos[3];
+                constexpr int use_laser = ctos[2];
                 if constexpr (use_laser) {
                     // need extra cells for gathering the laser
                     constexpr int stencil_size = depos_order + 2 + 1;
@@ -99,7 +98,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
             // return whether the particle is valid and should deposit
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto /*depos_order*/,
-                                  auto /*derivative_type*/,
                                   auto /*can_ionize*/,
                                   auto /*use_laser*/)
             {
@@ -110,7 +108,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
             // return the lowest cell index that the particle deposits into
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto depos_order,
-                                  auto derivative_type,
                                   auto /*can_ionize*/,
                                   auto use_laser) -> amrex::IntVectND<2>
             {
@@ -144,7 +141,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                                   Array3<amrex::Real> arr,
                                   auto cache_idx, auto depos_idx,
                                   auto depos_order,
-                                  auto derivative_type,
                                   auto can_ionize,
                                   auto use_laser) noexcept
             {
