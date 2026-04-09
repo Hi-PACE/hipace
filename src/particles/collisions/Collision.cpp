@@ -151,9 +151,15 @@ Collision::doCollisionA (
             const amrex::Real w2 = ptd2.rdata(PlasmaIdx::w)[i2];
             int ion_lev2 = ptd2.idata(PlasmaIdx::ion_lev)[i2];
 
-            if (ion_lev2 > 0) {
-                // Already ionized, do not collide
-                return false;
+            // Already ionized, do not collide
+            if (ion_atomic_number == 1) {           // H
+                if (ion_lev2 > 0) {
+                    return false;
+                }
+            } else if (ion_atomic_number == 18) {   // Ar
+                if (ion_lev2 > 3) {
+                    return false;
+                }
             }
 
             // particle's Lorentz factor
@@ -372,6 +378,9 @@ Collision::doCollisionImp (
     PlasmaBins bins1 = findParticlesInEachTile(geom.Domain(), 1, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(geom.Domain(), 1, species2, geom);
 
+    amrex::Print() << "Plasma bins 1 = " << bins1.numBins() << "\n";
+    amrex::Print() << "Plasma bins 2 = " << bins2.numBins() << "\n";
+
     // offset: start/end positions of particles for each cell
     // perm: permutation array mapping cell entries to particle indices
     auto offset1 = bins1.offsetsPtr();
@@ -454,6 +463,7 @@ Collision::doCollisionImp (
             }
         );
 
+        amrex::Print() << "before first collision kernel\n" << std::flush;    // DEBUG
         // loop over independent pairs
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
@@ -478,6 +488,19 @@ Collision::doCollisionImp (
                     const int j1 = perm1[offset1_start + idx1];
                     const int j2 = perm2[offset2_start + idx2];
 
+                    // DEBUG
+                    if (j1 < 0 || j1 >= np1 || j2 < 0 || j2 >= np2) {
+                        AMREX_DEVICE_PRINTF(
+                            "OOB: tile np1=%d np2=%d j1=%d j2=%d icell=%d "
+                            "offset1=[%d,%d) offset2=[%d,%d) idx1=%d idx2=%d\n",
+                            np1, np2, j1, j2, icell,
+                            offset1_start, offset1_stop,
+                            offset2_start, offset2_stop,
+                            idx1, idx2
+                        );
+                        return;
+                    }
+
                     const bool make_new_particle = collision_function(
                         ptd1, j1, ptd2, j2,
                         N1, N2, icoll,
@@ -498,6 +521,10 @@ Collision::doCollisionImp (
                 }
             }
         );
+
+        amrex::Print() << "before sync 1\n" << std::flush;    // DEBUG
+        amrex::Gpu::streamSynchronize();
+        amrex::Print() << "after sync 1\n" << std::flush;
 
         if (!m_has_collision_product) {
             continue;
@@ -533,6 +560,7 @@ Collision::doCollisionImp (
         ptd2 = ptile2.getParticleTileData();
         auto ptd3 = ptile3.getParticleTileData();
 
+        amrex::Print() << "before second collision kernel\n" << std::flush;    // DEBUG
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
                 const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
@@ -571,6 +599,8 @@ Collision::doCollisionImp (
             }
         );
 
+        amrex::Print() << "before sync 2\n" << std::flush;    // DEBUG
         amrex::Gpu::streamSynchronize();
+        amrex::Print() << "after sync 2\n" << std::flush;
     }
 }
