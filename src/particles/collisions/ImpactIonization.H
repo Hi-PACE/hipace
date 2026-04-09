@@ -71,7 +71,7 @@ void ImpactIonization (
     };
     // Tolerances for numerical checks
     constexpr T_R rel_tol  = T_R(1.0e-10);
-    constexpr T_R eps_n    = T_R(1.0e-14);
+    constexpr T_R eps_n    = T_R(1.0e-10);
     constexpr T_R beta_tol = T_R(1.0e-12);
 
     T_R const Eion  = Eion_eV * PhysConstSI::q_e;  // [J]
@@ -222,18 +222,23 @@ void ImpactIonization (
 
     T_R const n_1 = std::sqrt(n1sq);
     T_R const n_3 = T_R(1.0) - n_1 - n_2;
-    if (n_3 < T_R(0.0)) {
-        AMREX_DEVICE_PRINTF(
-            "ImpactIonization: invalid triangle, n1=%e n2=%e n3=%e\n",
-            n_1, n_2, n_3
-        );
+
+    T_R const den_alpha = T_R(2.0)*n_1*n_3;
+    T_R const den_gamma = T_R(2.0)*n_1*n_2;
+
+    if (n_1 <= eps_n || n_2 <= eps_n || n_3 <= eps_n || den_alpha <= eps_n || den_gamma <= eps_n) {
+        AMREX_DEVICE_PRINTF("ImpactIonization: degenerate triangle n1=%e n2=%e n3=%e\n",
+            n_1, n_2, n_3);
         return;
     }
 
+    T_R const C_den = n_1*n_1 / (T_R(2.0)*m1) + n_2*n_2 / (T_R(2.0)*m2) + n_3*n_3 / (T_R(2.0)*m3);
+    if (C_den <= eps_n) {
+        AMREX_DEVICE_PRINTF("ImpactIonization: bad energy_den=%e\n", C_den);
+        return;
+    }
     // Common momentum scale from energy conservation (non-relativistic!)
-    T_R const C = std::sqrt(Eout / (
-            n_1*n_1 / (T_R(2.0)*m1) + n_2*n_2 / (T_R(2.0)*m2) + n_3*n_3 / (T_R(2.0)*m3))
-    );
+    T_R const C = std::sqrt(Eout / C_den);
 
     // Momentum magnitudes in COM
     T_R const p1f_mag = C * n_1;
@@ -241,10 +246,10 @@ void ImpactIonization (
     T_R const p3f_mag = C * n_3;
 
     // Triangle angles from the law of cosines
-    T_R cos_alpha = (n_1*n_1 + n_3*n_3 - n_2*n_2) / (T_R(2.0)*n_1*n_3);
+    T_R cos_alpha = (n_1*n_1 + n_3*n_3 - n_2*n_2) / den_alpha;
     cos_alpha = clamp(cos_alpha, T_R(-1.0), T_R(1.0));
     
-    T_R cos_gamma = (n_1*n_1 + n_2*n_2 - n_3*n_3) / (T_R(2.0)*n_1*n_2);
+    T_R cos_gamma = (n_1*n_1 + n_2*n_2 - n_3*n_3) / den_gamma;
     cos_gamma = clamp(cos_gamma, T_R(-1.0), T_R(1.0));
 
     T_R const sin_alpha = std::sqrt(amrex::max(T_R(0.0), T_R(1.0) - cos_alpha*cos_alpha));
