@@ -138,11 +138,6 @@ public:
     [[nodiscard]] bool
     needsTempIndividual () const;
 
-    /** \brief determines if rho for every ionisation levels is requested as a diagnostic
-     */
-    [[nodiscard]] bool
-    needsRhoIonlev () const;
-
     /** \brief calculate box which possibly was trimmed in case of slice IO
      *
      * \param[in] slice_dir slicing direction
