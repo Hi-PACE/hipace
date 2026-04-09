@@ -196,10 +196,6 @@ AdvanceBeamParticlesSlice (
                     const amrex::Real ymid = (yp-y_pos_offset)*dy_inv;
                     const amrex::Real zmid = (zp-min_z)*dz_inv-0.5_rt;
 
-                    auto [shape_p, pcell] =
-                        compute_single_shape_factor<false, 2>(zmid, 2);
-                    auto [shape_n, ncell] =
-                        compute_single_shape_factor<false, 2>(zmid, 0);
                     auto [shape_p, pcell] = shape_factor<2>(zmid, 2);
                     auto [shape_n, ncell] = shape_factor<2>(zmid, 0);
 
