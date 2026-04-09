@@ -96,7 +96,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::AnyCTO(
             // use compile-time options
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>,  // depos_order
                 amrex::CompileTimeOptions<false, true>, // can_ionize
                 amrex::CompileTimeOptions<false, true>  // use_laser
             >{}, {
@@ -205,22 +205,26 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                     return;
                 }
 
+                constexpr int derivative_type = 0;
+
                 HIPACE_LOOP_UNROLL
-                for (int ix=0; ix <= depos_order; ++ix) {
+                for (int ix=0; ix <= depos_order+derivative_type; ++ix) {
                     HIPACE_LOOP_UNROLL
-                    for (int iy=0; iy <= depos_order; ++iy) {
+                    for (int iy=0; iy <= depos_order+derivative_type; ++iy) {
 
                         // --- Compute shape factors
                         // x direction
-                        auto [shape_x, i] = shape_factor<depos_order>(xmid, ix);
+                        auto [shape_x, shape_dx, i] =
+                            derivative_shape_factor<derivative_type, depos_order>(xmid, ix);
 
                         // y direction
-                        auto [shape_y, j] = shape_factor<depos_order>(ymid, iy);
+                        auto [shape_y, shape_dy, j] =
+                            derivative_shape_factor<derivative_type, depos_order>(ymid, iy);
 
                         const amrex::Real charge_density = q_invvol * shape_x * shape_y;
                         // wqx, wqy wqz are particle current in each direction
-                        const amrex::Real wqx     = charge_density * clight * vx;
-                        const amrex::Real wqy     = charge_density * clight * vy;
+                        // const amrex::Real wqx     = charge_density * clight * vx;
+                        // const amrex::Real wqy     = charge_density * clight * vy;
                         const amrex::Real wqz     = charge_density * clight * (gamma_psi-1._rt);
                         const amrex::Real wq      = charge_density * gamma_psi;
                         const amrex::Real wchi    = charge_density * q_mu0_mass_ratio * psi_inv;
@@ -228,8 +232,17 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
                         // Deposit current into arr
                         if (depos_idx[0] != -1) { // deposit_jx_jy
-                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), wqx);
-                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), wqy);
+                            // Ez
+                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]),
+                                q_invvol * clight *
+                                (shape_dx * dx_inv * shape_y * vx
+                                + shape_x * shape_dy * dy_inv * vy));
+
+                            // Bz
+                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]),
+                                q_invvol * clight *
+                                (shape_x * shape_dy * dy_inv * vx
+                                - shape_dx * dx_inv * shape_y * vy));
                         }
                         if (depos_idx[2] != -1) { // deposit_jz
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), wqz);

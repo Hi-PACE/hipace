@@ -72,4 +72,44 @@ PlasmaMomentumDerivative<T> PlasmaMomentumPush (
     return {dz_ux, dz_uy, dz_psi};
 }
 
+template<class T>
+struct PlasmaMomentumDerivative2 {
+    T dz_ux;
+    T dz_uy;
+};
+
+template<class T>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+PlasmaMomentumDerivative2<T> PlasmaMomentumPush2 (
+    const T& ux,
+    const T& uy,
+    amrex::Real psi_inv,
+    amrex::Real ExmBy_ci,
+    amrex::Real EypBx_ci,
+    amrex::Real Ez_ci,
+    amrex::Real Bx,
+    amrex::Real By,
+    amrex::Real Bz,
+    amrex::Real Aabssq_norm,
+    amrex::Real AabssqDx_norm,
+    amrex::Real AabssqDy_norm,
+    amrex::Real charge_mass_clight_ratio)
+{
+    using namespace amrex::literals;
+
+    const T gamma_psi = 0.5_rt*psi_inv*psi_inv*(
+                        1.0_rt + Aabssq_norm
+                        + ux*ux
+                        + uy*uy)
+                        + 0.5_rt;
+
+    const T dz_ux = (charge_mass_clight_ratio * (gamma_psi * ExmBy_ci
+                    + By + ( uy * Bz ) * psi_inv) - AabssqDx_norm * psi_inv);
+
+    const T dz_uy = (charge_mass_clight_ratio * (gamma_psi * EypBx_ci
+                    - Bx - ( ux * Bz ) * psi_inv) - AabssqDy_norm * psi_inv);
+
+    return {dz_ux, dz_uy};
+}
+
 #endif //  PUSHPLASMAPARTICLES_H_

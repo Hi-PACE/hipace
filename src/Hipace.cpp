@@ -703,6 +703,19 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // write laser aabs into fields MultiFab
     m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
 
+    // compute psi
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, false, false,
+            false, false, true, m_3D_geom, lev);
+
+        // add neutralizing background
+        m_fields.AddRhoIons(lev);
+    }
+    m_fields.SolvePoissonPsiExmByEypBx(m_3D_geom, current_N_level);
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_multi_plasma.GatherPsi(m_fields, m_3D_geom, lev);
+    }
+
     // has to be after aabs writing
     m_multi_plasma.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
@@ -717,7 +730,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
-                m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual, true, false, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
@@ -725,15 +738,13 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
-                m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual, m_use_laser, false, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
                 m_do_beam_jx_jy_deposition, true, m_do_beam_jz_minus_rho,
                 WhichSlice::This, WhichBeamSlice::This);
         }
-        // add neutralizing background
-        m_fields.AddRhoIons(lev);
 
         // deposit grid current into jz_beam
         m_grid_current.DepositCurrentSlice(m_fields, m_3D_geom[lev], lev, islice);
@@ -974,6 +985,8 @@ Hipace::ExplicitMGSolveBxBy (const int lev, const int which_slice)
     amrex::MultiFab BxBy (slicemf, amrex::make_alias, Comps[which_slice]["Bx"], 2);
     amrex::MultiFab SySx (slicemf, amrex::make_alias, Comps[which_slice]["Sy"], 2);
     amrex::MultiFab Mult (slicemf, amrex::make_alias, Comps[which_slice_chi]["chi"], ncomp_chi);
+
+    BxBy.setVal(0.);
 
     if (lev==0) {
         m_fields.EnforcePeriodic(true, {Comps[which_slice]["Sy"],

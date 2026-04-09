@@ -19,7 +19,8 @@ PlasmaParticleContainer::
 InitParticles (const amrex::RealVect& a_u_std,
                const amrex::RealVect& a_u_mean,
                const amrex::Real a_radius,
-               const amrex::Real a_hollow_core_radius)
+               const amrex::Real a_hollow_core_radius,
+               const amrex::Real a_temperature_width)
 {
     HIPACE_PROFILE("PlasmaParticleContainer::InitParticles()");
     using namespace amrex::literals;
@@ -305,16 +306,19 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 amrex::Real u[3] = {0.,0.,0.};
                 ParticleUtil::get_gaussian_random_momentum(u, a_u_mean, a_u_std, engine);
+                // u[0] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
+                // u[1] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
+                // u[2] *= std::exp(-(x*x+y*y)/a_temperature_width/a_temperature_width);
 
                 ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
                 ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
-                ptd.rdata(PlasmaIdx::psi)[pidx] = plasma_psi(u[0], u[1], u[2],
+                ptd.rdata(PlasmaIdx::const_of_motion)[pidx] = plasma_psi(u[0], u[1], u[2],
                                                              /* Assumes Aabssq == 0 */ 0._rt);
+                ptd.rdata(PlasmaIdx::psi)[pidx] = ptd.rdata(PlasmaIdx::const_of_motion)[pidx];
                 ptd.rdata(PlasmaIdx::x_prev)[pidx] = x;
                 ptd.rdata(PlasmaIdx::y_prev)[pidx] = y;
                 ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0];
                 ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1];
-                ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
                 HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
@@ -360,8 +364,9 @@ InitParticles (const amrex::RealVect& a_u_std,
                         ptd.rdata(PlasmaIdx::ux_half_step)[pidx] * ux_arr[imirror];
                     ptd.rdata(PlasmaIdx::uy_half_step)[midx] =
                         ptd.rdata(PlasmaIdx::uy_half_step)[pidx] * uy_arr[imirror];
-                    ptd.rdata(PlasmaIdx::psi_half_step)[midx] =
-                        ptd.rdata(PlasmaIdx::psi_half_step)[pidx];
+                    ptd.rdata(PlasmaIdx::const_of_motion)[midx] =
+                        ptd.rdata(PlasmaIdx::const_of_motion)[pidx];
+                    ptd.rdata(PlasmaIdx::psi)[midx] = ptd.rdata(PlasmaIdx::const_of_motion)[pidx];
 #ifdef HIPACE_USE_AB5_PUSH
                     HIPACE_LOOP_UNROLL
                     for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {

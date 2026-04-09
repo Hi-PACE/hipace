@@ -99,6 +99,7 @@ struct PlasmaIdx
         w,                  // weight, this will be returned by pos(2)
         ux, uy,             // momentum
         psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
+        const_of_motion,
         x_prev, y_prev,     // positions on the last non-temp slice
 
         ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
@@ -109,7 +110,6 @@ struct PlasmaIdx
         Fy1, Fy2, Fy3, Fy4, Fy5,             //
         Fux1, Fux2, Fux3, Fux4, Fux5,        //
         Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
-        Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
 #endif
         real_nattribs
     };
@@ -147,12 +147,14 @@ public:
      * \param[in] a_radius plasma radius. Only particles with x**2+y**2<a_radius**2 are injected
      * \param[in] a_hollow_core_radius hollow core plasma radius.
      *            Only particles with x**2+y**2>a_hollow_core_radius**2 are injected
+     * \param[in] a_temperature_width Spatial extent of the temperature profile, assuming Gaussian shape.
      */
     void InitParticles (
         const amrex::RealVect& a_thermal_momentum_std,
         const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real a_radius,
-        const amrex::Real a_hollow_core_radius);
+        const amrex::Real a_hollow_core_radius,
+        const amrex::Real a_temperature_width);
 
     /** Initialize ADK prefactors of ionizable plasmas
      *
@@ -265,6 +267,7 @@ public:
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     /** whether to add a neutralizing background of immobile particles of opposite charge */
+    amrex::Real m_temperature_width {std::numeric_limits<amrex::Real>::max()};
     bool m_neutralize_background = true;
 
     // general:

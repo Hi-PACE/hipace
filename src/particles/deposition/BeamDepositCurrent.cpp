@@ -86,7 +86,7 @@ DepositCurrentSlice (BeamParticleContainer& beam, Fields& fields,
 
     amrex::AnyCTO(
         // use compile-time options
-        amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
+        amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3, 4>>{},
         {Hipace::m_depos_order_xy},
         // call deposition function
         // The three functions passed as arguments to this lambda

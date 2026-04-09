@@ -293,7 +293,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
             const bool can_ionize = plasma.m_can_ionize;
 
             omp::ParallelFor(
-                amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
+                amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3, 4>>{},
                 {Hipace::m_depos_order_xy},
                 pti.numParticles(),
                 [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {

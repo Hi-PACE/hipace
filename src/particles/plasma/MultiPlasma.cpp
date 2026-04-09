@@ -126,6 +126,15 @@ MultiPlasma::AdvanceParticles (
 }
 
 void
+MultiPlasma::GatherPsi (
+    const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, int lev)
+{
+    for (int i=0; i<m_nplasmas; i++) {
+        GatherPsiPlasma(m_all_plasmas[i], fields, gm, lev);
+    }
+}
+
+void
 MultiPlasma::DepositNeutralizingBackground (
     Fields & fields, int which_slice,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)

@@ -148,6 +148,7 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "u_mean", m_u_mean);
     bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
+    queryWithParser(pp, "temperature_width", m_temperature_width);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(temperature_is_specified && thermal_momentum_is_specified),
          "Please specify exlusively either a temperature or the thermal momentum");
@@ -280,7 +281,7 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
             "to use the fine plasma patch feature");
     }
 
-    InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
+    InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius, m_temperature_width);
 
     if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
@@ -433,7 +434,7 @@ IonizationModule (const int lev,
         // It also constructs a mask with 1 boolean per macro-ion: 1 if ionized, 0 otherwise.
         amrex::AnyCTO(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>
             >{}, {
                 Hipace::m_depos_order_xy
             },
@@ -465,7 +466,7 @@ IonizationModule (const int lev,
 
             const amrex::Real ux = ptd_ion.rdata(PlasmaIdx::ux_half_step)[ip];
             const amrex::Real uy = ptd_ion.rdata(PlasmaIdx::uy_half_step)[ip];
-            const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi_half_step)[ip];
+            const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi)[ip];
 
             // Compute probability of ionization p
             const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
@@ -530,12 +531,12 @@ IonizationModule (const int lev,
                 ptd_elec.rdata(PlasmaIdx::ux     )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::uy     )[pidx] = 0._rt;
                 // Later we could consider adding a finite temperature to the ionized electrons
-                ptd_elec.rdata(PlasmaIdx::psi    )[pidx] = 1._rt; // Assumes Aabssq == 0
+                ptd_elec.rdata(PlasmaIdx::psi)[pidx] = 1._rt;
+                ptd_elec.rdata(PlasmaIdx::const_of_motion)[pidx] = 1._rt; // Assumes Aabssq == 0
                 ptd_elec.rdata(PlasmaIdx::x_prev )[pidx] = ptd_ion.rdata(PlasmaIdx::x_prev)[ip];
                 ptd_elec.rdata(PlasmaIdx::y_prev )[pidx] = ptd_ion.rdata(PlasmaIdx::y_prev)[ip];
                 ptd_elec.rdata(PlasmaIdx::ux_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = 0._rt;
-                ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = 1._rt;
 #ifdef HIPACE_USE_AB5_PUSH
                 HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
@@ -626,7 +627,7 @@ LaserIonization (const int islice,
         // It also constructs a mask with 1 boolean per macro-ion: 1 if ionized, 0 otherwise.
         amrex::AnyCTO(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>
             >{}, {
                 Hipace::m_depos_order_xy
             },
@@ -660,7 +661,7 @@ LaserIonization (const int islice,
 
             const amrex::Real ux = ptd_ion.rdata(PlasmaIdx::ux_half_step)[ip];
             const amrex::Real uy = ptd_ion.rdata(PlasmaIdx::uy_half_step)[ip];
-            const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi_half_step)[ip];
+            const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi)[ip];
 
             // Compute probability of ionization p
             const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
@@ -717,7 +718,7 @@ LaserIonization (const int islice,
         // (momentum, position, etc.) to newly created electrons in the plasma container.
         amrex::AnyCTO(
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>
+                amrex::CompileTimeOptions<0, 1, 2, 3, 4>
             >{}, {
                 Hipace::m_depos_order_xy
             },
@@ -794,7 +795,8 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::y_prev )[pidx] = ptd_ion.rdata(PlasmaIdx::y_prev)[ip];
                 ptd_elec.rdata(PlasmaIdx::ux_half_step )[pidx] = ux;
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = uy;
-                ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = psi;
+                ptd_elec.rdata(PlasmaIdx::const_of_motion)[pidx] =
+                    ptd_ion.rdata(PlasmaIdx::const_of_motion)[ip];
 #ifdef HIPACE_USE_AB5_PUSH
                 HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {

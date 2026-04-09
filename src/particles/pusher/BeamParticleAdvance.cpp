@@ -112,7 +112,7 @@ AdvanceBeamParticlesSlice (
     // Use OMP ParallelFor to use multiple threads when running on CPU
     omp::ParallelFor(
         amrex::TypeList<
-            amrex::CompileTimeOptions<0, 1, 2, 3>,
+            amrex::CompileTimeOptions<0, 1, 2, 3, 4>,
             amrex::CompileTimeOptions<false, true>,
             amrex::CompileTimeOptions<false, true>
         >{}, {
