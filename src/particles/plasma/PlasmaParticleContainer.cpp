@@ -107,7 +107,10 @@ PlasmaParticleContainer::ReadParameters ()
     std::string density_path = "";
     bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", density_path, pp_alt);
     if (density_file_specified) {
-        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data);
+        std::string density_mesh_name = "density";
+        queryWithParserAlt(pp, "density_mesh_name", density_mesh_name, pp_alt);
+        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data,
+                                        density_mesh_name);
     }
 
     std::string density_table_file_name{};
@@ -163,7 +166,8 @@ PlasmaParticleContainer::ReadParameters ()
         {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
-    queryWithParserAlt(pp, "insitu_period", m_insitu_period, pp_alt);
+    queryWithParserAlt(pp, "insitu_period", m_insitu_period.m_func_str, pp_alt);
+    m_insitu_period.compile();
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
     const bool set_file_prefix =
         queryWithParserAlt(pp, "insitu_file_prefix", m_insitu_file_prefix, pp_alt);
@@ -278,7 +282,7 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 
     InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
 
-    if (m_insitu_period > 0) {
+    if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
             Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
@@ -533,9 +537,7 @@ IonizationModule (const int lev,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = 1._rt;
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                     ptd_elec.rdata(iforce)[pidx] = 0._rt;
                 }
@@ -614,7 +616,6 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
         amrex::Real* AMREX_RESTRICT laser_adk_prefactor = m_laser_adk_prefactor.data();
         amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
-        amrex::Real* AMREX_RESTRICT laser_dp_second_prefactor = m_laser_dp_second_prefactor.data();
         const int max_ion_lev = m_max_ion_lev;
 
         long num_ions = ptile_ion.numParticles();
@@ -757,7 +758,7 @@ LaserIonization (const int islice,
                     const amrex::Real delta = std::sqrt(Ep) * laser_dp_prefactor[ion_lev_loc];
                     const amrex::Real delta2 = delta * delta;
                     const amrex::Real delta4 = delta2 * delta2;
-                    const amrex::Real alpha = laser_dp_second_prefactor[ion_lev_loc];
+                    const amrex::Real alpha = -adk_power[ion_lev_loc];
                     const amrex::Real s1 = - (7._rt/4._rt) + alpha / 2._rt;
                     const amrex::Real s2 = (1._rt/16._rt) * ( 8._rt * (alpha*alpha) - 68._rt*alpha + 131._rt );
                     const amrex::Real width_p = amrex::abs(A) * delta * (1._rt + s1*delta2 + s2*delta4);
@@ -795,9 +796,7 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = uy;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = psi;
 #ifdef HIPACE_USE_AB5_PUSH
-#ifdef AMREX_USE_GPU
-#pragma unroll
-#endif
+                HIPACE_LOOP_UNROLL
                 for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
                     ptd_elec.rdata(iforce)[pidx] = 0._rt;
                 }

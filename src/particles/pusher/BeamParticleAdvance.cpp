@@ -200,15 +200,16 @@ AdvanceBeamParticlesSlice (
                         compute_single_shape_factor<false, 2>(zmid, 2);
                     auto [shape_n, ncell] =
                         compute_single_shape_factor<false, 2>(zmid, 0);
+                    auto [shape_p, pcell] = shape_factor<2>(zmid, 2);
+                    auto [shape_n, ncell] = shape_factor<2>(zmid, 0);
+
                     Ezp *= (1._rt - shape_p - shape_n);
                     // Gather Ez field on particle from grid
                     for (int iy=0; iy<=depos_order.value; iy++){
                         for (int ix=0; ix<=depos_order.value; ix++){
                             // Compute shape factors
-                            auto [shape_y, jcell] =
-                                compute_single_shape_factor<false, depos_order.value>(ymid, iy);
-                            auto [shape_x, icell] =
-                                compute_single_shape_factor<false, depos_order.value>(xmid, ix);
+                            auto [shape_y, jcell] = shape_factor<depos_order.value>(ymid, iy);
+                            auto [shape_x, icell] = shape_factor<depos_order.value>(xmid, ix);
 
                             Ezp += shape_p * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_prev);
                             Ezp += shape_n * shape_y * shape_x * slice_arr(icell, jcell, ez_comp_next);

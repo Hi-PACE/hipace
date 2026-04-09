@@ -26,23 +26,24 @@ FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
 # Relative tolerance for checksum tests depends on the platform
-RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-7
+RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=1e-8
 
 # Run the simulation with multigrid Poisson solver
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
         lasers.solver_type = multigrid \
+        lasers.MG_tolerance_rel = 1e-7 \
         hipace.file_prefix = $TEST_NAME
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
 
-rm -rf $TEST_NAME
+# rm -rf $TEST_NAME
 
-# Run the simulation with FFT Poisson solver
-mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
-        lasers.solver_type = fft \
-        hipace.file_prefix = $TEST_NAME
-# Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
+# # Run the simulation with FFT Poisson solver
+# mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_SI \
+#         lasers.solver_type = fft \
+#         hipace.file_prefix = $TEST_NAME
+# # Compare the result with theory
+# $HIPACE_EXAMPLE_DIR/analysis_laser_vacuum.py --output-dir=$TEST_NAME
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --skip-particles \

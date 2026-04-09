@@ -12,6 +12,7 @@
 #include "particles/profiles/GetInitialDensity.H"
 #include "particles/profiles/GetInitialMomentum.H"
 #include "utils/Parser.H"
+#include "utils/IOUtil.H"
 #include "particles/sorting/BoxSort.H"
 #include <AMReX_AmrParticles.H>
 #include <AMReX_Particles.H>
@@ -229,7 +230,7 @@ public:
     bool m_initialize_on_cpu {false};
     /** How often the insitu beam diagnostics should be computed and written
      * Default is 0, meaning no output */
-    int m_insitu_period {0};
+    utils::DiagPeriod m_insitu_period {"0"};
     /** Whether external fields should be used for this beam */
     bool m_use_external_fields = false;
     /** External field functions for Ex Ey Ez Bx By Bz */
