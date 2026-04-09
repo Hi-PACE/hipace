@@ -463,7 +463,7 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
     if (m_solver_type == "multigrid") {
         AdvanceSliceMG(dt, is_first_step);
     } else if (m_solver_type == "fft") {
-        AdvanceSliceFFT(dt, step);
+        AdvanceSliceFFT(dt, is_first_step);
     } else if (m_solver_type == "off") {
         for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
             Array3<amrex::Real> arr = m_slices.array(mfi);
@@ -477,7 +477,6 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
                 }
             );
         }
-        AdvanceSliceFFT(dt, is_first_step);
     } else {
         amrex::Abort("laser.solver_type must be fft, multigrid or off");
     }
