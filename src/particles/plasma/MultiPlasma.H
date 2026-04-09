@@ -31,6 +31,11 @@ public:
                    amrex::Vector<amrex::DistributionMapping> slice_dm,
                    amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm);
 
+    /** \brief Loop over plasma species and initialize them.
+     *
+     * \param[in] gm Geometry of the simulation, to get the cell size
+     */
+    void InitIonization (amrex::Vector<amrex::Geometry> gm);
 
     /** Loop over plasma species and depose their currents into the current 2D slice in fields
      *
@@ -155,6 +160,26 @@ public:
      */
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
                             bool is_last_step);
+
+    PlasmaParticleContainer& GetPlasma (const std::string& name) {
+        for (int i = 0; i < m_nplasmas; ++i) {
+            if (m_names[i] == name) {
+                return m_all_plasmas[i];
+            }
+        }
+        amrex::Abort("Unknown plasma name " + name);
+        return m_all_plasmas[0];
+    }
+
+    const PlasmaParticleContainer& GetPlasma (const std::string& name) const {
+        for (int i = 0; i < m_nplasmas; ++i) {
+            if (m_names[i] == name) {
+                return m_all_plasmas[i];
+            }
+        }
+        amrex::Abort("Unknown plasma name " + name);
+        return m_all_plasmas[0];
+    }
 
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
     int m_nplasmas = 0; /**< number of plasma containers */

@@ -18,6 +18,7 @@
 #include "utils/GridCurrent.H"
 #include "laser/MultiLaser.H"
 #include "utils/Constants.H"
+#include "utils/GridIonization.H"
 #include "utils/Parser.H"
 #include "utils/MultiBuffer.H"
 #include "diagnostics/Diagnostic.H"
@@ -285,6 +286,8 @@ public:
     MultiLaser m_multi_laser;
     /** GridCurrent instance */
     GridCurrent m_grid_current;
+    /** GridIonization instance */
+    GridIonization m_grid_ionization;
 #ifdef HIPACE_USE_OPENPMD
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;

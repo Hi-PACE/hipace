@@ -3,7 +3,7 @@ Maxwell cluster @ DESY
 
 This page only provides HiPACE++ specific instructions.
 For more information please visit the
-`Maxwell documentation <https://confluence.desy.de/display/MXW/Maxwell+Cluster>`__.
+`Maxwell documentation <https://wiki.desy.de/maxwell/>`__.
 
 Create a file ``profile.hipace``, for instance in ``$HOME``, and ``source`` it whenever you log in and want to work with
 HiPACE++:
@@ -12,12 +12,9 @@ HiPACE++:
 
    #!/usr/bin/env zsh # Shell is assumed to be zsh
    module purge
-   module load maxwell gcc/12 cuda/12.3s openmpi/4 hdf5/1.10.6
-   # pick correct GPU setting (this may differ for V100 nodes)
-   export GPUS_PER_SOCKET=2
-   export GPUS_PER_NODE=4
+   module load maxwell gcc/12 cuda/12.8 openmpi/4 hdf5/1.10.6
    # optimize CUDA compilation for A100
-   export AMREX_CUDA_ARCH=8.0 # use 8.0 for A100 or 7.0 for V100
+   export AMREX_CUDA_ARCH=8.0 # use 7.0 for V100, 8.0 for A100 or 9.0 for H200
 
 Install HiPACE++ (the first time, and whenever you want the latest version):
 
@@ -32,7 +29,7 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
 
 You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started`
 section, to prepare an input file that suits your needs. You can then create your directory on
-BEEGFS ``/beegfs/desy/group/<your group>`` or ``/beegfs/desy/user/<your username>``,
+DUST ``/data/dust/group/<your group>`` or ``/data/dust/user/<your username>``,
 where you can put your input file and adapt the following
 submission script:
 
@@ -52,8 +49,8 @@ submission script:
 
    mpiexec -n 4 -npernode 4 $HOME/src/hipace/build/bin/hipace inputs
 
-The ``-npernode`` must be set to ``GPUS_PER_NODE``, otherwise not all GPUs are used correctly.
-There are nodes with 4 GPUs and 1 GPU (see the `Maxwell documentation on compute infrastructure <https://confluence.desy.de/display/MXW/Compute+Infrastructure>`__.
+The ``-npernode`` must be set to the number of GPUs per node, otherwise not all GPUs are used correctly.
+There are nodes with 4 GPUs and 1 GPU (see the `Maxwell documentation on compute infrastructure <https://wiki.desy.de/maxwell/infrastructure/compute/>`__.
 for more details and the required constraints). Please set the value accordingly.
 
 .. tip::

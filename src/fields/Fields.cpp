@@ -115,6 +115,10 @@ Fields::AllocData (
             if (Hipace::m_do_beam_jz_minus_rho) {
                 Comps[isl].multi_emplace(N_Comps, "rhomjz_beam");
             }
+            for (const auto& c : Hipace::GetInstance().m_grid_ionization.GetFieldComponents(
+                                    Hipace::GetInstance().m_multi_plasma)) {
+                Comps[isl].multi_emplace(N_Comps, c);
+            }
 
             isl = WhichSlice::Previous;
             Comps[isl].multi_emplace(N_Comps, "jx_beam", "jy_beam");
@@ -171,6 +175,10 @@ Fields::AllocData (
                     Comps[isl].multi_emplace(N_Comps, "w_" + plasma_name, "ux_" + plasma_name, "uy_" + plasma_name,
                     "uz_" + plasma_name, "ux^2_" + plasma_name, "uy^2_" + plasma_name, "uz^2_" + plasma_name);
                 }
+            }
+            for (const auto& c : Hipace::GetInstance().m_grid_ionization.GetFieldComponents(
+                                    Hipace::GetInstance().m_multi_plasma)) {
+                Comps[isl].multi_emplace(N_Comps, c);
             }
 
             isl = WhichSlice::Previous;
