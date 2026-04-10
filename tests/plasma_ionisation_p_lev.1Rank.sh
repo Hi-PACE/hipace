@@ -28,12 +28,12 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_plasma_ionization \
 
 mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_plasma_ionization \
         hipace.file_prefix=particle_ionization.1Rank \
-        ion.ppc=20 20\
+        ion.ppc=10 10\
         hipace.deposit_n=1\
         hipace.deposit_n_ion_levels=1
 
 
 
-$HIPACE_EXAMPLE_DIR/inputs_plasma_ionization.py \
+$HIPACE_EXAMPLE_DIR/analysis_plasma_ionization.py \
     --diags_grid=$HIPACE_EXAMPLE_DIR/grid_ionization.1Rank \
     --diags_particle=$HIPACE_EXAMPLE_DIR/particle_ionization.1Rank
