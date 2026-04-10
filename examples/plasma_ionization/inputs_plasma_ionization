@@ -11,8 +11,6 @@ my_constants.lambda0_nm = 800
 
 hipace.file_prefix = grid_ionisation.1Rank
 hipace.do_tiling = 0
-hipace.deposit_n = 1
-hipace.deposit_n_ion_levels = 1
 
 geometry.prob_lo     = -10.*kp_inv   -10.*kp_inv   -10.*kp_inv #box shifted
 geometry.prob_hi     =  10.*kp_inv    10.*kp_inv    10.*kp_inv

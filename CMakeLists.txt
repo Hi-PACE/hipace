@@ -290,7 +290,7 @@ if(BUILD_TESTING)
                 Poisson_even.1Rank
                 Poisson_odd.1Rank
                 salame.SI.1Rank
-                plasma_ionisation_p_lev.1Rank.sh
+                plasma_ionisation_p_lev.1Rank
             )
 
         else()
