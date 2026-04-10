@@ -23,7 +23,7 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                const bool deposit_chi, const bool deposit_rhomjz,const bool deposit_n,
+                const bool deposit_chi, const bool deposit_rhomjz, const bool deposit_n,
                 amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
@@ -256,7 +256,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                         if (depos_idx[5] != -1) { // deposit_rhomjz
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), wrhomjz);
                         }
-                        if (depos_idx[6] != -1) { // deposit_rhomjz
+                        if (depos_idx[6] != -1) { // deposit_n
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), wn);
                         }
                     }
