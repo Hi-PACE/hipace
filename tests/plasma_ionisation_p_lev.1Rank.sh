@@ -20,11 +20,11 @@ PARTICLE_DIAGS="${PWD}/particle_ionization.1Rank"
 
 mpiexec -n 1 "$HIPACE_EXECUTABLE" "$HIPACE_EXAMPLE_DIR/inputs_plasma_ionization" \
     hipace.file_prefix="$GRID_DIAGS" \
+    ion.ppc="0 0" \
     grid_ionization.plasma_names=ion
 
 mpiexec -n 1 "$HIPACE_EXECUTABLE" "$HIPACE_EXAMPLE_DIR/inputs_plasma_ionization" \
     hipace.file_prefix="$PARTICLE_DIAGS" \
-    ion.ppc="10 10" \
     hipace.deposit_n=1 \
     hipace.deposit_n_ion_levels=1
 

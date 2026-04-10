@@ -32,7 +32,7 @@ elec.element = electron
 elec.neutralize_background = false
 
 ion.density(x,y,z) = n0
-ion.ppc = 0 0
+ion.ppc = 10 10
 ion.u_mean = 0.0 0.0 0.0
 ion.element = Ar
 ion.initial_ion_level = 0
