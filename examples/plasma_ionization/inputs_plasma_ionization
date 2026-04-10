@@ -8,7 +8,6 @@ my_constants.n0 = nc/10000
 my_constants.w0_um = 100
 my_constants.lambda0_nm = 800
 
-hipace.file_prefix = grid_ionisation.1Rank
 hipace.do_tiling = 0
 
 geometry.prob_lo     = -10.*kp_inv   -10.*kp_inv   -10.*kp_inv #box shifted

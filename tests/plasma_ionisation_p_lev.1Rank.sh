@@ -34,6 +34,6 @@ mpiexec -n 1 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_plasma_ionization \
 
 
 
-$HIPACE_EXAMPLE_DIR/analysis_plasma_ionization.py \
+python3 $HIPACE_EXAMPLE_DIR/analysis_plasma_ionization.py \
     --diags_grid=$HIPACE_EXAMPLE_DIR/grid_ionization.1Rank \
     --diags_particle=$HIPACE_EXAMPLE_DIR/particle_ionization.1Rank
