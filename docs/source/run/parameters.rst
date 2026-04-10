@@ -1173,7 +1173,7 @@ Field diagnostics
     accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
 
 * ``hipace.deposit_n`` (`bool`) optional (default `0`)
-    If the number density of each plasma species should be deposited so that it is available as a diagnostic.
+    Whether the number density of each plasma species should be deposited so that it is available as a diagnostic.
     If ``n_<plasma name>`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
 
 * ``hipace.deposit_n_ion_levels`` (`bool`) optional (default `0`)
