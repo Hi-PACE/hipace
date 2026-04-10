@@ -211,7 +211,7 @@ Collision::doCollisionImpSameSpecies (
 
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
-                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
+                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells-1, ipair);
 
                 const int offset1_start = offset1[icell];
                 const int offset1_stop = offset1[icell+1];
@@ -268,7 +268,7 @@ Collision::doCollisionImpSameSpecies (
 
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
-                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
+                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells-1, ipair);
 
                 const int offset1_start = offset1[icell];
                 const int offset1_stop = offset1[icell+1];
@@ -404,7 +404,7 @@ Collision::doCollisionImpDifferentSpecies (
 
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
-                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
+                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells-1, ipair);
 
                 const int offset1_start = offset1[icell];
                 const int offset1_stop = offset1[icell+1];
@@ -480,7 +480,7 @@ Collision::doCollisionImpDifferentSpecies (
 
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
-                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
+                const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells-1, ipair);
 
                 const int offset1_start = offset1[icell];
                 const int offset1_stop = offset1[icell+1];
@@ -497,7 +497,7 @@ Collision::doCollisionImpDifferentSpecies (
                 while (idx1 < n1 && idx2 < n2) {
                     const int j1 = perm1[offset1_start + idx1];
                     const int j2 = perm2[offset2_start + idx2];
-                    const int new_part_idx = n2 < n1 ? p_flag1[j2] : p_flag2[j1];
+                    const int new_part_idx = n2 < n1 ? p_flag1[j1] : p_flag2[j2];
 
                     if (new_part_idx >= 0) {
                         ionizaiton_function(
