@@ -17,7 +17,7 @@ HIPACE_SOURCE_DIR=$2
 FILE_NAME=`basename "$0"`
 TEST_NAME="${FILE_NAME%.*}"
 
-HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/plasma_initialization
+HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/plasma_ionization
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 
