@@ -17,7 +17,7 @@ lasers.names = laser
 lasers.lambda0 = lambda0_nm * 1.e-9
 
 laser.a0 = 0.01
-laser.position_mean = 0. 0. 0
+laser.position_mean = 0. 0. 0.
 laser.w0 = w0_um*1.e-6
 laser.L0 = 100e-6
 laser.focal_distance = 0.
