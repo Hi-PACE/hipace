@@ -245,6 +245,10 @@ public:
     inline static bool m_deposit_rho = false;
     /** Whether to deposit rho for every individual plasma for diagnostics */
     inline static bool m_deposit_rho_individual = false;
+    /** Whether to deposit number density of plasma for diagnostics */
+    inline static bool m_deposit_n = false;
+    /** Whether to deposit number density of plasma of different ionisation levels for diagnostics */
+    inline static bool m_deposit_n_ion_levels = false;
     /** Whether to deposit temperature for every individual plasma for diagnostics */
     inline static bool m_deposit_temp_individual = false;
     /** Order of the temperature deposition shape factor */

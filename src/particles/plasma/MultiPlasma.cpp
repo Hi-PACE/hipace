@@ -84,13 +84,21 @@ MultiPlasma::maxChargeDensity (amrex::Real z)
 void
 MultiPlasma::DepositCurrent (
     Fields & fields, int which_slice,
-    bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz,
+    bool deposit_jx_jy, bool deposit_jz, bool deposit_rho, bool deposit_chi, bool deposit_rhomjz, bool deposit_n,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
 {
     for (int i=0; i<m_nplasmas; i++) {
         ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
-                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz,
-                         gm, lev);
+                         deposit_jx_jy, deposit_jz, deposit_rho, deposit_chi, deposit_rhomjz, deposit_n,
+                         gm, lev, -1);
+        if (m_all_plasmas[i].m_max_ion_lev == 0) continue;
+        if (deposit_n && Hipace::m_deposit_n_ion_levels) {
+            for (int ion_lev = 0; ion_lev <= m_all_plasmas[i].m_max_ion_lev; ++ion_lev) {
+                ::DepositCurrent(m_all_plasmas[i], fields, which_slice,
+                    false, false, false, false, false, true,
+                    gm, lev, ion_lev);
+            }
+        }
     }
 }
 
@@ -134,7 +142,7 @@ MultiPlasma::DepositNeutralizingBackground (
         if (m_all_plasmas[i].m_neutralize_background) {
             // current of ions is zero, so they are not deposited.
             ::DepositCurrent(m_all_plasmas[i], fields, which_slice, false,
-                             false, false, false, true, gm, lev);
+                             false, false, false, true, false, gm, lev);
         }
     }
 }

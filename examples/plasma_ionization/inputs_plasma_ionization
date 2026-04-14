@@ -1,0 +1,51 @@
+amr.n_cell = 50 50 50
+
+my_constants.kp_inv = 10.e-6
+
+my_constants.nc = 1.75e27
+my_constants.n0 = nc/10000
+
+my_constants.w0_um = 100
+my_constants.lambda0_nm = 800
+
+hipace.do_tiling = 0
+
+geometry.prob_lo     = -10.*kp_inv   -10.*kp_inv   -10.*kp_inv #box shifted
+geometry.prob_hi     =  10.*kp_inv    10.*kp_inv    10.*kp_inv
+
+lasers.names = laser
+lasers.lambda0 = lambda0_nm * 1.e-9
+
+laser.a0 = 0.01
+laser.position_mean = 0. 0. 0.
+laser.w0 = w0_um*1.e-6
+laser.L0 = 100e-6
+laser.focal_distance = 0.
+
+plasmas.names = elec ion
+plasmas.insitu_period = 1
+
+elec.density(x,y,z) = n0
+elec.ppc = 0 0
+elec.u_mean = 0.0 0.0 0.0
+elec.element = electron
+elec.neutralize_background = false
+
+ion.density(x,y,z) = n0
+ion.ppc = 10 10
+ion.u_mean = 0.0 0.0 0.0
+ion.element = Ar
+ion.initial_ion_level = 0
+ion.can_laser_ionize = 1
+ion.ionization_product = elec
+
+amr.max_level = 0
+
+diagnostic.output_period = 1
+
+hipace.depos_order_xy = 0
+
+boundary.field = Dirichlet
+boundary.particle = Periodic
+
+diagnostic.diag_type = xyz

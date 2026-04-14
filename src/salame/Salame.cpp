@@ -60,7 +60,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
         for (int lev=0; lev<current_N_level; ++lev) {
             // deposit plasma jx and jy on the next temp slice, to the SALAME slice
             hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
-                    WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
+                    WhichSlice::Salame, true, false, false, false, false, false, hipace->m_3D_geom, lev);
 
             // use an initial guess of zero for Bx and By in MG solver to reduce relative error
             hipace->m_fields.setVal(0., lev, WhichSlice::Salame,
@@ -112,7 +112,7 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
             for (int lev=0; lev<current_N_level; ++lev) {
                 hipace->m_multi_plasma.DepositCurrent(hipace->m_fields,
-                    WhichSlice::Salame, true, false, false, false, false, hipace->m_3D_geom, lev);
+                    WhichSlice::Salame, true, false, false, false, false, false, hipace->m_3D_geom, lev);
             }
         } else {
             for (int lev=0; lev<current_N_level; ++lev) {

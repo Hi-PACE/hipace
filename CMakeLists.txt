@@ -9,7 +9,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.24.0)
-project(HiPACE VERSION 25.09)
+project(HiPACE VERSION 26.04)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -290,6 +290,7 @@ if(BUILD_TESTING)
                 Poisson_even.1Rank
                 Poisson_odd.1Rank
                 salame.SI.1Rank
+                plasma_ionisation_p_lev.1Rank
             )
 
         else()
