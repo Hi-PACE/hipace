@@ -898,7 +898,7 @@ void bottomsolve_gpu (amrex::Real dx0, amrex::Real dy0, Array3<amrex::Real> cons
         int i = icell - j*lenx;
         j += lev_domain[0].smallEnd(1) + corner_offset;
         i += lev_domain[0].smallEnd(0) + corner_offset;
-        bool is_active = true;
+        bool is_active = j <= (lev_domain[0].bigEnd(1) - corner_offset);
 
         for (int ilev = 0; ilev < nlevs-1; ++ilev) {
             // set phi to zero

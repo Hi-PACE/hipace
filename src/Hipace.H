@@ -18,6 +18,7 @@
 #include "utils/GridCurrent.H"
 #include "laser/MultiLaser.H"
 #include "utils/Constants.H"
+#include "utils/GridIonization.H"
 #include "utils/Parser.H"
 #include "utils/MultiBuffer.H"
 #include "diagnostics/Diagnostic.H"
@@ -249,6 +250,10 @@ public:
     inline static bool m_deposit_rho = false;
     /** Whether to deposit rho for every individual plasma for diagnostics */
     inline static bool m_deposit_rho_individual = false;
+    /** Whether to deposit number density of plasma for diagnostics */
+    inline static bool m_deposit_n = false;
+    /** Whether to deposit number density of plasma of different ionisation levels for diagnostics */
+    inline static bool m_deposit_n_ion_levels = false;
     /** Whether to deposit temperature for every individual plasma for diagnostics */
     inline static bool m_deposit_temp_individual = false;
     /** Order of the temperature deposition shape factor */
@@ -290,6 +295,8 @@ public:
     MultiLaser m_multi_laser;
     /** GridCurrent instance */
     GridCurrent m_grid_current;
+    /** GridIonization instance */
+    GridIonization m_grid_ionization;
 #ifdef HIPACE_USE_OPENPMD
     /** openPMD writer instance */
     OpenPMDWriter m_openpmd_writer;
