@@ -285,11 +285,6 @@ Hipace::InitData ()
     amrex::Print() << "using CUDA version " << __CUDACC_VER_MAJOR__ << "." << __CUDACC_VER_MINOR__
                    << "." << __CUDACC_VER_BUILD__ << "\n";
 #endif
-#ifdef HIPACE_USE_AB5_PUSH
-    amrex::Print() << "using the Adams-Bashforth plasma particle pusher\n";
-#else
-    amrex::Print() << "using the leapfrog plasma particle pusher\n";
-#endif
 
     m_multi_laser.InitData();
 

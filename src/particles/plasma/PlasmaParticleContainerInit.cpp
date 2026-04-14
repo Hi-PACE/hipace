@@ -298,6 +298,9 @@ InitParticles (const amrex::RealVect& a_u_std,
 
         AMREX_ALWAYS_ASSERT(total_non_mirrored_particles == current_size);
 
+        const bool use_ab5_push = m_use_ab5_push;
+        auto comps = m_comps;
+
         amrex::ParallelForRNG(current_size,
             [=] AMREX_GPU_DEVICE (unsigned int pidx, const amrex::RandomEngine& engine) {
                 const amrex::Real x = ptd.rdata(PlasmaIdx::x)[pidx];
@@ -308,20 +311,27 @@ InitParticles (const amrex::RealVect& a_u_std,
 
                 ptd.rdata(PlasmaIdx::ux)[pidx] = u[0];
                 ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
-                ptd.rdata(PlasmaIdx::psi)[pidx] = plasma_psi(u[0], u[1], u[2],
-                                                             /* Assumes Aabssq == 0 */ 0._rt);
-                ptd.rdata(PlasmaIdx::x_prev)[pidx] = x;
-                ptd.rdata(PlasmaIdx::y_prev)[pidx] = y;
-                ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0];
-                ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1];
-                ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
-#ifdef HIPACE_USE_AB5_PUSH
-                HIPACE_LOOP_UNROLL
-                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
-                    ptd.rdata(iforce)[pidx] = 0._rt;
+                ptd.rdata(PlasmaIdx::psi)[pidx] =
+                    plasma_psi(u[0], u[1], u[2], /* Assumes Aabssq == 0 */ 0._rt);
+
+                if (comps.use_laser) {
+                    ptd.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;
                 }
-#endif
-                ptd.idata(PlasmaIdx::ion_lev)[pidx] = init_ion_lev;
+
+                if (comps.use_temp_slice) {
+                    ptd.rdata(PlasmaIdx::x_prev + comps.offset_temp)[pidx] = x;
+                    ptd.rdata(PlasmaIdx::y_prev + comps.offset_temp)[pidx] = y;
+                }
+
+                if (comps.use_ab5_push) {
+                    for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                        ptd.rdata(iforce + comps.offset_ab5)[pidx] = 0._rt;
+                    }
+                }
+
+                if (comps.use_ion_level) {
+                    ptd.idata(PlasmaIdx::ion_lev)[pidx] = init_ion_lev;
+                }
             });
 
         if (m_do_symmetrize) {
@@ -349,27 +359,38 @@ InitParticles (const amrex::RealVect& a_u_std,
                     ptd.cpu(midx) = 0; // level 0
                     ptd.rdata(PlasmaIdx::x)[midx] = x_arr[imirror];
                     ptd.rdata(PlasmaIdx::y)[midx] = y_arr[imirror];
-
                     ptd.rdata(PlasmaIdx::w)[midx] = ptd.rdata(PlasmaIdx::w)[pidx];
-                    ptd.rdata(PlasmaIdx::ux)[midx] = ptd.rdata(PlasmaIdx::ux)[pidx] * ux_arr[imirror];
-                    ptd.rdata(PlasmaIdx::uy)[midx] = ptd.rdata(PlasmaIdx::uy)[pidx] * uy_arr[imirror];
-                    ptd.rdata(PlasmaIdx::psi)[midx] = ptd.rdata(PlasmaIdx::psi)[pidx];
-                    ptd.rdata(PlasmaIdx::x_prev)[midx] = x_arr[imirror];
-                    ptd.rdata(PlasmaIdx::y_prev)[midx] = y_arr[imirror];
+                    ptd.rdata(PlasmaIdx::ux)[midx] =
+                        ptd.rdata(PlasmaIdx::ux)[pidx] * ux_arr[imirror];
+                    ptd.rdata(PlasmaIdx::uy)[midx] =
+                        ptd.rdata(PlasmaIdx::uy)[pidx] * uy_arr[imirror];
+                    ptd.rdata(PlasmaIdx::psi)[midx] =
+                        ptd.rdata(PlasmaIdx::psi)[pidx];
                     ptd.rdata(PlasmaIdx::ux_half_step)[midx] =
                         ptd.rdata(PlasmaIdx::ux_half_step)[pidx] * ux_arr[imirror];
                     ptd.rdata(PlasmaIdx::uy_half_step)[midx] =
                         ptd.rdata(PlasmaIdx::uy_half_step)[pidx] * uy_arr[imirror];
                     ptd.rdata(PlasmaIdx::psi_half_step)[midx] =
                         ptd.rdata(PlasmaIdx::psi_half_step)[pidx];
-#ifdef HIPACE_USE_AB5_PUSH
-                    HIPACE_LOOP_UNROLL
-                    for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
-                        ptd.rdata(iforce)[midx] = 0._rt;
-                    }
-#endif
-                    ptd.idata(PlasmaIdx::ion_lev)[midx] = ptd.idata(PlasmaIdx::ion_lev)[pidx];
 
+                    if (comps.use_laser) {
+                        ptd.rdata(PlasmaIdx::aabssq)[midx] = 0._rt;
+                    }
+
+                    if (comps.use_temp_slice) {
+                        ptd.rdata(PlasmaIdx::x_prev + comps.offset_temp)[midx] = x_arr[imirror];
+                        ptd.rdata(PlasmaIdx::y_prev + comps.offset_temp)[midx] = y_arr[imirror];
+                    }
+
+                    if (comps.use_ab5_push) {
+                        for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                            ptd.rdata(iforce + comps.offset_ab5)[midx] = 0._rt;
+                        }
+                    }
+
+                    if (comps.use_ion_level) {
+                        ptd.idata(PlasmaIdx::ion_lev)[midx] = init_ion_lev;
+                    }
                 }
             });
         }

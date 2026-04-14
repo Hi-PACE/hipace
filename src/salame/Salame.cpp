@@ -234,11 +234,20 @@ SalameGetJxJyFromBxBy (Hipace* hipace, const int lev)
 
     amrex::MultiFab& slicemf = hipace->m_fields.getSlices(lev);
 
-#ifdef HIPACE_USE_AB5_PUSH
-    const amrex::Real dz = ( 1901._rt / 720._rt ) * hipace->m_3D_geom[lev].CellSize(Direction::z);
-#else
-    const amrex::Real dz = 1.5_rt * hipace->m_3D_geom[lev].CellSize(Direction::z);
-#endif
+    bool use_ab5_pusher = false;
+    for (int i=0; i<hipace->m_multi_plasma.GetNPlasmas(); ++i) {
+        if (i == 0) {
+            use_ab5_pusher = hipace->m_multi_plasma.m_all_plasmas[i].m_use_ab5_push;
+        } else {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                hipace->m_multi_plasma.m_all_plasmas[i].m_use_ab5_push == use_ab5_pusher,
+                "All plasmas must use the same pusher when using SALAME"
+            );
+        }
+    }
+
+    const amrex::Real dz = (use_ab5_pusher ? 1901._rt / 720._rt : 1.5_rt)
+        * hipace->m_3D_geom[lev].CellSize(Direction::z);
 
     for ( amrex::MFIter mfi(slicemf, DfltMfiTlng); mfi.isValid(); ++mfi ){
 
@@ -280,7 +289,8 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 
             const amrex::Real dx_inv = gm.InvCellSize(0);
             const amrex::Real dy_inv = gm.InvCellSize(1);
-            const amrex::Real dz = gm.CellSize(2);
+            const amrex::Real dz = (plasma.m_use_ab5_push ? 1901._rt / 720._rt : 1.5_rt)
+                * gm.CellSize(2);
 
             // Offset for converting positions to indexes
             amrex::Real const x_pos_offset = GetPosOffset(0, gm, slice_fab.box());
@@ -314,13 +324,8 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                         ptd.idata(PlasmaIdx::ion_lev)[ip] * charge_mass_c_ratio
                         : charge_mass_c_ratio;
 
-#ifdef HIPACE_USE_AB5_PUSH
-                    ptd.rdata(PlasmaIdx::ux)[ip] =  ( 1901._rt / 720._rt )*dz * q_m_c_ratio * Byp;
-                    ptd.rdata(PlasmaIdx::uy)[ip] = -( 1901._rt / 720._rt )*dz * q_m_c_ratio * Bxp;
-#else
-                    ptd.rdata(PlasmaIdx::ux)[ip] =  1.5_rt*dz * q_m_c_ratio * Byp;
-                    ptd.rdata(PlasmaIdx::uy)[ip] = -1.5_rt*dz * q_m_c_ratio * Bxp;
-#endif
+                    ptd.rdata(PlasmaIdx::ux)[ip] =  dz * q_m_c_ratio * Byp;
+                    ptd.rdata(PlasmaIdx::uy)[ip] = -dz * q_m_c_ratio * Bxp;
                 });
 
         }

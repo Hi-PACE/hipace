@@ -73,8 +73,7 @@ jobs:
         pip install -U -e ./tools
         cmake -S . -B build             \
             -DHiPACE_MPI=OFF            \
-            -DCMAKE_VERBOSE_MAKEFILE=ON \
-            -DHiPACE_PUSHER=AB5
+            -DCMAKE_VERBOSE_MAKEFILE=ON
         cmake --build build -j 2
     - name: Run Tests
       run: ctest --test-dir build --output-on-failure
