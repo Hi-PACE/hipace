@@ -146,6 +146,10 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                                 Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
                                 bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
+                        ExmByp *= clight_inv;
+                        EypBxp *= clight_inv;
+                        Ezp *= clight_inv;
+
                         if (use_laser.value) {
                             Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
@@ -157,10 +161,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             AabssqDxp *= 0.25_rt * laser_norm_ion;
                             AabssqDyp *= 0.25_rt * laser_norm_ion;
                         }
-
-                        ExmByp *= clight_inv;
-                        EypBxp *= clight_inv;
-                        Ezp *= clight_inv;
                     }
 
                     if (!use_ab5_push.value) {

@@ -312,6 +312,9 @@ InitParticles (const amrex::RealVect& a_u_std,
                 ptd.rdata(PlasmaIdx::uy)[pidx] = u[1];
                 ptd.rdata(PlasmaIdx::psi)[pidx] =
                     plasma_psi(u[0], u[1], u[2], /* Assumes Aabssq == 0 */ 0._rt);
+                ptd.rdata(PlasmaIdx::ux_half_step)[pidx] = u[0];
+                ptd.rdata(PlasmaIdx::uy_half_step)[pidx] = u[1];
+                ptd.rdata(PlasmaIdx::psi_half_step)[pidx] = ptd.rdata(PlasmaIdx::psi)[pidx];
 
                 if (comps.use_laser) {
                     ptd.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;

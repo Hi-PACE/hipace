@@ -107,8 +107,8 @@ struct PlasmaIdx
 
         // optional:
 
-        aabssq,             // Laser value at the particle position
-        real_nattribs_laser,
+        aabssq=real_nattribs,   // Laser value at the particle position
+        real_nattribs_laser=1,
 
         x_prev=0, y_prev,   // positions on the last non-temp slice
         real_nattribs_temp_slice,
