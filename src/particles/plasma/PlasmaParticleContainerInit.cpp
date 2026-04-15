@@ -298,7 +298,6 @@ InitParticles (const amrex::RealVect& a_u_std,
 
         AMREX_ALWAYS_ASSERT(total_non_mirrored_particles == current_size);
 
-        const bool use_ab5_push = m_use_ab5_push;
         auto comps = m_comps;
 
         amrex::ParallelForRNG(current_size,

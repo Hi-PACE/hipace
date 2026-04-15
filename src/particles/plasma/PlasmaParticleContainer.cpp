@@ -469,7 +469,7 @@ IonizationModule (const int lev,
         const int max_ion_lev = m_max_ion_lev;
 
         long num_ions = ptile_ion.numParticles();
-
+        const bool use_laser = Hipace::m_use_laser;
 
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
         // and calculates ionization probability. If ionization occurs, it increments
@@ -511,8 +511,11 @@ IonizationModule (const int lev,
             const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi_half_step)[ip];
 
             // Compute probability of ionization p
-            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
-                                                           /* Assumes Aabssq == 0 */ 0._rt);
+            amrex::Real Aabssqp = 0._rt;
+            if (use_laser) {
+                Aabssqp = ptd_ion.rdata(PlasmaIdx::aabssq)[ip];
+            }
+            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi, Aabssqp);
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
             if (ion_lev_loc >= max_ion_lev) {
                 return;
@@ -548,8 +551,6 @@ IonizationModule (const int lev,
 
         // Load electron after resize
         auto ptd_elec = ptile_elec.getParticleTileData();
-
-        const int init_ion_lev = m_product_pc->m_init_ion_lev;
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
@@ -712,9 +713,9 @@ LaserIonization (const int islice,
             const amrex::Real uy = ptd_ion.rdata(PlasmaIdx::uy_half_step)[ip];
             const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi_half_step)[ip];
 
+            const amrex::Real Aabssqp = ptd_ion.rdata(PlasmaIdx::aabssq)[ip];
             // Compute probability of ionization p
-            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
-                                                           /* Assumes Aabssq == 0 */ 0._rt);
+            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi, Aabssqp);
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
             if (ion_lev_loc >= max_ion_lev) {
                 return;
@@ -754,8 +755,6 @@ LaserIonization (const int islice,
 
         // Load electron after resize
         auto ptd_elec = ptile_elec.getParticleTileData();
-
-        const int init_ion_lev = m_product_pc->m_init_ion_lev;
 
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
@@ -833,6 +832,7 @@ LaserIonization (const int islice,
 
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
+                // No normalization required since these are always electrons
                 const amrex::Real psi = plasma_psi(ux, uy, uz, amrex::abs(A*A));
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
@@ -885,22 +885,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
     {
         // Loading the data
         const auto ptd = pti.GetParticleTile().getParticleTileData();
-
         amrex::Long const num_particles = pti.numParticles();
-
-        const PhysConst pc = get_phys_const();
         const bool use_laser = Hipace::m_use_laser;
-        const amrex::Geometry& gm = Hipace::GetInstance().m_3D_geom[0];
-        const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
-        amrex::FArrayBox& isl_fab = Hipace::GetInstance().m_fields.getSlices(0)[pti];
-        Array3<amrex::Real> arr = isl_fab.array();
-        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
-        const amrex::Real dx_inv = gm.InvCellSize(0);
-        const amrex::Real dy_inv = gm.InvCellSize(1);
-        const bool can_ionize = m_can_ionize;
-        const amrex::Real laser_norm = (m_charge/pc.q_e) * (pc.m_e/m_mass)
-            * (m_charge/pc.q_e) * (pc.m_e/m_mass);
 
         amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
         amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
@@ -922,14 +908,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
                 amrex::Real Aabssqp = 0._rt;
                 if (use_laser) {
-                    amrex::Real laser_norm_ion = laser_norm;
-                    if (can_ionize) {
-                        laser_norm_ion *=
-                            ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    }
-                    doLaserGatherShapeN<2>(x, y, Aabssqp, arr, aabs_comp,
-                                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                    Aabssqp *= laser_norm_ion;
+                    Aabssqp = ptd.rdata(PlasmaIdx::aabssq)[ip];
                 }
 
                 // Particle's Lorentz factor

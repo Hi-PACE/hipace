@@ -107,9 +107,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 amrex::Real q_mass_clight_ratio = charge_mass_clight_ratio;
                 amrex::Real laser_norm_ion = laser_norm;
                 if (can_ionize) {
-                    q_mass_clight_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    laser_norm_ion *=
-                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    const amrex::Real p_ion_lev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
+                    q_mass_clight_ratio *= p_ion_lev;
+                    laser_norm_ion *= p_ion_lev * p_ion_lev;
                 }
 
                 amrex::Real xp = 0._rt;
@@ -118,44 +118,55 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 if (!read_from_temp) {
                     xp = ptd.rdata(PlasmaIdx::x)[ip];
                     yp = ptd.rdata(PlasmaIdx::y)[ip];
+                    if (temp_slice) {
+                        // first temp slice
+                        ptd.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip] = xp;
+                        ptd.rdata(PlasmaIdx::y_prev + comps.offset_temp)[ip] = yp;
+                    }
                 } else {
                     xp = ptd.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
                     yp = ptd.rdata(PlasmaIdx::y_prev + comps.offset_temp)[ip];
                 }
 
+                amrex::Real ux = ptd.rdata(PlasmaIdx::ux_half_step)[ip];
+                amrex::Real uy = ptd.rdata(PlasmaIdx::uy_half_step)[ip];
+                amrex::Real psi = ptd.rdata(PlasmaIdx::psi_half_step)[ip];
+
+                amrex::Real ux_half = ux;
+                amrex::Real uy_half = uy;
+                amrex::Real psi_half = psi;
+
                 for (int i = 0; i < n_subcycles; i++) {
 
-                    if (lev == 0 || lev_bounds.contains(xp, yp)) {
+                    if (i == 0 || lev == 0 || lev_bounds.contains(xp, yp)) {
                         ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
                         Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
-                        Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
 
                         doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp,
                                 Bzp, slice_arr, psi_comp, ez_comp, bx_comp, by_comp,
                                 bz_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
                         if (use_laser.value) {
+                            Aabssqp = 0._rt, AabssqDxp = 0._rt, AabssqDyp = 0._rt;
+
                             doLaserGatherShapeN<depos_order.value>(xp, yp,
                                 Aabssqp, AabssqDxp, AabssqDyp, slice_arr, aabs_comp,
                                 dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+                            Aabssqp *= 0.5_rt * laser_norm_ion;
+                            AabssqDxp *= 0.25_rt * laser_norm_ion;
+                            AabssqDyp *= 0.25_rt * laser_norm_ion;
                         }
 
                         ExmByp *= clight_inv;
                         EypBxp *= clight_inv;
                         Ezp *= clight_inv;
-                        Aabssqp *= 0.5_rt * laser_norm_ion;
-                        AabssqDxp *= 0.25_rt * laser_norm_ion;
-                        AabssqDyp *= 0.25_rt * laser_norm_ion;
                     }
 
                     if (!use_ab5_push.value) {
 
                         constexpr int nsub = 4;
                         const amrex::Real sdz = dz/nsub;
-
-                        amrex::Real ux = ptd.rdata(PlasmaIdx::ux_half_step)[ip];
-                        amrex::Real uy = ptd.rdata(PlasmaIdx::uy_half_step)[ip];
-                        amrex::Real psi = ptd.rdata(PlasmaIdx::psi_half_step)[ip];
 
                         // full push in momentum
                         // from t-1/2 to t+1/2
@@ -190,18 +201,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                         if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
 
-                        if (!temp_slice) {
-                            // update values of the last non temp slice
-                            // the next push always starts from these
-                            ptd.rdata(PlasmaIdx::ux_half_step)[ip] = ux;
-                            ptd.rdata(PlasmaIdx::uy_half_step)[ip] = uy;
-                            ptd.rdata(PlasmaIdx::psi_half_step)[ip] = psi;
-
-                            if (comps.use_temp_slice) {
-                                ptd.rdata(PlasmaIdx::x_prev)[ip] = xp;
-                                ptd.rdata(PlasmaIdx::y_prev)[ip] = yp;
-                            }
-                        }
+                        ux_half = ux;
+                        uy_half = uy;
+                        psi_half = psi;
 
                         // half push in momentum
                         // from t+1/2 to t+1
@@ -228,15 +230,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             psi += sdz*dz_psi + 0.5_rt*sdz*sdz*dz_psi_dual.epsilon;
 
                         }
-                        ptd.rdata(PlasmaIdx::ux)[ip] = ux;
-                        ptd.rdata(PlasmaIdx::uy)[ip] = uy;
-                        ptd.rdata(PlasmaIdx::psi)[ip] = psi;
 
                     } else {
 
-                        amrex::Real ux = ptd.rdata(PlasmaIdx::ux_half_step)[ip];
-                        amrex::Real uy = ptd.rdata(PlasmaIdx::uy_half_step)[ip];
-                        amrex::Real psi = ptd.rdata(PlasmaIdx::psi_half_step)[ip];
                         const amrex::Real psi_inv = 1._rt/psi;
 
                         auto [dz_ux, dz_uy, dz_psi] = PlasmaMomentumPush(
@@ -271,27 +267,39 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         }
 
                         if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
-                        ptd.pos(0, ip) = xp;
-                        ptd.pos(1, ip) = yp;
 
-                        if (!temp_slice) {
-                            // update values of the last non temp slice
-                            // the next push always starts from these
-                            ptd.rdata(PlasmaIdx::ux_half_step)[ip] = ux;
-                            ptd.rdata(PlasmaIdx::uy_half_step)[ip] = uy;
-                            ptd.rdata(PlasmaIdx::psi_half_step)[ip] = psi;
-                            ptd.rdata(PlasmaIdx::x_prev)[ip] = xp;
-                            ptd.rdata(PlasmaIdx::y_prev)[ip] = yp;
-                        }
-
-                        ptd.rdata(PlasmaIdx::ux)[ip] = ux;
-                        ptd.rdata(PlasmaIdx::uy)[ip] = uy;
-                        ptd.rdata(PlasmaIdx::psi)[ip] = psi;
+                        ux_half = ux;
+                        uy_half = uy;
+                        psi_half = psi;
                     }
                 } // loop over subcycles
 
+                if (use_laser.value) {
+                    Aabssqp = 0._rt;
+
+                    doLaserGatherShapeN<depos_order.value>(xp, yp,
+                        Aabssqp, slice_arr, aabs_comp,
+                        dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+
+                    Aabssqp *= laser_norm_ion;
+
+                    ptd.rdata(PlasmaIdx::aabssq)[ip] = Aabssqp;
+                }
+
                 ptd.pos(0, ip) = xp;
                 ptd.pos(1, ip) = yp;
+
+                ptd.rdata(PlasmaIdx::ux)[ip] = ux;
+                ptd.rdata(PlasmaIdx::uy)[ip] = uy;
+                ptd.rdata(PlasmaIdx::psi)[ip] = psi;
+
+                if (!temp_slice) {
+                    // update values of the last non temp slice
+                    // the next push always starts from these
+                    ptd.rdata(PlasmaIdx::ux_half_step)[ip] = ux_half;
+                    ptd.rdata(PlasmaIdx::uy_half_step)[ip] = uy_half;
+                    ptd.rdata(PlasmaIdx::psi_half_step)[ip] = psi_half;
+                }
             });
     }
 
