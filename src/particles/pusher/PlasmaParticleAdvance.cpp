@@ -88,14 +88,17 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
             amrex::TypeList<
                 amrex::CompileTimeOptions<0, 1, 2, 3>,
                 amrex::CompileTimeOptions<false, true>,
+                amrex::CompileTimeOptions<false, true>,
                 amrex::CompileTimeOptions<false, true>
             >{}, {
                 Hipace::m_depos_order_xy,
                 Hipace::m_use_laser,
-                plasma.m_use_ab5_push
+                plasma.m_use_ab5_push,
+                n_subcycles > 1
             },
             int(pti.numParticles()), // int ParallelFor is 3-5% faster than amrex::Long version
-            [=] AMREX_GPU_DEVICE (int ip, auto depos_order, auto use_laser, auto use_ab5_push) {
+            [=] AMREX_GPU_DEVICE (int ip, auto depos_order, auto use_laser,
+                                  auto use_ab5_push, auto use_subcycling) {
                 // only push plasma particles on their according MR level
                 if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
@@ -136,7 +139,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 amrex::Real uy_half = uy;
                 amrex::Real psi_half = psi;
 
-                for (int i = 0; i < n_subcycles; i++) {
+                for (int i = 0; i < (use_subcycling ? n_subcycles : 1); i++) {
 
                     if (i == 0 || lev == 0 || lev_bounds.contains(xp, yp)) {
                         ExmByp = 0._rt, EypBxp = 0._rt, Ezp = 0._rt;
