@@ -20,8 +20,8 @@
 #include <cmath>  // isnan() isinf()
 #include <limits> // numeric_limits<float>::min()
 
-/* \brief The implicit, non-relativistic assumption has not been
- *        changed
+/* \brief The implicit, non-relativistic assumption has been modified,
+ *        and the ionization model is now relativistic.
  *        Momentum and energy division after the ionization event
  *        is done as follows:
  *        Three numbers are generated that satisfy the triangle inequality.
@@ -44,8 +44,8 @@
  *        n_3 = 1 - n_2 - n_1.
  *        Next, we need to find the number C, such that if
  *        p_i = C * n_i, we would have E_1 + E_2 + E_3 = E_out
- *        where E_i = p_i^2 / (2 m_i), i.e.,
- *        C^2 * \sum_i [n_i^2 / (2 m_i)] = E_out
+ *        where E_i = sqrt((p_i * c)^2 + (m_i * c^2)^2) - m_i * c^2.
+ *        The root for C is found using the bisection method.
  *        After C is determined the momentum vectors are arranged
  *        such that the net linear momentum is zero.
  *        To see if there are nan or inf updated velocities,
@@ -139,23 +139,23 @@ void ImpactIonization (
     T_R const boost_v2 = gc*gc / ((gc + T_R(1.0)) * c2);
 
     // ------------------------------------------------------------------
-    // COM-frame incoming particle 1 momentum
+    // COM-frame boost of the initial momenta
     // ------------------------------------------------------------------
     T_R const vcDv1 = (vcx*ux1 + vcy*uy1 + vcz*uz1) * PhysConstSI::c / g1;
     T_R const vcDv2 = (vcx*ux2 + vcy*uy2 + vcz*uz2) * PhysConstSI::c / g2;
 
-    // Compute p1 star
+    // Boost particle 1 to COM
     T_R p1sx;
     T_R p1sy;
     T_R p1sz;
-    if ( vcms > std::numeric_limits<T_R>::min() )
+    if ( vcms > T_R(0.0) )
     {
-        T_R const lorentz_transform_factor =
+        T_R const lorentz_coeff_1 =
             ( boost_v2 * vcDv1 - gc ) * m1 * g1;
         
-        p1sx = px1 + vcx*lorentz_transform_factor;
-        p1sy = py1 + vcy*lorentz_transform_factor;
-        p1sz = pz1 + vcz*lorentz_transform_factor;
+        p1sx = px1 + vcx*lorentz_coeff_1;
+        p1sy = py1 + vcy*lorentz_coeff_1;
+        p1sz = pz1 + vcz*lorentz_coeff_1;
     }
     else // If vcms = 0, don't do Lorentz-transform.
     {
@@ -164,24 +164,37 @@ void ImpactIonization (
         p1sz = pz1;
     }
 
-    // ------------------------------------------------------------------
-    // COM-frame gammas
-    // ------------------------------------------------------------------
-    T_R const g1s = ( T_R(1.0) - vcDv1*inv_c2 )*gc*g1;
-    T_R const g2s = ( T_R(1.0) - vcDv2*inv_c2 )*gc*g2;
-    // Redundant?
-    if (g1s < T_R(1.0) || g2s < T_R(1.0)) {
-        AMREX_DEVICE_PRINTF(
-            "ImpactIonization: invalid COM gammas, g1s=%e g2s=%e\n",
-            g1s, g2s
-        );
-        return;
+    // Boost particle 2 to COM
+    T_R p2sx;
+    T_R p2sy;
+    T_R p2sz;
+    if (vcms > T_R(0.0)) {
+        T_R const lorentz_coeff_2 =
+            ( boost_v2 * vcDv2 - gc ) * m2 * g2;
+        
+        p2sx = px2 + vcx*lorentz_coeff_2;
+        p2sy = py2 + vcy*lorentz_coeff_2;
+        p2sz = pz2 + vcz*lorentz_coeff_2;
+    } else {
+        p2sx = px2;
+        p2sy = py2;
+        p2sz = pz2;
     }
 
+    // ------------------------------------------------------------------
     // Ionization probability and final-state construction
+    // ------------------------------------------------------------------
+    T_R const p1s_sq = p1sx*p1sx + p1sy*p1sy + p1sz*p1sz;
+    T_R const p2s_sq = p2sx*p2sx + p2sy*p2sy + p2sz*p2sz;
+
+    T_R const E1s = std::sqrt(p1s_sq*c2 + m1*m1*c2*c2);
+    T_R const E2s = std::sqrt(p2s_sq*c2 + m2*m2*c2*c2);
+
+    T_R const K1s = E1s - m1*c2;
+    T_R const K2s = E2s - m2*c2;
+
     // Available initial kinetic energy in the COM frame [J]
-    T_R const Ecm =
-        ( (g1s - T_R(1.0))*m1 + (g2s - T_R(1.0))*m2 ) * c2;
+    T_R const Ecm = K1s + K2s;
 
     // Kinetic energy available to the 3 outgoing particles in COM [J]
     T_R const Eout = Ecm - Eion;
@@ -194,9 +207,8 @@ void ImpactIonization (
     //
     // Momentum magnitudes satisfy triangle closure,
     // scaled so that total kinetic energy = Eout.
-
-    T_R const E_target = (g2s-T_R(1.0))*m2 * c2;
     // Sample three normalized momentum magnitudes satisfying triangle inequality
+    T_R const E_target = K2s;
     T_R n_2 = amrex::min(E_target/Ecm, T_R(0.5)*amrex::Random(engine));
     n_2 = clamp(n_2, T_R(0.0), T_R(0.5) - eps_n);
 
@@ -232,13 +244,54 @@ void ImpactIonization (
         return;
     }
 
-    T_R const C_den = n_1*n_1 / (T_R(2.0)*m1) + n_2*n_2 / (T_R(2.0)*m2) + n_3*n_3 / (T_R(2.0)*m3);
-    if (C_den <= eps_n) {
-        AMREX_DEVICE_PRINTF("ImpactIonization: bad energy_den=%e\n", C_den);
-        return;
+    // Conversion from non-relativistic to relativistic C
+
+    // T_R const C_den = n_1*n_1 / (T_R(2.0)*m1) + n_2*n_2 / (T_R(2.0)*m2) + n_3*n_3 / (T_R(2.0)*m3);
+    // if (C_den <= eps_n) {
+    //     AMREX_DEVICE_PRINTF("ImpactIonization: bad energy_den=%e\n", C_den);
+    //     return;
+    // }
+    // T_R const C = std::sqrt(Eout / C_den);
+
+    auto k_rel = [=] AMREX_GPU_HOST_DEVICE (T_R Crel) -> T_R
+    {
+        T_R const p1 = Crel * n_1;
+        T_R const p2 = Crel * n_2;
+        T_R const p3 = Crel * n_3;
+
+        T_R const K1 = std::sqrt(p1*p1*c2 + m1*m1*c2*c2) - m1*c2;
+        T_R const K2 = std::sqrt(p2*p2*c2 + m2*m2*c2*c2) - m2*c2;
+        T_R const K3 = std::sqrt(p3*p3*c2 + m3*m3*c2*c2) - m3*c2;
+
+        return K1 + K2 + K3;
+    };
+
+    // Root finding bisection method for C such that k_rel(C) = Eout
+
+    T_R C_lo = T_R(0.0);
+    T_R C_hi = m1 * PhysConstSI::c;
+    // Grow upper bound until enough kinetic energy is reached
+    while (k_rel(C_hi) < Eout) {
+        C_hi *= T_R(2.0);
+
+        // optional safety ceiling
+        if (C_hi > T_R(1.0e6) * m1 * PhysConstSI::c) {
+            AMREX_DEVICE_PRINTF("ImpactIonization: failed to bracket relativistic C\n");
+            return;
+        }
     }
-    // Common momentum scale from energy conservation (non-relativistic!)
-    T_R const C = std::sqrt(Eout / C_den);
+
+    // Is bisection fast enough?
+    for (int iter = 0; iter < 60; ++iter) {
+        T_R const C_mid = T_R(0.5) * (C_lo + C_hi);
+        if (k_rel(C_mid) < Eout) {
+            C_lo = C_mid;
+        } else {
+            C_hi = C_mid;
+        }
+    }
+
+    T_R const C = T_R(0.5) * (C_lo + C_hi);
 
     // Momentum magnitudes in COM
     T_R const p1f_mag = C * n_1;
@@ -286,7 +339,7 @@ void ImpactIonization (
     T_R p2fx; T_R p2fy; T_R p2fz;
     T_R p3fx; T_R p3fy; T_R p3fz;
 
-    if ( vcms > std::numeric_limits<T_R>::min() )
+    if ( vcms > T_R(0.0) )
     {
         T_R const vcDp1fs = vcx*p1fsx + vcy*p1fsy + vcz*p1fsz;
         T_R const vcDp2fs = vcx*p2fsx + vcy*p2fsy + vcz*p2fsz;

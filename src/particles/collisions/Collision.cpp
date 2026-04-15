@@ -62,6 +62,7 @@ Collision::ReadParameters(
         m_collision_type == "ion_impact",
         "Unknown collision type"
     );
+
     // The projectile can be either an electron or an ion
     // Target particle is always a neutral/ion
     // The user is asked to always input the target type as the second specie
@@ -86,7 +87,7 @@ Collision::ReadParameters(
         m_ionization_energies.copyToDeviceAsync();
     }
     else {
-
+        
     }
     // Plasma physical element name
     amrex::ParmParse pp_s2(m_inout_species2_name);
@@ -129,6 +130,12 @@ Collision::doCollisionA (
 
     const int ion_element_id = ion_map_ids[m_physical_element];
     const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        ion_atomic_number == 1 || 
+        ion_atomic_number == 18, 
+        "The current implementation of electron-impact ionization only supports Hydrogen and Argon. Please check the input file and the physical element specified for species2."
+    );
 
     const amrex::Real inv_dV = geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
     const amrex::Real dt = geom.CellSize(2) * inv_c;
@@ -378,8 +385,8 @@ Collision::doCollisionImp (
     PlasmaBins bins1 = findParticlesInEachTile(geom.Domain(), 1, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(geom.Domain(), 1, species2, geom);
 
-    amrex::Print() << "Plasma bins 1 = " << bins1.numBins() << "\n";
-    amrex::Print() << "Plasma bins 2 = " << bins2.numBins() << "\n";
+    // amrex::Print() << "Plasma bins 1 = " << bins1.numBins() << "\n";
+    // amrex::Print() << "Plasma bins 2 = " << bins2.numBins() << "\n";
 
     // offset: start/end positions of particles for each cell
     // perm: permutation array mapping cell entries to particle indices
@@ -463,7 +470,6 @@ Collision::doCollisionImp (
             }
         );
 
-        amrex::Print() << "before first collision kernel\n" << std::flush;    // DEBUG
         // loop over independent pairs
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
@@ -522,9 +528,7 @@ Collision::doCollisionImp (
             }
         );
 
-        amrex::Print() << "before sync 1\n" << std::flush;    // DEBUG
         amrex::Gpu::streamSynchronize();
-        amrex::Print() << "after sync 1\n" << std::flush;
 
         if (!m_has_collision_product) {
             continue;
@@ -560,7 +564,6 @@ Collision::doCollisionImp (
         ptd2 = ptile2.getParticleTileData();
         auto ptd3 = ptile3.getParticleTileData();
 
-        amrex::Print() << "before second collision kernel\n" << std::flush;    // DEBUG
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
                 const int icell = amrex::bisect(p_num_ind_pairs, 0, num_cells, ipair);
@@ -599,8 +602,6 @@ Collision::doCollisionImp (
             }
         );
 
-        amrex::Print() << "before sync 2\n" << std::flush;    // DEBUG
         amrex::Gpu::streamSynchronize();
-        amrex::Print() << "after sync 2\n" << std::flush;
     }
 }
