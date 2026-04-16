@@ -700,6 +700,11 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // write laser aabs into fields MultiFab
     m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
 
+    // interpolate laser aabs to plasma particles
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_multi_plasma.GatherLaser(lev, m_3D_geom[lev], m_fields);
+    }
+
     // has to be after aabs writing
     m_multi_plasma.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 

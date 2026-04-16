@@ -97,7 +97,7 @@ DepositTemperature (PlasmaParticleContainer& plasma,
                 auto [shape_x, i] = shape_factor<depos_order>(xmid, 0);
                 auto [shape_y, j] = shape_factor<depos_order>(ymid, 0);
 
-                return {i-1, j-1};
+                return {i, j};
             },
             // do_deposit
             // deposit of weight, momentum (ux, uy, uz) and their squares (uxsq, uysq, uzsq)

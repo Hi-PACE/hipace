@@ -12,6 +12,7 @@
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/GPUUtil.H"
+#include "utils/OMPUtil.H"
 #include "utils/InsituUtil.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
@@ -865,6 +866,74 @@ LaserIonization (const int islice,
 
         // Synchronize before ion_mask and ip_elec go out of scope
         amrex::Gpu::streamSynchronize();
+    }
+}
+
+void
+PlasmaParticleContainer::
+GatherLaser (const int lev,
+             const amrex::Geometry& geom,
+             const Fields& fields)
+{
+    if (!Hipace::m_use_laser) return;
+    HIPACE_PROFILE("PlasmaParticleContainer::GatherLaser()");
+
+    using namespace amrex::literals;
+
+    const PhysConst phys_const = get_phys_const();
+
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        // Extract field array from FabArray
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int aabs_comp = Comps[WhichSlice::This]["aabs"];
+
+        // Extract properties associated with physical size of the box
+        const amrex::Real dx_inv = geom.InvCellSize(0);
+        const amrex::Real dy_inv = geom.InvCellSize(1);
+
+        // Offset for converting positions to indexes
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
+
+        // loading the data
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
+        const bool can_ionize = m_can_ionize;
+
+        const amrex::Real laser_norm = (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass)
+            * (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass);
+
+        // Use OMP ParallelFor to use multiple threads when running on CPU
+        omp::ParallelFor(
+            amrex::TypeList<
+                amrex::CompileTimeOptions<0, 1, 2, 3>
+            >{}, {
+                Hipace::m_depos_order_xy
+            },
+            pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
+                // only push plasma particles on their according MR level
+                if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
+
+                amrex::Real laser_norm_ion = laser_norm;
+                if (can_ionize) {
+                    const amrex::Real p_ion_lev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
+                    laser_norm_ion *= p_ion_lev * p_ion_lev;
+                }
+
+                const amrex::Real xp = ptd.rdata(PlasmaIdx::x)[ip];
+                const amrex::Real yp = ptd.rdata(PlasmaIdx::y)[ip];
+
+                amrex::Real Aabssqp = 0._rt;
+                doLaserGatherShapeN<depos_order.value>(xp, yp,
+                    Aabssqp, slice_arr, aabs_comp,
+                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                Aabssqp *= laser_norm_ion;
+
+                ptd.rdata(PlasmaIdx::aabssq)[ip] = Aabssqp;
+            });
     }
 }
 

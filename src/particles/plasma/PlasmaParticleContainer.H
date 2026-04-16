@@ -203,6 +203,17 @@ public:
                           const MultiLaser& laser,
                           const amrex::Real background_density_SI);
 
+
+    /** Gather Laser field to the particles
+     *
+     * \param[in] lev MR level
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] fields the general field class
+     */
+    void GatherLaser (const int lev,
+                      const amrex::Geometry& geom,
+                      const Fields& fields);
+
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
      */

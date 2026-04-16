@@ -277,18 +277,6 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     }
                 } // loop over subcycles
 
-                if (use_laser.value) {
-                    Aabssqp = 0._rt;
-
-                    doLaserGatherShapeN<depos_order.value>(xp, yp,
-                        Aabssqp, slice_arr, aabs_comp,
-                        dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-
-                    Aabssqp *= laser_norm_ion;
-
-                    ptd.rdata(PlasmaIdx::aabssq)[ip] = Aabssqp;
-                }
-
                 ptd.pos(0, ip) = xp;
                 ptd.pos(1, ip) = yp;
 

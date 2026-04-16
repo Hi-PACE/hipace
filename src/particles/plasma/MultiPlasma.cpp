@@ -134,6 +134,14 @@ MultiPlasma::AdvanceParticles (
 }
 
 void
+MultiPlasma::GatherLaser (int lev, amrex::Geometry const& gm, const Fields & fields)
+{
+    for (int i=0; i<m_nplasmas; i++) {
+        m_all_plasmas[i].GatherLaser(lev, gm, fields);
+    }
+}
+
+void
 MultiPlasma::DepositNeutralizingBackground (
     Fields & fields, int which_slice,
     amrex::Vector<amrex::Geometry> const& gm, int const lev)
