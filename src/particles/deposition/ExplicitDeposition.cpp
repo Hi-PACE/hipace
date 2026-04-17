@@ -167,8 +167,23 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 amrex::Real Aabssqp = 0._rt;
+                amrex::Real AabssqDxp = 0._rt;
+                amrex::Real AabssqDyp = 0._rt;
+                // if (use_laser) {
+                //     // Its important that Aabssqp is first fully gathered and not used
+                //     // directly per cell like AabssqDxp and AabssqDyp
+                //     doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, AabssqDxp, AabssqDyp,
+                //                                      arr, cache_idx[4],
+                //                                      dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                //     Aabssqp *= a_laser_fac * q_mass_ratio * q_mass_ratio;
+                //     AabssqDxp *= a_laser_fac * a_clight;
+                //     AabssqDyp *= a_laser_fac * a_clight;
+                // }
+
                 if (use_laser) {
                     Aabssqp = ptd.rdata(PlasmaIdx::aabssq)[ip];
+                    AabssqDxp = ptd.rdata(PlasmaIdx::aabssqdx)[ip];
+                    AabssqDyp = ptd.rdata(PlasmaIdx::aabssqdy)[ip];
                 }
 
                 // calculate gamma/psi for plasma particles
@@ -195,23 +210,23 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
                         const amrex::Real ExmBy_v = arr(i, j, cache_idx[2]);
                         const amrex::Real EypBx_v = arr(i, j, cache_idx[3]);
 
-                        amrex::Real AabssqDxp = 0._rt;
-                        amrex::Real AabssqDyp = 0._rt;
-                        // Rename variables for NVCC lambda capture to work
-                        [[maybe_unused]] auto clight = a_clight;
-                        [[maybe_unused]] auto laser_fac = a_laser_fac;
-                        if constexpr (use_laser) {
-                            // avoid going outside of domain
-                            if (shape_x * shape_y != 0._rt) {
-                                // need extra cells for gathering the laser
-                                const amrex::Real xp1y00 = arr(i+1, j  , cache_idx[4]);
-                                const amrex::Real xm1y00 = arr(i-1, j  , cache_idx[4]);
-                                const amrex::Real x00yp1 = arr(i  , j+1, cache_idx[4]);
-                                const amrex::Real x00ym1 = arr(i  , j-1, cache_idx[4]);
-                                AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * clight;
-                                AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * clight;
-                            }
-                        }
+                        // amrex::Real AabssqDxp = 0._rt;
+                        // amrex::Real AabssqDyp = 0._rt;
+                        // // Rename variables for NVCC lambda capture to work
+                        // [[maybe_unused]] auto clight = a_clight;
+                        // [[maybe_unused]] auto laser_fac = a_laser_fac;
+                        // if constexpr (use_laser) {
+                        //     // avoid going outside of domain
+                        //     if (shape_x * shape_y != 0._rt) {
+                        //         // need extra cells for gathering the laser
+                        //         const amrex::Real xp1y00 = arr(i+1, j  , cache_idx[4]);
+                        //         const amrex::Real xm1y00 = arr(i-1, j  , cache_idx[4]);
+                        //         const amrex::Real x00yp1 = arr(i  , j+1, cache_idx[4]);
+                        //         const amrex::Real x00ym1 = arr(i  , j-1, cache_idx[4]);
+                        //         AabssqDxp = (xp1y00-xm1y00) * 0.5_rt * dx_inv * laser_fac * clight;
+                        //         AabssqDyp = (x00yp1-x00ym1) * 0.5_rt * dy_inv * laser_fac * clight;
+                        //     }
+                        // }
 
                         amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), charge_density_mu0 * (
                             - shape_x * shape_y * (

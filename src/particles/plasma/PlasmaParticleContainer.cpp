@@ -584,6 +584,12 @@ IonizationModule (const int lev,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = 1._rt;
 
+                if (comps.use_laser) {
+                    ptd_elec.rdata(PlasmaIdx::aabssq)[ip] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[ip] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[ip] = 0._rt;
+                }
+
                 if (comps.use_temp_slice) {
                     ptd_elec.rdata(PlasmaIdx::x_prev + comps.offset_temp)[pidx] =
                         ptd_ion.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
@@ -849,6 +855,12 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = uy;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = psi;
 
+                if (comps.use_laser) {
+                    ptd_elec.rdata(PlasmaIdx::aabssq)[ip] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[ip] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[ip] = 0._rt;
+                }
+
                 if (comps.use_temp_slice) {
                     ptd_elec.rdata(PlasmaIdx::x_prev + comps.offset_temp)[pidx] =
                         ptd_ion.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
@@ -927,12 +939,16 @@ GatherLaser (const int lev,
                 const amrex::Real yp = ptd.rdata(PlasmaIdx::y)[ip];
 
                 amrex::Real Aabssqp = 0._rt;
+                amrex::Real AabssqDxp = 0._rt;
+                amrex::Real AabssqDyp = 0._rt;
                 doLaserGatherShapeN<depos_order.value>(xp, yp,
-                    Aabssqp, slice_arr, aabs_comp,
+                    Aabssqp, AabssqDxp, AabssqDyp, slice_arr, aabs_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 Aabssqp *= laser_norm_ion;
 
                 ptd.rdata(PlasmaIdx::aabssq)[ip] = Aabssqp;
+                ptd.rdata(PlasmaIdx::aabssqdx)[ip] = AabssqDxp;
+                ptd.rdata(PlasmaIdx::aabssqdy)[ip] = AabssqDyp;
             });
     }
 }
