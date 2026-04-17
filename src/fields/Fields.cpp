@@ -624,6 +624,9 @@ Fields::Copy (const int current_N_level, const int i_slice, FieldDiagnosticData&
                 });
         }
     }
+
+    // sync before m_rel_z_vec is written to again by the next Copy
+    amrex::Gpu::streamSynchronize();
 }
 
 void
