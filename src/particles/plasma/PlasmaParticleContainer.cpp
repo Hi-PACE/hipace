@@ -887,6 +887,35 @@ LaserIonization (const int islice,
 
 void
 PlasmaParticleContainer::
+ResetPositions ()
+{
+    HIPACE_PROFILE("PlasmaParticleContainer::ResetPositions()");
+
+    AMREX_ALWAYS_ASSERT(m_is_on_temp_slice);
+    m_is_on_temp_slice = false;
+
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        // loading the data
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
+        const auto comps = m_comps;
+        AMREX_ALWAYS_ASSERT(m_comps.use_temp_slice);
+
+        // Use OMP ParallelFor to use multiple threads when running on CPU
+        omp::ParallelFor(
+            pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (int ip) {
+                if (!ptd.id(ip).is_valid()) return;
+
+                ptd.rdata(PlasmaIdx::x)[ip] = ptd.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
+                ptd.rdata(PlasmaIdx::y)[ip] = ptd.rdata(PlasmaIdx::y_prev + comps.offset_temp)[ip];
+            });
+    }
+}
+
+void
+PlasmaParticleContainer::
 GatherLaser (const int lev,
              const amrex::Geometry& geom,
              const Fields& fields)

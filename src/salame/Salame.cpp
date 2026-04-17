@@ -182,12 +182,14 @@ SalameModule (Hipace* hipace, const int n_iter, const bool do_advance, int& last
 
             hipace->ExplicitMGSolveBxBy(lev, WhichSlice::This);
         }
+
+        if (hipace->m_N_level > 1) {
+            // tag to prev slice for next push
+            hipace->m_multi_plasma.TagByLevel(current_N_level, hipace->m_3D_geom, true);
+        }
     }
 
-    if (hipace->m_N_level > 1) {
-        // tag to prev slice for push
-        hipace->m_multi_plasma.TagByLevel(current_N_level, hipace->m_3D_geom, true);
-    }
+    hipace->m_multi_plasma.ResetPositions();
 }
 
 

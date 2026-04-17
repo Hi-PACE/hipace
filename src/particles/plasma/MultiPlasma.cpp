@@ -134,6 +134,14 @@ MultiPlasma::AdvanceParticles (
 }
 
 void
+MultiPlasma::ResetPositions ()
+{
+    for (int i=0; i<m_nplasmas; i++) {
+        m_all_plasmas[i].ResetPositions();
+    }
+}
+
+void
 MultiPlasma::GatherLaser (int lev, amrex::Geometry const& gm, const Fields & fields)
 {
     for (int i=0; i<m_nplasmas; i++) {

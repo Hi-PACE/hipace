@@ -52,7 +52,6 @@ ExplicitDeposition (PlasmaParticleContainer& plasma, Fields& fields,
         const amrex::Real a_clight = pc.c;
         const amrex::Real clight_inv = 1._rt/pc.c;
         // The laser a0 is always normalized
-        const amrex::Real a_laser_fac = (pc.m_e/pc.q_e) * (pc.m_e/pc.q_e);
         const amrex::Real charge_invvol_mu0 = plasma.m_charge * invvol * pc.mu0;
         const amrex::Real charge_mass_ratio = plasma.m_charge / plasma.m_mass;
 

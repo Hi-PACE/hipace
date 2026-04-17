@@ -205,6 +205,8 @@ public:
                           const MultiLaser& laser,
                           const amrex::Real background_density_SI);
 
+    /** Reset positions after push to temp slice */
+    void ResetPositions ();
 
     /** Gather Laser field to the particles
      *

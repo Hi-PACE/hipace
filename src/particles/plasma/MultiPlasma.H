@@ -93,6 +93,9 @@ public:
         const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev,
         int const current_N_level);
 
+    /** \brief Reset positions after push to temp slice */
+    void ResetPositions ();
+
     /** \brief Gather Laser field to the particles
      *
      * \param[in] lev MR level

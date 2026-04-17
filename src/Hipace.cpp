@@ -1176,6 +1176,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } // end of predictor corrector loop
 
+    m_multi_plasma.ResetPositions();
+
     if (relative_Bfield_error > 10. && m_predcorr_B_error_tolerance > 0.)
     {
         amrex::Print() << "WARNING: Predictor corrector loop may have diverged!\n"
