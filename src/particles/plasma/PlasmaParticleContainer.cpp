@@ -182,52 +182,56 @@ PlasmaParticleContainer::ReadParameters ()
 void
 PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 {
-    SetArena(amrex::The_Arena());
+    if (!m_components_allocated) {
+        m_components_allocated = true;
 
-    m_comps.use_laser = Hipace::m_use_laser;
-    m_comps.use_temp_slice = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame()
-        || !Hipace::m_explicit;
-    m_comps.use_ab5_push = m_use_ab5_push;
-    m_comps.use_ion_level = m_can_ionize;
+        SetArena(amrex::The_Arena());
 
-    int num_real_comps = 0;
+        m_comps.use_laser = Hipace::m_use_laser;
+        m_comps.use_temp_slice = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame()
+            || !Hipace::m_explicit;
+        m_comps.use_ab5_push = m_use_ab5_push;
+        m_comps.use_ion_level = m_can_ionize;
 
-    for (int j = 0; j < PlasmaIdx::real_nattribs; ++j) {
-        AddRealComp();
-        ++num_real_comps;
-    }
+        int num_real_comps = 0;
 
-    if (m_comps.use_laser) {
-        for (int j = 0; j < PlasmaIdx::real_nattribs_laser; ++j) {
+        for (int j = 0; j < PlasmaIdx::real_nattribs; ++j) {
             AddRealComp();
             ++num_real_comps;
         }
-    }
 
-    if (m_comps.use_temp_slice) {
-        m_comps.offset_temp = num_real_comps;
-        for (int j = 0; j < PlasmaIdx::real_nattribs_temp_slice; ++j) {
-            AddRealComp();
-            ++num_real_comps;
+        if (m_comps.use_laser) {
+            for (int j = 0; j < PlasmaIdx::real_nattribs_laser; ++j) {
+                AddRealComp();
+                ++num_real_comps;
+            }
         }
-    }
 
-    if (m_comps.use_ab5_push) {
-        m_comps.offset_ab5 = num_real_comps;
-        for (int j = 0; j < PlasmaIdx::real_nattribs_ab5_push; ++j) {
-            AddRealComp();
-            ++num_real_comps;
+        if (m_comps.use_temp_slice) {
+            m_comps.offset_temp = num_real_comps;
+            for (int j = 0; j < PlasmaIdx::real_nattribs_temp_slice; ++j) {
+                AddRealComp();
+                ++num_real_comps;
+            }
         }
-    }
 
-    if (m_comps.use_ion_level) {
-        for (int j = 0; j < PlasmaIdx::int_nattribs_ion_level; ++j) {
-            AddIntComp();
+        if (m_comps.use_ab5_push) {
+            m_comps.offset_ab5 = num_real_comps;
+            for (int j = 0; j < PlasmaIdx::real_nattribs_ab5_push; ++j) {
+                AddRealComp();
+                ++num_real_comps;
+            }
         }
-    }
 
-    reserveData();
-    resizeData();
+        if (m_comps.use_ion_level) {
+            for (int j = 0; j < PlasmaIdx::int_nattribs_ion_level; ++j) {
+                AddIntComp();
+            }
+        }
+
+        reserveData();
+        resizeData();
+    }
 
     if (!m_read_fine_patch) {
         m_read_fine_patch = true;

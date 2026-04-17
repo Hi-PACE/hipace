@@ -308,6 +308,7 @@ public:
     bool m_use_ab5_push = false;
     PlasmaComps m_comps;
     bool m_is_on_temp_slice = false;
+    bool m_components_allocated = false;
 
     // ionization:
 
