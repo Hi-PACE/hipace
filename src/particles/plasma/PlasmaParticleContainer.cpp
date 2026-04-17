@@ -585,9 +585,9 @@ IonizationModule (const int lev,
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = 1._rt;
 
                 if (comps.use_laser) {
-                    ptd_elec.rdata(PlasmaIdx::aabssq)[ip] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[ip] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[ip] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[pidx] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[pidx] = 0._rt;
                 }
 
                 if (comps.use_temp_slice) {
@@ -856,9 +856,9 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = psi;
 
                 if (comps.use_laser) {
-                    ptd_elec.rdata(PlasmaIdx::aabssq)[ip] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[ip] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[ip] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[pidx] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[pidx] = 0._rt;
                 }
 
                 if (comps.use_temp_slice) {
@@ -914,8 +914,10 @@ GatherLaser (const int lev,
         const auto ptd = pti.GetParticleTile().getParticleTileData();
         const bool can_ionize = m_can_ionize;
 
-        const amrex::Real laser_norm = (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass)
+        const amrex::Real laser_norm_qm = (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass)
             * (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass);
+        const amrex::Real laser_norm_c = phys_const.c * (phys_const.m_e/phys_const.q_e)
+            * (phys_const.m_e/phys_const.q_e);
 
         // Use OMP ParallelFor to use multiple threads when running on CPU
         omp::ParallelFor(
@@ -929,10 +931,10 @@ GatherLaser (const int lev,
                 // only push plasma particles on their according MR level
                 if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
-                amrex::Real laser_norm_ion = laser_norm;
+                amrex::Real laser_norm_qm_ion = laser_norm_qm;
                 if (can_ionize) {
                     const amrex::Real p_ion_lev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
-                    laser_norm_ion *= p_ion_lev * p_ion_lev;
+                    laser_norm_qm_ion *= p_ion_lev * p_ion_lev;
                 }
 
                 const amrex::Real xp = ptd.rdata(PlasmaIdx::x)[ip];
@@ -944,7 +946,9 @@ GatherLaser (const int lev,
                 doLaserGatherShapeN<depos_order.value>(xp, yp,
                     Aabssqp, AabssqDxp, AabssqDyp, slice_arr, aabs_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                Aabssqp *= laser_norm_ion;
+                Aabssqp *= laser_norm_qm_ion;
+                AabssqDxp *= laser_norm_c;
+                AabssqDyp *= laser_norm_c;
 
                 ptd.rdata(PlasmaIdx::aabssq)[ip] = Aabssqp;
                 ptd.rdata(PlasmaIdx::aabssqdx)[ip] = AabssqDxp;
