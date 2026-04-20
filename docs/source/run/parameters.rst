@@ -1172,6 +1172,16 @@ Field diagnostics
     but the charge density from every plasma species will be deposited into individual fields
     accessible as ``rho_<plasma name>`` in ``diagnostic.field_data``.
 
+* ``hipace.deposit_n`` (`bool`) optional (default `0`)
+    Whether the number density of each plasma species should be deposited so that it is available as a diagnostic.
+    If ``n_<plasma name>`` is explicitly mentioned in ``diagnostic.field_data``, then the default will become `1`.
+
+* ``hipace.deposit_n_ion_levels`` (`bool`) optional (default `0`)
+    This option works similarly to ``hipace.deposit_rho_individual``, but the number density will
+    be split according to the ionization level. Every plasma species that is ionizable will be
+    deposited into individual fields accessible as ``n_<plasma name>_ionlev_<ionization level>``
+    in ``diagnostic.field_data``.
+
 * ``hipace.deposit_temp_individual`` (`bool`) optional (default `0`)
     The weights, momentum, and their squares from every plasma species
     will be deposited into individual fields accessible as ``w``, ``ux_<plasma name>`` or
@@ -1322,7 +1332,7 @@ Whether the energy loss due to classical radiation reaction of beam particles is
     In normalized units, `hipace.background_density_SI` must be specified.
 
 Spin tracking
--------------
+^^^^^^^^^^^^^
 
 Track the spin of each beam particle as it is rotated by the electromagnetic fields using the
 Thomas-Bargmann-Michel-Telegdi (TBMT) model, see
@@ -1341,6 +1351,30 @@ or beam in-situ diagnostic as ``[sx], [sx^2], [sy], [sy^2], [sz], [sz^2]``.
 * ``<beam name> or beams.spin_anom`` (`bool`) optional (default `0.00115965218128`)
     The anomalous magnetic moment. The default value is the moment for electrons.
 
+Grid Ionization
+^^^^^^^^^^^^^^^
+
+For weak laser pulses that ionize neutral gas to make a plasma channel but do not form an electron
+wake, the ionization fraction and resulting electron temperature can be computed directly on the
+grid without using plasma particles. This results in significantly faster computation and eliminates
+statistical noise. However, ions and electrons remain stationary with this approach.
+
+To use this feature, start with a normal input script that contains all the plasma species with
+plasma laser ionization fully set up. Then set the particles per cell for all plasmas to zero
+``<plasma name>.ppc = 0 0`` and add all the ionizable plasma species to
+``grid_ionization.plasma_names``. The ``ionization_product`` species of the plasmas will be
+ignored and instead generic electrons will be produced by grid ionization.
+
+When enabled, the fields ``grid_ionization_w_elec``, ``grid_ionization_ux^2_elec``,
+``grid_ionization_uy^2_elec``, ``grid_ionization_uz_elec``, ``grid_ionization_uz^2_elec``
+and ``grid_ionization_w_<plasma name>_<ion level>`` will be available in the diagnostic to
+compute the electron temperature and ionization fraction. Additionally, the refractive index
+chi is updated by the ionized electrons.
+
+* ``grid_ionization.plasma_names`` (list of `strings`) optional (default `no_gridplasma`)
+    Names of existing plasma species that will be modeled by the grid instead of particles.
+    All of these species should be atoms with laser ionization enabled and with
+    zero particles per cell ``ppc = 0 0``.
 
 Parser
 ------

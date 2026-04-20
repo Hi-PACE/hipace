@@ -83,6 +83,7 @@ Hipace::Hipace () :
     m_adaptive_time_step.ReadParameters(m_multi_beam.get_nbeams());
     m_multi_laser.ReadParameters();
     m_grid_current.ReadParameters();
+    m_grid_ionization.ReadParameters();
     m_diags.ReadParameters(m_N_level, m_multi_laser.UseLaser());
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.ReadParameters();
@@ -129,6 +130,8 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    queryWithParser(pph, "deposit_n", m_deposit_n);
+    queryWithParser(pph, "deposit_n_ion_levels", m_deposit_n_ion_levels);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
     queryWithParser(pph, "temperature_depos_order", m_temperature_depos_order);
@@ -290,6 +293,8 @@ Hipace::InitData ()
 #endif
 
     m_multi_laser.InitData();
+
+    m_multi_plasma.InitIonization(m_3D_geom);
 
     for (int lev=0; lev<m_N_level; ++lev) {
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
@@ -551,6 +556,11 @@ Hipace::Evolve ()
         // Only reset plasma after receiving time step, to use proper density
         m_multi_plasma.InitData(m_slice_ba, m_slice_dm, m_slice_geom, m_3D_geom);
 
+        // Initialize grid inoization after multi plasma
+        for (int lev=0; lev<m_N_level; ++lev) {
+            m_grid_ionization.InitData(m_fields, m_multi_plasma, m_slice_geom[lev], lev);
+        }
+
         m_multi_laser.SetInitialChi(m_multi_plasma);
 
         // deposit neutralizing background
@@ -710,7 +720,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
-                m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual,
+                true, true, m_deposit_n || m_deposit_n_ion_levels, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
@@ -718,7 +729,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
-                m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual,
+                m_use_laser, true,m_deposit_n || m_deposit_n_ion_levels, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
@@ -734,6 +746,12 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // Psi ExmBy EypBx Ez Bz solve
     m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
+
+    // Calculate grid ionization and update chi
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_grid_ionization.IonizeGrid(m_fields, m_multi_plasma, m_multi_laser, m_slice_geom[lev],
+            lev, m_multi_laser.GetLaserGeom());
+    }
 
     // Advance laser slice by 1 step using chi
     // no MR for laser
@@ -864,7 +882,7 @@ Hipace::CalculateEzNext (const int current_N_level, const bool is_first_step)
 
         // deposit plasma jx and jy on the next slice
         m_multi_plasma.DepositCurrent(m_fields,
-            WhichSlice::Next, true, false, false, false, false, m_3D_geom, lev);
+            WhichSlice::Next, true, false, false, false, false, false, m_3D_geom, lev);
     }
 
     m_fields.SolvePoissonEz(m_3D_geom, current_N_level, WhichSlice::Next);
@@ -1124,7 +1142,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
         for (int lev=0; lev<current_N_level; ++lev) {
             // plasmas deposit jx jy to next temp slice
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::Next,
-                true, false, false, false, false, m_3D_geom, lev);
+                true, false, false, false, false, false, m_3D_geom, lev);
 
             // beams deposit jx jy to the next slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
