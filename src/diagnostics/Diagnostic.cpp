@@ -234,7 +234,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             }
             break;
             case DiagnosticData::diag_type::histogram: {
-                getWithParser(pp, "hist_species_name", fd.m_hist_species_name);
+                getWithParser(pp, "hist_species_names", fd.m_hist_species_names);
                 getWithParser(pp, "hist_num_bins", fd.m_hist_num_bins);
                 getWithParser(pp, "hist_bins_lo", fd.m_hist_bins_lo);
                 getWithParser(pp, "hist_bins_hi", fd.m_hist_bins_hi);

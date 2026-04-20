@@ -57,7 +57,7 @@ struct DiagnosticData
 
     // histogram
 
-    std::string m_hist_species_name = "";
+    amrex::Vector<std::string> m_hist_species_names;
     int m_hist_num_dims = 1;
     amrex::Vector<int> m_hist_num_bins;
     amrex::Vector<amrex::Real> m_hist_bins_lo;

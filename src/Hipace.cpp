@@ -1329,17 +1329,16 @@ Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
                     m_fields.Copy(current_N_level, islice, fd, m_3D_geom, m_multi_laser);
                     break;
                 case DiagnosticData::diag_type::histogram:
-                    for (auto& plasma : m_multi_plasma.m_all_plasmas) {
-                        if (plasma.m_name == fd.m_hist_species_name) {
-                            HistogramDeposition(plasma, fd);
-                            amrex::Gpu::dtoh_memcpy(
-                                fd.m_F_real.dataPtr() + fd.m_hist_gpu_fab.box().numPts() * (
-                                    islice - fd.m_F_real.box().smallEnd(2)
-                                ),
-                                fd.m_hist_gpu_fab.dataPtr(),
-                                sizeof(amrex::Real) * fd.m_hist_gpu_fab.box().numPts()
-                            );
-                        }
+                    for (auto& species_name : fd.m_hist_species_names) {
+                        auto& plasma = m_multi_plasma.GetPlasma(species_name);
+                        HistogramDeposition(plasma, fd);
+                        amrex::Gpu::dtoh_memcpy(
+                            fd.m_F_real.dataPtr() + fd.m_hist_gpu_fab.box().numPts() * (
+                                islice - fd.m_F_real.box().smallEnd(2)
+                            ),
+                            fd.m_hist_gpu_fab.dataPtr(),
+                            sizeof(amrex::Real) * fd.m_hist_gpu_fab.box().numPts()
+                        );
                     }
                     break;
             }
