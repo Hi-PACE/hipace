@@ -322,6 +322,8 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "";
+    /** If the runtime attributes of the AMReX particle container were already set up */
+    bool m_components_allocated = false;
 };
 
 /** \brief Iterator over boxes in a particle container */

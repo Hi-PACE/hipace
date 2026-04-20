@@ -182,18 +182,22 @@ PlasmaParticleContainer::ReadParameters ()
 void
 PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 {
-    SetArena(amrex::The_Arena());
+    if (!m_components_allocated) {
+        m_components_allocated = true;
 
-    for (int j = 0; j < PlasmaIdx::real_nattribs; ++j) {
-        AddRealComp();
+        SetArena(amrex::The_Arena());
+
+        for (int j = 0; j < PlasmaIdx::real_nattribs; ++j) {
+            AddRealComp();
+        }
+
+        for (int j = 0; j < PlasmaIdx::int_nattribs; ++j) {
+            AddIntComp();
+        }
+
+        reserveData();
+        resizeData();
     }
-
-    for (int j = 0; j < PlasmaIdx::int_nattribs; ++j) {
-        AddIntComp();
-    }
-
-    reserveData();
-    resizeData();
 
     if (!m_read_fine_patch) {
         m_read_fine_patch = true;
