@@ -17,6 +17,7 @@ jobs:
       # For macOS, Ninja is slower than the default:
       #CMAKE_GENERATOR: Ninja
       SETUPTOOLS_USE_DISTUTILS: stdlib
+      OMP_NUM_THREADS: 2
     steps:
     - uses: actions/checkout@v4
     - name: Brew Cache
@@ -82,6 +83,8 @@ jobs:
         brew install open-mpi --only-dependencies --force
         brew install open-mpi
         brew link open-mpi
+
+        brew install hdf5-mpi
 
         brew install pkg-config
 
