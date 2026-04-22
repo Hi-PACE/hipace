@@ -106,10 +106,13 @@ jobs:
         export CCACHE_MAXSIZE=100M
         export CCACHE_SLOPPINESS=time_macros
         ccache -z
+        export CXXFLAGS="-g -fsanitize=undefined,address -fno-sanitize-recover=all"
 
         cmake -S . -B build             \
           -DCMAKE_VERBOSE_MAKEFILE=ON   \
           -DHiPACE_openpmd_internal=OFF \
+          -DAMReX_BOUND_CHECK=YES       \
+          -DAMReX_ASSERTIONS=YES        \
           -DHiPACE_PRECISION=DOUBLE
         cmake --build build -j 2
 
@@ -118,4 +121,6 @@ jobs:
 
     - name: test HiPACE++
       run: |
+        export "ASAN_OPTIONS=detect_leaks=0"
+        export UBSAN_OPTIONS=print_stacktrace=1
         ctest --test-dir build --output-on-failure
