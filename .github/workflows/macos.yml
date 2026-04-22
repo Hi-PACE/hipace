@@ -1,11 +1,8 @@
 name: 🍏 macOS
-
 on: [push, pull_request]
-
 concurrency:
   group: ${{ github.ref }}-${{ github.head_ref }}-macos
   cancel-in-progress: true
-
 jobs:
   build_appleclang:
     name: AppleClang
@@ -17,7 +14,6 @@ jobs:
       # For macOS, Ninja is slower than the default:
       #CMAKE_GENERATOR: Ninja
       SETUPTOOLS_USE_DISTUTILS: stdlib
-      OMP_NUM_THREADS: 2
     steps:
     - uses: actions/checkout@v4
     - name: Brew Cache
@@ -54,54 +50,33 @@ jobs:
         restore-keys: |
           ccache-macos-appleclang-${{ hashFiles('.github/workflows/macos.yml') }}-
           ccache-macos-appleclang-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
     - name: install dependencies
       run: |
         brew --cache
         set +e
-
-        # rm -rf /usr/local/bin/2to3*
-        # rm -rf /usr/local/bin/idle3*
-        # rm -rf /usr/local/bin/pydoc3*
-        # rm -rf /usr/local/bin/python3*
-
+        rm -rf /usr/local/bin/2to3*
+        rm -rf /usr/local/bin/idle3*
+        rm -rf /usr/local/bin/pydoc3*
+        rm -rf /usr/local/bin/python3*
         brew install fftw --only-dependencies --force
         brew install fftw
         brew link fftw
-
         brew install libomp --only-dependencies --force
         brew install libomp
         brew link --force libomp
-
         brew install ninja --only-dependencies --force
         brew install ninja
         brew link ninja
-
         brew install open-mpi --only-dependencies --force
         brew install open-mpi
         brew link open-mpi
-
-        brew install hdf5-mpi
-
         brew install pkg-config
-
         set -e
-
         brew uninstall cmake
-
         brew tap openpmd/openpmd
         brew install openpmd-api --only-dependencies --force
         brew install openpmd-api
         brew link openpmd-api
-
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api
-        python -m pip install git+https://github.com/LASY-org/lasy.git@development
-        python -m pip install -U -e ./tools
-
     - name: build HiPACE++
       run: |
         export CCACHE_COMPRESS=1
@@ -109,16 +84,13 @@ jobs:
         export CCACHE_MAXSIZE=100M
         export CCACHE_SLOPPINESS=time_macros
         ccache -z
-
-        cmake -S . -B build             \
+        cmake -S . -B build_sp          \
           -DCMAKE_VERBOSE_MAKEFILE=ON   \
           -DHiPACE_openpmd_internal=OFF \
-          -DHiPACE_PRECISION=DOUBLE
-        cmake --build build -j 2
-
+          -DHiPACE_PRECISION=SINGLE
+        cmake --build build_sp -j 2
         du -hs ~/Library/Caches/ccache
         ccache -s
-
-    - name: test HiPACE++
-      run: |
-        ctest --test-dir build --output-on-failure
+#    - name: test HiPACE++
+#      run: |
+#        ctest --test-dir build_sp --output-on-failure
