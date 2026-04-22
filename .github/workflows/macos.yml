@@ -98,15 +98,15 @@ jobs:
         export CCACHE_SLOPPINESS=time_macros
         ccache -z
 
-        cmake -S . -B build_sp          \
+        cmake -S . -B build             \
           -DCMAKE_VERBOSE_MAKEFILE=ON   \
           -DHiPACE_openpmd_internal=OFF \
-          -DHiPACE_PRECISION=SINGLE
-        cmake --build build_sp -j 2
+          -DHiPACE_PRECISION=DOUBLE
+        cmake --build build -j 2
 
         du -hs ~/Library/Caches/ccache
         ccache -s
 
-#    - name: test HiPACE++
-#      run: |
-#        ctest --test-dir build_sp --output-on-failure
+    - name: test HiPACE++
+      run: |
+        ctest --test-dir build --output-on-failure
