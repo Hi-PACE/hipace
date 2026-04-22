@@ -108,9 +108,9 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
     if (mesh.geometry() == openPMD::Mesh::Geometry::cartesian) {
         m_profile_type = 1;
 
-        idx_perm[0] = axis_labels_map.count("x") > 0 ? axis_labels_map["x"] : -1;
-        idx_perm[1] = axis_labels_map.count("y") > 0 ? axis_labels_map["y"] : -1;
-        idx_perm[2] = axis_labels_map.count("z") > 0 ? axis_labels_map["z"] : -1;
+        idx_perm[0] = axis_labels_map.contains("x") ? axis_labels_map["x"] : -1;
+        idx_perm[1] = axis_labels_map.contains("y") ? axis_labels_map["y"] : -1;
+        idx_perm[2] = axis_labels_map.contains("z") ? axis_labels_map["z"] : -1;
 
         axis_labels_map.erase("x");
         axis_labels_map.erase("y");
@@ -127,8 +127,8 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
             strides.erase(strides.begin());
         }
 
-        idx_perm[0] = axis_labels_map.count("r") > 0 ? axis_labels_map["r"] : -1;
-        idx_perm[1] = axis_labels_map.count("z") > 0 ? axis_labels_map["z"] : -1;
+        idx_perm[0] = axis_labels_map.contains("r") ? axis_labels_map["r"] : -1;
+        idx_perm[1] = axis_labels_map.contains("z") ? axis_labels_map["z"] : -1;
         idx_perm[2] = -1;
 
         axis_labels_map.erase("r");

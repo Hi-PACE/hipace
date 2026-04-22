@@ -115,7 +115,7 @@ Diagnostic::needsRhoIndividual () const {
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
             // we don't know the names of all the plasmas here so just look for "rho_..."
-            if (c.find("rho_") == 0) {
+            if (c.starts_with("rho_")) {
                 return true;
             }
         }
@@ -132,9 +132,9 @@ Diagnostic::needsTempIndividual () const {
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
             // we don't know the names of all the plasmas here so just look for "ux_..."
-            if (c.find("w_") == 0 ||
-                c.find("ux_") == 0 || c.find("uy_") == 0 || c.find("uz_") == 0 ||
-                c.find("ux^2_") == 0 || c.find("uy^2_") == 0 || c.find("uz^2_") == 0) {
+            if (c.starts_with("w_") ||
+                c.starts_with("ux_") || c.starts_with("uy_") || c.starts_with("uz_") ||
+                c.starts_with("ux^2_") || c.starts_with("uy^2_") || c.starts_with("uz^2_")) {
                 return true;
             }
         }
@@ -204,14 +204,14 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
 
         std::string base_geom_name = "level_0";
 
-        if (diag_name_to_default_geometry.count(fd.m_diag_name) > 0) {
+        if (diag_name_to_default_geometry.contains(fd.m_diag_name)) {
             base_geom_name = diag_name_to_default_geometry.at(fd.m_diag_name);
         }
 
         queryWithParserAlt(pp, "base_geometry", base_geom_name, ppd);
         DeprecatedInput(fd.m_diag_name, "level", "base_geometry");
 
-        if (geometry_name_to_geom_type.count(base_geom_name) > 0) {
+        if (geometry_name_to_geom_type.contains(base_geom_name)) {
             fd.m_base_geom_type = geometry_name_to_geom_type.at(base_geom_name);
             fd.m_level = geometry_name_to_level.at(base_geom_name);
         } else {
@@ -244,13 +244,13 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 is_global_comp_used[comp_name] = true;
                 // remove all components
                 comps_set.clear();
-            } else if (geometry_name_to_output_comps[base_geom_name].count(comp_name) > 0) {
+            } else if (geometry_name_to_output_comps[base_geom_name].contains(comp_name)) {
                 is_global_comp_used[comp_name] = true;
                 // insert requested component
                 comps_set.insert(comp_name);
-            } else if (comp_name.find("remove_") == 0 &&
-                       geometry_name_to_output_comps[base_geom_name].count(
-                       comp_name.substr(std::string("remove_").size(), comp_name.size())) > 0) {
+            } else if (comp_name.starts_with("remove_") &&
+                       geometry_name_to_output_comps[base_geom_name].contains(
+                       comp_name.substr(std::string("remove_").size(), comp_name.size()))) {
                 is_global_comp_used[comp_name] = true;
                 // remove requested component
                 comps_set.erase(comp_name.substr(std::string("remove_").size(), comp_name.size()));

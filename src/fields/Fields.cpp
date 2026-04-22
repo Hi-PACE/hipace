@@ -1430,7 +1430,7 @@ Fields::InSituComputeDiags (int step, int islice, const amrex::Geometry& geom3D,
     const int Bx = Comps[WhichSlice::This]["Bx"];
     const int By = Comps[WhichSlice::This]["By"];
     const int Bz = Comps[WhichSlice::This]["Bz"];
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Comps[WhichSlice::This].count("jz_beam") > 0,
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Comps[WhichSlice::This].contains("jz_beam"),
         "Must use explicit solver for field insitu diagnostic");
     const int jz_beam = Comps[WhichSlice::This]["jz_beam"];
 
