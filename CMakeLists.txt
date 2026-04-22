@@ -41,9 +41,9 @@ endif()
 
 # C++ Standard in Superbuilds #################################################
 #
-# This is the easiest way to push up a C++17 requirement for AMReX, PICSAR and
+# This is the easiest way to push up a C++20 requirement for AMReX and
 # openPMD-api until they increase their requirement.
-set_cxx17_superbuild()
+set_cxx20_superbuild()
 
 
 # CCache Support ##############################################################
@@ -143,8 +143,8 @@ target_include_directories(HiPACE PRIVATE
 # add sources
 add_subdirectory(src)
 
-# C++ properties: at least a C++17 capable compiler is needed
-target_compile_features(HiPACE PUBLIC cxx_std_17)
+# C++ properties: at least a C++20 capable compiler is needed
+target_compile_features(HiPACE PUBLIC cxx_std_20)
 set_target_properties(HiPACE PROPERTIES
     CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON
@@ -158,7 +158,7 @@ target_link_libraries(HiPACE PUBLIC HiPACE::thirdparty::FFT)
 # AMReX helper function: propagate CUDA specific target & source properties
 if(HiPACE_COMPUTE STREQUAL CUDA)
     setup_target_for_cuda_compilation(HiPACE)
-    target_compile_features(HiPACE PUBLIC cuda_std_17)
+    target_compile_features(HiPACE PUBLIC cuda_std_20)
     set_target_properties(HiPACE PROPERTIES
         CUDA_EXTENSIONS OFF
         CUDA_STANDARD_REQUIRED ON

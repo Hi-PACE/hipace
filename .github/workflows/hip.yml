@@ -52,7 +52,7 @@ jobs:
 
         cmake -S . -B build_sp \
           -DCMAKE_VERBOSE_MAKEFILE=ON \
-          -DAMReX_AMD_ARCH=gfx900     \
+          -DAMReX_AMD_ARCH=gfx90a     \
           -DHiPACE_COMPUTE=HIP        \
           -DHiPACE_MPI=ON             \
           -DHiPACE_PRECISION=SINGLE

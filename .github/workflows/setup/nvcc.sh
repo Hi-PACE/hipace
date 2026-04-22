@@ -41,15 +41,15 @@ echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x8
 
 sudo apt-get update
 sudo apt-get install -y          \
-    cuda-command-line-tools-11-8 \
-    cuda-compiler-11-8           \
-    cuda-cupti-dev-11-8          \
-    cuda-minimal-build-11-8      \
-    cuda-nvml-dev-11-8           \
-    cuda-nvtx-11-8               \
-    libcufft-dev-11-8            \
-    libcurand-dev-11-8
-sudo ln -s cuda-11.8 /usr/local/cuda
+    cuda-command-line-tools-12-2 \
+    cuda-compiler-12-2           \
+    cuda-cupti-dev-12-2          \
+    cuda-minimal-build-12-2      \
+    cuda-nvml-dev-12-2           \
+    cuda-nvtx-12-2               \
+    libcufft-dev-12-2            \
+    libcurand-dev-12-2
+sudo ln -s cuda-12.2 /usr/local/cuda
 
 # cmake-easyinstall
 #
