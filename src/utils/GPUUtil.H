@@ -109,6 +109,7 @@ struct Array3 {
 #endif
 
     template <class U>
+    // copy constructor, allow to convert from T to const T
     requires std::is_convertible_v<U*, T*>
     AMREX_GPU_HOST_DEVICE
     Array3 (const Array3<U>& rhs) noexcept
