@@ -240,10 +240,8 @@ SharedMemoryDeposition (int num_particles,
 
                         const int tile_id = (itile_x * ntile_y + itile_y);
 
-#ifdef AMREX_USE_OMP
-#pragma omp simd
-#endif
                         // deposit charge / current of all particles in this tile
+                        // cannot use SIMD here because particles might deposit into the same cell
                         for (int ip = a_offsets[tile_id]; ip < a_offsets[tile_id+1]; ++ip) {
                             do_deposit(a_indices[ip], ptd, field, idx_cache, idx_depos);
                         }
@@ -254,8 +252,8 @@ SharedMemoryDeposition (int num_particles,
     }
 #endif
     else {
-        // simple loop over particles, on CPU this only uses one thread
-        amrex::ParallelFor(num_particles,
+        // simple loop over particles, on CPU this only uses one thread and no SIMD
+        amrex::For(num_particles,
             [=] AMREX_GPU_DEVICE (int ip) {
                 if (is_valid(ip, ptd)) {
                     do_deposit(ip, ptd, field, idx_cache, idx_depos);

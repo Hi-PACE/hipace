@@ -44,9 +44,9 @@ MultiLaser::ReadParameters ()
     AMREX_ALWAYS_ASSERT(m_interp_order <= 3 && m_interp_order >= 0);
 
     bool mg_param_given = queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
-    mg_param_given += queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
-    mg_param_given += queryWithParser(pp, "MG_verbose", m_MG_verbose);
-    mg_param_given += queryWithParser(pp, "MG_average_rhs", m_MG_average_rhs);
+    mg_param_given = queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs) || mg_param_given;
+    mg_param_given = queryWithParser(pp, "MG_verbose", m_MG_verbose) || mg_param_given;
+    mg_param_given = queryWithParser(pp, "MG_average_rhs", m_MG_average_rhs) || mg_param_given;
 
     // Raise warning if user specifies MG parameters without using the MG solver
     if (mg_param_given && (m_solver_type != "multigrid")) {
