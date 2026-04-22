@@ -58,10 +58,10 @@ jobs:
         brew --cache
         set +e
 
-        rm -rf /usr/local/bin/2to3*
-        rm -rf /usr/local/bin/idle3*
-        rm -rf /usr/local/bin/pydoc3*
-        rm -rf /usr/local/bin/python3*
+        # rm -rf /usr/local/bin/2to3*
+        # rm -rf /usr/local/bin/idle3*
+        # rm -rf /usr/local/bin/pydoc3*
+        # rm -rf /usr/local/bin/python3*
 
         brew install fftw --only-dependencies --force
         brew install fftw
