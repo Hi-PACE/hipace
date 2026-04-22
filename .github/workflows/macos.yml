@@ -53,6 +53,10 @@ jobs:
         restore-keys: |
           ccache-macos-appleclang-${{ hashFiles('.github/workflows/macos.yml') }}-
           ccache-macos-appleclang-
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
     - name: install dependencies
       run: |
         brew --cache
