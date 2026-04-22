@@ -19,7 +19,7 @@ jobs:
 #   https://github.com/ComputationalRadiationPhysics/picongpu/blob/0.5.0/share/picongpu/dockerfiles/ubuntu-1604/Dockerfile
 #   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/
   build_nvcc:
-    name: NVCC 11.8 SP
+    name: NVCC 12.2 SP
     runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false
     env:
@@ -29,7 +29,7 @@ jobs:
 
     - name: install dependencies
       run: |
-        .github/workflows/setup/nvcc11.sh
+        .github/workflows/setup/nvcc.sh
 
     - name: CCache Cache
       uses: actions/cache@v4
@@ -52,7 +52,7 @@ jobs:
 
         cmake -S . -B build            \
           -DCMAKE_VERBOSE_MAKEFILE=ON  \
-          -DAMReX_CUDA_ARCH=6.0        \
+          -DAMReX_CUDA_ARCH=8.0        \
           -DHiPACE_COMPUTE=CUDA        \
           -DHiPACE_PRECISION=SINGLE    \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
