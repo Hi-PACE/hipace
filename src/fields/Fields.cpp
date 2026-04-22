@@ -779,13 +779,15 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
         [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             const bool i_is_changing = (i < box_len0);
-            const bool i_lo_edge = (!i_is_changing) && (!j);
-            const bool i_hi_edge = (!i_is_changing) && j;
-            const bool j_lo_edge = i_is_changing && (!j);
-            const bool j_hi_edge = i_is_changing && j;
+            const int i_is_changing_i = static_cast<int>(i_is_changing);
+            const int i_not_changing_i = static_cast<int>(!i_is_changing);
+            const int i_lo_edge = static_cast<int>(!i_is_changing && (j == 0));
+            const int i_hi_edge = static_cast<int>(!i_is_changing && (j != 0));
+            const int j_lo_edge = static_cast<int>(i_is_changing && (j == 0));
+            const int j_hi_edge = static_cast<int>(i_is_changing && (j != 0));
 
-            const int i_idx = box_lo0 + i_hi_edge*(box_len0-1) + i_is_changing*i;
-            const int j_idx = box_lo1 + j_hi_edge*(box_len1-1) + (!i_is_changing)*(i-box_len0);
+            const int i_idx = box_lo0 + i_hi_edge*(box_len0-1) + i_is_changing_i*i;
+            const int j_idx = box_lo1 + j_hi_edge*(box_len1-1) + i_not_changing_i*(i-box_len0);
 
             const amrex::Real i_idx_offset = i_idx + (- i_lo_edge + i_hi_edge) * offset;
             const amrex::Real j_idx_offset = j_idx + (- j_lo_edge + j_hi_edge) * offset;
@@ -793,7 +795,7 @@ SetDirichletBoundaries (Array2<amrex::Real> RHS, const amrex::Box& solver_size,
             const amrex::Real x = i_idx_offset * dx + offset0;
             const amrex::Real y = j_idx_offset * dy + offset1;
 
-            const amrex::Real dxdx = dx*dx*(!i_is_changing) + dy*dy*i_is_changing;
+            const amrex::Real dxdx = i_is_changing ? dy*dy : dx*dx;
 
             // atomic add because the corners of RHS get two values
             amrex::Gpu::Atomic::AddNoRet(&(RHS(i_idx, j_idx)),
