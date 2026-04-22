@@ -39,9 +39,10 @@ MultiPlasma::ReadParameters ()
 }
 
 void
-MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
-                       amrex::Vector<amrex::DistributionMapping> slice_dm,
-                       amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm)
+MultiPlasma::InitData (const amrex::Vector<amrex::BoxArray>& slice_ba,
+                       const amrex::Vector<amrex::DistributionMapping>& slice_dm,
+                       const amrex::Vector<amrex::Geometry>& slice_gm,
+                       const amrex::Vector<amrex::Geometry>& gm)
 {
     for (auto& plasma : m_all_plasmas) {
         // make it think there is only level 0
