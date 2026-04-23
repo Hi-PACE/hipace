@@ -244,6 +244,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 getWithParser(pp, "hist_num_bins", fd.m_hist_num_bins);
                 getWithParser(pp, "hist_bins_lo", fd.m_hist_bins_lo);
                 getWithParser(pp, "hist_bins_hi", fd.m_hist_bins_hi);
+                queryWithParser(pp, "hist_integrate_along_z", fd.m_hist_integrate_along_z);
 
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                     fd.m_hist_num_bins.size() == 1 || fd.m_hist_num_bins.size() == 2,
@@ -277,9 +278,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     {"x", "y", "z", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
 
                 fd.m_nfields = fd.m_hist_species_names.size();
-                for (auto& species_name : fd.m_hist_species_names) {
-                    fd.m_comps_output.push_back(species_name + "_" + fd.m_diag_name);
-                }
+                fd.m_comps_output = fd.m_hist_species_names;
 
                 fd.m_diag_coarsen[0] = 1;
                 fd.m_diag_coarsen[1] = 1;
@@ -366,7 +365,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
     // if there are multiple diagnostic objects with the same m_base_diag_type (colliding component
     // names), append the name of the diagnostic object to the component name in the output
     for (auto& fd : m_diag_data) {
-        if (1 < std::count_if(m_diag_data.begin(), m_diag_data.end(), [&] (auto& fd2) {
+        if (fd.m_base_diag_type == DiagnosticData::diag_type::histogram ||
+            1 < std::count_if(m_diag_data.begin(), m_diag_data.end(), [&] (auto& fd2) {
             return fd.m_base_diag_type == fd2.m_base_diag_type;
         })) {
             for (auto& comp_name : fd.m_comps_output) {
@@ -482,6 +482,9 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         }
         // trim the 3D box to slice box for slice IO
         TrimIOBox(fd.m_slice_dir, domain, diag_domain);
+        if (fd.m_hist_integrate_along_z) {
+            TrimIOBox(2, domain, diag_domain);
+        }
 
         domain.coarsen(fd.m_diag_coarsen);
 
