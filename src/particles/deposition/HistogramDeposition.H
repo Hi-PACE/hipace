@@ -8,6 +8,7 @@
 #ifndef HISTOGRAMDEPOSITION_H_
 #define HISTOGRAMDEPOSITION_H_
 
+#include "particles/beam/BeamParticleContainer.H"
 #include "particles/plasma/PlasmaParticleContainer.H"
 #include "fields/Fields.H"
 #include "utils/Constants.H"
@@ -15,11 +16,18 @@
 #include "diagnostics/Diagnostic.H"
 
 /** Make a histogram of plasma particles
- * \param[in] plasma species of which the current is deposited
+ * \param[in] plasma species of which the histogram is deposited
  * \param[in,out] fd diagnostic data
  */
 void
-HistogramDeposition (PlasmaParticleContainer& plasma, DiagnosticData& fd);
+HistogramDepositionPlasma (PlasmaParticleContainer& plasma, DiagnosticData& fd);
+
+/** Make a histogram of beam particles
+ * \param[in] beam species of which the histogram is deposited
+ * \param[in,out] fd diagnostic data
+ */
+void
+HistogramDepositionBeam (BeamParticleContainer& beam, DiagnosticData& fd);
 
 
 #endif //  HISTOGRAMDEPOSITION_H_

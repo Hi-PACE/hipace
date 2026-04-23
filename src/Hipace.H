@@ -365,7 +365,6 @@ private:
     amrex::Vector< CoulombCollision > m_all_collisions;
 
     void InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
-    void FillFieldDiagnostics (const int current_N_level, int islice);
     void FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void FlushDiagnostics ();

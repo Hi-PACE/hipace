@@ -814,8 +814,13 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // get laser insitu diagnostics
     m_multi_laser.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
-    // copy fields (and laser) to diagnostic array
-    FillFieldDiagnostics(current_N_level, islice);
+    // copy fields, laser, plasma and beam to diagnostic array
+    m_diags.FillDiagnostics(
+        islice, current_N_level,
+        m_fields, m_multi_laser,
+        m_multi_plasma, m_multi_beam,
+        m_3D_geom
+    );
 
     // plasma field ionization
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -1319,34 +1324,6 @@ Hipace::InitDiagnostics (const int step, const amrex::Real time, const bool is_l
 }
 
 void
-Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
-{
-    for (auto& fd : m_diags.getFieldData()) {
-        if (fd.m_has_output) {
-            switch (fd.m_base_diag_type) {
-                case DiagnosticData::diag_type::field:
-                case DiagnosticData::diag_type::laser:
-                    m_fields.Copy(current_N_level, islice, fd, m_3D_geom, m_multi_laser);
-                    break;
-                case DiagnosticData::diag_type::histogram:
-                    for (auto& species_name : fd.m_hist_species_names) {
-                        auto& plasma = m_multi_plasma.GetPlasma(species_name);
-                        HistogramDeposition(plasma, fd);
-                        amrex::Gpu::dtoh_memcpy(
-                            fd.m_F_real.dataPtr() + fd.m_hist_gpu_fab.box().numPts() * (
-                                islice - fd.m_F_real.box().smallEnd(2)
-                            ),
-                            fd.m_hist_gpu_fab.dataPtr(),
-                            sizeof(amrex::Real) * fd.m_hist_gpu_fab.box().numPts()
-                        );
-                    }
-                    break;
-            }
-        }
-    }
-}
-
-void
 Hipace::FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
@@ -1363,7 +1340,7 @@ Hipace::WriteDiagnostics (const int step, const amrex::Real time, const bool is_
 {
 #ifdef HIPACE_USE_OPENPMD
     if (m_diags.hasAnyFieldOutput(step, time, is_last_step)) {
-        m_openpmd_writer.WriteFieldDiagnostics(m_diags.getFieldData(),
+        m_openpmd_writer.WriteFieldDiagnostics(m_diags.getDiagData(),
             m_multi_laser, m_physical_time, step);
     }
 

@@ -15,6 +15,11 @@
 
 #include <vector>
 
+class Fields;
+class MultiBeam;
+class MultiLaser;
+class MultiPlasma;
+
 
 /** \brief This struct holds data for one field diagnostic on one MR level */
 struct DiagnosticData
@@ -31,7 +36,8 @@ struct DiagnosticData
      * Default is 0, meaning no output */
     utils::DiagPeriod m_output_period = "0";
     bool m_has_output = false; /**< if there is output to write */
-    amrex::Geometry m_geom_io; /**< Diagnostics geometry */
+    amrex::Geometry m_geom_io; /**< Diagnostics geometry of output data*/
+    amrex::Geometry m_realspace_geom; /**< Diagnostics geometry in simulation realspace */
     int m_output_slice_dir = -1;
 
     // field and laser
@@ -59,18 +65,18 @@ struct DiagnosticData
 
     amrex::Vector<std::string> m_hist_species_names;
     int m_hist_num_dims = 1;
+    bool m_hist_integrate_along_z = false;
     amrex::Vector<int> m_hist_num_bins;
     amrex::Vector<amrex::Real> m_hist_bins_lo;
     amrex::Vector<amrex::Real> m_hist_bins_hi;
-    amrex::Geometry m_hist_realspace_geom;
     amrex::FArrayBox m_hist_gpu_fab;
     // parser funcitons for histogram
     amrex::Parser m_hist_parser_q1;
-    amrex::ParserExecutor<8> m_hist_exe_q1;
+    amrex::ParserExecutor<9> m_hist_exe_q1;
     amrex::Parser m_hist_parser_q2;
-    amrex::ParserExecutor<8> m_hist_exe_q2;
+    amrex::ParserExecutor<9> m_hist_exe_q2;
     amrex::Parser m_hist_parser_w;
-    amrex::ParserExecutor<8> m_hist_exe_w;
+    amrex::ParserExecutor<9> m_hist_exe_w;
 };
 
 
@@ -90,7 +96,7 @@ public:
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
 
     /** \brief return data for all field diagnostics */
-    amrex::Vector<DiagnosticData>& getFieldData () { return m_diag_data; }
+    amrex::Vector<DiagnosticData>& getDiagData () { return m_diag_data; }
 
     /** \brief determines if a single field diagnostic has any output on in this time step
      *
@@ -181,6 +187,32 @@ public:
     void ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                          amrex::Geometry const& laser_geom, int output_step,
                          amrex::Real output_time, bool is_last_step);
+
+    /** \brief calculate where data from slice islice will go to using zeroth-order interpolation
+     * returns if this slice is needed and the destination slice index
+     *
+     * \param[in] fd diag data object
+     * \param[in] islice current slice
+     * \param[in] geom3d 3d domain used for the z direction
+     */
+    static std::pair<bool, int>
+    ReverseShapeFactor (const DiagnosticData& fd, int islice, const amrex::Geometry& geom3d);
+
+    /** \brief Fill diagnostic arrays with the simulation data available on the current slice
+     *
+     * \param[in] islice current slice
+     * \param[in] current_N_level number of MR levels active on the current slice
+     * \param[in] fields Fields object
+     * \param[in] lasers MultiLaser object
+     * \param[in] plasmas MultiPlasma object
+     * \param[in] beams MultiBeam object
+     * \param[in] field_geom geometry for all field MR levels
+     */
+    void
+    FillDiagnostics (int islice, int current_N_level,
+                     Fields& fields, MultiLaser& lasers,
+                     MultiPlasma& plasmas, MultiBeam& beams,
+                     const amrex::Vector<amrex::Geometry>& field_geom);
 
 private:
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */

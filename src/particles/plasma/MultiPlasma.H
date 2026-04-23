@@ -182,6 +182,16 @@ public:
         return m_all_plasmas[0];
     }
 
+    [[nodiscard]]
+    bool HasPlasma (const std::string& name) const {
+        for (auto& plasma_name : m_names) {
+            if (plasma_name == name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     amrex::Vector<PlasmaParticleContainer> m_all_plasmas; /**< contains all plasma containers */
     int m_nplasmas = 0; /**< number of plasma containers */
     amrex::Vector<std::string> m_names {"no_plasma"}; /**< names of all plasma containers */

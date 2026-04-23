@@ -9,6 +9,7 @@
 #include "Hipace.H"
 #include "utils/HipaceProfilerWrapper.H"
 #include "utils/DeprecatedInput.H"
+#include "particles/deposition/HistogramDeposition.H"
 #include <AMReX_ParmParse.H>
 
 #include <algorithm>
@@ -203,6 +204,11 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
         fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
 
+        amrex::Array<int,3> diag_coarsen_arr{1,1,1};
+        queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
+
+        queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
+
         switch (fd.m_base_diag_type) {
             case DiagnosticData::diag_type::field:
             case DiagnosticData::diag_type::laser: {
@@ -221,10 +227,6 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 }
                 fd.m_output_slice_dir = fd.m_slice_dir;
 
-                queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
-
-                amrex::Array<int,3> diag_coarsen_arr{1,1,1};
-                queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
                 if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1 || fd.m_slice_dir == 2) {
                     diag_coarsen_arr[fd.m_slice_dir] = 1;
                 }
@@ -251,27 +253,35 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     "number of values as hist_num_bins"
                 );
 
+                diag_coarsen_arr[0] = 1;
+                diag_coarsen_arr[1] = 1;
+                fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
+                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_diag_coarsen.min() >= 1,
+                    "Coarsening ratio must be >= 1");
+
                 std::string func1;
                 getWithParser(pp, "hist_function", func1);
-                fd.m_hist_exe_q1 = makeFunctionWithParser<8>(func1, fd.m_hist_parser_q1,
-                    {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+                fd.m_hist_exe_q1 = makeFunctionWithParser<9>(func1, fd.m_hist_parser_q1,
+                    {"x", "y", "z", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
 
                 if (fd.m_hist_num_dims == 2) {
                     std::string func2;
                     getWithParser(pp, "hist_function2", func2);
-                    fd.m_hist_exe_q2 = makeFunctionWithParser<8>(func2, fd.m_hist_parser_q2,
-                        {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+                    fd.m_hist_exe_q2 = makeFunctionWithParser<9>(func2, fd.m_hist_parser_q2,
+                        {"x", "y", "z", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
                 } else {
                     fd.m_output_slice_dir = 1;
                 }
 
-                std::string funcw = "ga_psi * w";
+                std::string funcw = "w";
                 queryWithParser(pp, "hist_weight", funcw);
-                fd.m_hist_exe_w = makeFunctionWithParser<8>(funcw, fd.m_hist_parser_w,
-                    {"x", "y", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+                fd.m_hist_exe_w = makeFunctionWithParser<9>(funcw, fd.m_hist_parser_w,
+                    {"x", "y", "z", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
 
-                fd.m_nfields = 1;
-                fd.m_comps_output.push_back(fd.m_diag_name);
+                fd.m_nfields = fd.m_hist_species_names.size();
+                for (auto& species_name : fd.m_hist_species_names) {
+                    fd.m_comps_output.push_back(species_name + "_" + fd.m_diag_name);
+                }
             }
             break;
         }
@@ -409,7 +419,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                 geom = laser_geom;
                 break;
             case DiagnosticData::diag_type::histogram:
-                // plasma is based on field level 0 geom
+                // particles are based on field level 0 geom
                 geom = field_geom[0];
                 break;
         }
@@ -425,6 +435,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                     domain.grow(Hipace::GetInstance().m_multi_laser.getSlices().nGrowVect());
                     break;
                 case DiagnosticData::diag_type::histogram:
+                    domain.grow(Hipace::GetInstance().m_fields.getSlices(0).nGrowVect());
                     break;
             }
         }
@@ -484,19 +495,20 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         if(fd.m_has_output) {
             HIPACE_PROFILE("Diagnostic::ResizeFDiagFAB()");
 
+            fd.m_realspace_geom = amrex::Geometry(domain, &diag_domain, geom.Coord());
+
             switch (fd.m_base_diag_type) {
                 case DiagnosticData::diag_type::field:
-                    fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
+                    fd.m_geom_io = fd.m_realspace_geom;
                     fd.m_F_real.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_real.setVal<amrex::RunOn::Host>(0);
                     break;
                 case DiagnosticData::diag_type::laser:
-                    fd.m_geom_io = amrex::Geometry(domain, &diag_domain, geom.Coord());
+                    fd.m_geom_io = fd.m_realspace_geom;
                     fd.m_F_complex.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_complex.setVal<amrex::RunOn::Host>({0,0});
                     break;
                 case DiagnosticData::diag_type::histogram: {
-                    fd.m_hist_realspace_geom = amrex::Geometry(domain, &diag_domain, geom.Coord());
                     amrex::Box hist_domain = domain;
                     amrex::RealBox hist_bounds = diag_domain;
                     hist_domain.setRange(0, 0, fd.m_hist_num_bins[0]);
@@ -516,7 +528,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
                     fd.m_F_real.resize(hist_domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_real.setVal<amrex::RunOn::Host>(0);
                     hist_domain.setRange(2, 0, 1);
-                    fd.m_hist_gpu_fab.resize(hist_domain, fd.m_nfields, amrex::The_Arena());
+                    fd.m_hist_gpu_fab.resize(hist_domain, 1, amrex::The_Arena());
                     fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0);
                 }
                 break;
@@ -538,6 +550,93 @@ Diagnostic::TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbo
         if (slice_dir < 2) {
             rbox_3d.setLo(slice_dir, mid - half_cell_size);
             rbox_3d.setHi(slice_dir, mid + half_cell_size);
+        }
+    }
+}
+
+std::pair<bool, int>
+Diagnostic::ReverseShapeFactor (const DiagnosticData& fd, int islice,
+                                const amrex::Geometry& geom3d)
+{
+    const amrex::Real poff_calc_z = GetPosOffset(2, geom3d, geom3d.Domain());
+    const amrex::Real poff_diag_z = GetPosOffset(2, fd.m_realspace_geom,
+                                                 fd.m_realspace_geom.Domain());
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        geom3d.CellSize(2) <= fd.m_realspace_geom.CellSize(2),
+        "Diagnostic cannot have a smaller cellsize in z than the simulation domain"
+    );
+
+    const amrex::Real z_pos = amrex::Real(islice) * geom3d.CellSize(2) + poff_calc_z;
+
+    if (fd.m_slice_dir == 2 || fd.m_hist_integrate_along_z) {
+        // integral along z
+        return {
+            fd.m_realspace_geom.ProbLo(2) <= z_pos && z_pos <= fd.m_realspace_geom.ProbHi(2),
+            fd.m_realspace_geom.Domain().smallEnd(2)
+        };
+    } else {
+        // zeroth order interpolation from simulation domain to diag
+        const int diag_slice = static_cast<int>(std::round(
+            (z_pos - poff_diag_z) * fd.m_realspace_geom.InvCellSize(2)));
+
+        const int calc_slice = static_cast<int>(std::round(
+            ((amrex::Real(diag_slice) * fd.m_realspace_geom.CellSize(2) + poff_diag_z)
+            - poff_calc_z) * geom3d.InvCellSize(2)));
+
+        return {
+            calc_slice == islice &&
+            fd.m_realspace_geom.Domain().smallEnd(2) <= diag_slice &&
+            diag_slice <= fd.m_realspace_geom.Domain().bigEnd(2),
+            diag_slice
+        };
+    }
+}
+
+void
+Diagnostic::FillDiagnostics (int islice, int current_N_level,
+                             Fields& fields, MultiLaser& lasers,
+                             MultiPlasma& plasmas, MultiBeam& beams,
+                             const amrex::Vector<amrex::Geometry>& field_geom)
+{
+    for (auto& fd : m_diag_data) {
+        if (!fd.m_has_output) {
+            continue;
+        }
+        switch (fd.m_base_diag_type) {
+            case DiagnosticData::diag_type::field:
+            case DiagnosticData::diag_type::laser:
+                fields.Copy(current_N_level, islice, fd, field_geom, lasers);
+                break;
+            case DiagnosticData::diag_type::histogram: {
+                auto [collect_data, dst_slice] = ReverseShapeFactor(fd, islice, field_geom[0]);
+                if (!collect_data) {
+                    break;
+                }
+                HIPACE_PROFILE("Diagnostic::HistogramDepositionCopy()");
+                for (int icomp = 0; icomp < fd.m_hist_species_names.size(); ++icomp) {
+                    const auto& species_name = fd.m_hist_species_names[icomp];
+                    amrex::Real* gpu_ptr = fd.m_hist_gpu_fab.dataPtr();
+                    amrex::Real* cpu_ptr = fd.m_F_real.dataPtr(icomp) +
+                        fd.m_hist_gpu_fab.numPts() * (dst_slice - fd.m_F_real.box().smallEnd(2));
+                    if (fd.m_hist_integrate_along_z) {
+                        amrex::Gpu::htod_memcpy_async(gpu_ptr, cpu_ptr,
+                            sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()
+                        );
+                    } else {
+                        fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0);
+                    }
+                    if (plasmas.HasPlasma(species_name)) {
+                        HistogramDepositionPlasma(plasmas.GetPlasma(species_name), fd);
+                    } else {
+                        HistogramDepositionBeam(beams.getBeam(species_name), fd);
+                    }
+                    amrex::Gpu::dtoh_memcpy_async(cpu_ptr, gpu_ptr,
+                        sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()
+                    );
+                }
+            }
+            break;
         }
     }
 }
