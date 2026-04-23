@@ -16,8 +16,8 @@ on:
       - development
 
 jobs:
-  linux_gcc_cxx17_omp_ompi:
-    name: GNU@7.5 C++17 OMP OMPI
+  linux_gcc_cxx20_omp_ompi:
+    name: GNU C++20 OMP OMPI
     runs-on: ubuntu-latest
     env: {OMP_NUM_THREADS: 2}
     steps:
@@ -41,15 +41,15 @@ jobs:
         pip install -U -e ./tools
         cmake -S . -B build                        \
             -DHiPACE_COMPUTE=OMP                   \
-            -DCMAKE_CXX_STANDARD=17                \
+            -DCMAKE_CXX_STANDARD=20                \
             -DCMAKE_INSTALL_PREFIX=/tmp/my-hipace  \
             -DCMAKE_VERBOSE_MAKEFILE=ON
         cmake --build build -j 2
     - name: Run Tests
       run: ctest --test-dir build --output-on-failure
 
-  linux_gcc_cxx17:
-    name: GNU@7.5 C++17 Serial
+  linux_gcc_cxx20:
+    name: GNU C++20 Serial
     runs-on: ubuntu-latest
     env: {OMP_NUM_THREADS: 2}
     steps:
