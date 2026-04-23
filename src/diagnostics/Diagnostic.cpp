@@ -190,6 +190,12 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                          all_comps_error_str.str());
         }
 
+        if (fd.m_base_diag_type == DiagnosticData::diag_type::field) {
+            fd.m_level = geometry_name_to_level.at(base_geom_name);
+        }
+
+        // general parametes for all base geometries
+
         if (queryWithParser(pph, "output_period", fd.m_output_period.m_func_str)) {
             amrex::Print() << "WARNING: 'hipace.output_period' is deprecated! "
                 "Use 'diagnostic.output_period' instead!\n";
@@ -197,17 +203,18 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
         queryWithParserAlt(pp, "output_period", fd.m_output_period.m_func_str, ppd);
         fd.m_output_period.compile();
 
-        if (fd.m_base_diag_type == DiagnosticData::diag_type::field) {
-            fd.m_level = geometry_name_to_level.at(base_geom_name);
-        }
-
         fd.m_use_custom_size_lo = queryWithParserAlt(pp, "patch_lo", fd.m_diag_lo, ppd);
         fd.m_use_custom_size_hi = queryWithParserAlt(pp, "patch_hi", fd.m_diag_hi, ppd);
 
         amrex::Array<int,3> diag_coarsen_arr{1,1,1};
         queryWithParserAlt(pp, "coarsening", diag_coarsen_arr, ppd);
+        fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_diag_coarsen.min() >= 1,
+                    "Coarsening ratio must be >= 1");
 
         queryWithParserAlt(pp, "include_ghost_cells", fd.m_include_ghost_cells, ppd);
+
+        // parameters for specific base geometries
 
         switch (fd.m_base_diag_type) {
             case DiagnosticData::diag_type::field:
@@ -228,11 +235,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 fd.m_output_slice_dir = fd.m_slice_dir;
 
                 if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1 || fd.m_slice_dir == 2) {
-                    diag_coarsen_arr[fd.m_slice_dir] = 1;
+                    fd.m_diag_coarsen[fd.m_slice_dir] = 1;
                 }
-                fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_diag_coarsen.min() >= 1,
-                    "Coarsening ratio must be >= 1");
             }
             break;
             case DiagnosticData::diag_type::histogram: {
@@ -252,12 +256,6 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     "hist_bins_lo and hist_bins_hi must have the same "
                     "number of values as hist_num_bins"
                 );
-
-                diag_coarsen_arr[0] = 1;
-                diag_coarsen_arr[1] = 1;
-                fd.m_diag_coarsen = amrex::IntVect(diag_coarsen_arr);
-                AMREX_ALWAYS_ASSERT_WITH_MESSAGE(fd.m_diag_coarsen.min() >= 1,
-                    "Coarsening ratio must be >= 1");
 
                 std::string func1;
                 getWithParser(pp, "hist_function", func1);
@@ -282,6 +280,9 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 for (auto& species_name : fd.m_hist_species_names) {
                     fd.m_comps_output.push_back(species_name + "_" + fd.m_diag_name);
                 }
+
+                fd.m_diag_coarsen[0] = 1;
+                fd.m_diag_coarsen[1] = 1;
             }
             break;
         }
@@ -290,6 +291,8 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             // no need to have field_data with histogram
             continue;
         }
+
+        // get and parse field_data parameter
 
         amrex::Vector<std::string> use_comps{};
         const bool use_local_comps = queryWithParser(pp, "field_data", use_comps);
@@ -499,16 +502,19 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
 
             switch (fd.m_base_diag_type) {
                 case DiagnosticData::diag_type::field:
+                    // real data
                     fd.m_geom_io = fd.m_realspace_geom;
                     fd.m_F_real.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_real.setVal<amrex::RunOn::Host>(0);
                     break;
                 case DiagnosticData::diag_type::laser:
+                    // complex data
                     fd.m_geom_io = fd.m_realspace_geom;
                     fd.m_F_complex.resize(domain, fd.m_nfields, amrex::The_Pinned_Arena());
                     fd.m_F_complex.setVal<amrex::RunOn::Host>({0,0});
                     break;
                 case DiagnosticData::diag_type::histogram: {
+                    // real data with one slice used as cache on the GPU
                     amrex::Box hist_domain = domain;
                     amrex::RealBox hist_bounds = diag_domain;
                     hist_domain.setRange(0, 0, fd.m_hist_num_bins[0]);
@@ -620,10 +626,12 @@ Diagnostic::FillDiagnostics (int islice, int current_N_level,
                     amrex::Real* cpu_ptr = fd.m_F_real.dataPtr(icomp) +
                         fd.m_hist_gpu_fab.numPts() * (dst_slice - fd.m_F_real.box().smallEnd(2));
                     if (fd.m_hist_integrate_along_z) {
+                        // add to previous data
                         amrex::Gpu::htod_memcpy_async(gpu_ptr, cpu_ptr,
                             sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()
                         );
                     } else {
+                        // start from zero
                         fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0);
                     }
                     if (plasmas.HasPlasma(species_name)) {

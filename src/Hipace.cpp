@@ -11,7 +11,6 @@
 #include "utils/HipaceProfilerWrapper.H"
 #include "particles/sorting/SliceSort.H"
 #include "particles/sorting/BoxSort.H"
-#include "particles/deposition/HistogramDeposition.H"
 #include "salame/Salame.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/IOUtil.H"

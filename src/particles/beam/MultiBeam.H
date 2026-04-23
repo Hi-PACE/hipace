@@ -92,7 +92,7 @@ public:
                 return m_all_beams[i];
             }
         }
-        amrex::Abort("Unknown plasma name " + name);
+        amrex::Abort("Unknown beam name " + name);
         return m_all_beams[0];
     }
 
@@ -106,7 +106,7 @@ public:
                 return m_all_beams[i];
             }
         }
-        amrex::Abort("Unknown plasma name " + name);
+        amrex::Abort("Unknown beam name " + name);
         return m_all_beams[0];
     }
 

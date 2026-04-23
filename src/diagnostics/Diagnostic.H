@@ -24,8 +24,6 @@ class MultiPlasma;
 /** \brief This struct holds data for one field diagnostic on one MR level */
 struct DiagnosticData
 {
-    // all
-
     std::string m_diag_name; /**< name used for input parameters and in the output */
     enum struct diag_type {
         field,
@@ -36,14 +34,11 @@ struct DiagnosticData
      * Default is 0, meaning no output */
     utils::DiagPeriod m_output_period = "0";
     bool m_has_output = false; /**< if there is output to write */
-    amrex::Geometry m_geom_io; /**< Diagnostics geometry of output data*/
-    amrex::Geometry m_realspace_geom; /**< Diagnostics geometry in simulation realspace */
-    int m_output_slice_dir = -1;
-
-    // field and laser
-
     int m_level = 0; /**< MR level */
-    int m_slice_dir = -1; /**< Slicing direction */
+    amrex::Geometry m_geom_io; /**< Diagnostics geometry of the openPMD output */
+    amrex::Geometry m_realspace_geom; /**< Diagnostics geometry in simulation realspace */
+    int m_output_slice_dir = -1; /**< Slicing direction of the openPMD output */
+    int m_slice_dir = -1; /**< Slicing direction in simulation realspace */
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
     bool m_use_custom_size_lo = false; /**< if a user defined diagnostics size should be used (lo)*/
     bool m_use_custom_size_hi = false; /**< if a user defined diagnostics size should be used (hi)*/
@@ -63,14 +58,14 @@ struct DiagnosticData
 
     // histogram
 
-    amrex::Vector<std::string> m_hist_species_names;
-    int m_hist_num_dims = 1;
-    bool m_hist_integrate_along_z = false;
-    amrex::Vector<int> m_hist_num_bins;
-    amrex::Vector<amrex::Real> m_hist_bins_lo;
-    amrex::Vector<amrex::Real> m_hist_bins_hi;
-    amrex::FArrayBox m_hist_gpu_fab;
-    // parser funcitons for histogram
+    amrex::Vector<std::string> m_hist_species_names; /**< beam and plasma names for histogram */
+    int m_hist_num_dims = 1; /**< 1D or 2D histogram */
+    bool m_hist_integrate_along_z = false; /**< resolve or integrate along zeta */
+    amrex::Vector<int> m_hist_num_bins; /**< number of bins per hist axis */
+    amrex::Vector<amrex::Real> m_hist_bins_lo; /**< bounds for each hist axis */
+    amrex::Vector<amrex::Real> m_hist_bins_hi; /**< bounds for each hist axis */
+    amrex::FArrayBox m_hist_gpu_fab; /**< hist slice data cache on GPU */
+    /** parser funcitons for histogram */
     amrex::Parser m_hist_parser_q1;
     amrex::ParserExecutor<9> m_hist_exe_q1;
     amrex::Parser m_hist_parser_q2;
