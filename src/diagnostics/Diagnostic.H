@@ -35,10 +35,11 @@ struct DiagnosticData
     utils::DiagPeriod m_output_period = "0";
     bool m_has_output = false; /**< if there is output to write */
     int m_level = 0; /**< MR level */
+    amrex::IntVect m_remove_axis {0, 0, 0}; /**< which axis should be removed */
+    amrex::Vector<std::string> m_axis_labels {}; /**< axis labels in C order */
+    bool m_integrate_along_z = false; /**< resolve or integrate along zeta */
     amrex::Geometry m_geom_io; /**< Diagnostics geometry of the openPMD output */
     amrex::Geometry m_realspace_geom; /**< Diagnostics geometry in simulation realspace */
-    int m_output_slice_dir = -1; /**< Slicing direction of the openPMD output */
-    int m_slice_dir = -1; /**< Slicing direction in simulation realspace */
     bool m_include_ghost_cells = false; /**< if ghost cells are included in output */
     bool m_use_custom_size_lo = false; /**< if a user defined diagnostics size should be used (lo)*/
     bool m_use_custom_size_hi = false; /**< if a user defined diagnostics size should be used (hi)*/
@@ -60,7 +61,6 @@ struct DiagnosticData
 
     amrex::Vector<std::string> m_hist_species_names; /**< beam and plasma names for histogram */
     int m_hist_num_dims = 1; /**< 1D or 2D histogram */
-    bool m_hist_integrate_along_z = false; /**< resolve or integrate along zeta */
     amrex::Vector<int> m_hist_num_bins; /**< number of bins per hist axis */
     amrex::Vector<amrex::Real> m_hist_bins_lo; /**< bounds for each hist axis */
     amrex::Vector<amrex::Real> m_hist_bins_hi; /**< bounds for each hist axis */
@@ -162,14 +162,6 @@ public:
      */
     [[nodiscard]] bool
     needsTempIndividual () const;
-
-    /** \brief calculate box which possibly was trimmed in case of slice IO
-     *
-     * \param[in] slice_dir slicing direction
-     * \param[in,out] domain_3d domain box to be possibly trimmed to a slice box
-     * \param[in,out] rbox_3d real box to be possibly trimmed to a slice box
-     */
-    void TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbox_3d);
 
     /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
      *

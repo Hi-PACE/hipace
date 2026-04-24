@@ -178,30 +178,37 @@ OpenPMDWriter::WriteFieldData (
         field.setDataOrder(openPMD::Mesh::DataOrder::C);
 
         const amrex::Geometry& geom = fd.m_geom_io;
-        const amrex::Box data_box = geom.Domain();
 
         // node staggering, labels, spacing and offsets
         // convert AMReX Fortran index order to C order
-        auto relative_cell_pos = utils::getRelativeCellPosition(data_box);
-        std::vector< std::string > axisLabels {"z", "y", "x"};
+        auto relative_cell_pos = utils::getRelativeCellPosition(geom.Domain());
         auto dCells = utils::getReversedVec(geom.CellSize()); // dz, dy, dx
         auto offWindow = utils::getReversedVec(geom.ProbLo());
         openPMD::Extent global_size = utils::getReversedVec(geom.Domain().size());
-        const amrex::IntVect box_offset {0, 0, data_box.smallEnd(2) - geom.Domain().smallEnd(2)};
+        const amrex::IntVect box_offset {0, 0, 0};
         openPMD::Offset chunk_offset = utils::getReversedVec(box_offset);
-        openPMD::Extent chunk_size = utils::getReversedVec(data_box.size());
-        if (fd.m_output_slice_dir >= 0) {
-            const int remove_dir = 2 - fd.m_output_slice_dir;
-            // User requested slice IO
-            // remove the slicing direction in position, label, resolution, offset
-            relative_cell_pos.erase(relative_cell_pos.begin() + remove_dir);
-            axisLabels.erase(axisLabels.begin() + remove_dir);
-            dCells.erase(dCells.begin() + remove_dir);
-            offWindow.erase(offWindow.begin() + remove_dir);
-            global_size.erase(global_size.begin() + remove_dir);
-            chunk_offset.erase(chunk_offset.begin() + remove_dir);
-            chunk_size.erase(chunk_size.begin() + remove_dir);
+        openPMD::Extent chunk_size = utils::getReversedVec(geom.Domain().size());
+
+        for (int i=0; i<3; ++i) {
+            if (fd.m_remove_axis[i]) {
+                const int remove_dir = 2 - i;
+                // User requested slice IO
+                // remove the slicing direction in position, label, resolution, offset
+                // Remove entries starting from the back of the vectors
+                relative_cell_pos.erase(relative_cell_pos.begin() + remove_dir);
+                dCells.erase(dCells.begin() + remove_dir);
+                offWindow.erase(offWindow.begin() + remove_dir);
+                global_size.erase(global_size.begin() + remove_dir);
+                chunk_offset.erase(chunk_offset.begin() + remove_dir);
+                chunk_size.erase(chunk_size.begin() + remove_dir);
+            }
         }
+
+        std::vector<std::string> axisLabels;
+        for (int i=fd.m_axis_labels.size()-1; i>=0; --i) {
+            axisLabels.push_back(fd.m_axis_labels[i]);
+        }
+
         field_comp.setPosition(relative_cell_pos);
         field.setAxisLabels(axisLabels);
         field.setGridSpacing(dCells);

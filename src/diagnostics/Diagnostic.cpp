@@ -221,22 +221,29 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
             case DiagnosticData::diag_type::laser: {
                 std::string str_type;
                 getWithParserAlt(pp, "diag_type", str_type, ppd);
-                if        (str_type == "xyz"){
-                    fd.m_slice_dir = -1;
+                if (str_type == "xyz"){
+                    fd.m_remove_axis = {0, 0, 0};
+                    fd.m_axis_labels = {"x", "y", "z"};
                 } else if (str_type == "xz") {
-                    fd.m_slice_dir = 1;
+                    fd.m_remove_axis = {0, 1, 0};
+                    fd.m_axis_labels = {"x", "z"};
                 } else if (str_type == "yz") {
-                    fd.m_slice_dir = 0;
+                    fd.m_remove_axis = {1, 0, 0};
+                    fd.m_axis_labels = {"y", "z"};
                 } else if (str_type == "xy_integrated") {
-                    fd.m_slice_dir = 2;
+                    fd.m_remove_axis = {0, 0, 1};
+                    fd.m_axis_labels = {"x", "y"};
+                    fd.m_integrate_along_z = true;
                 } else {
-                    amrex::Abort("Unknown diagnostics type: must be xyz, xz or yz.");
+                    amrex::Abort("Unknown diagnostics type: must be xyz, xz, yz or xy_integrated.");
                 }
-                fd.m_output_slice_dir = fd.m_slice_dir;
 
-                if(fd.m_slice_dir == 0 || fd.m_slice_dir == 1 || fd.m_slice_dir == 2) {
-                    fd.m_diag_coarsen[fd.m_slice_dir] = 1;
+                for (int i=0; i<3; ++i) {
+                    if (fd.m_remove_axis[i]) {
+                        fd.m_diag_coarsen[i] = 1;
+                    }
                 }
+
             }
             break;
             case DiagnosticData::diag_type::histogram: {
@@ -244,7 +251,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 getWithParser(pp, "hist_num_bins", fd.m_hist_num_bins);
                 getWithParser(pp, "hist_bins_lo", fd.m_hist_bins_lo);
                 getWithParser(pp, "hist_bins_hi", fd.m_hist_bins_hi);
-                queryWithParser(pp, "hist_integrate_along_z", fd.m_hist_integrate_along_z);
+                queryWithParser(pp, "hist_integrate_along_z", fd.m_integrate_along_z);
 
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                     fd.m_hist_num_bins.size() == 1 || fd.m_hist_num_bins.size() == 2,
@@ -268,8 +275,22 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     getWithParser(pp, "hist_function2", func2);
                     fd.m_hist_exe_q2 = makeFunctionWithParser<9>(func2, fd.m_hist_parser_q2,
                         {"x", "y", "z", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
+
+                    if (fd.m_integrate_along_z) {
+                        fd.m_remove_axis = {0, 0, 1};
+                        fd.m_axis_labels = {func1, func2};
+                    } else {
+                        fd.m_remove_axis = {0, 0, 0};
+                        fd.m_axis_labels = {func1, func2, "z"};
+                    }
                 } else {
-                    fd.m_output_slice_dir = 1;
+                    if (fd.m_integrate_along_z) {
+                        fd.m_remove_axis = {0, 1, 1};
+                        fd.m_axis_labels = {func1};
+                    } else {
+                        fd.m_remove_axis = {0, 1, 0};
+                        fd.m_axis_labels = {func1, "z"};
+                    }
                 }
 
                 std::string funcw = "w";
@@ -480,10 +501,23 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
             diag_domain.setHi(dir, geom.ProbHi(dir)
                 + (domain.bigEnd(dir) - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
         }
+
         // trim the 3D box to slice box for slice IO
-        TrimIOBox(fd.m_slice_dir, domain, diag_domain);
-        if (fd.m_hist_integrate_along_z) {
-            TrimIOBox(2, domain, diag_domain);
+        for(int dir=0; dir<=2; ++dir) {
+            if (fd.m_remove_axis[dir]) {
+                const amrex::Real half_cell_size = diag_domain.length(dir) /
+                                                   ( 2. * domain.length(dir) );
+                const amrex::Real mid = (diag_domain.lo(dir) + diag_domain.hi(dir)) / 2.;
+                // Flatten the box down to 1 cell in the approprate direction.
+                domain.setSmall(dir, 0);
+                domain.setBig(dir, 0);
+                if ((dir != 2 || !fd.m_integrate_along_z) &&
+                    fd.m_base_diag_type != DiagnosticData::diag_type::histogram)
+                {
+                    diag_domain.setLo(dir, mid - half_cell_size);
+                    diag_domain.setHi(dir, mid + half_cell_size);
+                }
+            }
         }
 
         domain.coarsen(fd.m_diag_coarsen);
@@ -546,23 +580,6 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
     }
 }
 
-void
-Diagnostic::TrimIOBox (int slice_dir, amrex::Box& domain_3d, amrex::RealBox& rbox_3d)
-{
-    if (slice_dir >= 0){
-        const amrex::Real half_cell_size = rbox_3d.length(slice_dir) /
-                                           ( 2. * domain_3d.length(slice_dir) );
-        const amrex::Real mid = (rbox_3d.lo(slice_dir) + rbox_3d.hi(slice_dir)) / 2.;
-        // Flatten the box down to 1 cell in the approprate direction.
-        domain_3d.setSmall(slice_dir, 0);
-        domain_3d.setBig  (slice_dir, 0);
-        if (slice_dir < 2) {
-            rbox_3d.setLo(slice_dir, mid - half_cell_size);
-            rbox_3d.setHi(slice_dir, mid + half_cell_size);
-        }
-    }
-}
-
 std::pair<bool, int>
 Diagnostic::ReverseShapeFactor (const DiagnosticData& fd, int islice,
                                 const amrex::Geometry& geom3d)
@@ -578,7 +595,7 @@ Diagnostic::ReverseShapeFactor (const DiagnosticData& fd, int islice,
 
     const amrex::Real z_pos = amrex::Real(islice) * geom3d.CellSize(2) + poff_calc_z;
 
-    if (fd.m_slice_dir == 2 || fd.m_hist_integrate_along_z) {
+    if (fd.m_integrate_along_z) {
         // integral along z
         return {
             fd.m_realspace_geom.ProbLo(2) <= z_pos && z_pos <= fd.m_realspace_geom.ProbHi(2),
@@ -628,7 +645,7 @@ Diagnostic::FillDiagnostics (int islice, int current_N_level,
                     amrex::Real* gpu_ptr = fd.m_hist_gpu_fab.dataPtr();
                     amrex::Real* cpu_ptr = fd.m_F_real.dataPtr(icomp) +
                         fd.m_hist_gpu_fab.numPts() * (dst_slice - fd.m_F_real.box().smallEnd(2));
-                    if (fd.m_hist_integrate_along_z) {
+                    if (fd.m_integrate_along_z) {
                         // add to previous data
                         amrex::Gpu::htod_memcpy_async(gpu_ptr, cpu_ptr,
                             sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()

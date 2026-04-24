@@ -519,7 +519,7 @@ Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
                                                           * fd.m_geom_io.InvCellSize(2)));
 
     amrex::Box diag_box = fd.m_geom_io.Domain();
-    if (fd.m_slice_dir != 2) {
+    if (!fd.m_integrate_along_z) {
         // Put contributions from i_slice to different diag_fab slices in GPU vector
         m_rel_z_vec.resize(k_max+1-k_min);
         for (int k=k_min; k<=k_max; ++k) {
