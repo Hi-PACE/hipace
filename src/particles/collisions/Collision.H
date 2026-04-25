@@ -13,9 +13,9 @@
  */
 class Collision
 {
-    std::string m_inout_species1_name = "";
-    std::string m_inout_species2_name = "";
-    std::string m_out_species3_name = "";
+    std::string m_projectile_name = "";
+    std::string m_target_name = "";
+    std::string m_new_electron_name = "";
     std::string m_collision_type = "";
     std::string m_physical_element ="";
     bool m_has_collision_product = false;

@@ -522,11 +522,14 @@ When both are specified, the per-species value is used.
     the specific ionization energy of each state.
     Options are: ``electron``, ``positron``, ``H``, ``D``, ``T``, ``He``, ``Li``, ``Be``, ``B``, ….
 
-* ``<plasma name>.can_ionize`` (`bool`) optional (default `0`)
-    Whether this plasma can ionize. Can also be set to 1 by specifying ``<plasma name>.ionization_product``.
+* ``<plasma name>.can_field_ionize`` (`bool`) optional (default `0`)
+    Whether this plasma can be ionized by fields, as for example from a driving particle beam. 
 
-* ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `<plasma name>.can_ionize`)
+* ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can be ionized by a laser.
+
+* ``<plasma name>.can_impact_ionize`` (`bool`) optional (default `0`)
+    Whether this plasma can be ionized by impact ionization between plasma particles.
 
 * ``<plasma name>.initial_ion_level`` (`int`) optional (default `-1`)
     The initial ionization state of the plasma. `0` for neutral gasses.
@@ -535,7 +538,7 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name>.ionization_product`` (`string`) optional (default "")
     Name of the plasma species that contains the new electrons that are produced
-    when this plasma gets ionized. Only needed if this plasma is ionizable.
+    when this plasma gets field or laser ionized. Only needed if this plasma is ionizable.
 
 * ``<plasma name> or plasmas.neutralize_background`` (`bool`) optional (default `1`)
     Whether to add a neutralizing background of immobile particles of opposite charge.
@@ -1485,9 +1488,10 @@ WARNING: this module is in development.
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX,
 for collisions between plasma-plasma and beam-plasma.
 As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
+Please note that the impact ionization module is currently under development, and SI units are always required.
 
 * ``hipace.collisions`` (list of `strings`) optional
-    List of names of binary Coulomb collisions.
+    List of names of binary elastic Coulomb collisions.
     Each will represent collisions between 2 species.
 
 * ``<collision name>.species`` (two `strings`) optional
@@ -1501,6 +1505,32 @@ As collisions depend on the physical density, in normalized units `hipace.backgr
 
 * ``<collision_name>.collision_period`` (`integer`) optional (default `1`)
     Number of :math:`\zeta` slices between applying the elastic collision operator (useful when you are in a fairly collisionless regime, but still want to calculate elastic collisions). The timestep used for collisions is multiplied by this factor. Only applies to plasma-plasma collisions.
+    
+* ``hipace.impact_ionization`` (list of `strings`) optional
+    List of names of binary inelastic Coulomb collisions.
+    Each will represent collisions between 2 plasma species.
+    Three species must be specified: the projectile, the target (ion or neutral atom), and the product (electron).
+    Currently only impact ionization between electrons and another species, which might be ions or neutral atoms, is implemented.
+    Please note that the impact ionization module is currently under development, and SI units are always required.
+
+* ``<impact_name>.type`` (string) optional
+    Type of impact ionization. Currently, only `electron_impact` is implemented.
+
+* ``<impact name>.projectile`` (string) optional
+    The name of the projectile species for impact ionization.
+    The species must be defined according to `Plasma parameters`.
+
+* ``<impact name>.target`` (string) optional
+    The name of the target species for impact ionization.
+    The species must be defined according to `Plasma parameters`.
+
+* ``<impact name>.new_electron`` (string) optional
+    The name of the product species for impact ionization.
+    The species must be defined according to `Plasma parameters` and should be an electron species.
+    In electron impacts, initial and newly created electrons can be treated as on single species 
+    simply by using the same name for the projectile and the new electrons.
+    However, to treat the new electrons as a separate species, a different name can be used.
+    In that case, the new electrons won't be contributing to further ionizations.
 
 Radiation reaction
 ^^^^^^^^^^^^^^^^^^

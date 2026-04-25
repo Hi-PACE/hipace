@@ -68,11 +68,11 @@ Collision::ReadParameters(
     // The user is asked to always input the target type as the second specie
     m_has_collision_product = m_collision_type == "electron_impact" || m_collision_type == "ion_impact";
 
-    getWithParser(pp, "species1", m_inout_species1_name);
-    getWithParser(pp, "species2", m_inout_species2_name);
+    getWithParser(pp, "projectile", m_projectile_name);
+    getWithParser(pp, "target", m_target_name);
 
     if (m_has_collision_product) {
-        getWithParser(pp, "species3", m_out_species3_name);
+        getWithParser(pp, "new_electron", m_new_electron_name);
     }
 
     if (m_collision_type == "electron_impact") {
@@ -90,7 +90,7 @@ Collision::ReadParameters(
         
     }
     // Plasma physical element name
-    amrex::ParmParse pp_s2(m_inout_species2_name);
+    amrex::ParmParse pp_s2(m_target_name);
     getWithParser(pp_s2, "element", m_physical_element);
 }
 
@@ -120,9 +120,9 @@ Collision::doCollisionA (
     const amrex::Real* p_binding_energies = m_binding_energies.data();
     const amrex::Real* p_ionization_energies = m_ionization_energies.data();
 
-    auto& species1 = multi_plasma.GetPlasma(m_inout_species1_name);
-    auto& species2 = multi_plasma.GetPlasma(m_inout_species2_name);
-    auto& species3 = multi_plasma.GetPlasma(m_out_species3_name);
+    auto& species1 = multi_plasma.GetPlasma(m_projectile_name);
+    auto& species2 = multi_plasma.GetPlasma(m_target_name);
+    auto& species3 = multi_plasma.GetPlasma(m_new_electron_name);
 
     auto m1 = species1.GetMass();
     auto m2 = species2.GetMass();
@@ -134,7 +134,7 @@ Collision::doCollisionA (
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         ion_atomic_number == 1 || 
         ion_atomic_number == 18, 
-        "The current implementation of electron-impact ionization only supports Hydrogen and Argon. Please check the input file and the physical element specified for species2."
+        "The current implementation of electron-impact ionization only supports Hydrogen and Argon. Please check the input file and the physical element specified for target."
     );
 
     const amrex::Real inv_dV = geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
@@ -374,8 +374,8 @@ Collision::doCollisionImp (
         G const& ionization_function)
 {
     // assume the two species are different for now
-    auto& species1 = multi_plasma.GetPlasma(m_inout_species1_name);
-    auto& species2 = multi_plasma.GetPlasma(m_inout_species2_name);
+    auto& species1 = multi_plasma.GetPlasma(m_projectile_name);
+    auto& species2 = multi_plasma.GetPlasma(m_target_name);
 
     for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
         amrex::removeInvalidParticles(species1.ParticlesAt(0, pti));
@@ -442,34 +442,6 @@ Collision::doCollisionImp (
         auto p_flag1 = flag1.dataPtr();
         auto p_flag2 = flag2.dataPtr();
 
-        amrex::Gpu::DeviceVector<amrex::Real> cell_weight1(num_cells);
-        amrex::Gpu::DeviceVector<amrex::Real> cell_weight2(num_cells);
-        auto p_cell_weight1 = cell_weight1.dataPtr();
-        auto p_cell_weight2 = cell_weight2.dataPtr();
-
-        amrex::ParallelFor(2*num_cells,
-            [=] AMREX_GPU_DEVICE (int icell) {
-                if (icell < num_cells) {
-                    auto start = offset1[icell];
-                    auto stop = offset1[icell+1];
-                    amrex::Real loc_cell_weight1 = 0;
-                    for (int idx1 = start; idx1 < stop; ++idx1) {
-                        loc_cell_weight1 += ptd1.rdata(PlasmaIdx::w)[perm1[idx1]];
-                    }
-                    p_cell_weight1[icell] = loc_cell_weight1;
-                } else {
-                    icell -= num_cells;
-                    auto start = offset2[icell];
-                    auto stop = offset2[icell+1];
-                    amrex::Real loc_cell_weight2 = 0;
-                    for (int idx2 = start; idx2 < stop; ++idx2) {
-                        loc_cell_weight2 += ptd2.rdata(PlasmaIdx::w)[perm2[idx2]];
-                    }
-                    p_cell_weight2[icell] = loc_cell_weight2;
-                }
-            }
-        );
-
         // loop over independent pairs
         amrex::ParallelForRNG(total_ind_pairs,
             [=] AMREX_GPU_DEVICE (int ipair, amrex::RandomEngine const& engine){
@@ -484,9 +456,6 @@ Collision::doCollisionImp (
 
                 const int N1 = offset1_stop - offset1_start;
                 const int N2 = offset2_stop - offset2_start;
-
-                //const amrex::Real loc_cell_weight1 = p_cell_weight1[icell];
-                //const amrex::Real loc_cell_weight2 = p_cell_weight2[icell];
 
                 int idx1 = icoll;
                 int idx2 = icoll;
@@ -554,12 +523,12 @@ Collision::doCollisionImp (
             amrex::Scan::Type::exclusive, amrex::Scan::retSum
         );
 
-        auto& species3 = multi_plasma.GetPlasma(m_out_species3_name);
+        auto& species3 = multi_plasma.GetPlasma(m_new_electron_name);
         auto& ptile3 = species3.ParticlesAt(0, pti);
         int old_size3 = ptile3.size();
         ptile3.resize(old_size3 + num_new_particles);
 
-        // get new ptd after resize in case species3 is the same as species1 or 2
+        // get new ptd after resize in case species3 is the same as species1 or species2
         ptd1 = ptile1.getParticleTileData();
         ptd2 = ptile2.getParticleTileData();
         auto ptd3 = ptile3.getParticleTileData();

@@ -65,14 +65,17 @@ PlasmaParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
 
     bool ion_lev_specified = queryWithParser(pp, "initial_ion_level", m_init_ion_lev);
-    // m_can_field_ionize = pp.contains("ionization_product");
 
-    // queryWithParser(pp, "can_ionize", m_can_field_ionize);
-    queryWithParser(pp, "can_ionize", m_can_ionize);
-    m_can_laser_ionize = false;
+    queryWithParser(pp, "can_field_ionize", m_can_field_ionize);
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
+    queryWithParser(pp, "can_impact_ionize", m_can_impact_ionize);
 
-    // m_can_ionize = m_can_field_ionize || m_can_laser_ionize;    // !!!
+    m_can_ionize = m_can_field_ionize || m_can_laser_ionize || m_can_impact_ionize;
+
+    DeprecatedInput(m_name, "can_ionize", "can_field_ionize");
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_can_field_ionize == pp.contains("ionization_product") || m_can_laser_ionize == pp.contains("ionization_product"),
+        "When specifying ionization_product, can_*_ionize must be set to 1 via field or laser");
 
     if(m_can_ionize) {
         m_neutralize_background = false; // change default
