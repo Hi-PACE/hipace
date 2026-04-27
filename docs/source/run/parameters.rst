@@ -1236,9 +1236,11 @@ Particles outside the histogram bounds are discarded.
     to obtain the physical particle weight. Uses the same variables as
     ``<diag name>.hist_function``. This can also be used to filter particles.
 
-* ``<diag name>.hist_integrate_along_z`` (`bool`) optional (default `false`)
-    If ``false``, z is an additional axis. If ``true``, all z-slices are summed into a
-    single histogram.
+* ``<diag name>.hist_add_z_axis`` (`bool`) optional (default `false`)
+    Add the zeta axis from the simulation to the histogram output.
+    This is more efficient than adding z as a custom histogram axis using
+    ``hist_function`` or ``hist_function2``. If disabled the histogram contains data from
+    all z slices in the range given by ``patch_lo`` and ``patch_hi``.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^

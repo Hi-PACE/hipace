@@ -251,7 +251,9 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 getWithParser(pp, "hist_num_bins", fd.m_hist_num_bins);
                 getWithParser(pp, "hist_bins_lo", fd.m_hist_bins_lo);
                 getWithParser(pp, "hist_bins_hi", fd.m_hist_bins_hi);
-                queryWithParser(pp, "hist_integrate_along_z", fd.m_integrate_along_z);
+                bool add_z_axis = false;
+                queryWithParser(pp, "hist_add_z_axis", add_z_axis);
+                fd.m_integrate_along_z = !add_z_axis;
 
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                     fd.m_hist_num_bins.size() == 1 || fd.m_hist_num_bins.size() == 2,

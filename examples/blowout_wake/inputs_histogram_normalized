@@ -45,7 +45,6 @@ hist_z_uz1.hist_bins_lo = -6 1980
 hist_z_uz1.hist_bins_hi =  6 2020
 hist_z_uz1.hist_function = "z"
 hist_z_uz1.hist_function2 = "uz"
-hist_z_uz1.hist_integrate_along_z = true
 
 hist_z_uz2.base_geometry = histogram
 hist_z_uz2.hist_species_names = beam
@@ -53,7 +52,7 @@ hist_z_uz2.hist_num_bins = 200
 hist_z_uz2.hist_bins_lo = 1980
 hist_z_uz2.hist_bins_hi = 2020
 hist_z_uz2.hist_function = "uz"
-hist_z_uz2.hist_integrate_along_z = false
+hist_z_uz2.hist_add_z_axis = true
 
 hist_temperature.base_geometry = histogram
 hist_temperature.hist_species_names = plasma
@@ -61,7 +60,6 @@ hist_temperature.hist_num_bins = 200
 hist_temperature.hist_bins_lo = 0
 hist_temperature.hist_bins_hi = 0.02
 hist_temperature.hist_function = "sqrt(ux^2 + uy^2 + uz^2)"
-hist_temperature.hist_integrate_along_z = true
 
 hist_all.base_geometry = histogram
 hist_all.hist_species_names = beam plasma
@@ -72,4 +70,3 @@ hist_all.hist_bins_hi = 10 10
 hist_all.hist_function = log(abs(x+2*y+z+ion_lev))
 hist_all.hist_function2 = log(abs(3*ux+uy+uz))
 hist_all.hist_weight = log(abs(w+ga_psi))*log(abs(3*ux+uy+uz))*log(abs(x+2*y+z+ion_lev))
-hist_all.hist_integrate_along_z = true
