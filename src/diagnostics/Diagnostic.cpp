@@ -655,7 +655,9 @@ Diagnostic::FillDiagnostics (int islice, int current_N_level,
                         fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0);
                     }
                     if (plasmas.HasPlasma(species_name)) {
-                        HistogramDepositionPlasma(plasmas.GetPlasma(species_name), fd);
+                        const amrex::Real zmid = amrex::Real(islice) * field_geom[0].CellSize(2) +
+                            GetPosOffset(2, field_geom[0], field_geom[0].Domain());
+                        HistogramDepositionPlasma(plasmas.GetPlasma(species_name), fd, zmid);
                     } else {
                         HistogramDepositionBeam(beams.getBeam(species_name), fd);
                     }

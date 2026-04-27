@@ -19,7 +19,7 @@
 #include "utils/GPUUtil.H"
 
 void
-HistogramDepositionPlasma (PlasmaParticleContainer& plasma, DiagnosticData& fd)
+HistogramDepositionPlasma (PlasmaParticleContainer& plasma, DiagnosticData& fd, amrex::Real zmid)
 {
     if (!(fd.m_base_diag_type == DiagnosticData::diag_type::histogram)) {
         return;
@@ -42,8 +42,6 @@ HistogramDepositionPlasma (PlasmaParticleContainer& plasma, DiagnosticData& fd)
     const bool use_second_dim = fd.m_hist_num_dims == 2;
 
     const bool can_ionize = plasma.m_can_ionize;
-
-    const amrex::Real zmid = 0;
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
