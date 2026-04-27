@@ -74,12 +74,12 @@ HistogramDepositionPlasma (PlasmaParticleContainer& plasma, DiagnosticData& fd, 
                 const amrex::Real uzp = plasma_uz(gamma, psi);
 
                 const amrex::Real hw = gamma * psi_inv *
-                    histw(xp, yp, uxp, zmid, uyp, uzp, gamma * psi_inv, wp, ion_level);
+                    histw(xp, yp, zmid, uxp, uyp, uzp, gamma * psi_inv, wp, ion_level);
                 if (hw == 0._rt) {
                     return;
                 }
                 const amrex::Real h1 =
-                    hist1(xp, yp, uxp, zmid, uyp, uzp, gamma * psi_inv, wp, ion_level);
+                    hist1(xp, yp, zmid, uxp, uyp, uzp, gamma * psi_inv, wp, ion_level);
                 amrex::Real h2 = 0.5_rt;
                 if (use_second_dim) {
                     h2 = hist2(xp, yp, zmid, uxp, uyp, uzp, gamma * psi_inv, wp, ion_level);
