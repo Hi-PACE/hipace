@@ -152,6 +152,7 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
 
     for (auto& plasma_name : m_names) {
         const auto& plasma = multi_plasma.GetPlasma(plasma_name);
+        const bool is_last_plasma = plasma_name == m_names.back();
 
         const int ion_weight_comp =
             Comps[WhichSlice::This]["grid_ionization_w_" + plasma_name + "_0"];
@@ -296,7 +297,9 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                     // chi
                     // chi of new electrons does not depend on the laser field strength
                     // or the the new random momentum
-                    chi += arr(i, j, comps[1]) * chi_factor_elec;
+                    if (is_last_plasma) {
+                        chi += arr(i, j, comps[1]) * chi_factor_elec;
+                    }
 
                     // last ion level
                     chi += arr(i, j, ion_weight_comp + max_ion_lev) *
