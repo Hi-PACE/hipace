@@ -954,15 +954,20 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
 
+* ``lasers.use_non_centered_push`` (`bool`) optional (default `false`)
+    By default, the laser solver uses the two previous time steps to compute the next one.
+    In some cases this can lead to unphysical fast oscillations.
+    With this setting, only one previous time step is used which, can help to reduce oscillations
+    but is less accurate.
+
 * ``lasers.interp_order`` (`int`) optional (default `1`)
     Transverse shape order for the laser to field interpolation of aabs and
     the field to laser interpolation of chi. Currently, `0,1,2,3` are implemented.
 
 * ``lasers.solver_type`` (`string`) optional (default `multigrid`)
-    Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
-    Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
+    Type of solver for the laser envelope solver. Only ``multigrid`` is available.
+    Currently, the approximation that the phase is evaluated on-axis only is made.
     With the multigrid solver, we could drop this assumption.
-    For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
 
 * ``lasers.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solver used for the laser pulse.
