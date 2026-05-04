@@ -43,7 +43,7 @@ You can then create your directory in your ``$SCRATCH_<project id>``, where you 
 .. code-block:: bash
 
    #!/bin/bash -l
-   #SBATCH -A $proj
+   #SBATCH -A <your project id>
    #SBATCH --partition=booster
    #SBATCH --nodes=2
    #SBATCH --ntasks=8
