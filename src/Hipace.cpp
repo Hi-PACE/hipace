@@ -58,6 +58,7 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     int max_level = 0;
     queryWithParser(pp_amr, "max_level", max_level);
     m_N_level = max_level + 1;
+    queryWithParser(pph, "ignore_noncritical_warnings", m_ignore_noncritical_warnings);
     AnyFFT::setup();
 }
 
@@ -118,9 +119,14 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
     m_numprocs = amrex::ParallelDescriptor::NProcs();
-    if (m_numprocs > m_max_step + 1 && amrex::ParallelDescriptor::IOProcessor()) {
-        amrex::ErrorStream()
-            << "WARNING: Please use more or equal time steps than the number of MPI ranks\n";
+    if (m_ignore_noncritical_warnings) {
+        if (m_numprocs > m_max_step + 1 && amrex::ParallelDescriptor::IOProcessor()) {
+            amrex::OutStream()
+                << "WARNING: Please use more or equal time steps than the number of MPI ranks\n";
+        }
+    } else {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs <= m_max_step + 1,
+            "Please use more or equal time steps than the number of MPI ranks");
     }
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);

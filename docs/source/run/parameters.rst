@@ -188,6 +188,10 @@ General parameters
     Note that z refers to the location of the beam particle inside the moving frame of reference
     (zeta) and t to the physical time of the current time step.
 
+* ``hipace.ignore_noncritical_warnings`` (`bool`) optional (default `0`)
+    Don't crash the simulation from assertions that check for suboptimal input parameters
+    but are not needed for correctness.
+
 Geometry
 --------
 

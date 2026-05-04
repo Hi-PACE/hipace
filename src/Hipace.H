@@ -76,6 +76,9 @@ struct Hipace_early_init
 
     /* Number of mesh refinement levels */
     int m_N_level = 1;
+
+    /* Don't stop the simulation if user inputs are potentially suboptimal */
+    inline static bool m_ignore_noncritical_warnings = false;
 };
 
 /** \brief Singleton class that initializes, runs and finalizes the simulation */
