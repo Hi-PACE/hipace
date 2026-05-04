@@ -4,8 +4,8 @@ Jupiter Booster @ JSC
 This page only provides HiPACE++ specific instructions.
 For more information please visit the `JSC documentation <https://apps.fz-juelich.de/jsc/hps/jupiter/index.html>`__.
 
-Log in with ``<yourid>@login.jupiter.fz-juelich.de``. Note that you will need to log into
-JuDoor to be added to a compute project, set up an SSH key, and set up 2FA.
+Log in with ``<yourid>@login.jupiter.fz-juelich.de``. Note that you first need to log into JuDoor
+to be added to a compute project, set up an SSH key and set up 2FA.
 
 Running on GPU
 --------------
