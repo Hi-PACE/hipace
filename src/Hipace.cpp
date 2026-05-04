@@ -118,8 +118,10 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
     m_numprocs = amrex::ParallelDescriptor::NProcs();
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs <= m_max_step+1,
-                                     "Please use more or equal time steps than number of ranks");
+    if (m_numprocs > m_max_step + 1 && amrex::ParallelDescriptor::IOProcessor()) {
+        amrex::ErrorStream()
+            << "WARNING: Please use more or equal time steps than the number of MPI ranks\n";
+    }
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
