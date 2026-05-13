@@ -33,6 +33,7 @@ This section documents quick-start guides for a selection of supercomputers that
    :maxdepth: 1
 
    platforms/booster_jsc
+   platforms/jupiter_jsc
    platforms/lumi_csc
    platforms/maxwell_desy
    platforms/perlmutter_nersc
