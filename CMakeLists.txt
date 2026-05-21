@@ -9,7 +9,7 @@
 # Preamble ####################################################################
 #
 cmake_minimum_required(VERSION 3.24.0)
-project(HiPACE VERSION 26.04)
+project(HiPACE VERSION 26.05)
 
 # helper functions
 include(${HiPACE_SOURCE_DIR}/cmake/HiPACEFunctions.cmake)
@@ -254,6 +254,7 @@ if(BUILD_TESTING)
             linear_wake.SI.1Rank
             gaussian_linear_wake.normalized.1Rank
             gaussian_linear_wake.SI.1Rank
+            histogram.2Rank
             reset.2Rank
             beam_in_vacuum.SI.1Rank
             beam_in_vacuum.normalized.1Rank

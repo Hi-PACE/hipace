@@ -1,0 +1,72 @@
+amr.n_cell = 64 64 100
+
+hipace.normalized_units=1
+
+amr.max_level = 0
+
+max_step = 3
+hipace.dt = 1
+
+hipace.depos_order_xy = 2
+
+boundary.field = Dirichlet
+boundary.particle = Periodic
+geometry.prob_lo = -8 -8 -6 # physical domain
+geometry.prob_hi =  8  8  6
+
+beams.names = beam
+beam.injection_type = fixed_weight_pdf
+beam.pdf = "exp(-0.5*(z/1.41)^2)"
+beam.density = 3.
+beam.u_mean = 0. 0. 2000
+beam.u_std = 0. 0. 0.
+beam.position_mean = 0 0
+beam.position_std = 0.3 0.3
+beam.num_particles = 1e5
+
+plasmas.names = plasma
+plasma.density(x,y,z) = 1.
+plasma.ppc = 2 2
+plasma.element = electron
+plasma.temperature_in_ev = 1
+
+diagnostic.diag_type = xz
+diagnostic.output_period = "current_step == max_step"
+diagnostic.beam_output_period = 0
+
+diagnostic.names = lev0 hist_z_uz1 hist_z_uz2 hist_temperature hist_all
+
+lev0.field_data = By ExmBy Ez Psi Sx chi jx_beam jz_beam rhomjz
+
+hist_z_uz1.base_geometry = histogram
+hist_z_uz1.hist_species_names = beam
+hist_z_uz1.hist_num_bins = 100 200
+hist_z_uz1.hist_bins_lo = -6 1980
+hist_z_uz1.hist_bins_hi =  6 2020
+hist_z_uz1.hist_function = "z"
+hist_z_uz1.hist_function2 = "uz"
+
+hist_z_uz2.base_geometry = histogram
+hist_z_uz2.hist_species_names = beam
+hist_z_uz2.hist_num_bins = 200
+hist_z_uz2.hist_bins_lo = 1980
+hist_z_uz2.hist_bins_hi = 2020
+hist_z_uz2.hist_function = "uz"
+hist_z_uz2.hist_add_z_axis = true
+
+hist_temperature.base_geometry = histogram
+hist_temperature.hist_species_names = plasma
+hist_temperature.hist_num_bins = 200
+hist_temperature.hist_bins_lo = 0
+hist_temperature.hist_bins_hi = 0.02
+hist_temperature.hist_function = "sqrt(ux^2 + uy^2 + uz^2)"
+
+hist_all.base_geometry = histogram
+hist_all.hist_species_names = beam plasma
+hist_all.hist_num_bins = 200 200
+hist_all.hist_bins_lo = -10 -10
+hist_all.hist_bins_hi = 10 10
+# test all quantities available for the histogram
+hist_all.hist_function = log(abs(x+2*y+z+ion_lev))
+hist_all.hist_function2 = log(abs(3*ux+uy+uz))
+hist_all.hist_weight = log(abs(w+ga_psi))*log(abs(3*ux+uy+uz))*log(abs(x+2*y+z+ion_lev))
