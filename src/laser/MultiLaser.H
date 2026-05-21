@@ -123,17 +123,17 @@ public:
      * The complex phase of the envelope is evaluated on-axis only, but can be generalized to everywhere.
      *
      * \param[in] dt time step of the simulation
-     * \param[in] is_first_step if this is the first time step of the simulation
+     * \param[in] non_centered_push push using only 2 slices instead of 3
      */
-    void AdvanceSliceMG (amrex::Real dt, bool is_first_step);
+    void AdvanceSliceMG (amrex::Real dt, bool non_centered_push);
 
     /** Advance a laser slice by 1 time step using a FFT solver.
      * The complex phase of the envelope is evaluated on-axis only.
      *
      * \param[in] dt time step of the simulation
-     * \param[in] is_first_step if this is the first time step of the simulation
+     * \param[in] non_centered_push push using only 2 slices instead of 3
      */
-    void AdvanceSliceFFT (amrex::Real dt, bool is_first_step);
+    void AdvanceSliceFFT (amrex::Real dt, bool non_centered_push);
 
     /** Initialize 1 longitudinal slice of the laser, and store it in n00j00 (current time step)
      * and nm1j00 (previous time step).
@@ -215,6 +215,8 @@ private:
     int m_MG_verbose = 0;
     /** Whether to use time-averaged RHS in envelope solver. */
     bool m_MG_average_rhs = true;
+    /** always use 2-slice non-centered push */
+    bool m_use_non_centered_push = false;
     /** hpmg solver for the envelope solver */
     std::unique_ptr<hpmg::MultiGrid> m_mg;
     /** store rhs for MG solver */
