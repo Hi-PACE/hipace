@@ -58,6 +58,149 @@ namespace coll_ion
     inline constexpr Real a0    = 5.29177210544e-11; // m
     inline constexpr Real normalization = 4.0 * MathConst::pi * a0*a0 * alpha*alpha*alpha*alpha;
 
+    // Check if the collision energy is sufficient for ionization
+    AMREX_GPU_HOST_DEVICE inline
+    bool impact_energy (
+        Real const ux1, Real const uy1, Real const uz1, Real const g1,
+        Real const ux2, Real const uy2, Real const uz2, Real const g2,
+        Real const m1, Real const m2, Real const Eion_eV, Real const c2, Real const inv_c2)
+    {
+        using namespace amrex::literals;
+
+        // Tolerances for numerical checks
+        constexpr Real rel_tol  = 1e-10_rt;
+        constexpr Real beta_tol = 1e-12_rt;
+
+        Real const Eion  = Eion_eV * PhysConstSI::q_e;  // [J]
+
+        // ------------------------------------------------------------------
+        // Early-out if relative motion is negligible
+        // ------------------------------------------------------------------
+        Real const diffx = ux1 - ux2;
+        Real const diffy = uy1 - uy2;
+        Real const diffz = uz1 - uz2;
+        Real const diffm = std::sqrt(diffx*diffx + diffy*diffy + diffz*diffz);
+        Real const summ = std::sqrt(ux1*ux1 + uy1*uy1 + uz1*uz1) + std::sqrt(ux2*ux2 + uy2*uy2 + uz2*uz2);
+        // If g = u1 - u2 = 0, do not collide.
+        // Or if the relative difference is less than 1.0e-10.
+        if (summ <= 0.0_rt) return false;
+        if (diffm / summ < rel_tol) return false;
+
+        // ------------------------------------------------------------------
+        // Initial lab-frame momenta
+        // ------------------------------------------------------------------
+        Real const px1 = ux1 * m1 * PhysConstSI::c;
+        Real const py1 = uy1 * m1 * PhysConstSI::c;
+        Real const pz1 = uz1 * m1 * PhysConstSI::c;
+
+        Real const px2 = ux2 * m2 * PhysConstSI::c;
+        Real const py2 = uy2 * m2 * PhysConstSI::c;
+        Real const pz2 = uz2 * m2 * PhysConstSI::c;
+
+        // ------------------------------------------------------------------
+        // COM velocity
+        // ------------------------------------------------------------------
+        Real const mass_g = m1 * g1 + m2 * g2;
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(mass_g > 0.0_rt, "Mass is zero in ImpactIonizationSigma");
+
+        Real const vcx    = (px1+px2) / mass_g;
+        Real const vcy    = (py1+py2) / mass_g;
+        Real const vcz    = (pz1+pz2) / mass_g;
+        Real const vcms   = vcx*vcx + vcy*vcy + vcz*vcz;
+
+        Real beta2 = vcms * inv_c2;
+        if (beta2 < 0.0_rt) {
+            if (beta2 > -beta_tol) {
+                beta2 = 0.0_rt;
+            } else {
+                AMREX_DEVICE_PRINTF(
+                    "ImpactIonization: beta < 0, beta2=%e vcms=%e\n",
+                    beta2, vcms
+                );
+                return false;
+            }
+        }
+
+        if (beta2 >= 1.0_rt - beta_tol) {
+            AMREX_DEVICE_PRINTF(
+                "ImpactIonization: beta too close to 1, beta2=%e\n",
+                beta2
+            );
+            return false;
+        }
+
+        Real const gc = 1.0_rt / std::sqrt( 1.0_rt - beta2 );
+
+        // Stable equivalent of (gc - 1)/vcms:
+        // (gamma - 1)/v^2 = gamma^2 / ((gamma + 1) c^2)
+        Real const boost_v2 = gc*gc / ((gc + 1.0_rt) * c2);
+
+        // ------------------------------------------------------------------
+        // COM-frame boost of the initial momenta
+        // ------------------------------------------------------------------
+        Real const vcDv1 = (vcx*ux1 + vcy*uy1 + vcz*uz1) * PhysConstSI::c / g1;
+        Real const vcDv2 = (vcx*ux2 + vcy*uy2 + vcz*uz2) * PhysConstSI::c / g2;
+
+        // Boost particle 1 to COM
+        Real p1sx;
+        Real p1sy;
+        Real p1sz;
+        if ( vcms > 0.0_rt )
+        {
+            Real const lorentz_coeff_1 =
+                ( boost_v2 * vcDv1 - gc ) * m1 * g1;
+            
+            p1sx = px1 + vcx*lorentz_coeff_1;
+            p1sy = py1 + vcy*lorentz_coeff_1;
+            p1sz = pz1 + vcz*lorentz_coeff_1;
+        }
+        else // If vcms = 0, don't do Lorentz-transform.
+        {
+            p1sx = px1;
+            p1sy = py1;
+            p1sz = pz1;
+        }
+
+        // Boost particle 2 to COM
+        Real p2sx;
+        Real p2sy;
+        Real p2sz;
+        if (vcms > 0.0_rt) {
+            Real const lorentz_coeff_2 =
+                ( boost_v2 * vcDv2 - gc ) * m2 * g2;
+            
+            p2sx = px2 + vcx*lorentz_coeff_2;
+            p2sy = py2 + vcy*lorentz_coeff_2;
+            p2sz = pz2 + vcz*lorentz_coeff_2;
+        } else {
+            p2sx = px2;
+            p2sy = py2;
+            p2sz = pz2;
+        }
+
+        // ------------------------------------------------------------------
+        // Ionization probability and final-state construction
+        // ------------------------------------------------------------------
+        Real const p1s_sq = p1sx*p1sx + p1sy*p1sy + p1sz*p1sz;
+        Real const p2s_sq = p2sx*p2sx + p2sy*p2sy + p2sz*p2sz;
+
+        Real const E1s = std::sqrt(p1s_sq*c2 + m1*m1*c2*c2);
+        Real const E2s = std::sqrt(p2s_sq*c2 + m2*m2*c2*c2);
+
+        Real const K1s = E1s - m1*c2;
+        Real const K2s = E2s - m2*c2;
+
+        // Available initial kinetic energy in the COM frame [J]
+        Real const Ecm = K1s + K2s;
+
+        // Kinetic energy available to the 3 outgoing particles in COM [J]
+        Real const Eout = Ecm - Eion;
+        if (Eout <= 0.0_rt)   // Energy not sufficient for ionization 
+        { return false;
+        } else { return true;
+        }
+    }
+
     struct IonizationResult
     {
         Real sigma;
@@ -82,9 +225,9 @@ namespace coll_ion
     IonizationResult sigma_E(int atomic_number, int zstar, Real e, const Real* p_binding_energies, const Real* p_ionization_energies)
     {
         Real sigma = 0.0;
-        Real weighted_en = 0.0;
+        Real ionization_en = 0.0;
 
-        Real ionization_sum = 0.0;
+        //Real ionization_sum = 0.0;
         int n = 0;      // degeneracy counter
 
         int base_idx = get_energy_index(atomic_number);
@@ -101,7 +244,7 @@ namespace coll_ion
             
             // Add current electron to the running group
             n++;
-            ionization_sum += p_ionization_energies[idx_k];
+            //ionization_sum += p_ionization_energies[idx_k];
 
             Real bp = p_binding_energies[idx_k] / me_c2;  // binding energy in m_e c² units
 
@@ -141,14 +284,15 @@ namespace coll_ion
                 sigma += sk;
 
                 //is this correct? should degenerate electrons share one averaged ionization energy?
-                Real ionization_E = ionization_sum / static_cast<Real>(n);
-                weighted_en += sk * ionization_E;
+                //Real ionization_E = ionization_sum / static_cast<Real>(n);
+                //weighted_en += sk * ionization_E;
             }
 
             n = 0;   // reset degeneracy for the next shell
-            ionization_sum = 0.0;
+            //ionization_sum = 0.0;
         }
-        Real ionization_en = (sigma > 0.0) ? weighted_en / sigma : 0.0;
+        //Real ionization_en = (sigma > 0.0) ? weighted_en / sigma : 0.0;
+        ionization_en = p_ionization_energies[base_idx + zstar];
 
         return {sigma, ionization_en};
     }

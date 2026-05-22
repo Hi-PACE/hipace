@@ -13,6 +13,7 @@
 #include "utils/DeprecatedInput.H"
 #include "utils/GPUUtil.H"
 #include "utils/InsituUtil.H"
+#include "utils/IonizationEnergiesTable.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
@@ -78,6 +79,16 @@ PlasmaParticleContainer::ReadParameters ()
         "When specifying ionization_product, can_*_ionize must be set to 1 via field or laser");
 
     if(m_can_ionize) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(element != "",
+            "For ionization, the element of the plasma must be specified. Please check the input file.");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(element) != 0,
+            "There are no ionization energies available for this element. "
+            "Please update src/utils/IonizationEnergiesTable.H using write_atomic_data_cpp.py");
+        // Get atomic number and ionization energies from file
+        const int ion_element_id = ion_map_ids[element];
+        const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+        m_max_ion_lev = ion_atomic_number;
+
         m_neutralize_background = false; // change default
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial ion level must be specified");
