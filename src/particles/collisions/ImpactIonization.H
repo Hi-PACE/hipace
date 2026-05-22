@@ -198,7 +198,13 @@ void ImpactIonization (
 
     // Kinetic energy available to the 3 outgoing particles in COM [J]
     T_R const Eout = Ecm - Eion;
-    if (Eout <= T_R(0.0)) return;   // Energy not sufficient for ionization
+    if (Eout <= T_R(0.0)) {     // Energy not sufficient for ionization
+        AMREX_DEVICE_PRINTF(
+            "ImpactIonization: energy not sufficient for ionization, E = %e = %e (Ecm) - %e (Eion)\n",
+            Eout, Ecm, Eion
+        );
+        return;
+    }    // Energy not sufficient for ionization
 
     // 3-body final state in the COM frame
     // Particle 1 : scattered projectile       (mass m1)

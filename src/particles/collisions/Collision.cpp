@@ -26,18 +26,18 @@ namespace {
                                         15.76, 15.76, 15.76, 15.76, 15.76, 15.76
     };  // Very structure specific to ImpactIonizationSigma.H
 
-    constexpr amrex::Real ionizationEnergies[28] = {
-        /* Z=1  (H)  */ 13.598434005136,
+/*    constexpr amrex::Real ionizationEnergies[28] = {
+        // Z=1  (H)  13.598434005136,
 
-        /* Z=7  (N)  : 1s, 1s, 2s, 2s, 2p, 2p, 2p */
+        // Z=7  (N)  : 1s, 1s, 2s, 2s, 2p, 2p, 2p
                         667.04609, 552.06731,
                         97.89013,  77.4735,
                         47.4453,   29.60125, 14.53413,
 
-        /* Z=2  (He) : 1s, 1s */
+        // Z=2  (He) : 1s, 1s
                         54.41776311, 24.587387936,
 
-        /* Z=18 (Ar) : 1s,1s,2s,2s,2p x6,3s x2,3p x6 */
+        // Z=18 (Ar) : 1s,1s,2s,2s,2p x6,3s x2,3p x6
                         4426.2227, 4120.6655,
                         918.374,   855.47,
                         755.13,    685.47,   619.0,
@@ -45,6 +45,22 @@ namespace {
                         143.457,   124.41,
                         91.290,    74.84,    59.58,
                         40.735,    27.62967, 15.7596112
+    };
+*/
+
+    constexpr amrex::Real ionizationEnergies[28] = {
+        /* H */ 13.598434005136,
+
+        /* N: zstar = 0..6 */
+        14.53413, 29.60125, 47.4453, 77.4735, 97.89013, 552.06731, 667.04609,
+
+        /* He: zstar = 0..1 */
+        24.587387936, 54.41776311,
+
+        /* Ar: zstar = 0..17 */
+        15.7596112, 27.62967, 40.735, 59.58, 74.84, 91.290,
+        124.41, 143.457, 422.60, 479.76, 540.4, 619.0,
+        685.47, 755.13, 855.47, 918.374, 4120.6655, 4426.2227
     };
 }
 
@@ -222,6 +238,15 @@ Collision::doCollisionA (
             const amrex::Real Krel = (grel - 1.0) * m1 * c2 / PhysConstSI::q_e;    // (eV)
             auto cs_data = coll_ion::sigma_E(ion_atomic_number, ion_lev2, Krel, p_binding_energies, p_ionization_energies);
             auto sigma = cs_data.sigma;
+            auto Eion_eV = cs_data.ionization_en;
+
+            // Check if the collision energy is sufficient for ionization
+            bool impact = coll_ion::impact_energy (
+                ux1, uy1, uz1, g1,
+                ux2, uy2, uz2, g2,
+                m1, m2, Eion_eV, c2, inv_c2
+            );
+            if (!impact) return false;
 
             // The ionization mechanism is based on the algorithm from Perez et al., Phys.Plasmas.19.083104 (2012)
             // The weights are rescaled according to eq (22)-(23),
@@ -234,7 +259,8 @@ Collision::doCollisionA (
             if (Pion > r) {
                 // Rejection method according to the adaptation of eq (14) in the ionization model, 
                 // from Perez et al., Phys.Plasmas.19.083104 (2012)
-                r = amrex::Random(engine);
+
+                r = amrex::Random(engine);    
                 return ( w1r > r*amrex::max(w1r,w2r) );
             } else {
                 return false;
@@ -251,7 +277,6 @@ Collision::doCollisionA (
             amrex::Real uy1 = ptd1.rdata(PlasmaIdx::uy_half_step)[i1];
             amrex::Real psi1 = ptd1.rdata(PlasmaIdx::psi_half_step)[i1];
             const amrex::Real w1 = ptd1.rdata(PlasmaIdx::w)[i1];
-            const int ion_lev1 = ptd1.idata(PlasmaIdx::ion_lev)[i1];
 
             amrex::Real ux2 = ptd2.rdata(PlasmaIdx::ux_half_step)[i2];
             amrex::Real uy2 = ptd2.rdata(PlasmaIdx::uy_half_step)[i2];
@@ -259,26 +284,10 @@ Collision::doCollisionA (
             const amrex::Real w2 = ptd2.rdata(PlasmaIdx::w)[i2];
             int ion_lev2 = ptd2.idata(PlasmaIdx::ion_lev)[i2];
 
-            // Initialize new electron properties
-            ptd3.id(i3) = 4;
-            ptd3.cpu(i3) = 0;
-            ptd3.rdata(PlasmaIdx::x)[i3] = ptd2.rdata(PlasmaIdx::x)[i2];
-            ptd3.rdata(PlasmaIdx::y)[i3] = ptd2.rdata(PlasmaIdx::y)[i2];
-            ptd3.rdata(PlasmaIdx::x_prev)[i3] = ptd2.rdata(PlasmaIdx::x_prev)[i2];
-            ptd3.rdata(PlasmaIdx::y_prev)[i3] = ptd2.rdata(PlasmaIdx::y_prev)[i2];
-            ptd3.rdata(PlasmaIdx::w)[i3] = ptd2.rdata(PlasmaIdx::w)[i2];
-            ptd3.idata(PlasmaIdx::ion_lev)[i3] = 0;
             // Quantities to be updated after collision
             amrex::Real ux3 = 0._rt;
             amrex::Real uy3 = 0._rt;
-            amrex::Real psi3 = 1._rt;
             amrex::Real uz3 = 0._rt;
-            ptd3.rdata(PlasmaIdx::ux)[i3] = ux3;
-            ptd3.rdata(PlasmaIdx::uy)[i3] = uy3;
-            ptd3.rdata(PlasmaIdx::psi)[i3] = psi3;
-            ptd3.rdata(PlasmaIdx::ux_half_step)[i3] = ux3;
-            ptd3.rdata(PlasmaIdx::uy_half_step)[i3] = uy3;
-            ptd3.rdata(PlasmaIdx::psi_half_step)[i3] = psi3;
 
             // particle's Lorentz factor
             amrex::Real g1 = plasma_gamma(ux1, uy1, psi1, 1._rt / psi1, /* Assumes Aabssq == 0 */ 0._rt);
@@ -334,6 +343,16 @@ Collision::doCollisionA (
             ptd2.rdata(PlasmaIdx::uy_half_step)[i2] = uy2;
             ptd2.rdata(PlasmaIdx::psi_half_step)[i2] = plasma_psi(ux2, uy2, uz2, /* Assumes Aabssq == 0 */ 0._rt);
             ptd2.idata(PlasmaIdx::ion_lev)[i2] = ion_lev2;
+
+            // Initialize new electron properties
+            ptd3.id(i3) = 4;
+            ptd3.cpu(i3) = ptd2.cpu(i2);
+            ptd3.rdata(PlasmaIdx::x)[i3] = ptd2.rdata(PlasmaIdx::x)[i2];
+            ptd3.rdata(PlasmaIdx::y)[i3] = ptd2.rdata(PlasmaIdx::y)[i2];
+            ptd3.rdata(PlasmaIdx::x_prev)[i3] = ptd2.rdata(PlasmaIdx::x_prev)[i2];
+            ptd3.rdata(PlasmaIdx::y_prev)[i3] = ptd2.rdata(PlasmaIdx::y_prev)[i2];
+            ptd3.rdata(PlasmaIdx::w)[i3] = ptd2.rdata(PlasmaIdx::w)[i2];
+            ptd3.idata(PlasmaIdx::ion_lev)[i3] = 0;
 
             ptd3.rdata(PlasmaIdx::ux)[i3] = ux3;
             ptd3.rdata(PlasmaIdx::uy)[i3] = uy3;
