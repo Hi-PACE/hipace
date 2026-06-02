@@ -478,7 +478,6 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
                 }
             );
         }
-
     } else {
         amrex::Abort("laser.solver_type must be fft, multigrid or off");
     }
