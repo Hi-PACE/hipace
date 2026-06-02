@@ -25,7 +25,7 @@ AdvanceBeamParticlesSlice (
     using namespace amrex::literals;
 
     const PhysConst phys_const = get_phys_const();
-    const bool acc_z = beam.m_acc_z;
+
     const bool do_z_push = beam.m_do_z_push;
     const int n_subcycles = beam.m_n_subcycles;
     const bool radiation_reaction = beam.m_do_radiation_reaction;
@@ -200,6 +200,7 @@ AdvanceBeamParticlesSlice (
                     auto [shape_n, ncell] = shape_factor<2>(zmid, 0);
 
                     Ezp *= (1._rt - shape_p - shape_n);
+
                     // Gather Ez field on particle from grid
                     for (int iy=0; iy<=depos_order.value; iy++){
                         for (int ix=0; ix<=depos_order.value; ix++){
@@ -217,7 +218,7 @@ AdvanceBeamParticlesSlice (
                     ApplyExternalField(xp, yp, zp, time, clight, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                         external_fields);
                 }
-                if(!acc_z) Ezp = 0;
+
                 ExmByp *= inv_clight;
                 EypBxp *= inv_clight;
                 Ezp *= inv_clight;
