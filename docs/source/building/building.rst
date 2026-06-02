@@ -30,18 +30,18 @@ Dependencies
 HiPACE++ depends on the following popular third party software.
 Please see installation instructions below in the Developers section.
 
-- a mature `C++17 <https://en.wikipedia.org/wiki/C%2B%2B14>`__ compiler: e.g. GCC 7, Clang 7, NVCC 11.0, MSVC 19.15 or newer
+- a mature `C++20 <https://en.wikipedia.org/wiki/C%2B%2B20>`__ compiler: e.g. GCC 11, Clang 14, NVCC 12.2, MSVC 19.34 or newer
 - `CMake 3.24.0+ <https://cmake.org/>`__
 - `AMReX development <https://amrex-codes.github.io>`__: we automatically download and compile a copy of AMReX
-- `openPMD-api 0.16.1+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
+- `openPMD-api 0.17.0+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
 
   - `HDF5 <https://support.hdfgroup.org/HDF5>`__ 1.8.13+ (optional; for ``.h5`` file support)
   - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.7.0+ (optional; for ``.bp`` file support)
 
 Platform-dependent, at least one of the following:
 
-- `CUDA Toolkit 11.0+ <https://developer.nvidia.com/cuda-downloads>`__: for NVIDIA GPU support (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
-- `ROCm 5.2+ <https://github.com/RadeonOpenCompute/ROCm>`__: for AMD GPU support
+- `CUDA Toolkit 12.2+ <https://developer.nvidia.com/cuda-downloads>`__: for NVIDIA GPU support (see `matching host-compilers <https://gist.github.com/ax3l/9489132>`__)
+- `ROCm 6.0+ <https://github.com/RadeonOpenCompute/ROCm>`__: for AMD GPU support
 - `FFTW3 <http://www.fftw.org/>`__: for CPUs (only used serially, but multi-threading supported; *not* needed for GPUs)
 
 Optional dependencies include:
@@ -208,7 +208,7 @@ CMake Option                 Default & Values                                   
 ``HiPACE_openpmd_mpi``       ON/OFF (default is set to value of ``HiPACE_MPI``)  Build openPMD with MPI support, although I/O is always serial
 ``HiPACE_openpmd_src``       *None*                                              Path to openPMD-api source directory (preferred if set)
 ``HiPACE_openpmd_repo``      ``https://github.com/openPMD/openPMD-api.git``      Repository URI to pull and build openPMD-api from
-``HiPACE_openpmd_branch``    ``0.16.1``                                          Repository branch for ``HiPACE_openpmd_repo``
+``HiPACE_openpmd_branch``    ``0.17.0``                                          Repository branch for ``HiPACE_openpmd_repo``
 ``HiPACE_openpmd_internal``  **ON**/OFF                                          Needs a pre-installed openPMD-api library if set to ``OFF``
 ``AMReX_LINEAR_SOLVERS``     ON/**OFF**                                          Compile AMReX multigrid solver.
 ===========================  ==================================================  =============================================================

@@ -58,6 +58,7 @@ Hipace_early_init::Hipace_early_init (Hipace* instance)
     int max_level = 0;
     queryWithParser(pp_amr, "max_level", max_level);
     m_N_level = max_level + 1;
+    queryWithParser(pph, "ignore_noncritical_warnings", m_ignore_noncritical_warnings);
     AnyFFT::setup();
 }
 
@@ -118,8 +119,15 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
     m_numprocs = amrex::ParallelDescriptor::NProcs();
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs <= m_max_step+1,
-                                     "Please use more or equal time steps than number of ranks");
+    if (m_ignore_noncritical_warnings) {
+        if (m_numprocs > m_max_step + 1 && amrex::ParallelDescriptor::IOProcessor()) {
+            amrex::OutStream()
+                << "WARNING: Please use more or equal time steps than the number of MPI ranks\n";
+        }
+    } else {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_numprocs <= m_max_step + 1,
+            "Please use more or equal time steps than the number of MPI ranks");
+    }
     queryWithParser(pph, "predcorr_B_error_tolerance", m_predcorr_B_error_tolerance);
     queryWithParser(pph, "predcorr_max_iterations", m_predcorr_max_iterations);
     queryWithParser(pph, "predcorr_B_mixing_factor", m_predcorr_B_mixing_factor);
@@ -129,6 +137,8 @@ Hipace::ReadParameters ()
     queryWithParser(pph, "deposit_rho", m_deposit_rho);
     m_deposit_rho_individual = m_diags.needsRhoIndividual();
     queryWithParser(pph, "deposit_rho_individual", m_deposit_rho_individual);
+    queryWithParser(pph, "deposit_n", m_deposit_n);
+    queryWithParser(pph, "deposit_n_ion_levels", m_deposit_n_ion_levels);
     m_deposit_temp_individual = m_diags.needsTempIndividual();
     queryWithParser(pph, "deposit_temp_individual", m_deposit_temp_individual);
     queryWithParser(pph, "temperature_depos_order", m_temperature_depos_order);
@@ -717,7 +727,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
-                m_deposit_rho || m_deposit_rho_individual, true, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual,
+                true, true, m_deposit_n || m_deposit_n_ion_levels, m_3D_geom, lev);
 
             // deposit jz_beam and maybe rhomjz of the beam on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
@@ -725,7 +736,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         } else {
             // deposit jx jy jz (maybe chi) and rhomjz
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, true,
-                m_deposit_rho || m_deposit_rho_individual, m_use_laser, true, m_3D_geom, lev);
+                m_deposit_rho || m_deposit_rho_individual,
+                m_use_laser, true,m_deposit_n || m_deposit_n_ion_levels, m_3D_geom, lev);
 
             // deposit jx jy jz and maybe rhomjz on This slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
@@ -809,8 +821,13 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // get laser insitu diagnostics
     m_multi_laser.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
-    // copy fields (and laser) to diagnostic array
-    FillFieldDiagnostics(current_N_level, islice);
+    // copy fields, laser, plasma and beam to diagnostic array
+    m_diags.FillDiagnostics(
+        islice, current_N_level,
+        m_fields, m_multi_laser,
+        m_multi_plasma, m_multi_beam,
+        m_3D_geom
+    );
 
     // plasma field ionization
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -877,7 +894,7 @@ Hipace::CalculateEzNext (const int current_N_level, const bool is_first_step)
 
         // deposit plasma jx and jy on the next slice
         m_multi_plasma.DepositCurrent(m_fields,
-            WhichSlice::Next, true, false, false, false, false, m_3D_geom, lev);
+            WhichSlice::Next, true, false, false, false, false, false, m_3D_geom, lev);
     }
 
     m_fields.SolvePoissonEz(m_3D_geom, current_N_level, WhichSlice::Next);
@@ -1137,7 +1154,7 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
         for (int lev=0; lev<current_N_level; ++lev) {
             // plasmas deposit jx jy to next temp slice
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::Next,
-                true, false, false, false, false, m_3D_geom, lev);
+                true, false, false, false, false, false, m_3D_geom, lev);
 
             // beams deposit jx jy to the next slice
             m_multi_beam.DepositCurrentSlice(m_fields, m_3D_geom, lev, is_first_step,
@@ -1314,16 +1331,6 @@ Hipace::InitDiagnostics (const int step, const amrex::Real time, const bool is_l
 }
 
 void
-Hipace::FillFieldDiagnostics (const int current_N_level, int islice)
-{
-    for (auto& fd : m_diags.getFieldData()) {
-        if (fd.m_has_field) {
-            m_fields.Copy(current_N_level, islice, fd, m_3D_geom, m_multi_laser);
-        }
-    }
-}
-
-void
 Hipace::FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
 {
 #ifdef HIPACE_USE_OPENPMD
@@ -1340,7 +1347,7 @@ Hipace::WriteDiagnostics (const int step, const amrex::Real time, const bool is_
 {
 #ifdef HIPACE_USE_OPENPMD
     if (m_diags.hasAnyFieldOutput(step, time, is_last_step)) {
-        m_openpmd_writer.WriteFieldDiagnostics(m_diags.getFieldData(),
+        m_openpmd_writer.WriteFieldDiagnostics(m_diags.getDiagData(),
             m_multi_laser, m_physical_time, step);
     }
 

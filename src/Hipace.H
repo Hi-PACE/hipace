@@ -76,6 +76,9 @@ struct Hipace_early_init
 
     /* Number of mesh refinement levels */
     int m_N_level = 1;
+
+    /* Don't stop the simulation if user inputs are potentially suboptimal */
+    inline static bool m_ignore_noncritical_warnings = false;
 };
 
 /** \brief Singleton class that initializes, runs and finalizes the simulation */
@@ -245,6 +248,10 @@ public:
     inline static bool m_deposit_rho = false;
     /** Whether to deposit rho for every individual plasma for diagnostics */
     inline static bool m_deposit_rho_individual = false;
+    /** Whether to deposit number density of plasma for diagnostics */
+    inline static bool m_deposit_n = false;
+    /** Whether to deposit number density of plasma of different ionisation levels for diagnostics */
+    inline static bool m_deposit_n_ion_levels = false;
     /** Whether to deposit temperature for every individual plasma for diagnostics */
     inline static bool m_deposit_temp_individual = false;
     /** Order of the temperature deposition shape factor */
@@ -361,7 +368,6 @@ private:
     amrex::Vector< CoulombCollision > m_all_collisions;
 
     void InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
-    void FillFieldDiagnostics (const int current_N_level, int islice);
     void FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void FlushDiagnostics ();

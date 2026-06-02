@@ -108,9 +108,11 @@ struct Array3 {
     int ncomp=0;
 #endif
 
-    template <class U=T, std::enable_if_t<std::is_const_v<U>,int> = 0>
+    template <class U>
+    // copy constructor, allow to convert from T to const T
+    requires std::is_convertible_v<U*, T*>
     AMREX_GPU_HOST_DEVICE
-    Array3 (const Array3<std::remove_const_t<T>>& rhs) noexcept
+    Array3 (const Array3<U>& rhs) noexcept
         : p(rhs.p),
           jstride(rhs.jstride),
           nstride(rhs.nstride),

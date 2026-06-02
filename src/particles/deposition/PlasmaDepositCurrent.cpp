@@ -23,8 +23,8 @@ void
 DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const int which_slice,
                 const bool deposit_jx_jy, const bool deposit_jz, const bool deposit_rho,
-                const bool deposit_chi, const bool deposit_rhomjz,
-                amrex::Vector<amrex::Geometry> const& gm, int const lev)
+                const bool deposit_chi, const bool deposit_rhomjz, const bool deposit_n,
+                amrex::Vector<amrex::Geometry> const& gm, int const lev, int ion_lev)
 {
     HIPACE_PROFILE("DepositCurrent_PlasmaParticleContainer()");
     using namespace amrex::literals;
@@ -40,8 +40,15 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
     const amrex::Real charge = (which_slice == WhichSlice::RhomJzIons) ? -plasma.m_charge : plasma.m_charge;
     const amrex::Real mass = plasma.m_mass;
     // only deposit rho individual on WhichSlice::This
-    const bool deposit_rho_individual = Hipace::m_deposit_rho_individual && which_slice == WhichSlice::This;
+    const bool deposit_rho_individual =
+        Hipace::m_deposit_rho_individual && which_slice == WhichSlice::This;
+    const bool deposit_n_ion_levels =
+        Hipace::m_deposit_n_ion_levels && which_slice == WhichSlice::This;
     const std::string rho_str = deposit_rho_individual ? "rho_" + plasma.GetName() : "rho";
+    const std::string n_str =
+        (ion_lev >= 0 && deposit_n_ion_levels)
+            ? "n_" + plasma.GetName() + "_ionlev_" + std::to_string(ion_lev)
+            : "n_" + plasma.GetName();
 
     // Loop over particle boxes
     for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
@@ -56,6 +63,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         const int    rho = deposit_rho    ? Comps[which_slice][rho_str]  : -1;
         const int    chi = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
         const int rhomjz = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
+        const int      n = deposit_n      ? Comps[which_slice][n_str]    : -1;
         const int   aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
 
         // Offset for converting positions to indexes
@@ -117,24 +125,27 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         amrex::GpuArray<int, 1>{aabs},
-                        amrex::GpuArray<int, 6>{jx, jy, jz, rho, chi, rhomjz});
+                        amrex::GpuArray<int, 7>{jx, jy, jz, rho, chi, rhomjz, n});
                 } else {
                     SharedMemoryDeposition<stencil_size, stencil_size, true>(
                         int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
                         isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
                         amrex::GpuArray<int, 0>{},
-                        amrex::GpuArray<int, 6>{jx, jy, jz, rho, chi, rhomjz});
+                        amrex::GpuArray<int, 7>{jx, jy, jz, rho, chi, rhomjz, n});
                 }
             },
             // is_valid
             // return whether the particle is valid and should deposit
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   auto /*depos_order*/,
-                                  auto /*can_ionize*/,
+                                  auto can_ionize,
                                   auto /*use_laser*/)
             {
                 // only deposit plasma currents on or below their according MR level
-                return ptd.id(ip).is_valid() && (lev == 0 || ptd.cpu(ip) >= lev);
+                return ptd.id(ip).is_valid() &&
+                       (lev == 0 || ptd.cpu(ip) >= lev) &&
+                       (!can_ionize || ion_lev == -1 ||
+                       ion_lev == ptd.idata(PlasmaIdx::ion_lev)[ip]);
             },
             // get_cell
             // return the lowest cell index that the particle deposits into
@@ -169,16 +180,16 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const amrex::Real yp = ptd.pos(1, ip);
                 const amrex::Real vx = ptd.rdata(PlasmaIdx::ux)[ip] * psi_inv;
                 const amrex::Real vy = ptd.rdata(PlasmaIdx::uy)[ip] * psi_inv;
-
+                const amrex::Real w  = ptd.rdata(PlasmaIdx::w)[ip];
                 // calculate charge of the plasma particles
-                amrex::Real q_invvol = charge_invvol * ptd.rdata(PlasmaIdx::w)[ip];
+                amrex::Real q_invvol = charge_invvol * w;
                 amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
                 [[maybe_unused]] amrex::Real laser_norm_ion = laser_norm;
                 if constexpr (can_ionize) {
-                    q_invvol *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    q_mu0_mass_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    laser_norm_ion *=
-                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    const amrex::Real p_ion_lev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
+                    q_invvol *= p_ion_lev;
+                    q_mu0_mass_ratio *= p_ion_lev;
+                    laser_norm_ion *= p_ion_lev * p_ion_lev;
                 }
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
@@ -218,6 +229,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                         auto [shape_y, j] = shape_factor<depos_order>(ymid, iy);
 
                         const amrex::Real charge_density = q_invvol * shape_x * shape_y;
+                        const amrex::Real num_density = invvol * shape_x * shape_y * w;
                         // wqx, wqy wqz are particle current in each direction
                         const amrex::Real wqx     = charge_density * clight * vx;
                         const amrex::Real wqy     = charge_density * clight * vy;
@@ -225,6 +237,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                         const amrex::Real wq      = charge_density * gamma_psi;
                         const amrex::Real wchi    = charge_density * q_mu0_mass_ratio * psi_inv;
                         const amrex::Real wrhomjz = charge_density;
+                        const amrex::Real wn      = num_density  * gamma_psi;
 
                         // Deposit current into arr
                         if (depos_idx[0] != -1) { // deposit_jx_jy
@@ -242,6 +255,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                         }
                         if (depos_idx[5] != -1) { // deposit_rhomjz
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[5]), wrhomjz);
+                        }
+                        if (depos_idx[6] != -1) { // deposit_n
+                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[6]), wn);
                         }
                     }
                 }
