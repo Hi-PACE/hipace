@@ -40,7 +40,8 @@ MultiLaser::ReadParameters ()
     queryWithParser(pp, "use_phase", m_use_phase);
     queryWithParser(pp, "use_non_centered_push", m_use_non_centered_push);
     queryWithParser(pp, "solver_type", m_solver_type);
-    AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
+    AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft" ||
+                        m_solver_type == "off");
     queryWithParser(pp, "interp_order", m_interp_order);
     AMREX_ALWAYS_ASSERT(m_interp_order <= 3 && m_interp_order >= 0);
 
@@ -464,8 +465,21 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
         AdvanceSliceMG(dt, is_first_step || m_use_non_centered_push);
     } else if (m_solver_type == "fft") {
         AdvanceSliceFFT(dt, is_first_step || m_use_non_centered_push);
+    } else if (m_solver_type == "off") {
+        for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
+            Array3<amrex::Real> arr = m_slices.array(mfi);
+            amrex::ParallelFor(
+                to2D(mfi.tilebox()),
+                [=] AMREX_GPU_DEVICE (int i, int j) {
+                    using namespace WhichLaserSlice;
+                    // copy current laser to slice of the next time step
+                    arr(i, j, np1j00_r) = arr(i, j, n00j00_r);
+                    arr(i, j, np1j00_i) = arr(i, j, n00j00_i);
+                }
+            );
+        }
     } else {
-        amrex::Abort("laser.solver_type must be fft or multigrid");
+        amrex::Abort("laser.solver_type must be fft, multigrid or off");
     }
 }
 
