@@ -89,7 +89,14 @@ jobs:
     - name: Build & Install
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+        ls "C:\Program Files\Microsoft Visual Studio"
+        ls "C:\Program Files\Microsoft Visual Studio\2026"
+        ls "C:\Program Files\Microsoft Visual Studio\2026\Enterprise"
+        ls "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\VC\Auxiliary"
+        ls "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\vc\Auxiliary"
+        ls "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\VC\Auxiliary\Build"
+        ls "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\vc\Auxiliary\build"
+        call "C:\Program Files\Microsoft Visual Studio\2026\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
 
         set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
         cmake -S . -B build   ^
