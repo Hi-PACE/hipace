@@ -16,7 +16,7 @@ jobs:
     # -Werror
     env: {CXXFLAGS: "-Wno-deprecated-declarations -Wno-error=pass-failed"}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: install dependencies
       shell: bash
