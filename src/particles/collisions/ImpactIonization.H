@@ -20,37 +20,33 @@
 #include <cmath>  // isnan() isinf()
 #include <limits> // numeric_limits<float>::min()
 
-/* \brief The implicit, non-relativistic assumption has been modified,
- *        and the ionization model is now relativistic.
- *        Momentum and energy division after the ionization event
- *        is done as follows:
- *        Three numbers are generated that satisfy the triangle inequality.
- *        These numbers will be scaled to give the momentum
- *        for each particle (satisfying the triangle inequality
- *        ensures that the momentum vectors can be arranged
- *        such that the net linear momentum is zero).
- *        Species 2 is definitely a neutral/ion, so we first choose its
- *        proportion to be n_2 = min(E2 / Ecoll, 0.5 * R), where
- *        R is a random number between 0 and 1.
- *        The other two numbers (n_1 & n_3) are then found
- *        by choosing a random point on the ellipse characterized
- *        by the semi-major and semi-minor axes
- *        a = (1 - n_2) / 2.0
- *        b = 0.5 * sqrt(1 - 2 * n_2)
- *        The numbers are found by randomly sampling an x value
- *        between -a and a, and finding the corresponding y value
- *        that falls on the ellipse: y^2 = b^2 - b^2/a^2 * x^2.
- *        Then n_1 = sqrt(y^2 + (x - n_2/2)^2) and
- *        n_3 = 1 - n_2 - n_1.
- *        Next, we need to find the number C, such that if
- *        p_i = C * n_i, we would have E_1 + E_2 + E_3 = E_out
- *        where E_i = sqrt((p_i * c)^2 + (m_i * c^2)^2) - m_i * c^2.
- *        The root for C is found using the bisection method.
- *        After C is determined the momentum vectors are arranged
- *        such that the net linear momentum is zero.
- *        To see if there are nan or inf updated velocities,
- *        compile with USE_ASSERTION=TRUE.
-*/ 
+/* \brief Relativistic impact-ionization final-state model.
+ *
+ *        The collision is handled in the center-of-momentum (COM) frame.
+ *        Ionization is allowed only if the COM kinetic energy exceeds the ionization energy.
+ *
+ *        After ionization, three outgoing particles are produced:
+ *
+ *            particle 1 : scattered projectile electron
+ *            particle 2 : target ion/ionized neutral
+ *            particle 3 : secondary electron
+ *        The two outgoing electrons are assigned independent isotropic random directions. 
+ *        Their momentum magnitudes are assumed to be equal, |p1| = |p3| = C, 
+ *        which is consistent with an equal-energy-share assumption for equal-mass electrons. 
+ *        The ion momentum is then fixed by momentum conservation:
+ *
+ *            p2 = -(p1 + p3).
+ *
+ *        The scalar C is determined by solving
+ *
+ *            K1(C) + K2(C) + K3(C) = Eout,
+ *
+ *        where Ki is the relativistic kinetic energy of particle i and Eout is the COM kinetic energy 
+ *        remaining after subtracting the ionization energy. The root is found by bisection.
+ *
+ *        The model assumes that particles 1 and 3 are electrons with equal mass. 
+ *        Compile with USE_ASSERTION=TRUE to enable checks for NaN or Inf updated momenta.
+ */
 
 template <typename T_R>
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -64,11 +60,6 @@ void ImpactIonization (
 {
     using namespace amrex::literals;
 
-    // Helper lambda to clamp a value between a lower and upper bound
-    auto clamp = [] AMREX_GPU_HOST_DEVICE (T_R x, T_R lo, T_R hi) -> T_R
-    {
-        return amrex::max(lo, amrex::min(hi, x));
-    };
     // Tolerances for numerical checks
     constexpr T_R rel_tol  = T_R(1.0e-10);
     constexpr T_R eps_n    = T_R(1.0e-10);
@@ -116,18 +107,18 @@ void ImpactIonization (
         if (beta2 > -beta_tol) {
             beta2 = T_R(0.0);
         } else {
-            AMREX_DEVICE_PRINTF(
-                "ImpactIonization: beta < 0, beta2=%e vcms=%e\n",
-                beta2, vcms
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                false,
+                "ImpactIonization: beta < 0!"
             );
             return;
         }
     }
 
     if (beta2 >= T_R(1.0) - beta_tol) {
-        AMREX_DEVICE_PRINTF(
-            "ImpactIonization: beta too close to 1, beta2=%e\n",
-            beta2
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            false,
+            "ImpactIonization: beta too close to 1!"
         );
         return;
     }
@@ -206,136 +197,98 @@ void ImpactIonization (
         return;
     }    // Energy not sufficient for ionization
 
+    // ------------------------------------------------------------------
     // 3-body final state in the COM frame
-    // Particle 1 : scattered projectile       (mass m1)
-    // Particle 2 : ion / neutral              (mass m2)
-    // Particle 3 : secondary electron         (mass m3)
+    // Particle 1 : scattered projectile electron   (mass m1)
+    // Particle 2 : ion                             (mass m2)
+    // Particle 3 : secondary electron              (mass m3)
     //
-    // Momentum magnitudes satisfy triangle closure,
-    // scaled so that total kinetic energy = Eout.
-    // Sample three normalized momentum magnitudes satisfying triangle inequality
-    T_R const E_target = K2s;
-    T_R n_2 = amrex::min(E_target/Ecm, T_R(0.5)*amrex::Random(engine));
-    n_2 = clamp(n_2, T_R(0.0), T_R(0.5) - eps_n);
+    // Coherent with WarpX electron impact model:
+    // - Particles 1 and 3 (both electrons) get independent isotropic
+    //   random directions in the COM frame.
+    // - Particle 2 (ion) direction is fully determined by momentum
+    //   conservation: p2 = -(p1 + p3).
+    // - Equal momentum magnitudes |p1| = |p3| = C is justified by the
+    //   equal energy share assumption (coherent with WarpX), which holds
+    //   relativistically if m1 == m3, i.e. both particles are electrons.
+    // - C is found by bisection so that total relativistic KE = Eout.
+    // ------------------------------------------------------------------
 
-    T_R const a = T_R(0.5) * (T_R(1.0) - n_2);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        std::abs(m1 - m3) < T_R(1.0e-10) * m1,
+        "ImpactIonization: equal momentum assumption requires m1 == m3 (both electrons)");
 
-    T_R const b2_arg = T_R(1.0) - T_R(2.0)*n_2;
-    if (b2_arg < T_R(0.0)) {
+    // Sample independent isotropic unit vectors for the two electrons
+    T_R const cos_theta1 = T_R(2.0) * amrex::Random(engine) - T_R(1.0);
+    T_R const sin_theta1 = std::sqrt(amrex::max(T_R(0.0), T_R(1.0) - cos_theta1*cos_theta1));
+    T_R const phi1       = amrex::Random(engine) * T_R(2.0) * MathConst::pi;
+    T_R const e1x        = sin_theta1 * std::cos(phi1);
+    T_R const e1y        = sin_theta1 * std::sin(phi1);
+    T_R const e1z        = cos_theta1;
+
+    T_R const cos_theta3 = T_R(2.0) * amrex::Random(engine) - T_R(1.0);
+    T_R const sin_theta3 = std::sqrt(amrex::max(T_R(0.0), T_R(1.0) - cos_theta3*cos_theta3));
+    T_R const phi3       = amrex::Random(engine) * T_R(2.0) * MathConst::pi;
+    T_R const e3x        = sin_theta3 * std::cos(phi3);
+    T_R const e3y        = sin_theta3 * std::sin(phi3);
+    T_R const e3z        = cos_theta3;
+
+    // Ion momentum direction from momentum conservation: p2 = -(p1 + p3)
+    // With |p1| = |p3| = C: the ion momentum vector is -C*(e1 + e3)
+    T_R const d2x    = -(e1x + e3x);
+    T_R const d2y    = -(e1y + e3y);
+    T_R const d2z    = -(e1z + e3z);
+    T_R const n2_raw = std::sqrt(d2x*d2x + d2y*d2y + d2z*d2z);
+
+    if (n2_raw < eps_n) {
         AMREX_DEVICE_PRINTF(
-            "ImpactIonization: invalid ellipse, b2_arg=%e n2=%e E_target=%e Ecm=%e\n",
-            b2_arg, n_2, E_target, Ecm
-        );
+            "ImpactIonization: degenerate ion direction, n2_raw=%e\n", n2_raw);
         return;
     }
 
-    T_R const b = T_R(0.5) * std::sqrt(amrex::max(T_R(0.0), b2_arg));
+    T_R const ion_dx = d2x / n2_raw;
+    T_R const ion_dy = d2y / n2_raw;
+    T_R const ion_dz = d2z / n2_raw;
 
-    T_R const x  = (T_R(2.0)*amrex::Random(engine) - T_R(1.0)) * a;
-    T_R y2 = b*b - (b*b/(a*a))*x*x;
-    y2 = amrex::max(T_R(0.0), y2);
-
-    T_R n1sq = y2 + x*x - x*n_2 + T_R(0.25)*n_2*n_2;
-    n1sq = amrex::max(T_R(0.0), n1sq);
-
-    T_R const n_1 = std::sqrt(n1sq);
-    T_R const n_3 = T_R(1.0) - n_1 - n_2;
-
-    T_R const den_alpha = T_R(2.0)*n_1*n_3;
-    T_R const den_gamma = T_R(2.0)*n_1*n_2;
-
-    if (n_1 <= eps_n || n_2 <= eps_n || n_3 <= eps_n || den_alpha <= eps_n || den_gamma <= eps_n) {
-        AMREX_DEVICE_PRINTF("ImpactIonization: degenerate triangle n1=%e n2=%e n3=%e\n",
-            n_1, n_2, n_3);
-        return;
-    }
-
-    // Conversion from non-relativistic to relativistic C
-
-    // T_R const C_den = n_1*n_1 / (T_R(2.0)*m1) + n_2*n_2 / (T_R(2.0)*m2) + n_3*n_3 / (T_R(2.0)*m3);
-    // if (C_den <= eps_n) {
-    //     AMREX_DEVICE_PRINTF("ImpactIonization: bad energy_den=%e\n", C_den);
-    //     return;
-    // }
-    // T_R const C = std::sqrt(Eout / C_den);
-
+    // Bisection for C such that K1(C) + K2(C) + K3(C) = Eout
+    // |p1| = C, |p3| = C, |p2| = C * n2_raw
     auto k_rel = [=] AMREX_GPU_HOST_DEVICE (T_R Crel) -> T_R
     {
-        T_R const p1 = Crel * n_1;
-        T_R const p2 = Crel * n_2;
-        T_R const p3 = Crel * n_3;
-
-        T_R const K1 = std::sqrt(p1*p1*c2 + m1*m1*c2*c2) - m1*c2;
-        T_R const K2 = std::sqrt(p2*p2*c2 + m2*m2*c2*c2) - m2*c2;
-        T_R const K3 = std::sqrt(p3*p3*c2 + m3*m3*c2*c2) - m3*c2;
-
+        T_R const K1 = std::sqrt(Crel*Crel*c2 + m1*m1*c2*c2) - m1*c2;
+        T_R const K2 = std::sqrt(Crel*Crel*n2_raw*n2_raw*c2 + m2*m2*c2*c2) - m2*c2;
+        T_R const K3 = std::sqrt(Crel*Crel*c2 + m3*m3*c2*c2) - m3*c2;
         return K1 + K2 + K3;
     };
 
-    // Root finding bisection method for C such that k_rel(C) = Eout
-
     T_R C_lo = T_R(0.0);
-    T_R C_hi = m1 * PhysConstSI::c;
-    // Grow upper bound until enough kinetic energy is reached
+    T_R C_hi = std::sqrt(T_R(2.0) * m1 * Eout);
     while (k_rel(C_hi) < Eout) {
         C_hi *= T_R(2.0);
-
-        // optional safety ceiling
-        if (C_hi > T_R(1.0e6) * m1 * PhysConstSI::c) {
+        if (C_hi > T_R(1.0e6) * std::sqrt(T_R(2.0) * m1 * Eout)) {
             AMREX_DEVICE_PRINTF("ImpactIonization: failed to bracket relativistic C\n");
             return;
         }
     }
-
-    // Is bisection fast enough?
     for (int iter = 0; iter < 60; ++iter) {
         T_R const C_mid = T_R(0.5) * (C_lo + C_hi);
-        if (k_rel(C_mid) < Eout) {
-            C_lo = C_mid;
-        } else {
-            C_hi = C_mid;
-        }
+        if (k_rel(C_mid) < Eout) C_lo = C_mid;
+        else C_hi = C_mid;
     }
-
     T_R const C = T_R(0.5) * (C_lo + C_hi);
 
-    // Momentum magnitudes in COM
-    T_R const p1f_mag = C * n_1;
-    T_R const p2f_mag = C * n_2;
-    T_R const p3f_mag = C * n_3;
+    // Final-state COM momenta
+    T_R const p1fsx = C * e1x;
+    T_R const p1fsy = C * e1y;
+    T_R const p1fsz = C * e1z;
 
-    // Triangle angles from the law of cosines
-    T_R cos_alpha = (n_1*n_1 + n_3*n_3 - n_2*n_2) / den_alpha;
-    cos_alpha = clamp(cos_alpha, T_R(-1.0), T_R(1.0));
+    T_R const p2fsx = C * n2_raw * ion_dx;
+    T_R const p2fsy = C * n2_raw * ion_dy;
+    T_R const p2fsz = C * n2_raw * ion_dz;
+
+    T_R const p3fsx = C * e3x;
+    T_R const p3fsy = C * e3y;
+    T_R const p3fsz = C * e3z;
     
-    T_R cos_gamma = (n_1*n_1 + n_2*n_2 - n_3*n_3) / den_gamma;
-    cos_gamma = clamp(cos_gamma, T_R(-1.0), T_R(1.0));
-
-    T_R const sin_alpha = std::sqrt(amrex::max(T_R(0.0), T_R(1.0) - cos_alpha*cos_alpha));
-    T_R const sin_gamma = std::sqrt(amrex::max(T_R(0.0), T_R(1.0) - cos_gamma*cos_gamma));
-
-    // Random orientation of the momentum triangle in 3D
-    T_R const Theta = amrex::Random(engine) * T_R(2.0) * MathConst::pi;
-    T_R const phi   = amrex::Random(engine) * MathConst::pi;
-
-    T_R const cos_theta = std::cos(Theta);
-    T_R const sin_theta = std::sin(Theta);
-    T_R const cos_phi   = std::cos(phi);
-    T_R const sin_phi   = std::sin(phi);
-
-    // Outgoing momenta in the COM frame
-    T_R p1fsx = p1f_mag * cos_theta * cos_phi;
-    T_R p1fsy = p1f_mag * cos_theta * sin_phi;
-    T_R p1fsz = -p1f_mag * sin_theta;
-
-    T_R p2fsx = p2f_mag * (-cos_alpha*cos_theta*cos_phi - sin_alpha*sin_phi);
-    T_R p2fsy = p2f_mag * (-cos_alpha*cos_theta*sin_phi + sin_alpha*cos_phi);
-    T_R p2fsz = p2f_mag * ( cos_alpha*sin_theta );
-
-    T_R p3fsx = p3f_mag * (-cos_gamma*cos_theta*cos_phi + sin_gamma*sin_phi);
-    T_R p3fsy = p3f_mag * (-cos_gamma*cos_theta*sin_phi - sin_gamma*cos_phi);
-    T_R p3fsz = p3f_mag * ( cos_gamma*sin_theta );
-
     // Boost final-state momenta from COM back to lab
     T_R const g1f_s = std::sqrt(T_R(1.0) + (p1fsx*p1fsx + p1fsy*p1fsy + p1fsz*p1fsz)/(m1*m1*c2));
     T_R const g2f_s = std::sqrt(T_R(1.0) + (p2fsx*p2fsx + p2fsy*p2fsy + p2fsz*p2fsz)/(m2*m2*c2));

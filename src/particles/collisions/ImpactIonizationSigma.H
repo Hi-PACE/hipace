@@ -3,39 +3,7 @@
 
 #include <AMReX_AmrCore.H>
 #include <AMReX_REAL.H>
-// #include <map>
 #include "utils/Constants.H"
-
-// Quantum degeneracy for each species (g = 2J + 1, ground-state term)
-/*
-AMREX_GPU_HOST_DEVICE inline amrex::Real g_deg[29] = {
-    // H (2 stages)
-    2.0, 1.0,
-    // N (6 stages)
-    4.0, 9.0, 6.0, 1.0, 2.0, 1.0,
-    // He (3 stages)
-    1.0, 2.0, 1.0,
-    // Ar (18 stages)
-    1.0, 4.0, 5.0, 4.0, 9.0, 6.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0, 1.0
-};
-
-constexpr int num_atom_species = 4;
-
-constexpr amrex::Real X_min = 1e-20; // Threshold for considering a species to be present
-
-// Helper lambda to map species index to atomic species
-AMREX_GPU_HOST_DEVICE
-inline int get_atom_index(int mu) {
-    if (mu <= 1 && mu >= 0) return 0;     // Hydrogen
-    if (mu <= 7 && mu > 1) return 1;      // Nitrogen
-    if (mu <= 10 && mu > 7) return 2;     // Helium
-    if (mu <= 14 && mu > 10) return 3;    // Argon
-    return 0;                             //!!!
-};
-
-AMREX_GPU_HOST_DEVICE
-const int zatom[num_atom_species] = {1, 7, 2, 18}; // Atomic numbers for H, N, He, Ar
-*/
 
 // Index mapping for reduced arrays
 // Returns the starting index in the energy arrays for a given Z
@@ -47,7 +15,7 @@ int get_energy_index(int Z)
     if (Z == 2)  return 8;   // He —  2 entries (indices 8–9)
     if (Z == 18) return 10;  // Ar — 18 entries (indices 10–27)
 
-    return 0;   //!!!
+    return 0;   // !!!
 }
 
 namespace coll_ion
@@ -114,7 +82,7 @@ namespace coll_ion
                 beta2 = 0.0_rt;
             } else {
                 AMREX_DEVICE_PRINTF(
-                    "ImpactIonization: beta < 0, beta2=%e vcms=%e\n",
+                    "ImpactIonizationSigma: beta < 0, beta2=%e vcms=%e\n",
                     beta2, vcms
                 );
                 return false;
@@ -123,7 +91,7 @@ namespace coll_ion
 
         if (beta2 >= 1.0_rt - beta_tol) {
             AMREX_DEVICE_PRINTF(
-                "ImpactIonization: beta too close to 1, beta2=%e\n",
+                "ImpactIonizationSigma: beta too close to 1, beta2=%e\n",
                 beta2
             );
             return false;
@@ -200,7 +168,7 @@ namespace coll_ion
         } else { return true;
         }
     }
-
+    
     struct IonizationResult
     {
         Real sigma;
@@ -227,7 +195,6 @@ namespace coll_ion
         Real sigma = 0.0;
         Real ionization_en = 0.0;
 
-        //Real ionization_sum = 0.0;
         int n = 0;      // degeneracy counter
 
         int base_idx = get_energy_index(atomic_number);
@@ -244,7 +211,6 @@ namespace coll_ion
             
             // Add current electron to the running group
             n++;
-            //ionization_sum += p_ionization_energies[idx_k];
 
             Real bp = p_binding_energies[idx_k] / me_c2;  // binding energy in m_e c² units
 
@@ -282,18 +248,10 @@ namespace coll_ion
                               - a1c * std::log(e_red));
 
                 sigma += sk;
-
-                //is this correct? should degenerate electrons share one averaged ionization energy?
-                //Real ionization_E = ionization_sum / static_cast<Real>(n);
-                //weighted_en += sk * ionization_E;
             }
-
             n = 0;   // reset degeneracy for the next shell
-            //ionization_sum = 0.0;
         }
-        //Real ionization_en = (sigma > 0.0) ? weighted_en / sigma : 0.0;
         ionization_en = p_ionization_energies[base_idx + zstar];
-
         return {sigma, ionization_en};
     }
 }
