@@ -52,15 +52,16 @@ Collision::ReadParameters(
     getWithParser(pp, "type", m_collision_type);
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        m_collision_type == "electron_impact" ||
-        m_collision_type == "ion_impact",
+        m_collision_type == "electron_impact",
         "Unknown collision type"
     );
 
-    // The projectile can be either an electron or an ion
-    // Target particle is always a neutral/ion
-    // The user is asked to always input the target type as the second specie
-    m_has_collision_product = m_collision_type == "electron_impact" || m_collision_type == "ion_impact";
+    // Ion-impact ionization might be added as a future step (same species colliding)
+    // Electron-impact ionization:
+    // - "projectile" names the incoming electron species
+    // - "target" names the neutral/ion species to be ionized
+    // - "new_electron" names the secondary electron
+    m_has_collision_product = m_collision_type == "electron_impact";
 
     getWithParser(pp, "projectile", m_projectile_name);
     getWithParser(pp, "target", m_target_name);
@@ -69,8 +70,9 @@ Collision::ReadParameters(
         getWithParser(pp, "new_electron", m_new_electron_name);
     }
 
+    // Initialize binding and ionization energies used by the
+    // electron-impact ionization cross-section model
     if (m_collision_type == "electron_impact") {
-        // Initialize binding energies for collision calculation
         m_binding_energies.resize(28);
         m_ionization_energies.resize(28);
         for (int i=0; i<28 ; ++i) {
@@ -79,9 +81,6 @@ Collision::ReadParameters(
         }
         m_binding_energies.copyToDeviceAsync();
         m_ionization_energies.copyToDeviceAsync();
-    }
-    else {
-        
     }
     // Plasma physical element name
     amrex::ParmParse pp_s2(m_target_name);
@@ -94,15 +93,13 @@ Collision::doCollision (
         MultiPlasma& multi_plasma)
 {
     if (m_collision_type == "electron_impact") {
-        doCollisionA(lev, geom, multi_plasma);
-    } else {
-        doCollisionB(lev, geom, multi_plasma);
+        doElectronImpact(lev, geom, multi_plasma);
     }
 }
 // SI units are assumed (!!!)
 // Different species colliding (electron impact)
 void
-Collision::doCollisionA (
+Collision::doElectronImpact (
         int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma)
 {
@@ -138,7 +135,8 @@ Collision::doCollisionA (
                               int N1, int N2, int icoll,
                               amrex::RandomEngine const& engine)
         {
-            // Collision function
+            // Decide whether this projectile-target pair undergoes electron-impact ionization
+            // If true, a secondary electron will be created
             amrex::Real ux1 = ptd1.rdata(PlasmaIdx::ux_half_step)[i1];
             amrex::Real uy1 = ptd1.rdata(PlasmaIdx::uy_half_step)[i1];
             amrex::Real psi1 = ptd1.rdata(PlasmaIdx::psi_half_step)[i1];
@@ -249,7 +247,8 @@ Collision::doCollisionA (
         {
             // Ionization function
             // Ionization occurs if the condition on Pion is satisfied
-            // A new electron is created following the rejection method
+            // The projectile electron and target ion are updated following the rejection method, 
+            // and the secondary electron is initialized in species 3
             amrex::Real ux1 = ptd1.rdata(PlasmaIdx::ux_half_step)[i1];
             amrex::Real uy1 = ptd1.rdata(PlasmaIdx::uy_half_step)[i1];
             amrex::Real psi1 = ptd1.rdata(PlasmaIdx::psi_half_step)[i1];
@@ -337,27 +336,6 @@ Collision::doCollisionA (
             ptd3.rdata(PlasmaIdx::ux_half_step)[i3] = ux3;
             ptd3.rdata(PlasmaIdx::uy_half_step)[i3] = uy3;
             ptd3.rdata(PlasmaIdx::psi_half_step)[i3] = plasma_psi(ux3, uy3, uz3, /* Assumes Aabssq == 0 */ 0._rt);
-        });
-}
-
-// Same species colliding (Ion impact)
-void
-Collision::doCollisionB (
-        int lev, const amrex::Geometry& geom,
-        MultiPlasma& multi_plasma)
-{
-    doCollisionImp(lev, geom, multi_plasma,
-        [=] AMREX_GPU_DEVICE (auto ptd1, int i1, auto ptd2, int i2,
-                              int N1, int N2, int icoll,
-                              amrex::RandomEngine const& engine)
-        {
-            return false;
-        },
-        [=] AMREX_GPU_DEVICE (auto ptd1, int i1, auto ptd2, int i2, auto ptd3, int i3,
-                              int N1, int N2, int icoll,
-                              amrex::RandomEngine const& engine)
-        {
-
         });
 }
 
