@@ -1480,7 +1480,7 @@ Please note that the impact ionization module is currently under development, an
 * ``<impact name>.new_electron`` (string) optional
     The name of the product species for impact ionization.
     The species must be defined according to `Plasma parameters` and should be an electron species.
-    In electron impacts, initial and newly created electrons can be treated as on single species 
+    In electron impacts, initial and newly created electrons can be treated as one single species 
     simply by using the same name for the projectile and the new electrons.
     However, to treat the new electrons as a separate species, a different name can be used.
     In that case, the new electrons won't be contributing to further ionizations.
