@@ -26,28 +26,6 @@ namespace {
                                         15.76, 15.76, 15.76, 15.76, 15.76, 15.76
     };  // Very structure specific to ImpactIonizationSigma.H
 
-/*    constexpr amrex::Real ionizationEnergies[28] = {
-        // Z=1  (H)  13.598434005136,
-
-        // Z=7  (N)  : 1s, 1s, 2s, 2s, 2p, 2p, 2p
-                        667.04609, 552.06731,
-                        97.89013,  77.4735,
-                        47.4453,   29.60125, 14.53413,
-
-        // Z=2  (He) : 1s, 1s
-                        54.41776311, 24.587387936,
-
-        // Z=18 (Ar) : 1s,1s,2s,2s,2p x6,3s x2,3p x6
-                        4426.2227, 4120.6655,
-                        918.374,   855.47,
-                        755.13,    685.47,   619.0,
-                        540.4,     479.76,   422.60,
-                        143.457,   124.41,
-                        91.290,    74.84,    59.58,
-                        40.735,    27.62967, 15.7596112
-    };
-*/
-
     constexpr amrex::Real ionizationEnergies[28] = {
         /* H */ 13.598434005136,
 
@@ -132,7 +110,6 @@ Collision::doCollisionA (
     constexpr amrex::Real inv_c = 1.0_rt / PhysConstSI::c;
     constexpr amrex::Real inv_c2 = 1.0_rt / (PhysConstSI::c * PhysConstSI::c);
 
-    // auto p_crosssection_data = m_crosssection_data.data();   !!!
     const amrex::Real* p_binding_energies = m_binding_energies.data();
     const amrex::Real* p_ionization_energies = m_ionization_energies.data();
 
@@ -162,7 +139,6 @@ Collision::doCollisionA (
                               amrex::RandomEngine const& engine)
         {
             // Collision function
-            // clean from unused quantities
             amrex::Real ux1 = ptd1.rdata(PlasmaIdx::ux_half_step)[i1];
             amrex::Real uy1 = ptd1.rdata(PlasmaIdx::uy_half_step)[i1];
             amrex::Real psi1 = ptd1.rdata(PlasmaIdx::psi_half_step)[i1];
@@ -180,7 +156,7 @@ Collision::doCollisionA (
                     return false;
                 }
             } else if (ion_atomic_number == 18) {   // Ar
-                if (ion_lev2 > 3) {
+                if (ion_lev2 > 3) {                 // Ionization arbitrarily stops at Ar 4+
                     return false;
                 }
             }
@@ -240,8 +216,10 @@ Collision::doCollisionA (
             auto sigma = cs_data.sigma;
             auto Eion_eV = cs_data.ionization_en;
 
+            if (sigma <= 0.0_rt) return false;
+
             // Check if the collision energy is sufficient for ionization
-            bool impact = coll_ion::impact_energy (
+            bool impact = coll_ion::impact_energy(
                 ux1, uy1, uz1, g1,
                 ux2, uy2, uz2, g2,
                 m1, m2, Eion_eV, c2, inv_c2
@@ -259,7 +237,6 @@ Collision::doCollisionA (
             if (Pion > r) {
                 // Rejection method according to the adaptation of eq (14) in the ionization model, 
                 // from Perez et al., Phys.Plasmas.19.083104 (2012)
-
                 r = amrex::Random(engine);    
                 return ( w1r > r*amrex::max(w1r,w2r) );
             } else {
