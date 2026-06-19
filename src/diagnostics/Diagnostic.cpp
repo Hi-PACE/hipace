@@ -508,7 +508,7 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         for(int dir=0; dir<=2; ++dir) {
             if (fd.m_remove_axis[dir]) {
                 const amrex::Real half_cell_size =
-                    diag_domain.length(dir) / ( amrex::Real(2) * domain.length(dir) );
+                    diag_domain.length(dir) / ( amrex::Real(2) * amrex::Real(domain.length(dir)) );
                 const amrex::Real mid =
                     (diag_domain.lo(dir) + diag_domain.hi(dir)) / amrex::Real(2);
                 // Flatten the box down to 1 cell in the approprate direction.

@@ -1168,7 +1168,7 @@ InitBeamFromFile (const std::string& input_file,
     // input data using AddOneBeamParticle function, make necessary variables and arrays
     auto& particle_tile = getBeamInitSlice();
     auto old_size = particle_tile.size();
-    auto new_size = old_size + num_to_add;
+    auto new_size = old_size + amrex::Long(num_to_add);
     particle_tile.resize(new_size);
 
     const auto ptd = particle_tile.getParticleTileData();

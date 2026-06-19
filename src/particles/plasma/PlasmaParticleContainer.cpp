@@ -438,7 +438,7 @@ IonizationModule (const int lev,
         amrex::Real* AMREX_RESTRICT adk_power = m_adk_power.data();
         const int max_ion_lev = m_max_ion_lev;
 
-        int num_ions = ptile_ion.numParticles();
+        amrex::Long num_ions = ptile_ion.numParticles();
 
 
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
@@ -455,7 +455,7 @@ IonizationModule (const int lev,
                 amrex::ParallelForRNG(num_ions, cto_func); // enables the use of amrex::Random within the loop
 
             },
-            [=] AMREX_GPU_DEVICE (int ip, const amrex::RandomEngine& engine,
+            [=] AMREX_GPU_DEVICE (amrex::Long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
 
             if (!ptd_ion.id(ip).is_valid() || ptd_ion.cpu(ip) != lev) return;
@@ -532,7 +532,7 @@ IonizationModule (const int lev,
             if(p_ion_mask[ip] != 0) {
                 // ensures thread-safe access when incrementing `p_ip_elec`
                 const int pid = static_cast<int>(amrex::Gpu::Atomic::Add( p_ip_elec, 1u ));
-                const int pidx = pid + old_size;
+                const int pidx = pid + static_cast<int>(old_size);
 
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
@@ -634,7 +634,7 @@ LaserIonization (const int islice,
         amrex::Real* AMREX_RESTRICT laser_dp_prefactor = m_laser_dp_prefactor.data();
         const int max_ion_lev = m_max_ion_lev;
 
-        int num_ions = ptile_ion.numParticles();
+        amrex::Long num_ions = ptile_ion.numParticles();
 
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
         // and calculates ionization probability. If ionization occurs, it increments
@@ -650,7 +650,7 @@ LaserIonization (const int islice,
                 amrex::ParallelForRNG(num_ions, cto_func); // enables the use of `amrex::Random` within the loop
 
             },
-            [=] AMREX_GPU_DEVICE (int ip, const amrex::RandomEngine& engine,
+            [=] AMREX_GPU_DEVICE (amrex::Long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
 
             // Avoid temp slice
@@ -795,7 +795,7 @@ LaserIonization (const int islice,
 
                 // ensures thread-safe access when incrementing `p_ip_elec`
                 const int pid = static_cast<int>(amrex::Gpu::Atomic::Add( p_ip_elec, 1u ));
-                const int pidx = pid + old_size;
+                const int pidx = pid + static_cast<int>(old_size);
                 const amrex::Real psi = plasma_psi(ux, uy, uz, amrex::abs(A*A));
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
