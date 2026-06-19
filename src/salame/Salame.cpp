@@ -402,9 +402,9 @@ SalameMultiplyBeamWeight (const amrex::Real W, Hipace* hipace)
         if (!beam.m_do_salame) continue;
 
         // For id and weights
-        auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-        amrex::Real * const wp = soa.GetRealData(BeamIdx::w).data();
-        auto * const idcpup = soa.GetIdCPUData().data();
+        auto& slice = beam.getBeamSlice(WhichBeamSlice::This);
+        amrex::Real * const wp = slice.GetRealData(BeamIdx::w).data();
+        auto * const idcpup = slice.GetIdCPUData().data();
 
         amrex::ParallelFor(
             beam.getNumParticles(WhichBeamSlice::This),

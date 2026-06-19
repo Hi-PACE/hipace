@@ -40,7 +40,7 @@ namespace
      */
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     void AddOneBeamParticle (
-        const BeamTileInit::ParticleTileDataType& ptd,
+        const BeamTile::ParticleTileDataType& ptd,
         const amrex::Real& x, const amrex::Real& y, const amrex::Real& z,
         const amrex::Real& ux, const amrex::Real& uy, const amrex::Real& uz,
         const amrex::Real& sx, const amrex::Real& sy, const amrex::Real& sz,
@@ -60,9 +60,9 @@ namespace
         ptd.rdata(BeamIdx::uy)[ip] = uyp;
         ptd.rdata(BeamIdx::uz)[ip] = uz;
         if (do_spin) {
-            ptd.m_runtime_rdata[0][ip] = sx;
-            ptd.m_runtime_rdata[1][ip] = sy;
-            ptd.m_runtime_rdata[2][ip] = sz;
+            ptd.rdata(BeamIdx::sx)[ip] = sx;
+            ptd.rdata(BeamIdx::sy)[ip] = sy;
+            ptd.rdata(BeamIdx::sz)[ip] = sz;
         }
         ptd.rdata(BeamIdx::w  )[ip] = std::abs(weight);
 

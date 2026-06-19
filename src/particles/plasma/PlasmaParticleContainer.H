@@ -121,14 +121,12 @@ struct PlasmaIdx
 
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
-    : public amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs, PlasmaIdx::int_nattribs,
-                                             amrex::PolymorphicArenaAllocator>
+    : public amrex::ParticleContainerRTSoA<amrex::Real, int>
 {
 public:
     /** Constructor */
     explicit PlasmaParticleContainer (std::string name) :
-        amrex::ParticleContainerPureSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs,
-                                        amrex::PolymorphicArenaAllocator>(),
+        amrex::ParticleContainerRTSoA<amrex::Real, int>(),
         m_name(std::move(name))
     {}
 
@@ -273,6 +271,7 @@ public:
     amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
     int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
     bool m_do_push = true; /**< whether the plasma pusher is enabled */
+    int m_ab5_permutation = 0; /**< index offset of the first ab5 force term */
 
     // ionization:
 
@@ -323,17 +322,17 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "";
+    /** If the runtime attributes of the AMReX particle container were already set up */
+    bool m_components_allocated = false;
 };
 
 /** \brief Iterator over boxes in a particle container */
-class PlasmaParticleIterator : public amrex::ParIterSoA<
-    PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs, amrex::PolymorphicArenaAllocator>
+class PlasmaParticleIterator : public amrex::ParIterRTSoA<amrex::Real, int>
 {
 public:
     /** Constructor */
     PlasmaParticleIterator (ContainerType& pc)
-        : amrex::ParIterSoA<PlasmaIdx::real_nattribs,PlasmaIdx::int_nattribs,
-                            amrex::PolymorphicArenaAllocator>(pc, 0, DfltMfi) {}
+        : amrex::ParIterRTSoA<amrex::Real, int>(pc, 0, DfltMfi) {}
 };
 
 #endif

@@ -803,12 +803,12 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
     for (int b = 0; b < m_nbeams; ++b) {
         auto& beam = beams.getBeam(b);
         const int num_particles = beam.getNumParticles(beam_slice);
-        auto& soa = beam.getBeamSlice(beam_slice).GetStructOfArrays();
+        auto& ptile = beam.getBeamSlice(beam_slice);
 
         if (beam.communicateIdCpuComponent()) {
             // only pack idcpu component if it should be communicated
             memcpy_to_buffer(slice, bo.m_beam_idcpu[b].value(), // NOLINT(bugprone-unchecked-optional-access)
-                             soa.GetIdCPUData().dataPtr(),
+                             ptile.GetIdCPUData().dataPtr(),
                              num_particles * sizeof(std::uint64_t));
         }
 
@@ -816,7 +816,7 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
             // only pack real component if it should be communicated
             if (beam.communicateRealComponent(rcomp)) {
                 memcpy_to_buffer(slice, bo.m_beam_real[b].at(rcomp),
-                                 soa.GetRealData(rcomp).dataPtr(),
+                                 ptile.GetRealData(rcomp).dataPtr(),
                                  num_particles * sizeof(amrex::Real));
             }
         }
@@ -825,7 +825,7 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int
             // only pack int component if it should be communicated
             if (beam.communicateIntComponent(icomp)) {
                 memcpy_to_buffer(slice, bo.m_beam_int[b].at(icomp),
-                                 soa.GetIntData(icomp).dataPtr(),
+                                 ptile.GetIntData(icomp).dataPtr(),
                                  num_particles * sizeof(int));
             }
         }
@@ -857,16 +857,16 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
         auto& beam = beams.getBeam(b);
         const int num_particles = static_cast<int>(get_metadata_location(slice)[b + 1]);
         beam.resize(beam_slice, num_particles, 0);
-        auto& soa = beam.getBeamSlice(beam_slice).GetStructOfArrays();
+        auto& ptile = beam.getBeamSlice(beam_slice);
 
         if (beam.communicateIdCpuComponent()) {
             // only undpack idcpu component if it should be communicated
             memcpy_from_buffer(slice, bo.m_beam_idcpu[b].value(), // NOLINT(bugprone-unchecked-optional-access)
-                               soa.GetIdCPUData().dataPtr(),
+                               ptile.GetIdCPUData().dataPtr(),
                                num_particles * sizeof(std::uint64_t));
         } else {
             // if idcpu is not communicated, then we need to initialize it here
-            std::uint64_t* data_ptr = soa.GetIdCPUData().dataPtr();
+            std::uint64_t* data_ptr = ptile.GetIdCPUData().dataPtr();
             amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) {
                 amrex::ParticleIDWrapper{data_ptr[i]} = 1;
                 amrex::ParticleCPUWrapper{data_ptr[i]} = 0;
@@ -877,11 +877,11 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
             if (beam.communicateRealComponent(rcomp)) {
                 // only unpack real component if it should be communicated
                 memcpy_from_buffer(slice, bo.m_beam_real[b].at(rcomp),
-                                   soa.GetRealData(rcomp).dataPtr(),
+                                   ptile.GetRealData(rcomp).dataPtr(),
                                    num_particles * sizeof(amrex::Real));
             } else {
                 // initialize per-slice-only real components to zero
-                amrex::Real* data_ptr = soa.GetRealData(rcomp).dataPtr();
+                amrex::Real* data_ptr = ptile.GetRealData(rcomp).dataPtr();
                 amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) {
                     data_ptr[i] = amrex::Real(0.);
                 });
@@ -892,11 +892,11 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, i
             if (beam.communicateIntComponent(icomp)) {
                 // only unpack int component if it should be communicated
                 memcpy_from_buffer(slice, bo.m_beam_int[b].at(icomp),
-                                   soa.GetIntData(icomp).dataPtr(),
+                                   ptile.GetIntData(icomp).dataPtr(),
                                    num_particles * sizeof(int));
             } else {
                 // initialize per-slice-only int components to zero
-                int* data_ptr = soa.GetIntData(icomp).dataPtr();
+                int* data_ptr = ptile.GetIntData(icomp).dataPtr();
                 amrex::ParallelFor(num_particles, [=] AMREX_GPU_DEVICE (int i) {
                     data_ptr[i] = 0;
                 });

@@ -88,12 +88,12 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
         for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
             // Get particles SoA data
-            auto& soa1 = pti.GetStructOfArrays();
-            amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux_half_step).data();
-            amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
-            amrex::Real* const psi1 = soa1.GetRealData(PlasmaIdx::psi_half_step).data();
-            const amrex::Real* const w1 = soa1.GetRealData(PlasmaIdx::w).data();
-            const int* const ion_lev1 = soa1.GetIntData(PlasmaIdx::ion_lev).data();
+            auto& ptile1 = pti.GetParticleTile();
+            amrex::Real* const ux1 = ptile1.GetRealData(PlasmaIdx::ux_half_step).data();
+            amrex::Real* const uy1 = ptile1.GetRealData(PlasmaIdx::uy_half_step).data();
+            amrex::Real* const psi1 = ptile1.GetRealData(PlasmaIdx::psi_half_step).data();
+            const amrex::Real* const w1 = ptile1.GetRealData(PlasmaIdx::w).data();
+            const int* const ion_lev1 = ptile1.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
             amrex::Real q1 = species1.GetCharge();
@@ -155,12 +155,12 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
         for (PlasmaParticleIterator pti(species1); pti.isValid(); ++pti) {
 
             // Get particles SoA data for species 1
-            auto& soa1 = pti.GetStructOfArrays();
-            amrex::Real* const ux1 = soa1.GetRealData(PlasmaIdx::ux_half_step).data();
-            amrex::Real* const uy1 = soa1.GetRealData(PlasmaIdx::uy_half_step).data();
-            amrex::Real* const psi1 = soa1.GetRealData(PlasmaIdx::psi_half_step).data();
-            const amrex::Real* const w1 = soa1.GetRealData(PlasmaIdx::w).data();
-            const int* const ion_lev1 = soa1.GetIntData(PlasmaIdx::ion_lev).data();
+            auto& ptile1 = pti.GetParticleTile();
+            amrex::Real* const ux1 = ptile1.GetRealData(PlasmaIdx::ux_half_step).data();
+            amrex::Real* const uy1 = ptile1.GetRealData(PlasmaIdx::uy_half_step).data();
+            amrex::Real* const psi1 = ptile1.GetRealData(PlasmaIdx::psi_half_step).data();
+            const amrex::Real* const w1 = ptile1.GetRealData(PlasmaIdx::w).data();
+            const int* const ion_lev1 = ptile1.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
             amrex::Real q1 = species1.GetCharge();
@@ -169,12 +169,11 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
 
             // Get particles SoA data for species 2
             auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
-            auto& soa2 = ptile2.GetStructOfArrays();
-            amrex::Real* const ux2 = soa2.GetRealData(PlasmaIdx::ux_half_step).data();
-            amrex::Real* const uy2 = soa2.GetRealData(PlasmaIdx::uy_half_step).data();
-            amrex::Real* const psi2= soa2.GetRealData(PlasmaIdx::psi_half_step).data();
-            const amrex::Real* const w2 = soa2.GetRealData(PlasmaIdx::w).data();
-            const int* const ion_lev2 = soa2.GetIntData(PlasmaIdx::ion_lev).data();
+            amrex::Real* const ux2 = ptile2.GetRealData(PlasmaIdx::ux_half_step).data();
+            amrex::Real* const uy2 = ptile2.GetRealData(PlasmaIdx::uy_half_step).data();
+            amrex::Real* const psi2= ptile2.GetRealData(PlasmaIdx::psi_half_step).data();
+            const amrex::Real* const w2 = ptile2.GetRealData(PlasmaIdx::w).data();
+            const int* const ion_lev2 = ptile2.GetIntData(PlasmaIdx::ion_lev).data();
             PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
             PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
             amrex::Real q2 = species2.GetCharge();
@@ -267,11 +266,11 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     for (PlasmaParticleIterator pti(species2); pti.isValid(); ++pti) {
 
         // // Get particles SoA data for species 1
-        auto& soa1 = species1.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
-        amrex::Real* const ux1 = soa1.GetRealData(BeamIdx::ux).data();
-        amrex::Real* const uy1 = soa1.GetRealData(BeamIdx::uy).data();
-        amrex::Real* const psi1 = soa1.GetRealData(BeamIdx::uz).data();
-        const amrex::Real* const w1 = soa1.GetRealData(BeamIdx::w).data();
+        auto& ptile1 = species1.getBeamSlice(WhichBeamSlice::This);
+        amrex::Real* const ux1 = ptile1.GetRealData(BeamIdx::ux).data();
+        amrex::Real* const uy1 = ptile1.GetRealData(BeamIdx::uy).data();
+        amrex::Real* const psi1 = ptile1.GetRealData(BeamIdx::uz).data();
+        const amrex::Real* const w1 = ptile1.GetRealData(BeamIdx::w).data();
         BeamBins::index_type * const indices1 = bins1.permutationPtr();
         BeamBins::index_type const * const offsets1 = bins1.offsetsPtr();
         amrex::Real q1 = species1.GetCharge();
@@ -280,12 +279,12 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
 
         // Get particles SoA data for species 2
         //auto& ptile2 = species2.ParticlesAt(lev, pti.index(), pti.LocalTileIndex());
-        auto& soa2 = pti.GetStructOfArrays();
-        amrex::Real* const ux2 = soa2.GetRealData(PlasmaIdx::ux_half_step).data();
-        amrex::Real* const uy2 = soa2.GetRealData(PlasmaIdx::uy_half_step).data();
-        amrex::Real* const psi2= soa2.GetRealData(PlasmaIdx::psi_half_step).data();
-        const amrex::Real* const w2 = soa2.GetRealData(PlasmaIdx::w).data();
-        const int* const ion_lev2 = soa2.GetIntData(PlasmaIdx::ion_lev).data();
+        auto& ptile2 = pti.GetParticleTile();
+        amrex::Real* const ux2 = ptile2.GetRealData(PlasmaIdx::ux_half_step).data();
+        amrex::Real* const uy2 = ptile2.GetRealData(PlasmaIdx::uy_half_step).data();
+        amrex::Real* const psi2= ptile2.GetRealData(PlasmaIdx::psi_half_step).data();
+        const amrex::Real* const w2 = ptile2.GetRealData(PlasmaIdx::w).data();
+        const int* const ion_lev2 = ptile2.GetIntData(PlasmaIdx::ion_lev).data();
         PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
         PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
         amrex::Real q2 = species2.GetCharge();

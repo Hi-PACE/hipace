@@ -182,9 +182,22 @@ PlasmaParticleContainer::ReadParameters ()
 void
 PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 {
-    SetArena(amrex::The_Arena());
-    reserveData();
-    resizeData();
+    if (!m_components_allocated) {
+        m_components_allocated = true;
+
+        SetArena(amrex::The_Arena());
+
+        for (int j = 0; j < PlasmaIdx::real_nattribs; ++j) {
+            AddRealComp();
+        }
+
+        for (int j = 0; j < PlasmaIdx::int_nattribs; ++j) {
+            AddIntComp();
+        }
+
+        reserveData();
+        resizeData();
+    }
 
     if (!m_read_fine_patch) {
         m_read_fine_patch = true;
@@ -330,12 +343,12 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
 
     for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
     {
-        auto& soa = pti.GetStructOfArrays();
+        auto& ptile = pti.GetParticleTile();
         const amrex::Real * const AMREX_RESTRICT pos_x = to_prev ?
-            soa.GetRealData(PlasmaIdx::x_prev).data() : soa.GetRealData(PlasmaIdx::x).data();
+            ptile.GetRealData(PlasmaIdx::x_prev).data() : ptile.GetRealData(PlasmaIdx::x).data();
         const amrex::Real * const AMREX_RESTRICT pos_y = to_prev ?
-            soa.GetRealData(PlasmaIdx::y_prev).data() : soa.GetRealData(PlasmaIdx::y).data();
-        auto * AMREX_RESTRICT idcpup = soa.GetIdCPUData().data();
+            ptile.GetRealData(PlasmaIdx::y_prev).data() : ptile.GetRealData(PlasmaIdx::y).data();
+        auto * AMREX_RESTRICT idcpup = ptile.GetIdCPUData().data();
 
         const int lev1_idx = std::min(1, current_N_level-1);
         const int lev2_idx = std::min(2, current_N_level-1);

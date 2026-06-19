@@ -64,6 +64,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
         const bool can_ionize = plasma.m_can_ionize;
         const int n_subcycles = plasma.m_n_subcycles;
+        [[maybe_unused]] const int ab5_permutation = plasma.m_ab5_permutation;
 
         const auto enforceBC = EnforceBC();
         const amrex::Real dz = gm[0].CellSize(2) / amrex::Real(n_subcycles);
@@ -225,11 +226,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                         Aabssqp, AabssqDxp, AabssqDyp, q_mass_clight_ratio);
 
-                    ptd.rdata(PlasmaIdx::Fx1)[ip] = ux * psi_inv;
-                    ptd.rdata(PlasmaIdx::Fy1)[ip] = uy * psi_inv;
-                    ptd.rdata(PlasmaIdx::Fux1)[ip] = dz_ux;
-                    ptd.rdata(PlasmaIdx::Fuy1)[ip] = dz_uy;
-                    ptd.rdata(PlasmaIdx::Fpsi1)[ip] = dz_psi;
+                    ptd.rdata(PlasmaIdx::Fx1 + ab5_permutation)[ip] = ux * psi_inv;
+                    ptd.rdata(PlasmaIdx::Fy1 + ab5_permutation)[ip] = uy * psi_inv;
+                    ptd.rdata(PlasmaIdx::Fux1 + ab5_permutation)[ip] = dz_ux;
+                    ptd.rdata(PlasmaIdx::Fuy1 + ab5_permutation)[ip] = dz_uy;
+                    ptd.rdata(PlasmaIdx::Fpsi1 + ab5_permutation)[ip] = dz_psi;
 
                     const amrex::Real ab5_coeffs[5] = {
                         ( 1901._rt / 720._rt ) * dz,    // a1 times dz
@@ -241,11 +242,15 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
                     HIPACE_LOOP_UNROLL
                     for (int iab=0; iab<5; ++iab) {
-                        xp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fx1   + iab)[ip];
-                        yp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fy1   + iab)[ip];
-                        ux  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fux1  + iab)[ip];
-                        uy  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fuy1  + iab)[ip];
-                        psi += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fpsi1 + iab)[ip];
+                        int p = ab5_permutation + iab;
+                        if (p >= 5) {
+                            p -= 5;
+                        }
+                        xp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fx1   + p)[ip];
+                        yp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fy1   + p)[ip];
+                        ux  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fux1  + p)[ip];
+                        uy  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fuy1  + p)[ip];
+                        psi += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fpsi1 + p)[ip];
                     }
 
                     if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
@@ -268,36 +273,11 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 #endif
                 } // loop over subcycles
             });
+    }
 
 #ifdef HIPACE_USE_AB5_PUSH
-        if (!temp_slice && lev == current_N_level - 1) {
-            auto& rd = pti.GetStructOfArrays().GetRealData();
-
-            // shift force terms
-            rd[PlasmaIdx::Fx5].swap(rd[PlasmaIdx::Fx4]);
-            rd[PlasmaIdx::Fy5].swap(rd[PlasmaIdx::Fy4]);
-            rd[PlasmaIdx::Fux5].swap(rd[PlasmaIdx::Fux4]);
-            rd[PlasmaIdx::Fuy5].swap(rd[PlasmaIdx::Fuy4]);
-            rd[PlasmaIdx::Fpsi5].swap(rd[PlasmaIdx::Fpsi4]);
-
-            rd[PlasmaIdx::Fx4].swap(rd[PlasmaIdx::Fx3]);
-            rd[PlasmaIdx::Fy4].swap(rd[PlasmaIdx::Fy3]);
-            rd[PlasmaIdx::Fux4].swap(rd[PlasmaIdx::Fux3]);
-            rd[PlasmaIdx::Fuy4].swap(rd[PlasmaIdx::Fuy3]);
-            rd[PlasmaIdx::Fpsi4].swap(rd[PlasmaIdx::Fpsi3]);
-
-            rd[PlasmaIdx::Fx3].swap(rd[PlasmaIdx::Fx2]);
-            rd[PlasmaIdx::Fy3].swap(rd[PlasmaIdx::Fy2]);
-            rd[PlasmaIdx::Fux3].swap(rd[PlasmaIdx::Fux2]);
-            rd[PlasmaIdx::Fuy3].swap(rd[PlasmaIdx::Fuy2]);
-            rd[PlasmaIdx::Fpsi3].swap(rd[PlasmaIdx::Fpsi2]);
-
-            rd[PlasmaIdx::Fx2].swap(rd[PlasmaIdx::Fx1]);
-            rd[PlasmaIdx::Fy2].swap(rd[PlasmaIdx::Fy1]);
-            rd[PlasmaIdx::Fux2].swap(rd[PlasmaIdx::Fux1]);
-            rd[PlasmaIdx::Fuy2].swap(rd[PlasmaIdx::Fuy1]);
-            rd[PlasmaIdx::Fpsi2].swap(rd[PlasmaIdx::Fpsi1]);
-        }
-#endif
+    if (!temp_slice && lev == current_N_level - 1) {
+        plasma.m_ab5_permutation = (plasma.m_ab5_permutation + 4) % 5;
     }
+#endif
 }

@@ -28,7 +28,8 @@ struct BeamIdx
         w,          // weight
         ux, uy, uz, // momentum
         real_nattribs_in_buffer,
-        real_nattribs=real_nattribs_in_buffer
+        real_nattribs=real_nattribs_in_buffer,
+        sx=real_nattribs, sy, sz
     };
     enum : int {
         // no extra components stored in MultiBuffer, besides 64bit idcpu
@@ -45,26 +46,7 @@ struct WhichBeamSlice {
     enum beam_slice : int { Next=0, This, N };
 };
 
-using BeamTile = amrex::ParticleTile<
-        amrex::SoAParticle<
-            BeamIdx::real_nattribs,
-            BeamIdx::int_nattribs
-        >,
-        BeamIdx::real_nattribs,
-        BeamIdx::int_nattribs,
-        amrex::PolymorphicArenaAllocator
-    >;
-
-using BeamTileInit = amrex::ParticleTile<
-        amrex::SoAParticle<
-            BeamIdx::real_nattribs_in_buffer,
-            BeamIdx::int_nattribs_in_buffer
-        >,
-        BeamIdx::real_nattribs_in_buffer,
-        BeamIdx::int_nattribs_in_buffer,
-        // use PolymorphicArenaAllocator to either use Pinned or Device memory at runtime
-        amrex::PolymorphicArenaAllocator
-    >;
+using BeamTile = amrex::ParticleTileRT<amrex::Real, int>;
 
 /** \brief Container for particles of 1 beam species. */
 class BeamParticleContainer // NOLINT(clang-analyzer-optin.performance.Padding)
@@ -185,7 +167,7 @@ public:
 
     void resize (int which_slice, int num_particles, int num_slipped_particles);
 
-    BeamTileInit& getBeamInitSlice () {
+    BeamTile& getBeamInitSlice () {
         return m_init_slice;
     }
 
@@ -215,7 +197,7 @@ private:
     std::array<BeamTile, WhichBeamSlice::N> m_slices {};
     std::array<int, WhichBeamSlice::N> m_num_particles_without_slipped {};
     std::array<int, WhichBeamSlice::N> m_num_particles_with_slipped {};
-    BeamTileInit m_init_slice {};
+    BeamTile m_init_slice {};
     BoxSorter m_init_sorter;
     uint64_t m_total_num_particles = 0;
 public:

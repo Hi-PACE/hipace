@@ -381,7 +381,7 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector<std::string>& be
 
         if (np != 0) {
             // copy data from GPU to IO buffer
-            auto& soa = beam.getBeamSlice(WhichBeamSlice::This).GetStructOfArrays();
+            auto& slice = beam.getBeamSlice(WhichBeamSlice::This);
 
             for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
                 const auto old_size = m_uint64_beam_data[ibeam][idx].size();
@@ -391,13 +391,13 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector<std::string>& be
                     );
                 }
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
-                    soa.GetIdCPUData().begin(),
-                    soa.GetIdCPUData().begin() + np,
+                    slice.GetIdCPUData().begin(),
+                    slice.GetIdCPUData().begin() + np,
                     m_uint64_beam_data[ibeam][idx].data() + m_offset[ibeam]);
             }
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                int(m_real_beam_data[ibeam].size()) == soa.NumRealComps(),
+                int(m_real_beam_data[ibeam].size()) == slice.NumRealComps(),
                 "List of real names in openPMD Writer class does not match the beam");
 
             for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
@@ -408,8 +408,8 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector<std::string>& be
                     );
                 }
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
-                    soa.GetRealData(int(idx)).begin(),
-                    soa.GetRealData(int(idx)).begin() + np,
+                    slice.GetRealData(int(idx)).begin(),
+                    slice.GetRealData(int(idx)).begin() + np,
                     m_real_beam_data[ibeam][idx].data() + m_offset[ibeam]);
             }
         }
