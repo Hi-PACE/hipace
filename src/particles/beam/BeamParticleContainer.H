@@ -137,57 +137,57 @@ public:
     void ReorderParticles (int beam_slice, int step, amrex::Geometry& slice_geom);
 
     /** Returns elementary charge q_e (or -q_e for electrons). */
-    amrex::Real GetCharge () const {return m_charge;}
+    [[nodiscard]] amrex::Real GetCharge () const {return m_charge;}
 
     /** Returns mass of physical species */
-    amrex::Real GetMass () const {return m_mass;}
+    [[nodiscard]] amrex::Real GetMass () const {return m_mass;}
 
-    std::string get_name () const {return m_name;}
+    [[nodiscard]] std::string get_name () const {return m_name;}
 
     void shiftBeamSlices () {
         m_slice_permutation = (m_slice_permutation + 1) % WhichBeamSlice::N;
         resize(WhichBeamSlice::Next, 0, 0);
     }
 
-    BeamTile& getBeamSlice (int which_slice) {
+    [[nodiscard]] BeamTile& getBeamSlice (int which_slice) {
         return m_slices[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    const BeamTile& getBeamSlice (int which_slice) const {
+    [[nodiscard]] const BeamTile& getBeamSlice (int which_slice) const {
         return m_slices[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    int getNumParticles (int which_slice) const {
+    [[nodiscard]] int getNumParticles (int which_slice) const {
         return m_num_particles_without_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
-    int getNumParticlesIncludingSlipped (int which_slice) const {
+    [[nodiscard]] int getNumParticlesIncludingSlipped (int which_slice) const {
         return m_num_particles_with_slipped[(which_slice + m_slice_permutation) % WhichBeamSlice::N];
     }
 
     void resize (int which_slice, int num_particles, int num_slipped_particles);
 
-    BeamTile& getBeamInitSlice () {
+    [[nodiscard]] BeamTile& getBeamInitSlice () {
         return m_init_slice;
     }
 
     void initializeSlice(int slice, int which_slice);
 
-    uint64_t getTotalNumParticles () const {
+    [[nodiscard]] uint64_t getTotalNumParticles () const {
         return m_total_num_particles;
     }
 
-    int numRealComponents () const {
+    [[nodiscard]] int numRealComponents () const {
         return BeamIdx::real_nattribs + (m_do_spin_tracking ? 3 : 0);
     }
-    int numIntComponents () const { return BeamIdx::int_nattribs; }
+    [[nodiscard]] int numIntComponents () const { return BeamIdx::int_nattribs; }
 
-    bool communicateIdCpuComponent () const { return true; }
-    bool communicateRealComponent (int rcomp) const {
+    [[nodiscard]] bool communicateIdCpuComponent () const { return true; }
+    [[nodiscard]] bool communicateRealComponent (int rcomp) const {
         // communicate all compile-time and runtime real components
         return rcomp < numRealComponents();
     }
-    bool communicateIntComponent (int icomp) const {
+    [[nodiscard]] bool communicateIntComponent (int icomp) const {
         // don't communicate nsubcycles or mr_level
         return icomp < BeamIdx::int_nattribs_in_buffer;
     }
