@@ -969,9 +969,10 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
     the field to laser interpolation of chi. Currently, `0,1,2,3` are implemented.
 
 * ``lasers.solver_type`` (`string`) optional (default `multigrid`)
-    Type of solver for the laser envelope solver. Only ``multigrid`` is available.
+    Type of solver for the laser envelope solver, either ``multigrid`` or ``off``.
     Currently, the approximation that the phase is evaluated on-axis only is made.
     With the multigrid solver, we could drop this assumption.
+    If set ``off``, the laser will not evolve and remain as the initial profile through the simulation.
 
 * ``lasers.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solver used for the laser pulse.

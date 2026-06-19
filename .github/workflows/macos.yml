@@ -18,7 +18,7 @@ jobs:
       #CMAKE_GENERATOR: Ninja
       SETUPTOOLS_USE_DISTUTILS: stdlib
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Brew Cache
       uses: actions/cache@v4
       # - once stored under a key, they become immutable (even if local cache path content changes)
@@ -86,8 +86,9 @@ jobs:
         brew uninstall cmake
 
         brew tap openpmd/openpmd
-        brew install openpmd-api --only-dependencies --force
-        brew install openpmd-api
+        brew trust openpmd/openpmd
+        brew install openpmd/openpmd/openpmd-api --only-dependencies --force
+        brew install openpmd/openpmd/openpmd-api
         brew link openpmd-api
 
     - name: build HiPACE++
