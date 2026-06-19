@@ -205,7 +205,7 @@ OpenPMDWriter::WriteFieldData (
         }
 
         std::vector<std::string> axisLabels;
-        for (int i=fd.m_axis_labels.size()-1; i>=0; --i) {
+        for (int i=static_cast<int>(fd.m_axis_labels.size()-1); i>=0; --i) {
             axisLabels.push_back(fd.m_axis_labels[i]);
         }
 

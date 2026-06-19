@@ -149,14 +149,17 @@ HistogramDepositionBeam (BeamParticleContainer& beam, DiagnosticData& fd)
             const amrex::Real gamma_psi = gamma / (gamma - uzp);
             const int ion_level = 0;
 
-            const amrex::Real hw = histw(xp, yp, zp, uxp, uyp, uzp, gamma_psi, wp, ion_level);
+            const amrex::Real hw = static_cast<amrex::Real>(
+                histw(xp, yp, zp, uxp, uyp, uzp, gamma_psi, wp, ion_level));
             if (hw == 0._rt) {
                 return;
             }
-            const amrex::Real h1 = hist1(xp, yp, zp, uxp, uyp, uzp, gamma_psi, wp, ion_level);
+            const amrex::Real h1 = static_cast<amrex::Real>(
+                hist1(xp, yp, zp, uxp, uyp, uzp, gamma_psi, wp, ion_level));
             amrex::Real h2 = 0.5_rt;
             if (use_second_dim) {
-                h2 = hist2(xp, yp, zp, uxp, uyp, uzp, gamma_psi, wp, ion_level);
+                h2 = static_cast<amrex::Real>(
+                    hist2(xp, yp, zp, uxp, uyp, uzp, gamma_psi, wp, ion_level));
             }
 
             const amrex::Real h1_mid = (h1 - h1_pos_offset) * d1_inv;

@@ -259,7 +259,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                     fd.m_hist_num_bins.size() == 1 || fd.m_hist_num_bins.size() == 2,
                     "hist_num_bins must have either one or two values"
                 );
-                fd.m_hist_num_dims = fd.m_hist_num_bins.size();
+                fd.m_hist_num_dims = static_cast<int>(fd.m_hist_num_bins.size());
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                     fd.m_hist_bins_lo.size() == fd.m_hist_num_dims &&
                     fd.m_hist_bins_hi.size() == fd.m_hist_num_dims,
@@ -300,7 +300,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 fd.m_hist_exe_w = makeFunctionWithParser<9>(funcw, fd.m_hist_parser_w,
                     {"x", "y", "z", "ux", "uy", "uz", "ga_psi", "w", "ion_lev"});
 
-                fd.m_nfields = fd.m_hist_species_names.size();
+                fd.m_nfields = static_cast<int>(fd.m_hist_species_names.size());
                 fd.m_comps_output = fd.m_hist_species_names;
 
                 fd.m_diag_coarsen[0] = 1;
@@ -507,9 +507,10 @@ Diagnostic::ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
         // trim the 3D box to slice box for slice IO
         for(int dir=0; dir<=2; ++dir) {
             if (fd.m_remove_axis[dir]) {
-                const amrex::Real half_cell_size = diag_domain.length(dir) /
-                                                   ( 2. * domain.length(dir) );
-                const amrex::Real mid = (diag_domain.lo(dir) + diag_domain.hi(dir)) / 2.;
+                const amrex::Real half_cell_size =
+                    diag_domain.length(dir) / ( amrex::Real(2) * domain.length(dir) );
+                const amrex::Real mid =
+                    (diag_domain.lo(dir) + diag_domain.hi(dir)) / amrex::Real(2);
                 // Flatten the box down to 1 cell in the approprate direction.
                 domain.setSmall(dir, 0);
                 domain.setBig(dir, 0);
