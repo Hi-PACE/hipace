@@ -534,7 +534,7 @@ IonizationModule (const int lev,
 
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
-                ptd_elec.id(pidx) = 2;
+                ptd_elec.id(pidx) = PlasmaID::from_field_ionization;
                 ptd_elec.cpu(pidx) = lev; // current level
                 ptd_elec.rdata(PlasmaIdx::x      )[pidx] = ptd_ion.rdata(PlasmaIdx::x)[ip];
                 ptd_elec.rdata(PlasmaIdx::y      )[pidx] = ptd_ion.rdata(PlasmaIdx::y)[ip];
@@ -795,7 +795,7 @@ LaserIonization (const int islice,
                 const amrex::Real psi = plasma_psi(ux, uy, uz, amrex::abs(A*A));
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
-                ptd_elec.id(pidx) = 2;
+                ptd_elec.id(pidx) = PlasmaID::from_laser_ionization;
                 ptd_elec.cpu(pidx) = ptd_ion.cpu(ip);  // current level
                 ptd_elec.rdata(PlasmaIdx::x      )[pidx] = ptd_ion.rdata(PlasmaIdx::x)[ip];
                 ptd_elec.rdata(PlasmaIdx::y      )[pidx] = ptd_ion.rdata(PlasmaIdx::y)[ip];

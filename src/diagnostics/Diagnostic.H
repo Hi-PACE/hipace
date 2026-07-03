@@ -72,6 +72,7 @@ struct DiagnosticData
     amrex::ParserExecutor<9> m_hist_exe_q2;
     amrex::Parser m_hist_parser_w;
     amrex::ParserExecutor<9> m_hist_exe_w;
+    bool m_hist_exit_boundary = false; /**< look at particles that are exiting the domain */
 };
 
 
@@ -185,6 +186,19 @@ public:
     static std::pair<bool, int>
     ReverseShapeFactor (const DiagnosticData& fd, int islice, const amrex::Geometry& geom3d);
 
+    /** \brief Collect histograms from particles and copy them to the CPU memory
+     *
+     * \param[in] fd field diagnostic
+     * \param[in] islice current slice
+     * \param[in] plasmas MultiPlasma object
+     * \param[in] beams MultiBeam object
+     * \param[in] field_geom geometry for all field MR levels
+     */
+    void
+    HistogramDepositionCopy (DiagnosticData& fd, int islice,
+                             MultiPlasma& plasmas, MultiBeam& beams,
+                             const amrex::Vector<amrex::Geometry>& field_geom);
+
     /** \brief Fill diagnostic arrays with the simulation data available on the current slice
      *
      * \param[in] islice current slice
@@ -200,6 +214,17 @@ public:
                      Fields& fields, MultiLaser& lasers,
                      MultiPlasma& plasmas, MultiBeam& beams,
                      const amrex::Vector<amrex::Geometry>& field_geom);
+
+    /** \brief Collect histograms from particles that exited the domain
+     *
+     * \param[in] islice current slice
+     * \param[in] plasmas MultiPlasma object
+     * \param[in] beams MultiBeam object
+     * \param[in] field_geom geometry for all field MR levels
+     */
+    void
+    FillBoundaryHistDiagnostics (int islice, MultiPlasma& plasmas, MultiBeam& beams,
+                                 const amrex::Vector<amrex::Geometry>& field_geom);
 
 private:
     amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */

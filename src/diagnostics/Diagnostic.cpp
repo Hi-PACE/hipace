@@ -254,6 +254,7 @@ Diagnostic::Initialize (int nlev, bool use_laser) {
                 bool add_z_axis = false;
                 queryWithParser(pp, "hist_add_z_axis", add_z_axis);
                 fd.m_integrate_along_z = !add_z_axis;
+                queryWithParser(pp, "hist_exit_boundary", fd.m_hist_exit_boundary);
 
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                     fd.m_hist_num_bins.size() == 1 || fd.m_hist_num_bins.size() == 2,
@@ -622,6 +623,43 @@ Diagnostic::ReverseShapeFactor (const DiagnosticData& fd, int islice,
 }
 
 void
+Diagnostic::HistogramDepositionCopy (DiagnosticData& fd, int islice,
+                                     MultiPlasma& plasmas, MultiBeam& beams,
+                                     const amrex::Vector<amrex::Geometry>& field_geom)
+{
+    auto [collect_data, dst_slice] = ReverseShapeFactor(fd, islice, field_geom[0]);
+    if (!collect_data) {
+        return;
+    }
+    HIPACE_PROFILE("Diagnostic::HistogramDepositionCopy()");
+    for (int icomp = 0; icomp < fd.m_hist_species_names.size(); ++icomp) {
+        const auto& species_name = fd.m_hist_species_names[icomp];
+        amrex::Real* gpu_ptr = fd.m_hist_gpu_fab.dataPtr();
+        amrex::Real* cpu_ptr = fd.m_F_real.dataPtr(icomp) +
+            fd.m_hist_gpu_fab.numPts() * (dst_slice - fd.m_F_real.box().smallEnd(2));
+        if (fd.m_integrate_along_z) {
+            // add to previous data
+            amrex::Gpu::htod_memcpy_async(gpu_ptr, cpu_ptr,
+                sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()
+            );
+        } else {
+            // start from zero
+            fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0);
+        }
+        if (plasmas.HasPlasma(species_name)) {
+            const amrex::Real zmid = amrex::Real(islice) * field_geom[0].CellSize(2) +
+                GetPosOffset(2, field_geom[0], field_geom[0].Domain());
+            HistogramDepositionPlasma(plasmas.GetPlasma(species_name), fd, zmid);
+        } else {
+            HistogramDepositionBeam(beams.getBeam(species_name), fd);
+        }
+        amrex::Gpu::dtoh_memcpy_async(cpu_ptr, gpu_ptr,
+            sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()
+        );
+    }
+}
+
+void
 Diagnostic::FillDiagnostics (int islice, int current_N_level,
                              Fields& fields, MultiLaser& lasers,
                              MultiPlasma& plasmas, MultiBeam& beams,
@@ -636,39 +674,60 @@ Diagnostic::FillDiagnostics (int islice, int current_N_level,
             case DiagnosticData::diag_type::laser:
                 fields.Copy(current_N_level, islice, fd, field_geom, lasers);
                 break;
-            case DiagnosticData::diag_type::histogram: {
-                auto [collect_data, dst_slice] = ReverseShapeFactor(fd, islice, field_geom[0]);
-                if (!collect_data) {
-                    break;
+            case DiagnosticData::diag_type::histogram:
+                if (!fd.m_hist_exit_boundary) {
+                    HistogramDepositionCopy(fd, islice, plasmas, beams, field_geom);
                 }
-                HIPACE_PROFILE("Diagnostic::HistogramDepositionCopy()");
-                for (int icomp = 0; icomp < fd.m_hist_species_names.size(); ++icomp) {
-                    const auto& species_name = fd.m_hist_species_names[icomp];
-                    amrex::Real* gpu_ptr = fd.m_hist_gpu_fab.dataPtr();
-                    amrex::Real* cpu_ptr = fd.m_F_real.dataPtr(icomp) +
-                        fd.m_hist_gpu_fab.numPts() * (dst_slice - fd.m_F_real.box().smallEnd(2));
-                    if (fd.m_integrate_along_z) {
-                        // add to previous data
-                        amrex::Gpu::htod_memcpy_async(gpu_ptr, cpu_ptr,
-                            sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()
-                        );
-                    } else {
-                        // start from zero
-                        fd.m_hist_gpu_fab.setVal<amrex::RunOn::Device>(0);
-                    }
-                    if (plasmas.HasPlasma(species_name)) {
-                        const amrex::Real zmid = amrex::Real(islice) * field_geom[0].CellSize(2) +
-                            GetPosOffset(2, field_geom[0], field_geom[0].Domain());
-                        HistogramDepositionPlasma(plasmas.GetPlasma(species_name), fd, zmid);
-                    } else {
-                        HistogramDepositionBeam(beams.getBeam(species_name), fd);
-                    }
-                    amrex::Gpu::dtoh_memcpy_async(cpu_ptr, gpu_ptr,
-                        sizeof(amrex::Real) * fd.m_hist_gpu_fab.size()
-                    );
-                }
+                break;
+        }
+    }
+}
+
+void
+Diagnostic::FillBoundaryHistDiagnostics (int islice, MultiPlasma& plasmas, MultiBeam& beams,
+                                         const amrex::Vector<amrex::Geometry>& field_geom)
+{
+    std::set<std::string> species_names_with_boundary_hist;
+
+    // first do all histograms before removing the boundary id tag
+    for (auto& fd : m_diag_data) {
+        if (fd.m_has_output &&
+            fd.m_base_diag_type == DiagnosticData::diag_type::histogram &&
+            islice > 0 &&
+            fd.m_hist_exit_boundary)
+        {
+            // particles where already pushed so they are on the next slice now
+            HistogramDepositionCopy(fd, islice - 1, plasmas, beams, field_geom);
+            species_names_with_boundary_hist.insert(
+                fd.m_hist_species_names.begin(), fd.m_hist_species_names.end());
+        }
+    }
+
+    // reset id so we don't double count particles.
+    for (const auto& species_name : species_names_with_boundary_hist) {
+        if (plasmas.HasPlasma(species_name)) {
+            auto& plasma = plasmas.GetPlasma(species_name);
+            for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti)
+            {
+                const auto ptd = pti.GetParticleTile().getParticleTileData();
+                amrex::ParallelFor(
+                    pti.numParticles(),
+                    [=] AMREX_GPU_DEVICE (int ip) {
+                        if (ptd.id(ip) == PlasmaID::invalid_at_boundary) {
+                            ptd.id(ip) = PlasmaID::invalid;
+                        }
+                    });
             }
-            break;
+        } else {
+            auto& beam = beams.getBeam(species_name);
+            const auto ptd = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
+            amrex::ParallelFor(
+                beam.getNumParticles(WhichBeamSlice::This),
+                [=] AMREX_GPU_DEVICE (int ip) {
+                    if (ptd.id(ip) == PlasmaID::invalid_at_boundary) {
+                        ptd.id(ip) = PlasmaID::invalid;
+                    }
+                });
         }
     }
 }

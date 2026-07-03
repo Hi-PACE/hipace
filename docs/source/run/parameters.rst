@@ -1252,6 +1252,10 @@ Particles outside the histogram bounds are discarded.
     ``hist_function`` or ``hist_function2``. If disabled the histogram contains data from
     all z slices in the range given by ``patch_lo`` and ``patch_hi``.
 
+* ``<diag name>.hist_exit_boundary`` (`bool`) optional (default `false`)
+    Collect data from particles that exit the simulation domain transversely through the
+    ``boundary.particle = Absorbing`` boundary condition.
+
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^
 

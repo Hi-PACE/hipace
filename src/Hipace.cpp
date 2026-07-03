@@ -842,6 +842,9 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
     }
 
+    // get plasma and beam histograms of particles that exited the domain
+    m_diags.FillBoundaryHistDiagnostics(islice, m_multi_plasma, m_multi_beam, m_3D_geom);
+
     if (m_depos_order_z == 2) {
         CalculateEzNext(current_N_level, is_first_step);
     }

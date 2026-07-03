@@ -51,7 +51,7 @@ namespace
         amrex::Real yp = y;
         amrex::Real uxp = ux;
         amrex::Real uyp = uy;
-        if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
+        if (enforceBC(ptd, ip, xp, yp, uxp, uyp)) return;
 
         ptd.rdata(BeamIdx::x )[ip] = xp;
         ptd.rdata(BeamIdx::y )[ip] = yp;
@@ -97,7 +97,7 @@ namespace
         amrex::Real yp = y;
         amrex::Real uxp = ux;
         amrex::Real uyp = uy;
-        if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
+        if (enforceBC(ptd, ip, xp, yp, uxp, uyp)) return;
 
         ptd.rdata(BeamIdx::x )[ip] = xp;
         ptd.rdata(BeamIdx::y )[ip] = yp;
