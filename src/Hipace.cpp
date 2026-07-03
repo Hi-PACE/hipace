@@ -842,9 +842,6 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         m_multi_plasma.AdvanceParticles(m_fields, m_3D_geom, false, lev, current_N_level);
     }
 
-    // get plasma and beam histograms of particles that exited the domain
-    m_diags.FillBoundaryHistDiagnostics(islice, m_multi_plasma, m_multi_beam, m_3D_geom);
-
     if (m_depos_order_z == 2) {
         CalculateEzNext(current_N_level, is_first_step);
     }
@@ -854,6 +851,9 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
+
+    // get plasma and beam histograms of particles that exited the domain after push
+    m_diags.FillBoundaryHistDiagnostics(islice, m_multi_plasma, m_multi_beam, m_3D_geom);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
