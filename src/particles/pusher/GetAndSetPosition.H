@@ -51,7 +51,6 @@ struct EnforceBC
      * \param[in] y y position of particle
      * \param[in] ux x momentum of particle
      * \param[in] uy y momentum of particle
-     * \param[in] w_index index to the weight component
      */
     template<class PTD>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
