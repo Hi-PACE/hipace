@@ -82,6 +82,34 @@ public:
     [[nodiscard]] const BeamParticleContainer&
     getBeam (int i) const {return m_all_beams[i];}
 
+    /** \brief Return 1 species
+     * \param[in] name name of the beam
+     */
+    [[nodiscard]]
+    BeamParticleContainer& getBeam (const std::string& name) {
+        for (int i = 0; i < m_nbeams; ++i) {
+            if (m_names[i] == name) {
+                return m_all_beams[i];
+            }
+        }
+        amrex::Abort("Unknown beam name " + name);
+        return m_all_beams[0];
+    }
+
+    /** \brief Return 1 species
+     * \param[in] name name of the beam
+     */
+    [[nodiscard]]
+    const BeamParticleContainer& getBeam (const std::string& name) const {
+        for (int i = 0; i < m_nbeams; ++i) {
+            if (m_names[i] == name) {
+                return m_all_beams[i];
+            }
+        }
+        amrex::Abort("Unknown beam name " + name);
+        return m_all_beams[0];
+    }
+
     /** returns the number of beams */
     [[nodiscard]] int
     get_nbeams () const {return m_nbeams;}

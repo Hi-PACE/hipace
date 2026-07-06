@@ -76,6 +76,9 @@ struct Hipace_early_init
 
     /* Number of mesh refinement levels */
     int m_N_level = 1;
+
+    /* Don't stop the simulation if user inputs are potentially suboptimal */
+    inline static bool m_ignore_noncritical_warnings = false;
 };
 
 /** \brief Singleton class that initializes, runs and finalizes the simulation */
@@ -365,7 +368,6 @@ private:
     amrex::Vector< CoulombCollision > m_all_collisions;
 
     void InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
-    void FillFieldDiagnostics (const int current_N_level, int islice);
     void FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void FlushDiagnostics ();

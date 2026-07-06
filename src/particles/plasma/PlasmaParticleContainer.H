@@ -305,7 +305,7 @@ public:
     amrex::Real m_charge = 0; /**< charge of each particle of this species, per Ion level */
     int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
     bool m_do_push = true; /**< whether the plasma pusher is enabled */
-    int m_ab5_permutation = 0;
+    int m_ab5_permutation = 0; /**< index offset of the first ab5 force term */
     /** whether to use the AB5 or leapfrog pusher */
     bool m_use_ab5_push = false;
     PlasmaComps m_comps;
@@ -361,6 +361,8 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "";
+    /** If the runtime attributes of the AMReX particle container were already set up */
+    bool m_components_allocated = false;
 };
 
 /** \brief Iterator over boxes in a particle container */

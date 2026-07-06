@@ -129,7 +129,7 @@ public:
      * \param[in] field_geom main field geometry
      * \param[in] multi_laser MultiLaser object
      */
-     void Copy (const int current_N_level, const int i_slice, FieldDiagnosticData& fd,
+     void Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
                 const amrex::Vector<amrex::Geometry>& field_geom, MultiLaser& multi_laser);
 
      /** \brief Initialize all required fields to zero and interpolate from lev-1 to lev if needed

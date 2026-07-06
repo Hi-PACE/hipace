@@ -70,7 +70,7 @@ private:
      * \param[in] a_multi_laser multi laser to get the central wavelength
      * \param[in,out] iteration openPMD iteration to which the data is written
      */
-    void WriteFieldData (const FieldDiagnosticData& fd, const MultiLaser& a_multi_laser,
+    void WriteFieldData (const DiagnosticData& fd, const MultiLaser& a_multi_laser,
                          openPMD::Iteration& iteration);
 
     /** Named Beam SoA attributes per particle as defined in BeamIdx
@@ -145,7 +145,7 @@ public:
      * \param[in] output_step current iteration to be written to file
      */
     void WriteFieldDiagnostics (
-        const amrex::Vector<FieldDiagnosticData>& field_diag,
+        const amrex::Vector<DiagnosticData>& field_diag,
         const MultiLaser& a_multi_laser, const amrex::Real physical_time, const int output_step);
 
     /** \brief Copy beam data into IO buffer

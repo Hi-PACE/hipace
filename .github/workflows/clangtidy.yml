@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env: {CXXFLAGS: "-Wno-pass-failed"}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Dependencies
       run: .github/workflows/setup/ubuntu_clang.sh
     - name: Build & Install

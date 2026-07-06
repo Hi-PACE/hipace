@@ -188,6 +188,10 @@ General parameters
     Note that z refers to the location of the beam particle inside the moving frame of reference
     (zeta) and t to the physical time of the current time step.
 
+* ``hipace.ignore_noncritical_warnings`` (`bool`) optional (default `0`)
+    Don't crash the simulation from assertions that check for suboptimal input parameters
+    but are not needed for correctness.
+
 Geometry
 --------
 
@@ -954,15 +958,21 @@ Parameters starting with ``lasers.`` apply to all laser pulses, parameters start
 * ``lasers.use_phase`` (`bool`) optional (default `true`)
     Whether the phase terms (:math:`\theta` in Eq. (6) of [C. Benedetti et al. Plasma Phys. Control. Fusion 60.1: 014002 (2017)]) are computed and used in the laser envelope advance. Keeping the phase should be more accurate, but can cause numerical issues in the presence of strong depletion/frequency shift.
 
+* ``lasers.use_non_centered_push`` (`bool`) optional (default `false`)
+    By default, the laser solver uses the two previous time steps to compute the next one.
+    In some cases this can lead to unphysical fast oscillations.
+    With this setting, only one previous time step is used which, can help to reduce oscillations
+    but is less accurate.
+
 * ``lasers.interp_order`` (`int`) optional (default `1`)
     Transverse shape order for the laser to field interpolation of aabs and
     the field to laser interpolation of chi. Currently, `0,1,2,3` are implemented.
 
 * ``lasers.solver_type`` (`string`) optional (default `multigrid`)
-    Type of solver for the laser envelope solver, either ``fft`` or ``multigrid``.
-    Currently, the approximation that the phase is evaluated on-axis only is made with both solvers.
+    Type of solver for the laser envelope solver, either ``multigrid`` or ``off``.
+    Currently, the approximation that the phase is evaluated on-axis only is made.
     With the multigrid solver, we could drop this assumption.
-    For now, the fft solver should be faster, more accurate and more stable, so only use the multigrid one with care.
+    If set ``off``, the laser will not evolve and remain as the initial profile through the simulation.
 
 * ``lasers.MG_tolerance_rel`` (`float`) optional (default `1e-4`)
     Relative error tolerance of the multigrid solver used for the laser pulse.
@@ -1113,7 +1123,7 @@ Field diagnostics
 
 * ``<diag name> or diagnostic.base_geometry`` (`string`) optional (default `level_0`)
     Which geometry the diagnostics should be based on.
-    Available geometries are `level_0`, `level_1`, `level_2` and `laser`,
+    Available geometries are `level_0`, `level_1`, `level_2`, `laser` and `histogram`,
     depending on if MR or a laser is used.
     If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
     becomes ``level_0 level_1 level_2 laser`` respectively.
@@ -1191,6 +1201,56 @@ Field diagnostics
     When ``hipace.deposit_temp_individual`` is turned on,
     this option specifies the shape order of the deposited fields.
     Currently, 0,1,2,3 are implemented.
+
+Particle Histogram diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This diagnostic allows the direct computation of histograms of arbitrary particle
+quantities during the simulation runtime. It supports both plasma and beam particles.
+It is part of the standard field diagnostic and is enabled by setting
+``<diag name>.base_geometry = histogram``. Histograms may have one or two user-defined axes.
+Optionally, the simulation z-axis can be included as an additional axis or integrated over.
+All field diagnostic parameters apply, except ``field_data`` and ``diag_type``.
+For example, ``patch_lo`` and ``patch_hi`` can be used to restrict the particles included in
+the histogram in coordinate space, but do not modify the histogram axes.
+Each particle species produces a separate histogram that is output as
+``<species name>_<diag name>``. No unit conversion or normalization by cell volume is applied.
+Particles outside the histogram bounds are discarded.
+
+* ``<diag name>.hist_species_names`` (`string`)
+    List of species to include. Can be beam and/or plasma species.
+
+* ``<diag name>.hist_num_bins`` (`int` or 2 `int`)
+    Number of bins per histogram axis.
+
+* ``<diag name>.hist_bins_lo`` (`flaot` or 2 `flaot`)
+    Lower bound of each histogram axis.
+
+* ``<diag name>.hist_bins_hi`` (`flaot` or 2 `flaot`)
+    Upper bound of each histogram axis.
+
+* ``<diag name>.hist_function`` (`string`)
+    Parser expression defining the first histogram axis as a function of particle properties:
+    ``x``, ``y``, ``z``, ``ux``, ``uy``, ``uz``, ``ga_psi``, ``w``, ``ion_lev``.
+    Here, ``ga_psi`` is the quasi-static weighting factor for plasma particles,
+    ``ion_lev`` is the ionization level (for ionizable species), and ``w`` is the
+    macro-particle weight.
+
+* ``<diag name>.hist_function2`` (`string`) optional
+    Parser expression defining the second histogram axis. Uses the same variables as
+    ``<diag name>.hist_function``.
+
+* ``<diag name>.hist_weight`` (`string`) optional (default `w`)
+    Parser expression defining the weight contributed by each particle to the histogram.
+    For plasma particles, this weight is automatically multiplied by ``ga_psi``
+    to obtain the physical particle weight. Uses the same variables as
+    ``<diag name>.hist_function``. This can also be used to filter particles.
+
+* ``<diag name>.hist_add_z_axis`` (`bool`) optional (default `false`)
+    Add the zeta axis from the simulation to the histogram output.
+    This is more efficient than adding z as a custom histogram axis using
+    ``hist_function`` or ``hist_function2``. If disabled the histogram contains data from
+    all z slices in the range given by ``patch_lo`` and ``patch_hi``.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^

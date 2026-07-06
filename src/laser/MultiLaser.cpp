@@ -38,15 +38,17 @@ MultiLaser::ReadParameters ()
     AMREX_ALWAYS_ASSERT(polarization == "linear" || polarization == "circular");
     m_linear_polarization = polarization == "linear";
     queryWithParser(pp, "use_phase", m_use_phase);
+    queryWithParser(pp, "use_non_centered_push", m_use_non_centered_push);
     queryWithParser(pp, "solver_type", m_solver_type);
-    AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft");
+    AMREX_ALWAYS_ASSERT(m_solver_type == "multigrid" || m_solver_type == "fft" ||
+                        m_solver_type == "off");
     queryWithParser(pp, "interp_order", m_interp_order);
     AMREX_ALWAYS_ASSERT(m_interp_order <= 3 && m_interp_order >= 0);
 
     bool mg_param_given = queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
-    mg_param_given += queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
-    mg_param_given += queryWithParser(pp, "MG_verbose", m_MG_verbose);
-    mg_param_given += queryWithParser(pp, "MG_average_rhs", m_MG_average_rhs);
+    mg_param_given = queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs) || mg_param_given;
+    mg_param_given = queryWithParser(pp, "MG_verbose", m_MG_verbose) || mg_param_given;
+    mg_param_given = queryWithParser(pp, "MG_average_rhs", m_MG_average_rhs) || mg_param_given;
 
     // Raise warning if user specifies MG parameters without using the MG solver
     if (mg_param_given && (m_solver_type != "multigrid")) {
@@ -460,16 +462,29 @@ MultiLaser::AdvanceSlice (const int islice, const Fields& fields, amrex::Real dt
     InterpolateChi(fields, geom_field_lev0);
 
     if (m_solver_type == "multigrid") {
-        AdvanceSliceMG(dt, is_first_step);
+        AdvanceSliceMG(dt, is_first_step || m_use_non_centered_push);
     } else if (m_solver_type == "fft") {
-        AdvanceSliceFFT(dt, is_first_step);
+        AdvanceSliceFFT(dt, is_first_step || m_use_non_centered_push);
+    } else if (m_solver_type == "off") {
+        for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
+            Array3<amrex::Real> arr = m_slices.array(mfi);
+            amrex::ParallelFor(
+                to2D(mfi.tilebox()),
+                [=] AMREX_GPU_DEVICE (int i, int j) {
+                    using namespace WhichLaserSlice;
+                    // copy current laser to slice of the next time step
+                    arr(i, j, np1j00_r) = arr(i, j, n00j00_r);
+                    arr(i, j, np1j00_i) = arr(i, j, n00j00_i);
+                }
+            );
+        }
     } else {
-        amrex::Abort("laser.solver_type must be fft or multigrid");
+        amrex::Abort("laser.solver_type must be fft, multigrid or off");
     }
 }
 
 void
-MultiLaser::AdvanceSliceMG (amrex::Real dt, bool is_first_step)
+MultiLaser::AdvanceSliceMG (amrex::Real dt, bool non_centered_push)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceMG()");
@@ -565,9 +580,9 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, bool is_first_step)
 
         // D_j^n as defined in Benedetti's 2017 paper
         djn = ( -3._rt*dt1 + dt2 ) / (2._rt*dz);
-        acoeff_real_scalar = is_first_step ? 6._rt/(c*dt*dz)
+        acoeff_real_scalar = non_centered_push ? 6._rt/(c*dt*dz)
             : 3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt);
-        acoeff_imag_scalar = is_first_step ? -4._rt * ( k0 + djn ) / (c*dt)
+        acoeff_imag_scalar = non_centered_push ? -4._rt * ( k0 + djn ) / (c*dt)
             : -2._rt * ( k0 + djn ) / (c*dt);
 
         amrex::ParallelFor(
@@ -577,7 +592,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, bool is_first_step)
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
-                if (is_first_step) {
+                if (non_centered_push) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
                         (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
                         (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
@@ -600,7 +615,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, bool is_first_step)
                     acoeff_real_scalar + arr(i, j, chi) : acoeff_real_scalar;
 
                 Complex rhs;
-                if (is_first_step) {
+                if (non_centered_push) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
@@ -649,7 +664,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, bool is_first_step)
 }
 
 void
-MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool is_first_step)
+MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool non_centered_push)
 {
 
     HIPACE_PROFILE("MultiLaser::AdvanceSliceFFT()");
@@ -752,7 +767,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool is_first_step)
                 using namespace WhichLaserSlice;
                 // Transverse Laplacian of real and imaginary parts of A_j^n-1
                 amrex::Real lapR, lapI;
-                if (is_first_step) {
+                if (non_centered_push) {
                     lapR = i>imin && i<imax && j>jmin && j<jmax ?
                         (arr(i+1, j, n00j00_r)+arr(i-1, j, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dx*dx) +
                         (arr(i, j+1, n00j00_r)+arr(i, j-1, n00j00_r)-2._rt*arr(i, j, n00j00_r))/(dy*dy) : 0._rt;
@@ -772,7 +787,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool is_first_step)
                 const Complex anp1jp1 = arr(i, j, np1jp1_r) + I * arr(i, j, np1jp1_i);
                 const Complex anp1jp2 = arr(i, j, np1jp2_r) + I * arr(i, j, np1jp2_i);
                 Complex rhs;
-                if (is_first_step) {
+                if (non_centered_push) {
                     // First time step: non-centered push to go
                     // from step 0 to step 1 without knowing -1.
                     const Complex an00jp1 = arr(i, j, n00jp1_r) + I * arr(i, j, n00jp1_i);
@@ -807,7 +822,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool is_first_step)
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
-            is_first_step ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
+            non_centered_push ? 6._rt/(c*dt*dz) - I * 4._rt * ( k0 + djn ) / (c*dt) :
              3._rt/(c*dt*dz) + 2._rt/(c*c*dt*dt) - I * 2._rt * ( k0 + djn ) / (c*dt);
         amrex::ParallelFor(
             to2D(bx),

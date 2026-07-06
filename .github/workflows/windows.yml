@@ -12,7 +12,7 @@ jobs:
     runs-on: windows-latest
     if: github.event.pull_request.draft == false
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: CCache Cache
       uses: actions/cache@v4
       # - once stored under a key, they become immutable (even if local cache path content changes)
@@ -54,7 +54,7 @@ jobs:
     runs-on: windows-latest
     if: github.event.pull_request.draft == false
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: CCache Cache
       uses: actions/cache@v4
       # - once stored under a key, they become immutable (even if local cache path content changes)
@@ -78,7 +78,7 @@ jobs:
       env:
         CMAKE_POLICY_VERSION_MINIMUM: 3.5
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+        call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cmake -S fftw-3.3.10  ^
               -B build_fftw   ^
               -G "Ninja"      ^
@@ -89,7 +89,7 @@ jobs:
     - name: Build & Install
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\vc\Auxiliary\build\vcvarsall.bat" x64
+        call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
 
         set "FFTW3_DIR=C:/Program Files (x86)/fftw/"
         cmake -S . -B build   ^
