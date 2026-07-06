@@ -325,7 +325,7 @@ private:
     std::string m_name; /**< name of the species */
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real plasma properties for in-situ per-slice reduced diagnostics. */
-    static constexpr int m_insitu_nrp = 14;
+    static constexpr int m_insitu_nrp = 15;
     /** Number of int plasma properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nip = 1;
     /** Per-slice real plasma properties */

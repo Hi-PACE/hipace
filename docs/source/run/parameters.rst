@@ -1339,9 +1339,9 @@ For particle quantities, "[...]" stands for averaging over all particles in the 
 for grid quantities, "[...]" stands for integrating over all cells in the current slice.
 
 For particle beams, the following quantities are calculated per slice and stored:
-``sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [x*uy], [y*ux], [ux/uz], [uy/uz], [ga], [ga^2], np``.
+``raw(w), sum(w), [x], [x^2], [y], [y^2], [z], [z^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [x*ux], [y*uy], [z*uz], [x*uy], [y*ux], [ux/uz], [uy/uz], [ga], [ga^2], np``.
 For plasma particles, the following quantities are calculated per slice and stored:
-``sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [ga], [ga^2], np``.
+``raw(w), sum(w), [x], [x^2], [y], [y^2], [ux], [ux^2], [uy], [uy^2], [uz], [uz^2], [ga], [ga^2], np``.
 Thereby, "w" stands for weight, "ux" is the normalized momentum in the x direction, "ga" is the Lorentz factor.
 Averages and totals over all slices are also provided for convenience under the
 respective ``average`` and ``total`` subcategories.

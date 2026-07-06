@@ -57,16 +57,7 @@ public:
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
      **/
-    void doCollisionA (
-        int lev, const amrex::Geometry& geom,
-        MultiPlasma& multi_plasma);
-
-    /**
-     * \param[in] lev MR level
-     * \param[in] geom corresponding geometry object
-     * \param[in,out] multi_plasma all plasmas
-     **/
-    void doCollisionB (
+    void doElectronImpact (
         int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma);
 };

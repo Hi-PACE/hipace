@@ -49,34 +49,23 @@
  */
 
 template <typename T_R>
-struct ImpactIonizationOutgoing
-{
-    T_R p1x, p1y, p1z;   // scattered projectile electron, COM-derived, lab frame
-    T_R p2x, p2y, p2z;   // recoiling ion
-    T_R p3x, p3y, p3z;   // secondary electron
-    bool valid = false;  // false if negligible relative motion, insufficient energy, or degenerate geometry
-};
-
-// Pure computation: no RNG-driven rejection, no particle-state writes, no ion_lev change.
-// Same physics as before (COM boost -> sample isotropic e1,e3 -> bisect for C -> boost back),
-// just returning the result instead of applying it.
-template <typename T_R>
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
-ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
-    T_R const ux1, T_R const uy1, T_R const uz1, T_R const g1,
-    T_R const ux2, T_R const uy2, T_R const uz2, T_R const g2,
-    T_R const m1, T_R const m2, T_R const m3,
-    T_R const Eion_eV, T_R const c2, T_R const inv_c2,
+void ImpactIonization (
+    T_R& ux1, T_R& uy1, T_R& uz1, T_R const g1,
+    T_R& ux2, T_R& uy2, T_R& uz2, T_R const g2, int& ion_lev2,
+    T_R& ux3, T_R& uy3, T_R& uz3,
+    T_R m1, T_R const w1r, T_R m2, T_R const w2r, T_R const m3,
+    T_R const Eion_eV, T_R const c2, T_R const inv_c, T_R const inv_c2,
     amrex::RandomEngine const& engine)
 {
     using namespace amrex::literals;
-    ImpactIonizationOutgoing<T_R> out{};
 
+    // Tolerances for numerical checks
     constexpr T_R rel_tol  = T_R(1.0e-10);
     constexpr T_R eps_n    = T_R(1.0e-10);
     constexpr T_R beta_tol = T_R(1.0e-12);
 
-    T_R const Eion = Eion_eV * PhysConstSI::q_e;
+    T_R const Eion  = Eion_eV * PhysConstSI::q_e;  // [J]
 
     // ------------------------------------------------------------------
     // Early-out if relative motion is negligible
@@ -88,8 +77,8 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
     T_R const summ = std::sqrt(ux1*ux1 + uy1*uy1 + uz1*uz1) + std::sqrt(ux2*ux2 + uy2*uy2 + uz2*uz2);
     // If g = u1 - u2 = 0, do not collide.
     // Or if the relative difference is less than 1.0e-10.
-    if (summ <= T_R(0.0)) return out;
-    if (diffm / summ < rel_tol) return out;
+    if (summ <= T_R(0.0)) return;
+    if (diffm / summ < rel_tol) return;
 
     // ------------------------------------------------------------------
     // Initial lab-frame momenta
@@ -122,7 +111,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
                 false,
                 "ImpactIonization: beta < 0!"
             );
-            return out;
+            return;
         }
     }
 
@@ -131,7 +120,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
             false,
             "ImpactIonization: beta too close to 1!"
         );
-        return out;
+        return;
     }
 
     T_R const gc = T_R(1.0) / std::sqrt( T_R(1.0) - beta2 );
@@ -205,7 +194,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
             "ImpactIonization: energy not sufficient for ionization, E = %e = %e (Ecm) - %e (Eion)\n",
             Eout, Ecm, Eion
         );
-        return out;
+        return;
     }    // Energy not sufficient for ionization
 
     // ------------------------------------------------------------------
@@ -254,7 +243,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
     if (n2_raw < eps_n) {
         AMREX_DEVICE_PRINTF(
             "ImpactIonization: degenerate ion direction, n2_raw=%e\n", n2_raw);
-        return out;
+        return;
     }
 
     T_R const ion_dx = d2x / n2_raw;
@@ -277,7 +266,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
         C_hi *= T_R(2.0);
         if (C_hi > T_R(1.0e6) * std::sqrt(T_R(2.0) * m1 * Eout)) {
             AMREX_DEVICE_PRINTF("ImpactIonization: failed to bracket relativistic C\n");
-            return out;
+            return;
         }
     }
     for (int iter = 0; iter < 60; ++iter) {
@@ -338,25 +327,52 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
         p3fx = p3fsx; p3fy = p3fsy; p3fz = p3fsz;
     }
 
-    out.p1x = p1fx; out.p1y = p1fy; out.p1z = p1fz;
-    out.p2x = p2fx; out.p2y = p2fy; out.p2z = p2fz;
-    out.p3x = p3fx; out.p3y = p3fy; out.p3z = p3fz;
-    out.valid = true;
+    // Convert lab-frame momenta back to normalized momenta
+    // Rejection method according to the adaptation of eq (14) in the ionization model, 
+    // from Perez et al., Phys.Plasmas.19.083104 (2012)
+    // The weights are rescaled according to eq (22)-(23),
+    // Higginson et al., Journal of Computational Physics 413 (2020)
+    auto r = amrex::Random(engine);
+    if ( w2r > r*amrex::max(w1r, w2r) )
+    {
+        ux1 = inv_c * p1fx / m1;
+        uy1 = inv_c * p1fy / m1;
+        uz1 = inv_c * p1fz / m1;
+
+        bool var_nan =
+            std::isnan(ux1) || std::isnan(uy1) || std::isnan(uz1);
+
+        bool var_inf =
+            std::isinf(ux1) || std::isinf(uy1) || std::isinf(uz1);
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!var_nan, "ImpactIonization: NaN detected in final-state velocities");
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!var_inf, "ImpactIonization: Inf detected in final-state velocities");
+    }
+    
+    ion_lev2 += 1;
+
+    ux2 = inv_c * p2fx / m2;
+    uy2 = inv_c * p2fy / m2;
+    uz2 = inv_c * p2fz / m2;
+
+    ux3 = inv_c * p3fx / m3;
+    uy3 = inv_c * p3fy / m3;
+    uz3 = inv_c * p3fz / m3;
 
     bool var_nan =
-        std::isnan(out.p1x) || std::isnan(out.p1y) || std::isnan(out.p1z) ||
-        std::isnan(out.p2x) || std::isnan(out.p2y) || std::isnan(out.p2z) ||
-        std::isnan(out.p3x) || std::isnan(out.p3y) || std::isnan(out.p3z);
+        std::isnan(ux1) || std::isnan(uy1) || std::isnan(uz1) ||
+        std::isnan(ux2) || std::isnan(uy2) || std::isnan(uz2) ||
+        std::isnan(ux3) || std::isnan(uy3) || std::isnan(uz3);
 
     bool var_inf =
-        std::isinf(out.p1x) || std::isinf(out.p1y) || std::isinf(out.p1z) ||
-        std::isinf(out.p2x) || std::isinf(out.p2y) || std::isinf(out.p2z) ||
-        std::isinf(out.p3x) || std::isinf(out.p3y) || std::isinf(out.p3z);
+        std::isinf(ux1) || std::isinf(uy1) || std::isinf(uz1) ||
+        std::isinf(ux2) || std::isinf(uy2) || std::isinf(uz2) ||
+        std::isinf(ux3) || std::isinf(uy3) || std::isinf(uz3);
 
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!var_nan, "ImpactIonization: NaN in computed final state");
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!var_inf, "ImpactIonization: Inf in computed final state");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!var_nan, "ImpactIonization: NaN detected in final-state velocities");
 
-    return out;
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!var_inf, "ImpactIonization: Inf detected in final-state velocities");
 }
 
 #endif // HIPACE_IMPACT_IONIZATION_H_
