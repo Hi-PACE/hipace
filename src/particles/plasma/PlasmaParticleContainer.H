@@ -310,6 +310,7 @@ public:
     bool m_use_ab5_push = false;
     PlasmaComps m_comps;
     bool m_is_on_temp_slice = false;
+    /** If the runtime attributes of the AMReX particle container were already set up */
     bool m_components_allocated = false;
 
     // ionization:
@@ -361,8 +362,6 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "";
-    /** If the runtime attributes of the AMReX particle container were already set up */
-    bool m_components_allocated = false;
 };
 
 /** \brief Iterator over boxes in a particle container */
