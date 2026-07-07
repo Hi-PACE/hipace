@@ -94,8 +94,13 @@ void ElasticCollisionPerez (
     T_R n1  = T_R(0.0);
     T_R n2  = T_R(0.0);
     T_R n12 = T_R(0.0);
+<<<<<<< HEAD
     T_R sum_wq1 = T_R(0.0);   // charge-weighted density accumulator, species 1
     T_R sum_wq2 = T_R(0.0);   // charge-weighted density accumulator, species 2
+=======
+    T_R sum_wq1 = T_R(0.0);   // new: charge-weighted density accumulator, species 1
+    T_R sum_wq2 = T_R(0.0);   // new: charge-weighted density accumulator, species 2
+>>>>>>> 3d747ab (Bug fix in ElasticCollisionPerez)
 
     for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) {
         n1 += w1[ I1[i1] ];
@@ -108,8 +113,11 @@ void ElasticCollisionPerez (
         sum_wq2 += w2[ I2[i2] ] * q2_i * q2_i;
     }
 
+<<<<<<< HEAD
     if (sum_wq1 == T_R(0.0) || sum_wq2 == T_R(0.0)) return;
 
+=======
+>>>>>>> 3d747ab (Bug fix in ElasticCollisionPerez)
     if (is_same_species) {
         n1 = n1 + n2;
         n2 = n1;
