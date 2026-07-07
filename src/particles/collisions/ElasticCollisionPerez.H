@@ -94,8 +94,8 @@ void ElasticCollisionPerez (
     T_R n1  = T_R(0.0);
     T_R n2  = T_R(0.0);
     T_R n12 = T_R(0.0);
-    T_R sum_wq1 = T_R(0.0);   // new: charge-weighted density accumulator, species 1
-    T_R sum_wq2 = T_R(0.0);   // new: charge-weighted density accumulator, species 2
+    T_R sum_wq1 = T_R(0.0);   // charge-weighted density accumulator, species 1
+    T_R sum_wq2 = T_R(0.0);   // charge-weighted density accumulator, species 2
 
     for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) {
         n1 += w1[ I1[i1] ];
