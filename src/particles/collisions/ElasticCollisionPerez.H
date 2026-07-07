@@ -108,6 +108,8 @@ void ElasticCollisionPerez (
         sum_wq2 += w2[ I2[i2] ] * q2_i * q2_i;
     }
 
+    if (sum_wq1 == T_R(0.0) || sum_wq2 == T_R(0.0)) return;
+
     if (is_same_species) {
         n1 = n1 + n2;
         n2 = n1;
