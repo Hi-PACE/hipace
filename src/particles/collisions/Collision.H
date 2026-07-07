@@ -43,7 +43,7 @@ public:
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
      * \param[in] collision_function return if a pair of particles collides
-     * \param[in] ionizaiton_function initialize product particle
+     * \param[in] ionization_function initialize product particle
      **/
     template <class F, class G>
     void doCollisionImp (
