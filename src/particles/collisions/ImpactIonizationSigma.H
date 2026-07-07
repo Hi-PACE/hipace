@@ -187,7 +187,7 @@ namespace coll_ion
      * @param atomic_number  Atomic number Z of the target element.
      * @param zstar          Current ion charge (number of removed electrons).
      * @param e              Incident-electron kinetic energy [eV].
-     * @return               Ionization cross section [m²].
+     * @return               Ionization cross section [m^2].
      */
     AMREX_GPU_HOST_DEVICE inline
     IonizationResult sigma_E(int atomic_number, int zstar, Real e, const Real* p_binding_energies, const Real* p_ionization_energies)
@@ -200,7 +200,7 @@ namespace coll_ion
         int base_idx = get_energy_index(atomic_number);
         const Real me_c2 = 510998.0;        // electron rest energy [eV]
 
-        // Convert incident energy to m_e c² units
+        // Convert incident energy to m_e c^2 units
         const Real ep = e / me_c2;
 
         // Sum over all bound electrons (k = 0 … n_bound-1)
@@ -212,7 +212,7 @@ namespace coll_ion
             // Add current electron to the running group
             n++;
 
-            Real bp = p_binding_energies[idx_k] / me_c2;  // binding energy in m_e c² units
+            Real bp = p_binding_energies[idx_k] / me_c2;  // binding energy in m_e c^2 units
 
             // Accumulate degenerate sub-shells (same binding energy)
             if (k < atomic_number - zstar - 1 &&
@@ -223,12 +223,12 @@ namespace coll_ion
             Real e_red = ep / bp;    // reduced energy  T / B
 
             if (e_red > 1.0) {
-                // Relativistic β² factors
+                // Relativistic beta^2 factors
                 Real betae2 = 1.0 - 1.0 / ((1.0 + ep) * (1.0 + ep));
                 Real betab2 = 1.0 - 1.0 / ((1.0 + bp) * (1.0 + bp));
                 Real betau2 = betab2;   // RBEB: U ≈ B
 
-                // Pre-factor  s0 = (r_e / 2c) * n / [B (βe² + βb² + βu²)]
+                // Pre-factor  s0 = (r_e / 2c) * n / [B (beta_e^2 + beta_b^2 + beta_u^2)]
                 Real s0 = normalization * n /
                           (2.0 * bp * (betae2 + betab2 + betau2));
 
