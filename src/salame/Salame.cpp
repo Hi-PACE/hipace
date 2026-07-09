@@ -302,7 +302,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
 
             const amrex::Real charge_mass_c_ratio =
                 plasma.m_charge / (plasma.m_mass * get_phys_const().c);
-            const bool can_ionize = plasma.m_can_ionize;
+            auto comps = plasma.m_comps;
 
             omp::ParallelFor(
                 amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
@@ -312,8 +312,8 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                     // only push plasma particles on their according MR level
                     if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
-                    const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev)[ip];
-                    const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev)[ip];
+                    const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev + comps.use_temp_slice)[ip];
+                    const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev + comps.use_temp_slice)[ip];
 
                     amrex::Real Bxp = 0._rt;
                     amrex::Real Byp = 0._rt;
@@ -322,7 +322,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                     doBxByGatherShapeN<depos_order.value>(xp, yp, Bxp, Byp, slice_arr,
                         bx_comp, by_comp, dx_inv, dy_inv, x_pos_offset, y_pos_offset);
 
-                    const amrex::Real q_m_c_ratio = can_ionize ?
+                    const amrex::Real q_m_c_ratio = comps.use_ion_level ?
                         ptd.idata(PlasmaIdx::ion_lev)[ip] * charge_mass_c_ratio
                         : charge_mass_c_ratio;
 
