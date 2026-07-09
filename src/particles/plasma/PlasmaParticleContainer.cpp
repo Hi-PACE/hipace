@@ -590,8 +590,6 @@ IonizationModule (const int lev,
 
                 if (comps.use_laser) {
                     ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[pidx] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[pidx] = 0._rt;
                 }
 
                 if (comps.use_temp_slice) {
@@ -861,8 +859,6 @@ LaserIonization (const int islice,
 
                 if (comps.use_laser) {
                     ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdx)[pidx] = 0._rt;
-                    ptd_elec.rdata(PlasmaIdx::aabssqdy)[pidx] = 0._rt;
                 }
 
                 if (comps.use_temp_slice) {
@@ -974,18 +970,12 @@ GatherLaser (const int lev,
                 const amrex::Real yp = ptd.rdata(PlasmaIdx::y)[ip];
 
                 amrex::Real Aabssqp = 0._rt;
-                amrex::Real AabssqDxp = 0._rt;
-                amrex::Real AabssqDyp = 0._rt;
                 doLaserGatherShapeN<depos_order.value>(xp, yp,
-                    Aabssqp, AabssqDxp, AabssqDyp, slice_arr, aabs_comp,
+                    Aabssqp, slice_arr, aabs_comp,
                     dx_inv, dy_inv, x_pos_offset, y_pos_offset);
                 Aabssqp *= laser_norm_qm_ion;
-                AabssqDxp *= laser_norm_c;
-                AabssqDyp *= laser_norm_c;
 
                 ptd.rdata(PlasmaIdx::aabssq)[ip] = Aabssqp;
-                ptd.rdata(PlasmaIdx::aabssqdx)[ip] = AabssqDxp;
-                ptd.rdata(PlasmaIdx::aabssqdy)[ip] = AabssqDyp;
             });
     }
 }
