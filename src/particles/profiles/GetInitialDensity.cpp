@@ -108,9 +108,9 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
     if (mesh.geometry() == openPMD::Mesh::Geometry::cartesian) {
         m_profile_type = 1;
 
-        idx_perm[0] = axis_labels_map.count("x") > 0 ? axis_labels_map["x"] : -1;
-        idx_perm[1] = axis_labels_map.count("y") > 0 ? axis_labels_map["y"] : -1;
-        idx_perm[2] = axis_labels_map.count("z") > 0 ? axis_labels_map["z"] : -1;
+        idx_perm[0] = axis_labels_map.contains("x") ? axis_labels_map["x"] : -1;
+        idx_perm[1] = axis_labels_map.contains("y") ? axis_labels_map["y"] : -1;
+        idx_perm[2] = axis_labels_map.contains("z") ? axis_labels_map["z"] : -1;
 
         axis_labels_map.erase("x");
         axis_labels_map.erase("y");
@@ -127,8 +127,8 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
             strides.erase(strides.begin());
         }
 
-        idx_perm[0] = axis_labels_map.count("r") > 0 ? axis_labels_map["r"] : -1;
-        idx_perm[1] = axis_labels_map.count("z") > 0 ? axis_labels_map["z"] : -1;
+        idx_perm[0] = axis_labels_map.contains("r") ? axis_labels_map["r"] : -1;
+        idx_perm[1] = axis_labels_map.contains("z") ? axis_labels_map["z"] : -1;
         idx_perm[2] = -1;
 
         axis_labels_map.erase("r");
@@ -144,7 +144,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
 
     for (int i=0; i<3; ++i) {
         m_strides[i] = idx_perm[i] != -1 ? strides[idx_perm[i]] : 0;
-        m_bigend[i] = idx_perm[i] != -1 ? extent[idx_perm[i]] - 1 : 0;
+        m_bigend[i] = idx_perm[i] != -1 ? static_cast<int>(extent[idx_perm[i]]) - 1 : 0;
         m_pos_offset[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(
             offset[idx_perm[i]] + spacing[idx_perm[i]] * position[idx_perm[i]]) : 0;
         m_dx_inv[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(1. / spacing[idx_perm[i]]) : 0;
@@ -152,7 +152,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
 
     if (use_mode) {
         m_strides[2] = mode_stride;
-        m_bigend[2] = mode_bigend;
+        m_bigend[2] = static_cast<int>(mode_bigend);
     }
 
     m_unitSI = static_cast<amrex::Real>(comp.unitSI());

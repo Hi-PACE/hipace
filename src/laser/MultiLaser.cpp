@@ -79,6 +79,7 @@ MultiLaser::ReadParameters ()
 void
 MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 {
+    using namespace amrex::literals;
     if (!m_use_laser) return;
     amrex::ParmParse pp("lasers");
 
@@ -110,8 +111,8 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
         int(amrex::Math::round((patch_hi_laser[2] - pos_offset_z) * field_geom_3D.InvCellSize(2)))
     );
 
-    patch_lo_laser[2] = (zeta_lo-0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
-    patch_hi_laser[2] = (zeta_hi+0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
+    patch_lo_laser[2] = (amrex::Real(zeta_lo) - 0.5_rt) * field_geom_3D.CellSize(2) + pos_offset_z;
+    patch_hi_laser[2] = (amrex::Real(zeta_hi) + 0.5_rt) * field_geom_3D.CellSize(2) + pos_offset_z;
 
     // make the boxes
     const amrex::Box domain_3D_laser{amrex::IntVect(0, 0, zeta_lo),
@@ -123,7 +124,7 @@ MultiLaser::MakeLaserGeometry (const amrex::Geometry& field_geom_3D)
 
     // make the geometry, slice box and ba and dm
     m_laser_geom_3D.define(domain_3D_laser, real_box, amrex::CoordSys::cartesian, {0, 0, 0});
-    m_nlasers = m_names.size();
+    m_nlasers = static_cast<int>(m_names.size());
 
     for (int i = 0; i < m_nlasers; ++i) {
         m_all_lasers.emplace_back(Laser(m_names[i]));
@@ -298,8 +299,8 @@ MultiLaser::UpdateLaserAabs (const int islice, const int current_N_level, Fields
             [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
                 using namespace WhichLaserSlice;
 
-                const amrex::Real x = i * dx_field + poff_field_x;
-                const amrex::Real y = j * dy_field + poff_field_y;
+                const amrex::Real x = amrex::Real(i) * dx_field + poff_field_x;
+                const amrex::Real y = amrex::Real(j) * dy_field + poff_field_y;
 
                 const amrex::Real xmid = (x - poff_laser_x) * dx_laser_inv;
                 const amrex::Real ymid = (y - poff_laser_y) * dy_laser_inv;
@@ -353,7 +354,7 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
             const amrex::Real c_t = pc.c * Hipace::m_physical_time;
             amrex::Real chi_factor = plasma.GetCharge() * plasma.GetCharge() * pc.mu0 / plasma.GetMass();
             if (plasma.m_can_ionize) {
-                chi_factor *= plasma.m_init_ion_lev * plasma.m_init_ion_lev;
+                chi_factor *= amrex::Real(plasma.m_init_ion_lev * plasma.m_init_ion_lev);
             }
 
             auto density_func = plasma.m_density_func;
@@ -366,8 +367,8 @@ MultiLaser::SetInitialChi (const MultiPlasma& multi_plasma)
 
             amrex::ParallelFor(to2D(mfi.growntilebox()),
                 [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
-                    const amrex::Real x = i * dx_laser + poff_laser_x;
-                    const amrex::Real y = j * dy_laser + poff_laser_y;
+                    const amrex::Real x = amrex::Real(i) * dx_laser + poff_laser_x;
+                    const amrex::Real y = amrex::Real(j) * dy_laser + poff_laser_y;
 
                     laser_arr_chi(i, j) += density_func(x, y, c_t) * chi_factor;
                 });
@@ -404,10 +405,10 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
         // chi near the boundaries is incorrect due to >0 deposition order.
         field_box.grow(-2*Fields::m_slices_nguards);
 
-        const amrex::Real pos_x_lo = field_box.smallEnd(0) * dx_field + poff_field_x;
-        const amrex::Real pos_x_hi = field_box.bigEnd(0) * dx_field + poff_field_x;
-        const amrex::Real pos_y_lo = field_box.smallEnd(1) * dy_field + poff_field_y;
-        const amrex::Real pos_y_hi = field_box.bigEnd(1) * dy_field + poff_field_y;
+        const amrex::Real pos_x_lo = amrex::Real(field_box.smallEnd(0)) * dx_field + poff_field_x;
+        const amrex::Real pos_x_hi = amrex::Real(field_box.bigEnd(0)) * dx_field + poff_field_x;
+        const amrex::Real pos_y_lo = amrex::Real(field_box.smallEnd(1)) * dy_field + poff_field_y;
+        const amrex::Real pos_y_hi = amrex::Real(field_box.bigEnd(1)) * dy_field + poff_field_y;
 
         // the indexes of the laser box where the fields box ends
         const int x_lo = amrex::Math::ceil((pos_x_lo - poff_laser_x) * dx_laser_inv);
@@ -420,8 +421,8 @@ MultiLaser::InterpolateChi (const Fields& fields, amrex::Geometry const& geom_fi
             {m_interp_order},
             mfi.growntilebox(),
             [=] AMREX_GPU_DEVICE(int i, int j, int, auto interp_order) noexcept {
-                const amrex::Real x = i * dx_laser + poff_laser_x;
-                const amrex::Real y = j * dy_laser + poff_laser_y;
+                const amrex::Real x = amrex::Real(i) * dx_laser + poff_laser_x;
+                const amrex::Real y = amrex::Real(j) * dy_laser + poff_laser_y;
 
                 const amrex::Real xmid = (x - poff_field_x) * dx_field_inv;
                 const amrex::Real ymid = (y - poff_field_y) * dy_field_inv;
@@ -499,7 +500,7 @@ MultiLaser::AdvanceSliceMG (amrex::Real dt, bool non_centered_push)
 
     const PhysConst phc = get_phys_const();
     const amrex::Real c = phc.c;
-    const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
+    const amrex::Real k0 = 2._rt * MathConst::pi/m_lambda0;
     const bool do_avg_rhs = m_MG_average_rhs;
 
     amrex::Real acoeff_real_scalar = 0._rt;
@@ -679,7 +680,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool non_centered_push)
 
     const PhysConst phc = get_phys_const();
     const amrex::Real c = phc.c;
-    const amrex::Real k0 = 2.*MathConst::pi/m_lambda0;
+    const amrex::Real k0 = 2._rt * MathConst::pi/m_lambda0;
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ){
         const amrex::Box& bx = mfi.tilebox();
@@ -817,8 +818,8 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool non_centered_push)
         m_forward_fft.Execute();
 
         // Multiply by appropriate factors in Fourier space
-        amrex::Real dkx = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(0);
-        amrex::Real dky = 2.*MathConst::pi/m_laser_geom_3D.ProbLength(1);
+        amrex::Real dkx = 2._rt * MathConst::pi/m_laser_geom_3D.ProbLength(0);
+        amrex::Real dky = 2._rt * MathConst::pi/m_laser_geom_3D.ProbLength(1);
         // acoeff_imag is supposed to be a nx*ny array.
         // For the sake of simplicity, we evaluate it on-axis only.
         const Complex acoeff =
@@ -828,10 +829,10 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool non_centered_push)
             to2D(bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 // divide rhs_fourier by -(k^2+a)
-                amrex::Real kx = (i<imid) ? dkx*i : dkx*(i-Nx);
-                amrex::Real ky = (j<jmid) ? dky*j : dky*(j-Ny);
-                const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0. ?
-                    1._rt/(kx*kx + ky*ky + acoeff) : 0.;
+                amrex::Real kx = (i<imid) ? dkx*amrex::Real(i) : dkx*amrex::Real(i-Nx);
+                amrex::Real ky = (j<jmid) ? dky*amrex::Real(j) : dky*amrex::Real(j-Ny);
+                const Complex inv_k2a = abs(kx*kx + ky*ky + acoeff) > 0._rt ?
+                    1._rt/(kx*kx + ky*ky + acoeff) : 0._rt;
                 rhs_fourier_arr(i,j) *= -inv_k2a;
             });
 
@@ -841,7 +842,7 @@ MultiLaser::AdvanceSliceFFT (const amrex::Real dt, bool non_centered_push)
         // Normalize and store solution in np1j00[0]. Guard cells are filled with 0s.
         amrex::Box grown_bx = bx;
         grown_bx.grow(m_slices_nguards);
-        const amrex::Real inv_numPts = 1./bx.numPts();
+        const amrex::Real inv_numPts = 1._rt / amrex::Real(bx.numPts());
         amrex::ParallelFor(
             to2D(grown_bx),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
@@ -924,9 +925,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     amrex::ParallelFor(to2D(bx),
                         [=] AMREX_GPU_DEVICE (int i, int j)
                         {
-                            const amrex::Real x = i * dx_arr[0] + poff_x;
-                            const amrex::Real y = j * dx_arr[1] + poff_y;
-                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+                            const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x;
+                            const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y;
+                            const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z;
 
                             const amrex::Real xmid = (x - laser_pos_offset[0]) * laser_dx_inv[0];
                             const amrex::Real ymid = (y - laser_pos_offset[1]) * laser_dx_inv[1];
@@ -956,9 +957,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                     amrex::ParallelFor(to2D(bx),
                         [=] AMREX_GPU_DEVICE (int i, int j)
                         {
-                            const amrex::Real x = i * dx_arr[0] + poff_x;
-                            const amrex::Real y = j * dx_arr[1] + poff_y;
-                            const amrex::Real z = islice * dx_arr[2] + poff_z;
+                            const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x;
+                            const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y;
+                            const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z;
 
                             const amrex::Real r = std::sqrt(x*x + y*y);
                             const amrex::Real theta = std::atan2(y, x);
@@ -978,9 +979,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                                     shape_factor<interp_order>(rmid, ir);
                                 val += (shape_r * shape_z) * laser_arr(ii, jj, 0);
                             for (int im=1; im<=laser_bigend[2]/2; im++) {
-                                val += (shape_r * shape_z) * std::cos(im*theta) *
+                                val += (shape_r * shape_z) * std::cos(amrex::Real(im)*theta) *
                                     laser_arr(ii, jj, 2*im-1);
-                                val += (shape_r * shape_z) * std::sin(im*theta) *
+                                val += (shape_r * shape_z) * std::sin(amrex::Real(im)*theta) *
                                     laser_arr(ii, jj, 2*im);
                             }}}
 
@@ -996,9 +997,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 amrex::ParallelFor(to2D(bx),
                     [=] AMREX_GPU_DEVICE (int i, int j)
                     {
-                        const amrex::Real x = i * dx_arr[0] + poff_x;
-                        const amrex::Real y = j * dx_arr[1] + poff_y;
-                        const amrex::Real z = islice * dx_arr[2] + poff_z;
+                        const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x;
+                        const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y;
+                        const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z;
                         if (ilaser == 0) {
                             arr(i, j, comp) = 0._rt;
                             arr(i, j, comp + 1) = 0._rt;
@@ -1025,9 +1026,9 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
                 amrex::ParallelFor(to2D(bx),
                     [=] AMREX_GPU_DEVICE (int i, int j)
                     {
-                        const amrex::Real x = i * dx_arr[0] + poff_x - x0;
-                        const amrex::Real y = j * dx_arr[1] + poff_y - y0;
-                        const amrex::Real z = islice * dx_arr[2] + poff_z - z0;
+                        const amrex::Real x = amrex::Real(i) * dx_arr[0] + poff_x - x0;
+                        const amrex::Real y = amrex::Real(j) * dx_arr[1] + poff_y - y0;
+                        const amrex::Real z = amrex::Real(islice) * dx_arr[2] + poff_z - z0;
                         // Coordinate rotation in yz plane for a laser propagating at an angle.
                         const amrex::Real yp = std::cos(propagation_angle_yz) * y
                             - std::sin( propagation_angle_yz ) * z;
@@ -1086,7 +1087,7 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
     const amrex::Real dx = m_laser_geom_3D.CellSize(0);
     const amrex::Real dy = m_laser_geom_3D.CellSize(1);
     const amrex::Real dz = m_laser_geom_3D.CellSize(2);
-    const amrex::Real dz2i = 1./(2. * dz);
+    const amrex::Real dz2i = 1._rt/(2._rt * dz);
     const amrex::Real dxdydz = dx * dy * dz;
 
     const int xmid_lo = m_laser_geom_3D.Domain().smallEnd(0) + (m_laser_geom_3D.Domain().length(0) - 1) / 2;
@@ -1115,8 +1116,8 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                      - abssq(arr(i,j, n00jp2_r), arr(i,j, n00jp2_i))
                      + abssq(arr(i,j, n00jp1_r), arr(i,j, n00jp1_i))
                     ) * dz2i;
-                const amrex::Real x = i * dx + poff_x;
-                const amrex::Real y = j * dy + poff_y;
+                const amrex::Real x = amrex::Real(i) * dx + poff_x;
+                const amrex::Real y = amrex::Real(j) * dy + poff_y;
 
                 const bool is_on_axis = (i==xmid_lo || i==xmid_hi) && (j==ymid_lo || j==ymid_hi);
                 const Complex aaxis{is_on_axis ? areal : 0._rt, is_on_axis ? aimag : 0._rt};

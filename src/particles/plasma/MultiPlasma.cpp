@@ -29,7 +29,7 @@ MultiPlasma::ReadParameters ()
                     "hipace.background_density_SI", "", true);
 
     if (m_names[0] == "no_plasma") return;
-    m_nplasmas = m_names.size();
+    m_nplasmas = static_cast<int>(m_names.size());
     for (int i = 0; i < m_nplasmas; ++i) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_names[i]!="beam", "Cannot have plasma with name 'beam'");
         m_all_plasmas.emplace_back(PlasmaParticleContainer(m_names[i]));
@@ -39,9 +39,10 @@ MultiPlasma::ReadParameters ()
 }
 
 void
-MultiPlasma::InitData (amrex::Vector<amrex::BoxArray> slice_ba,
-                       amrex::Vector<amrex::DistributionMapping> slice_dm,
-                       amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm)
+MultiPlasma::InitData (const amrex::Vector<amrex::BoxArray>& slice_ba,
+                       const amrex::Vector<amrex::DistributionMapping>& slice_dm,
+                       const amrex::Vector<amrex::Geometry>& slice_gm,
+                       const amrex::Vector<amrex::Geometry>& gm)
 {
     for (auto& plasma : m_all_plasmas) {
         // make it think there is only level 0

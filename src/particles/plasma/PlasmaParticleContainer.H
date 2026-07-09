@@ -94,7 +94,7 @@ amrex::Real plasma_psi (amrex::Real ux, amrex::Real uy, amrex::Real uz, amrex::R
 /** \brief Map names and indices for plasma particles attributes (SoA data) */
 struct PlasmaIdx
 {
-    enum {
+    enum : int {
         x=0, y,             // position
         w,                  // weight, this will be returned by pos(2)
         ux, uy,             // momentum
@@ -113,7 +113,7 @@ struct PlasmaIdx
 #endif
         real_nattribs
     };
-    enum {
+    enum : int {
         ion_lev,            // ionization level
         int_nattribs
     };
@@ -127,7 +127,7 @@ public:
     /** Constructor */
     explicit PlasmaParticleContainer (std::string name) :
         amrex::ParticleContainerRTSoA<amrex::Real, int>(),
-        m_name(name)
+        m_name(std::move(name))
     {}
 
     /** Read parameters from the input file */

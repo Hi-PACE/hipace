@@ -44,7 +44,7 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
     // Extract the longitudinal beam current
     amrex::MultiFab& S = fields.getSlices(lev);
 
-    const amrex::Real z = plo[2] + islice*dx_arr[2];
+    const amrex::Real z = plo[2] + amrex::Real(islice) * dx_arr[2];
     const amrex::Real delta_z = (z - pos_mean[2]) / pos_std[2];
     const amrex::Real long_pos_factor =  std::exp( -0.5_rt*(delta_z*delta_z) );
     const amrex::Real loc_peak_current_density = m_peak_current_density;
@@ -57,8 +57,8 @@ GridCurrent::DepositCurrentSlice (Fields& fields, const amrex::Geometry& geom, i
         amrex::ParallelFor( to2D(bx),
         [=] AMREX_GPU_DEVICE(int i, int j)
         {
-            const amrex::Real x = plo[0] + (i+0.5_rt)*dx_arr[0];
-            const amrex::Real y = plo[1] + (j+0.5_rt)*dx_arr[1];
+            const amrex::Real x = plo[0] + (amrex::Real(i) + 0.5_rt) * dx_arr[0];
+            const amrex::Real y = plo[1] + (amrex::Real(j) + 0.5_rt) * dx_arr[1];
 
             const amrex::Real delta_x = (x - pos_mean[0]) / pos_std[0];
             const amrex::Real delta_y = (y - pos_mean[1]) / pos_std[1];

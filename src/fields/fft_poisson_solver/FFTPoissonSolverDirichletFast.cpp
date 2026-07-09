@@ -32,7 +32,7 @@ FFTPoissonSolverDirichletFast::FFTPoissonSolverDirichletFast (
  * \param[in] n_data number of (contiguous) rows in position matrix
  */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int n_data) {
+amrex::GpuComplex<amrex::Real> to_complex (const T& in, int i, int j, int n_half, int n_data) {
     amrex::Real real = 0;
     amrex::Real imag = 0;
     if (i == 0) {
@@ -62,7 +62,7 @@ amrex::GpuComplex<amrex::Real> to_complex (T&& in, int i, int j, int n_half, int
  * \param[in] sine_factor prefactor for ToSine equal to 1/(2*sin((idx+1)*pi/(n_data+1)))
  */
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::Real to_sine (T&& in, int i, int j, int n_data, const amrex::Real* sine_factor) {
+amrex::Real to_sine (const T& in, int i, int j, int n_data, const amrex::Real* sine_factor) {
     const amrex::Real in_a = in(i+1, j);
     const amrex::Real in_b = in(n_data-i, j);
     // possible optimization:
@@ -221,12 +221,12 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * ( nx + 1 ));
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * ( ny + 1 ));
+    const amrex::Real sine_x_factor = MathConst::pi / amrex::Real( 2 * ( nx + 1 ));
+    const amrex::Real sine_y_factor = MathConst::pi / amrex::Real( 2 * ( ny + 1 ));
 
     // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
     // This normalization is used regardless of the sine transform library
-    const amrex::Real norm_fac = 0.5 / ( 2 * (( nx + 1 ) * ( ny + 1 )));
+    const amrex::Real norm_fac = 0.5_rt / amrex::Real( 2 * (( nx + 1 ) * ( ny + 1 )));
 
     // Calculate the array of m_eigenvalue_matrix
     m_eigenvalue_matrix.resize({{0,0,0}, {ny-1,nx-1,0}});
@@ -235,12 +235,15 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
         [=] AMREX_GPU_DEVICE (int j, int i) noexcept
         {
             /* fast poisson solver diagonal x coeffs */
-            amrex::Real sinex_sq = std::sin(( i + 1 ) * sine_x_factor) * std::sin(( i + 1 ) * sine_x_factor);
+            const amrex::Real sinex_sq = amrex::Math::powi<2>(
+                std::sin(amrex::Real(i + 1)*sine_x_factor));
             /* fast poisson solver diagonal y coeffs */
-            amrex::Real siney_sq = std::sin(( j + 1 ) * sine_y_factor) * std::sin(( j + 1 ) * sine_y_factor);
+            const amrex::Real siney_sq = amrex::Math::powi<2>(
+                std::sin(amrex::Real(j + 1)*sine_y_factor));
 
             if ((sinex_sq!=0) && (siney_sq!=0)) {
-                eigenvalue_matrix(j,i) = norm_fac / ( -4.0_rt * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+                eigenvalue_matrix(j,i) = norm_fac / ( -4.0_rt *
+                                         ( sinex_sq / dxsquared + siney_sq / dysquared ));
             } else {
                 // Avoid division by 0
                 eigenvalue_matrix(j,i) = 0._rt;
@@ -270,14 +273,16 @@ FFTPoissonSolverDirichletFast::define (amrex::BoxArray const& a_realspace_ba,
     amrex::Real* const sine_x_ptr = m_sine_x_factor.dataPtr();
     amrex::ParallelFor(nx,
         [=] AMREX_GPU_DEVICE (int i) {
-            sine_x_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi((i + 1._rt) / (nx + 1._rt)));
+            sine_x_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi(amrex::Real(i + 1) /
+                                                                amrex::Real(nx + 1)));
         });
 
     m_sine_y_factor.resize(ny);
     amrex::Real* const sine_y_ptr = m_sine_y_factor.dataPtr();
     amrex::ParallelFor(ny,
         [=] AMREX_GPU_DEVICE (int i) {
-            sine_y_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi((i + 1._rt) / (ny + 1._rt)));
+            sine_y_ptr[i] = 1._rt / (2._rt * amrex::Math::sinpi(amrex::Real(i + 1) /
+                                                                amrex::Real(ny + 1)));
         });
 }
 

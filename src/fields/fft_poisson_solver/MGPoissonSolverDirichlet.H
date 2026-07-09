@@ -31,18 +31,23 @@ public:
                                amrex::Geometry const& gm);
 
     /** virtual destructor */
-    virtual ~MGPoissonSolverDirichlet () override final {}
+    ~MGPoissonSolverDirichlet () final = default;
+
+    MGPoissonSolverDirichlet (const MGPoissonSolverDirichlet& rhs) = delete;
+    MGPoissonSolverDirichlet (MGPoissonSolverDirichlet&& rhs) = delete;
+    MGPoissonSolverDirichlet& operator= (const MGPoissonSolverDirichlet& rhs) = delete;
+    MGPoissonSolverDirichlet& operator= (MGPoissonSolverDirichlet&& rhs) = delete;
 
     /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
      *
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
-    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
+    void SolvePoissonEquation (amrex::MultiFab& lhs_mf) final;
 
     /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
-    virtual amrex::Real BoundaryOffset() override final { return m_mg->m_boundary_condition_offset; }
-    virtual amrex::Real BoundaryFactor() override final { return m_mg->m_boundary_condition_factor; }
+    amrex::Real BoundaryOffset() final { return m_mg->m_boundary_condition_offset; }
+    amrex::Real BoundaryFactor() final { return m_mg->m_boundary_condition_factor; }
 
 private:
     amrex::Real m_MG_tolerance_rel = 1.e-4;

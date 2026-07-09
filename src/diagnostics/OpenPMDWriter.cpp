@@ -23,7 +23,7 @@ namespace utils {
     {
         std::string record_name = fullName;
         std::string component_name = openPMD::RecordComponent::SCALAR;
-        std::size_t startComp = fullName.find_last_of("_");
+        std::size_t startComp = fullName.find_last_of('_');
 
         if( startComp != std::string::npos ) {  // non-scalar
             record_name = fullName.substr(0, startComp);
@@ -113,9 +113,9 @@ OpenPMDWriter::ReadParameters ()
     queryWithParser(ppd, "openpmd_viewer_u_workaround", m_openpmd_viewer_workaround);
 }
 
-OpenPMDWriter::OpenPMDWriter () {}
+OpenPMDWriter::OpenPMDWriter () = default;
 
-OpenPMDWriter::~OpenPMDWriter() {}
+OpenPMDWriter::~OpenPMDWriter() = default;
 
 void
 OpenPMDWriter::InitDiagnostics ()
@@ -133,7 +133,7 @@ OpenPMDWriter::InitDiagnostics ()
 void
 OpenPMDWriter::WriteBeamDiagnostics (
     MultiBeam& a_multi_beam, const amrex::Real physical_time, const int output_step,
-    const amrex::Vector< std::string > beamnames,
+    const amrex::Vector<std::string>& beamnames,
     amrex::Vector<amrex::Geometry> const& geom3D)
 {
     openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
@@ -205,7 +205,7 @@ OpenPMDWriter::WriteFieldData (
         }
 
         std::vector<std::string> axisLabels;
-        for (int i=fd.m_axis_labels.size()-1; i>=0; --i) {
+        for (int i=static_cast<int>(fd.m_axis_labels.size()-1); i>=0; --i) {
             axisLabels.push_back(fd.m_axis_labels[i]);
         }
 
@@ -245,7 +245,7 @@ OpenPMDWriter::WriteFieldData (
 }
 
 void
-OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
+OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector<std::string>& beamnames)
 {
     HIPACE_PROFILE("OpenPMDWriter::InitBeamData()");
 
@@ -269,8 +269,8 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
 
         m_uint64_beam_data[ibeam].resize(m_int_names.size());
 
-        for (std::size_t idx=0; idx<m_uint64_beam_data[ibeam].size(); idx++) {
-            m_uint64_beam_data[ibeam][idx].resize(np_total);
+        for (auto& uint64_beam_data : m_uint64_beam_data[ibeam]) {
+            uint64_beam_data.resize(np_total);
         }
 
         if (beam.m_do_spin_tracking) {
@@ -279,8 +279,8 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
             m_real_beam_data[ibeam].resize(m_real_names.size());
         }
 
-        for (std::size_t idx=0; idx<m_real_beam_data[ibeam].size(); idx++) {
-            m_real_beam_data[ibeam][idx].resize(np_total);
+        for (auto& real_beam_data : m_real_beam_data[ibeam]) {
+            real_beam_data.resize(np_total);
         }
 
         // if first slice of loop over slices, reset offset
@@ -291,7 +291,7 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
 void
 OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration& iteration,
                                       const amrex::Geometry& geom,
-                                      const amrex::Vector< std::string > beamnames)
+                                      const amrex::Vector<std::string>& beamnames)
 {
     HIPACE_PROFILE("OpenPMDWriter::WriteBeamParticleData()");
 
@@ -355,7 +355,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration& iter
 }
 
 void
-OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
+OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector<std::string>& beamnames)
 {
     HIPACE_PROFILE("OpenPMDWriter::CopyBeams()");
 
@@ -408,8 +408,8 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
                     );
                 }
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
-                    slice.GetRealData(idx).begin(),
-                    slice.GetRealData(idx).begin() + np,
+                    slice.GetRealData(int(idx)).begin(),
+                    slice.GetRealData(int(idx)).begin() + np,
                     m_real_beam_data[ibeam][idx].data() + m_offset[ibeam]);
             }
         }
@@ -496,7 +496,7 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
     auto particlesLineup = openPMD::Dataset(openPMD::determineDatatype<amrex::ParticleReal>(),{np});
 
     /* we have 7 or 10 SoA real attributes: x, y, z, weight, ux, uy, uz, (sx, sy, sz) */
-    int const NumSoARealAttributes = real_comp_names.size();
+    int const NumSoARealAttributes = static_cast<int>(real_comp_names.size());
     std::set< std::string > addedRecords; // add meta-data per record only once
 
     for (int i = 0; i < NumSoARealAttributes; ++i)

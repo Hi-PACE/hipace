@@ -67,7 +67,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         [[maybe_unused]] const int ab5_permutation = plasma.m_ab5_permutation;
 
         const auto enforceBC = EnforceBC();
-        const amrex::Real dz = gm[0].CellSize(2) / n_subcycles;
+        const amrex::Real dz = gm[0].CellSize(2) / amrex::Real(n_subcycles);
 
         if (!temp_slice && lev == 0) {
             // only count particles on non-temp slices and only once for all MR levels
@@ -101,9 +101,9 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 amrex::Real q_mass_clight_ratio = charge_mass_clight_ratio;
                 amrex::Real laser_norm_ion = laser_norm;
                 if (can_ionize) {
-                    q_mass_clight_ratio *= ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    laser_norm_ion *=
-                        ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
+                    const amrex::Real ilev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
+                    q_mass_clight_ratio *= ilev;
+                    laser_norm_ion *= ilev * ilev;
                 }
 
                 for (int i = 0; i < n_subcycles; i++) {

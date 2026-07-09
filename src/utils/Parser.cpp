@@ -28,7 +28,7 @@ namespace Parser {
                 "\"<var name>=<value>\" or \"<var name>=[<range begin>,<range end>,<num values>]\"."
                 " Got: \"" + s + "\"";
 
-            auto pos = s.find_first_of("=");
+            auto pos = s.find_first_of('=');
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(pos != std::string::npos, abort_str);
 
@@ -73,25 +73,25 @@ namespace Parser {
 
         if (local_variables_names.size() == 0) {
             auto exe = makeFunctionWithParser<0>(inputs[0], func_parser, {}, pp);
-            std::cout << "\nParser Debug Print \"" << inputs[0] << "\" = "
-                      << exe() << "\n" << std::endl;
+            amrex::OutStream() << "\nParser Debug Print \"" << inputs[0] << "\" = "
+                      << exe() << "\n\n";
         } else if (local_variables_names.size() == 1) {
             auto exe = makeFunctionWithParser<1>(inputs[0], func_parser, local_variables_names, pp);
-            std::cout << "\nParser Debug Print \"" << inputs[0] << "\" = [";
+            amrex::OutStream() << "\nParser Debug Print \"" << inputs[0] << "\" = [";
             auto [lo, hi, n] = local_variables_bounds[0];
             const double dx = (hi-lo)/(n-1);
             for (int i=0; i<n; ++i) {
                 double x = lo + i * dx;
                 const double val = exe(x);
                 if (i > 0) {
-                    std::cout << ", ";
+                    amrex::OutStream() << ", ";
                 }
-                std::cout << val;
+                amrex::OutStream() << val;
             }
-            std::cout << "]\n" << std::endl;
+            amrex::OutStream() << "]\n\n";
         } else if (local_variables_names.size() == 2) {
             auto exe = makeFunctionWithParser<2>(inputs[0], func_parser, local_variables_names, pp);
-            std::cout << "\nParser Debug Print \"" << inputs[0] << "\" = [";
+            amrex::OutStream() << "\nParser Debug Print \"" << inputs[0] << "\" = [";
             auto [lox, hix, nx] = local_variables_bounds[0];
             auto [loy, hiy, ny] = local_variables_bounds[1];
             const double dx = (hix-lox)/(nx-1);
@@ -99,23 +99,23 @@ namespace Parser {
             for (int j=0; j<ny; ++j) {
                 const double y = loy + j * dy;
                 if (j > 0) {
-                    std::cout << ",\n";
+                    amrex::OutStream() << ",\n";
                 }
-                std::cout << "[";
+                amrex::OutStream() << "[";
                 for (int i=0; i<nx; ++i) {
                     const double x = lox + i * dx;
                     const double val = exe(x, y);
                     if (i > 0) {
-                        std::cout << ", ";
+                        amrex::OutStream() << ", ";
                     }
-                    std::cout << val;
+                    amrex::OutStream() << val;
                 }
-                std::cout << "]";
+                amrex::OutStream() << "]";
             }
-            std::cout << "]\n" << std::endl;
+            amrex::OutStream() << "]\n\n";
         } else if (local_variables_names.size() == 3) {
             auto exe = makeFunctionWithParser<3>(inputs[0], func_parser, local_variables_names, pp);
-            std::cout << "\nParser Debug Print \"" << inputs[0] << "\" = [";
+            amrex::OutStream() << "\nParser Debug Print \"" << inputs[0] << "\" = [";
             auto [lox, hix, nx] = local_variables_bounds[0];
             auto [loy, hiy, ny] = local_variables_bounds[1];
             auto [loz, hiz, nz] = local_variables_bounds[2];
@@ -125,31 +125,31 @@ namespace Parser {
             for (int k=0; k<nz; ++k) {
                 const double z = loz + k * dz;
                 if (k > 0) {
-                    std::cout << ",\n\n";
+                    amrex::OutStream() << ",\n\n";
                 }
-                std::cout << "[";
+                amrex::OutStream() << "[";
                 for (int j=0; j<ny; ++j) {
                     const double y = loy + j * dy;
                     if (j > 0) {
-                        std::cout << ",\n";
+                        amrex::OutStream() << ",\n";
                     }
-                    std::cout << "[";
+                    amrex::OutStream() << "[";
                     for (int i=0; i<nx; ++i) {
                         const double x = lox + i * dx;
                         const double val = exe(x, y, z);
                         if (i > 0) {
-                            std::cout << ", ";
+                            amrex::OutStream() << ", ";
                         }
-                        std::cout << val;
+                        amrex::OutStream() << val;
                     }
-                    std::cout << "]";
+                    amrex::OutStream() << "]";
                 }
-                std::cout << "]";
+                amrex::OutStream() << "]";
             }
-            std::cout << "]\n" << std::endl;
+            amrex::OutStream() << "]\n\n";
         } else if (local_variables_names.size() == 4) {
             auto exe = makeFunctionWithParser<4>(inputs[0], func_parser, local_variables_names, pp);
-            std::cout << "\nParser Debug Print \"" << inputs[0] << "\" = [";
+            amrex::OutStream() << "\nParser Debug Print \"" << inputs[0] << "\" = [";
             auto [lox, hix, nx] = local_variables_bounds[0];
             auto [loy, hiy, ny] = local_variables_bounds[1];
             auto [loz, hiz, nz] = local_variables_bounds[2];
@@ -161,39 +161,40 @@ namespace Parser {
             for (int l=0; l<nw; ++l) {
                 const double w = low + l * dw;
                 if (l > 0) {
-                    std::cout << ",\n\n\n";
+                    amrex::OutStream() << ",\n\n\n";
                 }
-                std::cout << "[";
+                amrex::OutStream() << "[";
                 for (int k=0; k<nz; ++k) {
                     const double z = loz + k * dz;
                     if (k > 0) {
-                        std::cout << ",\n\n";
+                        amrex::OutStream() << ",\n\n";
                     }
-                    std::cout << "[";
+                    amrex::OutStream() << "[";
                     for (int j=0; j<ny; ++j) {
                         const double y = loy + j * dy;
                         if (j > 0) {
-                            std::cout << ",\n";
+                            amrex::OutStream() << ",\n";
                         }
-                        std::cout << "[";
+                        amrex::OutStream() << "[";
                         for (int i=0; i<nx; ++i) {
                             const double x = lox + i * dx;
                             const double val = exe(x, y, z, w);
                             if (i > 0) {
-                                std::cout << ", ";
+                                amrex::OutStream() << ", ";
                             }
-                            std::cout << val;
+                            amrex::OutStream() << val;
                         }
-                        std::cout << "]";
+                        amrex::OutStream() << "]";
                     }
-                    std::cout << "]";
+                    amrex::OutStream() << "]";
                 }
-                std::cout << "]";
+                amrex::OutStream() << "]";
             }
-            std::cout << "]\n" << std::endl;
+            amrex::OutStream() << "]\n\n";
         } else {
             amrex::Abort("DebugPrint(): Only supports up to 4 variables");
         }
+        amrex::OutStream().flush();
     }
 
 }

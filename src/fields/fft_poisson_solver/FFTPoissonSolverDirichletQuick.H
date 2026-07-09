@@ -32,7 +32,12 @@ public:
                                     amrex::Geometry const& gm);
 
     /** virtual destructor */
-    virtual ~FFTPoissonSolverDirichletQuick () override final {}
+    ~FFTPoissonSolverDirichletQuick () final = default;
+
+    FFTPoissonSolverDirichletQuick (const FFTPoissonSolverDirichletQuick& rhs) = delete;
+    FFTPoissonSolverDirichletQuick (FFTPoissonSolverDirichletQuick&& rhs) = delete;
+    FFTPoissonSolverDirichletQuick& operator= (const FFTPoissonSolverDirichletQuick& rhs) = delete;
+    FFTPoissonSolverDirichletQuick& operator= (FFTPoissonSolverDirichletQuick&& rhs) = delete;
 
     /**
      * \param[in] realspace_ba BoxArray on which the FFT is executed.
@@ -48,11 +53,11 @@ public:
      *
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
-    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
+    void SolvePoissonEquation (amrex::MultiFab& lhs_mf) final;
 
     /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions */
-    virtual amrex::Real BoundaryOffset() override final { return 0.5; }
-    virtual amrex::Real BoundaryFactor() override final { return 2.; }
+    amrex::Real BoundaryOffset() final { return 0.5; }
+    amrex::Real BoundaryFactor() final { return 2.; }
 
 private:
     /** Real array for the FFTs */

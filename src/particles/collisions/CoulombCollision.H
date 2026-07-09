@@ -25,7 +25,7 @@ public:
     void ReadParameters (
         const std::vector<std::string>& plasma_species_names,
         const std::vector<std::string>& beam_species_names,
-        std::string const collision_name);
+        std::string const& collision_name);
 
     /**
      * \brief Perform Coulomb collisions of plasma species over longitudinal push by 1 cell.

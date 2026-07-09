@@ -43,7 +43,7 @@ template<int stencil_x, int stencil_y, bool dynamic_comps,
 AMREX_FLATTEN
 void
 SharedMemoryDeposition (int num_particles,
-                        F1&& is_valid, F2&& get_start_cell, F3&& do_deposit,
+                        const F1& is_valid, const F2& get_start_cell, const F3& do_deposit,
                         Array3<amrex::Real> field, amrex::Box box, const PTD& ptd,
                         amrex::GpuArray<int, max_cache> idx_cache,
                         amrex::GpuArray<int, max_depos> idx_depos) {

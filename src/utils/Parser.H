@@ -182,8 +182,8 @@ namespace Parser
                 // use my_constants directly (with recursive string parsing) if available
                 // also check in local and global namespaces, same as the amrex parser
                 AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                    recursive_symbols.count(parse_string) == 0,
-                    "Expression '" + str + "' contains recursive symbol '" + parse_string + "'!\n"
+                    !recursive_symbols.contains(parse_string),
+                    "Expression '" + str + "' contains recursive symbol '"  + parse_string + "'!\n"
                 );
                 std::string replacer;
                 if (amrex::ParmParse{}.contains(parse_string.c_str())) {
@@ -303,7 +303,7 @@ namespace Parser
             amrex::ToString(n) + " should be " + amrex::ToString(AMREX_SPACEDIM) + "\n"
         );
         for (auto i=0ul ; i != n ; ++i) {
-            fillWithParser(pp, str_arr[i], val_arr[i]);
+            fillWithParser(pp, str_arr[i], val_arr[int(i)]);
         }
     }
 
@@ -317,7 +317,7 @@ namespace Parser
             amrex::ToString(n) + " should be " + amrex::ToString(AMREX_SPACEDIM) + "\n"
         );
         for (auto i=0ul ; i != n ; ++i) {
-            fillWithParser(pp, str_arr[i], val_arr[i]);
+            fillWithParser(pp, str_arr[i], val_arr[int(i)]);
         }
     }
 

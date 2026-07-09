@@ -61,12 +61,12 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
     const auto dx = gm.CellSizeArray();
     const amrex::Real dxsquared = dx[0]*dx[0];
     const amrex::Real dysquared = dx[1]*dx[1];
-    const amrex::Real sine_x_factor = MathConst::pi / ( 2. * logical_nx);
-    const amrex::Real sine_y_factor = MathConst::pi / ( 2. * logical_ny);
+    const amrex::Real sine_x_factor = MathConst::pi / amrex::Real( 2. * logical_nx);
+    const amrex::Real sine_y_factor = MathConst::pi / amrex::Real( 2. * logical_ny);
 
     // Normalization of FFTW's 'DST-I' discrete sine transform (FFTW_RODFT00)
     // This normalization is used regardless of the sine transform library
-    const amrex::Real norm_fac = 0.5 / ( 2 * (logical_nx * logical_ny));
+    const amrex::Real norm_fac = 0.5_rt / amrex::Real( 2 * (logical_nx * logical_ny));
 
     // Calculate the array of m_eigenvalue_matrix
     for (amrex::MFIter mfi(m_eigenvalue_matrix, DfltMfi); mfi.isValid(); ++mfi ){
@@ -76,12 +76,15 @@ FFTPoissonSolverDirichletDirect::define (amrex::BoxArray const& a_realspace_ba,
             to2D(fft_box), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
                     /* fast poisson solver diagonal x coeffs */
-                    amrex::Real sinex_sq = std::sin(( i - lo[0] + 1 ) * sine_x_factor) * std::sin(( i - lo[0] + 1 ) * sine_x_factor);
+                    const amrex::Real sinex_sq = amrex::Math::powi<2>(
+                        std::sin(amrex::Real( i - lo[0] + 1 ) * sine_x_factor));
                     /* fast poisson solver diagonal y coeffs */
-                    amrex::Real siney_sq = std::sin(( j - lo[1] + 1 ) * sine_y_factor) * std::sin(( j - lo[1] + 1 ) * sine_y_factor);
+                    const amrex::Real siney_sq = amrex::Math::powi<2>(
+                        std::sin(amrex::Real( j - lo[1] + 1 ) * sine_y_factor));
 
                     if ((sinex_sq!=0) && (siney_sq!=0)) {
-                        eigenvalue_matrix(i,j) = norm_fac / ( -4.0 * ( sinex_sq / dxsquared + siney_sq / dysquared ));
+                        eigenvalue_matrix(i,j) = norm_fac / ( -4.0_rt *
+                                                 ( sinex_sq / dxsquared + siney_sq / dysquared ));
                     } else {
                         // Avoid division by 0
                         eigenvalue_matrix(i,j) = 0._rt;
