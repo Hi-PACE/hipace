@@ -242,11 +242,12 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             ux, uy, psi_inv, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                             Aabssqp, AabssqDxp, AabssqDyp, q_mass_clight_ratio);
 
-                        ptd.rdata(PlasmaIdx::Fx1 + ab5_permutation)[ip] = ux * psi_inv;
-                        ptd.rdata(PlasmaIdx::Fy1 + ab5_permutation)[ip] = uy * psi_inv;
-                        ptd.rdata(PlasmaIdx::Fux1 + ab5_permutation)[ip] = dz_ux;
-                        ptd.rdata(PlasmaIdx::Fuy1 + ab5_permutation)[ip] = dz_uy;
-                        ptd.rdata(PlasmaIdx::Fpsi1 + ab5_permutation)[ip] = dz_psi;
+                        const int offset = ab5_permutation + comps.offset_ab5;
+                        ptd.rdata(PlasmaIdx::Fx1 + offset)[ip] = ux * psi_inv;
+                        ptd.rdata(PlasmaIdx::Fy1 + offset)[ip] = uy * psi_inv;
+                        ptd.rdata(PlasmaIdx::Fux1 + offset)[ip] = dz_ux;
+                        ptd.rdata(PlasmaIdx::Fuy1 + offset)[ip] = dz_uy;
+                        ptd.rdata(PlasmaIdx::Fpsi1 + offset)[ip] = dz_psi;
 
                         const amrex::Real ab5_coeffs[5] = {
                             ( 1901._rt / 720._rt ) * dz,    // a1 times dz
@@ -262,6 +263,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                             if (p >= 5) {
                                 p -= 5;
                             }
+                            p += comps.offset_ab5;
                             xp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fx1   + p)[ip];
                             yp  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fy1   + p)[ip];
                             ux  += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fux1  + p)[ip];

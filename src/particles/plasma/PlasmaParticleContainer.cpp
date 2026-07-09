@@ -790,7 +790,7 @@ LaserIonization (const int islice,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
 
-            if(p_ion_mask[ip] != 0) {
+            if (p_ion_mask[ip] != 0) {
 
                 const amrex::Real xp = ptd_ion.rdata(PlasmaIdx::x)[ip];
                 const amrex::Real yp = ptd_ion.rdata(PlasmaIdx::y)[ip];

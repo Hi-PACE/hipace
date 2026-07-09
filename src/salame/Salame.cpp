@@ -303,6 +303,7 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
             const amrex::Real charge_mass_c_ratio =
                 plasma.m_charge / (plasma.m_mass * get_phys_const().c);
             auto comps = plasma.m_comps;
+            AMREX_ALWAYS_ASSERT(comps.use_temp_slice);
 
             omp::ParallelFor(
                 amrex::TypeList<amrex::CompileTimeOptions<0, 1, 2, 3>>{},
