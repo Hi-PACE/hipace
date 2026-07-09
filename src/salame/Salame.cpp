@@ -312,8 +312,8 @@ SalameOnlyAdvancePlasma (Hipace* hipace, const int lev)
                     // only push plasma particles on their according MR level
                     if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
 
-                    const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev + comps.use_temp_slice)[ip];
-                    const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev + comps.use_temp_slice)[ip];
+                    const amrex::Real xp = ptd.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
+                    const amrex::Real yp = ptd.rdata(PlasmaIdx::y_prev + comps.offset_temp)[ip];
 
                     amrex::Real Bxp = 0._rt;
                     amrex::Real Byp = 0._rt;

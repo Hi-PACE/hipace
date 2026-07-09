@@ -858,7 +858,7 @@ LaserIonization (const int islice,
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = psi;
 
                 if (comps.use_laser) {
-                    ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;
+                    ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = amrex::abs(A*A);
                 }
 
                 if (comps.use_temp_slice) {
