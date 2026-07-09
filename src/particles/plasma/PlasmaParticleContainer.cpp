@@ -722,9 +722,9 @@ LaserIonization (const int islice,
             const amrex::Real uy = ptd_ion.rdata(PlasmaIdx::uy_half_step)[ip];
             const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi_half_step)[ip];
 
-            const amrex::Real Aabssqp = ptd_ion.rdata(PlasmaIdx::aabssq)[ip];
+            // const amrex::Real Aabssqp = ptd_ion.rdata(PlasmaIdx::aabssq)[ip];
             // Compute probability of ionization p
-            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi, Aabssqp);
+            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi, 0._rt); // TODO Add Aabssqp
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
             if (ion_lev_loc >= max_ion_lev) {
                 return;
