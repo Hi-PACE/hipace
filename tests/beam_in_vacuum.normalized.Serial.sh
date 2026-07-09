@@ -30,6 +30,7 @@ $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs_normalized \
                    hipace.tile_size = 8 \
                    hipace.depos_order_xy=0 \
                    diagnostic.field_data = all rho \
+                   plasmas.use_ab5_push = 1 \
                    hipace.file_prefix=$TEST_NAME
 
 # Compare the result with theory

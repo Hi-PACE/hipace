@@ -293,11 +293,6 @@ Hipace::InitData ()
     amrex::Print() << "using CUDA version " << __CUDACC_VER_MAJOR__ << "." << __CUDACC_VER_MINOR__
                    << "." << __CUDACC_VER_BUILD__ << "\n";
 #endif
-#ifdef HIPACE_USE_AB5_PUSH
-    amrex::Print() << "using the Adams-Bashforth plasma particle pusher\n";
-#else
-    amrex::Print() << "using the leapfrog plasma particle pusher\n";
-#endif
 
     m_multi_laser.InitData();
 
@@ -712,6 +707,11 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // write laser aabs into fields MultiFab
     m_multi_laser.UpdateLaserAabs(islice, current_N_level, m_fields, m_3D_geom);
+
+    // interpolate laser aabs to plasma particles
+    for (int lev=0; lev<current_N_level; ++lev) {
+        m_multi_plasma.GatherLaser(lev, m_3D_geom[lev], m_fields);
+    }
 
     // has to be after aabs writing
     m_multi_plasma.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
@@ -1188,6 +1188,8 @@ Hipace::PredictorCorrectorLoopToSolveBxBy (const int islice, const int current_N
         // Shift relative_Bfield_error values
         relative_Bfield_error_prev_iter = relative_Bfield_error;
     } // end of predictor corrector loop
+
+    m_multi_plasma.ResetPositions();
 
     if (relative_Bfield_error > 10. && m_predcorr_B_error_tolerance > 0.)
     {

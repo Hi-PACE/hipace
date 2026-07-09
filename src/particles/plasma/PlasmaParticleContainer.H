@@ -98,25 +98,44 @@ struct PlasmaIdx
         x=0, y,             // position
         w,                  // weight, this will be returned by pos(2)
         ux, uy,             // momentum
-        psi,                // pseudo-potential at the particle position. ATTENTION what is stored is actually normalized psi+1
-        x_prev, y_prev,     // positions on the last non-temp slice
-
+        psi,                // pseudo-potential at the particle position.
+                            // ATTENTION what is stored is actually normalized psi+1
         ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
         uy_half_step,       // at the same step for AB5 pusher
         psi_half_step,      // never effected by temp slice
-#ifdef HIPACE_USE_AB5_PUSH
-        Fx1, Fx2, Fx3, Fx4, Fx5,             // AB5 force terms
+        real_nattribs,
+
+        // optional:
+
+        aabssq=real_nattribs,   // Laser value at the particle position
+        real_nattribs_laser=1,
+
+        x_prev=0, y_prev,   // positions on the last non-temp slice
+        real_nattribs_temp_slice,
+
+        Fx1=0, Fx2, Fx3, Fx4, Fx5,           // AB5 force terms
         Fy1, Fy2, Fy3, Fy4, Fy5,             //
         Fux1, Fux2, Fux3, Fux4, Fux5,        //
         Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
         Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
-#endif
-        real_nattribs
+        real_nattribs_ab5_push
     };
     enum {
-        ion_lev,            // ionization level
-        int_nattribs
+        // optional:
+
+        ion_lev=0,          // ionization level
+        int_nattribs_ion_level
     };
+};
+
+struct PlasmaComps {
+    bool use_laser = false;
+    bool use_temp_slice = false;
+    bool use_ab5_push = false;
+    bool use_ion_level = false;
+
+    int offset_temp = -1;
+    int offset_ab5 = -1;
 };
 
 /** \brief Container for particles of 1 plasma species. */
@@ -183,6 +202,19 @@ public:
                           const amrex::Geometry& laser_geom,
                           const MultiLaser& laser,
                           const amrex::Real background_density_SI);
+
+    /** Reset positions after push to temp slice */
+    void ResetPositions ();
+
+    /** Gather Laser field to the particles
+     *
+     * \param[in] lev MR level
+     * \param[in] geom Geometry of the simulation, to get the cell size
+     * \param[in] fields the general field class
+     */
+    void GatherLaser (const int lev,
+                      const amrex::Geometry& geom,
+                      const Fields& fields);
 
     /** Reorder particles to speed-up current deposition
      * \param[in] islice zeta slice index
@@ -272,6 +304,12 @@ public:
     int m_n_subcycles = 1; /**< number of subcycles in the plasma particle push */
     bool m_do_push = true; /**< whether the plasma pusher is enabled */
     int m_ab5_permutation = 0; /**< index offset of the first ab5 force term */
+    /** whether to use the AB5 or leapfrog pusher */
+    bool m_use_ab5_push = false;
+    PlasmaComps m_comps;
+    bool m_is_on_temp_slice = false;
+    /** If the runtime attributes of the AMReX particle container were already set up */
+    bool m_components_allocated = false;
 
     // ionization:
 
@@ -322,8 +360,6 @@ private:
     amrex::Vector<int> m_insitu_sum_idata;
     /** Prefix/path for the output files */
     std::string m_insitu_file_prefix = "";
-    /** If the runtime attributes of the AMReX particle container were already set up */
-    bool m_components_allocated = false;
 };
 
 /** \brief Iterator over boxes in a particle container */

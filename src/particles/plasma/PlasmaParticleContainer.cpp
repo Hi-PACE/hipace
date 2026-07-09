@@ -12,6 +12,7 @@
 #include "utils/AtomicWeightTable.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/GPUUtil.H"
+#include "utils/OMPUtil.H"
 #include "utils/InsituUtil.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
@@ -49,14 +50,13 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(mass_Da != 0, "Unknown Element");
     }
 
+    queryWithParserAlt(pp, "use_ab5_push", m_use_ab5_push, pp_alt);
     queryWithParserAlt(pp, "n_subcycles", m_n_subcycles, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_n_subcycles >= 1,
-                                     "n_subcycles must be larger or equal to 1 sub-cycle (default is 1)");
-#ifdef HIPACE_USE_AB5_PUSH
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_n_subcycles == 1,
-                                 "Plasma subcycling only implemeted for leapfrog pusher!"
-                                 "Please set plasmas.n_subcycles = 1");
-#endif
+        "n_subcycles must be larger or equal to 1 sub-cycle (default is 1)");
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_use_ab5_push || m_n_subcycles == 1,
+        "Plasma subcycling only implemeted for leapfrog pusher!"
+        "Please set plasmas.n_subcycles = 1");
     queryWithParser(pp, "mass_Da", mass_Da);
     if(mass_Da != 0) {
         m_mass = phys_const.m_p * mass_Da / 1.007276466621;
@@ -187,12 +187,46 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
 
         SetArena(amrex::The_Arena());
 
+        m_comps.use_laser = Hipace::m_use_laser;
+        m_comps.use_temp_slice = Hipace::GetInstance().m_multi_beam.AnySpeciesSalame()
+            || !Hipace::m_explicit;
+        m_comps.use_ab5_push = m_use_ab5_push;
+        m_comps.use_ion_level = m_can_ionize;
+
+        int num_real_comps = 0;
+
         for (int j = 0; j < PlasmaIdx::real_nattribs; ++j) {
             AddRealComp();
+            ++num_real_comps;
         }
 
-        for (int j = 0; j < PlasmaIdx::int_nattribs; ++j) {
-            AddIntComp();
+        if (m_comps.use_laser) {
+            for (int j = 0; j < PlasmaIdx::real_nattribs_laser; ++j) {
+                AddRealComp();
+                ++num_real_comps;
+            }
+        }
+
+        if (m_comps.use_temp_slice) {
+            m_comps.offset_temp = num_real_comps;
+            for (int j = 0; j < PlasmaIdx::real_nattribs_temp_slice; ++j) {
+                AddRealComp();
+                ++num_real_comps;
+            }
+        }
+
+        if (m_comps.use_ab5_push) {
+            m_comps.offset_ab5 = num_real_comps;
+            for (int j = 0; j < PlasmaIdx::real_nattribs_ab5_push; ++j) {
+                AddRealComp();
+                ++num_real_comps;
+            }
+        }
+
+        if (m_comps.use_ion_level) {
+            for (int j = 0; j < PlasmaIdx::int_nattribs_ion_level; ++j) {
+                AddIntComp();
+            }
         }
 
         reserveData();
@@ -345,9 +379,11 @@ PlasmaParticleContainer::TagByLevel (const int current_N_level,
     {
         auto& ptile = pti.GetParticleTile();
         const amrex::Real * const AMREX_RESTRICT pos_x = to_prev ?
-            ptile.GetRealData(PlasmaIdx::x_prev).data() : ptile.GetRealData(PlasmaIdx::x).data();
+            ptile.GetRealData(PlasmaIdx::x_prev + m_comps.offset_temp).data()
+            : ptile.GetRealData(PlasmaIdx::x).data();
         const amrex::Real * const AMREX_RESTRICT pos_y = to_prev ?
-            ptile.GetRealData(PlasmaIdx::y_prev).data() : ptile.GetRealData(PlasmaIdx::y).data();
+            ptile.GetRealData(PlasmaIdx::y_prev + m_comps.offset_temp).data()
+            : ptile.GetRealData(PlasmaIdx::y).data();
         auto * AMREX_RESTRICT idcpup = ptile.GetIdCPUData().data();
 
         const int lev1_idx = std::min(1, current_N_level-1);
@@ -438,7 +474,7 @@ IonizationModule (const int lev,
         const int max_ion_lev = m_max_ion_lev;
 
         long num_ions = ptile_ion.numParticles();
-
+        const bool use_laser = Hipace::m_use_laser;
 
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time
         // and calculates ionization probability. If ionization occurs, it increments
@@ -459,9 +495,8 @@ IonizationModule (const int lev,
 
             if (!ptd_ion.id(ip).is_valid() || ptd_ion.cpu(ip) != lev) return;
 
-            // Avoid temp slice
-            const amrex::Real xp = ptd_ion.rdata(PlasmaIdx::x_prev)[ip];
-            const amrex::Real yp = ptd_ion.rdata(PlasmaIdx::y_prev)[ip];
+            const amrex::Real xp = ptd_ion.rdata(PlasmaIdx::x)[ip];
+            const amrex::Real yp = ptd_ion.rdata(PlasmaIdx::y)[ip];
 
             // Define field at particle position reals
             amrex::ParticleReal ExmByp = 0., EypBxp = 0., Ezp = 0.;
@@ -481,8 +516,11 @@ IonizationModule (const int lev,
             const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi_half_step)[ip];
 
             // Compute probability of ionization p
-            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
-                                                           /* Assumes Aabssq == 0 */ 0._rt);
+            amrex::Real Aabssqp = 0._rt;
+            if (use_laser) {
+                Aabssqp = ptd_ion.rdata(PlasmaIdx::aabssq)[ip];
+            }
+            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi, Aabssqp);
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
             if (ion_lev_loc >= max_ion_lev) {
                 return;
@@ -519,43 +557,53 @@ IonizationModule (const int lev,
         // Load electron after resize
         auto ptd_elec = ptile_elec.getParticleTileData();
 
-        const int init_ion_lev = m_product_pc->m_init_ion_lev;
-
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
+
+        auto comps = m_product_pc->m_comps;
+        AMREX_ALWAYS_ASSERT(comps.use_temp_slice == m_comps.use_temp_slice);
+        AMREX_ALWAYS_ASSERT(comps.offset_temp == m_comps.offset_temp);
+        AMREX_ALWAYS_ASSERT(comps.use_ion_level == false);
 
         // This kernel adds the new ionized electrons to the Plasma Particle Container
         amrex::ParallelFor(num_ions,
             [=] AMREX_GPU_DEVICE (long ip) {
 
-            if(p_ion_mask[ip] != 0) {
+            if (p_ion_mask[ip] != 0) {
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
 
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
+                // Later we could consider adding a finite temperature to the ionized electrons
                 ptd_elec.id(pidx) = 2;
                 ptd_elec.cpu(pidx) = lev; // current level
-                ptd_elec.rdata(PlasmaIdx::x      )[pidx] = ptd_ion.rdata(PlasmaIdx::x)[ip];
-                ptd_elec.rdata(PlasmaIdx::y      )[pidx] = ptd_ion.rdata(PlasmaIdx::y)[ip];
-
-                ptd_elec.rdata(PlasmaIdx::w      )[pidx] = ptd_ion.rdata(PlasmaIdx::w)[ip];
-                ptd_elec.rdata(PlasmaIdx::ux     )[pidx] = 0._rt;
-                ptd_elec.rdata(PlasmaIdx::uy     )[pidx] = 0._rt;
-                // Later we could consider adding a finite temperature to the ionized electrons
-                ptd_elec.rdata(PlasmaIdx::psi    )[pidx] = 1._rt; // Assumes Aabssq == 0
-                ptd_elec.rdata(PlasmaIdx::x_prev )[pidx] = ptd_ion.rdata(PlasmaIdx::x_prev)[ip];
-                ptd_elec.rdata(PlasmaIdx::y_prev )[pidx] = ptd_ion.rdata(PlasmaIdx::y_prev)[ip];
+                ptd_elec.rdata(PlasmaIdx::x)[pidx] = ptd_ion.rdata(PlasmaIdx::x)[ip];
+                ptd_elec.rdata(PlasmaIdx::y)[pidx] = ptd_ion.rdata(PlasmaIdx::y)[ip];
+                ptd_elec.rdata(PlasmaIdx::w)[pidx] = ptd_ion.rdata(PlasmaIdx::w)[ip];
+                ptd_elec.rdata(PlasmaIdx::ux)[pidx] = 0._rt;
+                ptd_elec.rdata(PlasmaIdx::uy)[pidx] = 0._rt;
+                ptd_elec.rdata(PlasmaIdx::psi)[pidx] = 1._rt; // Assumes Aabssq == 0
                 ptd_elec.rdata(PlasmaIdx::ux_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = 0._rt;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = 1._rt;
-#ifdef HIPACE_USE_AB5_PUSH
-                HIPACE_LOOP_UNROLL
-                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
-                    ptd_elec.rdata(iforce)[pidx] = 0._rt;
+
+                if (comps.use_laser) {
+                    ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = 0._rt;
                 }
-#endif
-                ptd_elec.idata(PlasmaIdx::ion_lev)[pidx] = init_ion_lev;
+
+                if (comps.use_temp_slice) {
+                    ptd_elec.rdata(PlasmaIdx::x_prev + comps.offset_temp)[pidx] =
+                        ptd_ion.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
+                    ptd_elec.rdata(PlasmaIdx::y_prev + comps.offset_temp)[pidx] =
+                        ptd_ion.rdata(PlasmaIdx::y_prev + comps.offset_temp)[ip];
+                }
+
+                if (comps.use_ab5_push) {
+                    for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                        ptd_elec.rdata(iforce + comps.offset_ab5)[pidx] = 0._rt;
+                    }
+                }
             }
         });
 
@@ -650,9 +698,8 @@ LaserIonization (const int islice,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
 
-            // Avoid temp slice
-            const amrex::Real xp = ptd_ion.rdata(PlasmaIdx::x_prev)[ip];
-            const amrex::Real yp = ptd_ion.rdata(PlasmaIdx::y_prev)[ip];
+            const amrex::Real xp = ptd_ion.rdata(PlasmaIdx::x)[ip];
+            const amrex::Real yp = ptd_ion.rdata(PlasmaIdx::y)[ip];
 
             if (!ptd_ion.id(ip).is_valid() || !laser_bounds.contains(xp, yp)) return;
 
@@ -675,9 +722,9 @@ LaserIonization (const int islice,
             const amrex::Real uy = ptd_ion.rdata(PlasmaIdx::uy_half_step)[ip];
             const amrex::Real psi = ptd_ion.rdata(PlasmaIdx::psi_half_step)[ip];
 
+            // const amrex::Real Aabssqp = ptd_ion.rdata(PlasmaIdx::aabssq)[ip];
             // Compute probability of ionization p
-            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi,
-                                                           /* Assumes Aabssq == 0 */ 0._rt);
+            const amrex::Real gamma_psi = plasma_gamma_psi(ux, uy, 1._rt / psi, 0._rt); // TODO Add Aabssqp
             const int ion_lev_loc = ptd_ion.idata(PlasmaIdx::ion_lev)[ip];
             if (ion_lev_loc >= max_ion_lev) {
                 return;
@@ -718,10 +765,13 @@ LaserIonization (const int islice,
         // Load electron after resize
         auto ptd_elec = ptile_elec.getParticleTileData();
 
-        const int init_ion_lev = m_product_pc->m_init_ion_lev;
-
         amrex::Gpu::DeviceScalar<uint32_t> ip_elec(0);
         uint32_t * AMREX_RESTRICT p_ip_elec = ip_elec.dataPtr();
+
+        auto comps = m_product_pc->m_comps;
+        AMREX_ALWAYS_ASSERT(comps.use_temp_slice == m_comps.use_temp_slice);
+        AMREX_ALWAYS_ASSERT(comps.offset_temp == m_comps.offset_temp);
+        AMREX_ALWAYS_ASSERT(comps.use_ion_level == false);
 
         // This kernel supports multiple deposition orders (0, 1, 2, 3) at compile time.
         // It calculates the momentum of ionized electrons based on equations (B8) and (B9)
@@ -740,11 +790,10 @@ LaserIonization (const int islice,
             [=] AMREX_GPU_DEVICE (long ip, const amrex::RandomEngine& engine,
                                   auto depos_order_xy) {
 
-            if(p_ion_mask[ip] != 0) {
+            if (p_ion_mask[ip] != 0) {
 
-                // Avoid temp slice
-                const amrex::Real xp = ptd_ion.rdata(PlasmaIdx::x_prev)[ip];
-                const amrex::Real yp = ptd_ion.rdata(PlasmaIdx::y_prev)[ip];
+                const amrex::Real xp = ptd_ion.rdata(PlasmaIdx::x)[ip];
+                const amrex::Real yp = ptd_ion.rdata(PlasmaIdx::y)[ip];
 
                 if (!ptd_ion.id(ip).is_valid() || !laser_bounds.contains(xp, yp)) return;
 
@@ -792,34 +841,140 @@ LaserIonization (const int islice,
 
                 const long pid = amrex::Gpu::Atomic::Add( p_ip_elec, 1u ); // ensures thread-safe access when incrementing `p_ip_elec`
                 const long pidx = pid + old_size;
+                // No normalization required since these are always electrons
                 const amrex::Real psi = plasma_psi(ux, uy, uz, amrex::abs(A*A));
                 // Copy ion data to new electron
                 // Set the ionized electron ID to 2 (valid/invalid) for the ionized electrons
                 ptd_elec.id(pidx) = 2;
                 ptd_elec.cpu(pidx) = ptd_ion.cpu(ip);  // current level
-                ptd_elec.rdata(PlasmaIdx::x      )[pidx] = ptd_ion.rdata(PlasmaIdx::x)[ip];
-                ptd_elec.rdata(PlasmaIdx::y      )[pidx] = ptd_ion.rdata(PlasmaIdx::y)[ip];
-                ptd_elec.rdata(PlasmaIdx::w      )[pidx] = ptd_ion.rdata(PlasmaIdx::w)[ip];
-                ptd_elec.rdata(PlasmaIdx::ux     )[pidx] = ux;
-                ptd_elec.rdata(PlasmaIdx::uy     )[pidx] = uy;
-                ptd_elec.rdata(PlasmaIdx::psi    )[pidx] = psi;
-                ptd_elec.rdata(PlasmaIdx::x_prev )[pidx] = ptd_ion.rdata(PlasmaIdx::x_prev)[ip];
-                ptd_elec.rdata(PlasmaIdx::y_prev )[pidx] = ptd_ion.rdata(PlasmaIdx::y_prev)[ip];
+                ptd_elec.rdata(PlasmaIdx::x)[pidx] = ptd_ion.rdata(PlasmaIdx::x)[ip];
+                ptd_elec.rdata(PlasmaIdx::y)[pidx] = ptd_ion.rdata(PlasmaIdx::y)[ip];
+                ptd_elec.rdata(PlasmaIdx::w)[pidx] = ptd_ion.rdata(PlasmaIdx::w)[ip];
+                ptd_elec.rdata(PlasmaIdx::ux)[pidx] = ux;
+                ptd_elec.rdata(PlasmaIdx::uy)[pidx] = uy;
+                ptd_elec.rdata(PlasmaIdx::psi)[pidx] = psi;
                 ptd_elec.rdata(PlasmaIdx::ux_half_step )[pidx] = ux;
                 ptd_elec.rdata(PlasmaIdx::uy_half_step )[pidx] = uy;
                 ptd_elec.rdata(PlasmaIdx::psi_half_step)[pidx] = psi;
-#ifdef HIPACE_USE_AB5_PUSH
-                HIPACE_LOOP_UNROLL
-                for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
-                    ptd_elec.rdata(iforce)[pidx] = 0._rt;
+
+                if (comps.use_laser) {
+                    ptd_elec.rdata(PlasmaIdx::aabssq)[pidx] = amrex::abs(A*A);
                 }
-#endif
-                ptd_elec.idata(PlasmaIdx::ion_lev)[pidx] = init_ion_lev;
+
+                if (comps.use_temp_slice) {
+                    ptd_elec.rdata(PlasmaIdx::x_prev + comps.offset_temp)[pidx] =
+                        ptd_ion.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
+                    ptd_elec.rdata(PlasmaIdx::y_prev + comps.offset_temp)[pidx] =
+                        ptd_ion.rdata(PlasmaIdx::y_prev + comps.offset_temp)[ip];
+                }
+
+                if (comps.use_ab5_push) {
+                    for (int iforce = PlasmaIdx::Fx1; iforce <= PlasmaIdx::Fpsi5; ++iforce) {
+                        ptd_elec.rdata(iforce + comps.offset_ab5)[pidx] = 0._rt;
+                    }
+                }
             }
         });
 
         // Synchronize before ion_mask and ip_elec go out of scope
         amrex::Gpu::streamSynchronize();
+    }
+}
+
+void
+PlasmaParticleContainer::
+ResetPositions ()
+{
+    HIPACE_PROFILE("PlasmaParticleContainer::ResetPositions()");
+
+    AMREX_ALWAYS_ASSERT(m_is_on_temp_slice);
+    m_is_on_temp_slice = false;
+
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        // loading the data
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
+        const auto comps = m_comps;
+        AMREX_ALWAYS_ASSERT(m_comps.use_temp_slice);
+
+        // Use OMP ParallelFor to use multiple threads when running on CPU
+        omp::ParallelFor(
+            pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (int ip) {
+                if (!ptd.id(ip).is_valid()) return;
+
+                ptd.rdata(PlasmaIdx::x)[ip] = ptd.rdata(PlasmaIdx::x_prev + comps.offset_temp)[ip];
+                ptd.rdata(PlasmaIdx::y)[ip] = ptd.rdata(PlasmaIdx::y_prev + comps.offset_temp)[ip];
+            });
+    }
+}
+
+void
+PlasmaParticleContainer::
+GatherLaser (const int lev,
+             const amrex::Geometry& geom,
+             const Fields& fields)
+{
+    if (!Hipace::m_use_laser) return;
+    HIPACE_PROFILE("PlasmaParticleContainer::GatherLaser()");
+
+    using namespace amrex::literals;
+
+    const PhysConst phys_const = get_phys_const();
+
+    // Loop over particle boxes
+    for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti)
+    {
+        // Extract field array from FabArray
+        const amrex::FArrayBox& slice_fab = fields.getSlices(lev)[pti];
+        Array3<const amrex::Real> const slice_arr = slice_fab.const_array();
+        const int aabs_comp = Comps[WhichSlice::This]["aabs"];
+
+        // Extract properties associated with physical size of the box
+        const amrex::Real dx_inv = geom.InvCellSize(0);
+        const amrex::Real dy_inv = geom.InvCellSize(1);
+
+        // Offset for converting positions to indexes
+        amrex::Real const x_pos_offset = GetPosOffset(0, geom, slice_fab.box());
+        const amrex::Real y_pos_offset = GetPosOffset(1, geom, slice_fab.box());
+
+        // loading the data
+        const auto ptd = pti.GetParticleTile().getParticleTileData();
+        const bool can_ionize = m_can_ionize;
+
+        const amrex::Real laser_norm_qm = (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass)
+            * (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass);
+
+        // Use OMP ParallelFor to use multiple threads when running on CPU
+        omp::ParallelFor(
+            amrex::TypeList<
+                amrex::CompileTimeOptions<0, 1, 2, 3>
+            >{}, {
+                Hipace::m_depos_order_xy
+            },
+            pti.numParticles(),
+            [=] AMREX_GPU_DEVICE (int ip, auto depos_order) {
+                // only push plasma particles on their according MR level
+                if (!ptd.id(ip).is_valid() || ptd.cpu(ip) != lev) return;
+
+                amrex::Real laser_norm_qm_ion = laser_norm_qm;
+                if (can_ionize) {
+                    const amrex::Real p_ion_lev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
+                    laser_norm_qm_ion *= p_ion_lev * p_ion_lev;
+                }
+
+                const amrex::Real xp = ptd.rdata(PlasmaIdx::x)[ip];
+                const amrex::Real yp = ptd.rdata(PlasmaIdx::y)[ip];
+
+                amrex::Real Aabssqp = 0._rt;
+                doLaserGatherShapeN<depos_order.value>(xp, yp,
+                    Aabssqp, slice_arr, aabs_comp,
+                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
+                Aabssqp *= laser_norm_qm_ion;
+
+                ptd.rdata(PlasmaIdx::aabssq)[ip] = Aabssqp;
+            });
     }
 }
 
@@ -840,22 +995,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
     {
         // Loading the data
         const auto ptd = pti.GetParticleTile().getParticleTileData();
-
         amrex::Long const num_particles = pti.numParticles();
-
-        const PhysConst pc = get_phys_const();
         const bool use_laser = Hipace::m_use_laser;
-        const amrex::Geometry& gm = Hipace::GetInstance().m_3D_geom[0];
-        const int aabs_comp = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
-        amrex::FArrayBox& isl_fab = Hipace::GetInstance().m_fields.getSlices(0)[pti];
-        Array3<amrex::Real> arr = isl_fab.array();
-        const amrex::Real x_pos_offset = GetPosOffset(0, gm, isl_fab.box());
-        const amrex::Real y_pos_offset = GetPosOffset(1, gm, isl_fab.box());
-        const amrex::Real dx_inv = gm.InvCellSize(0);
-        const amrex::Real dy_inv = gm.InvCellSize(1);
-        const bool can_ionize = m_can_ionize;
-        const amrex::Real laser_norm = (m_charge/pc.q_e) * (pc.m_e/m_mass)
-            * (m_charge/pc.q_e) * (pc.m_e/m_mass);
 
         amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpSum[m_insitu_nrp + m_insitu_nip]> reduce_op;
         amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], int[m_insitu_nip]> reduce_data(reduce_op);
@@ -877,14 +1018,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
                 amrex::Real Aabssqp = 0._rt;
                 if (use_laser) {
-                    amrex::Real laser_norm_ion = laser_norm;
-                    if (can_ionize) {
-                        laser_norm_ion *=
-                            ptd.idata(PlasmaIdx::ion_lev)[ip] * ptd.idata(PlasmaIdx::ion_lev)[ip];
-                    }
-                    doLaserGatherShapeN<2>(x, y, Aabssqp, arr, aabs_comp,
-                                           dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                    Aabssqp *= laser_norm_ion;
+                    Aabssqp = ptd.rdata(PlasmaIdx::aabssq)[ip];
                 }
 
                 // Particle's Lorentz factor

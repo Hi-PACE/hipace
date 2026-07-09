@@ -93,7 +93,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             amrex::Real* const uy1 = ptile1.GetRealData(PlasmaIdx::uy_half_step).data();
             amrex::Real* const psi1 = ptile1.GetRealData(PlasmaIdx::psi_half_step).data();
             const amrex::Real* const w1 = ptile1.GetRealData(PlasmaIdx::w).data();
-            const int* const ion_lev1 = ptile1.GetIntData(PlasmaIdx::ion_lev).data();
+            const int* const ion_lev1 = species1.m_can_ionize ?
+                ptile1.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
             amrex::Real q1 = species1.GetCharge();
@@ -159,7 +160,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             amrex::Real* const uy1 = ptile1.GetRealData(PlasmaIdx::uy_half_step).data();
             amrex::Real* const psi1 = ptile1.GetRealData(PlasmaIdx::psi_half_step).data();
             const amrex::Real* const w1 = ptile1.GetRealData(PlasmaIdx::w).data();
-            const int* const ion_lev1 = ptile1.GetIntData(PlasmaIdx::ion_lev).data();
+            const int* const ion_lev1 = species1.m_can_ionize ?
+                ptile1.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
             PlasmaBins::index_type * const indices1 = bins1.permutationPtr();
             PlasmaBins::index_type const * const offsets1 = bins1.offsetsPtr();
             amrex::Real q1 = species1.GetCharge();
@@ -172,7 +174,8 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             amrex::Real* const uy2 = ptile2.GetRealData(PlasmaIdx::uy_half_step).data();
             amrex::Real* const psi2= ptile2.GetRealData(PlasmaIdx::psi_half_step).data();
             const amrex::Real* const w2 = ptile2.GetRealData(PlasmaIdx::w).data();
-            const int* const ion_lev2 = ptile2.GetIntData(PlasmaIdx::ion_lev).data();
+            const int* const ion_lev2 = species2.m_can_ionize ?
+                ptile2.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
             PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
             PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
             amrex::Real q2 = species2.GetCharge();
@@ -282,7 +285,8 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
         amrex::Real* const uy2 = ptile2.GetRealData(PlasmaIdx::uy_half_step).data();
         amrex::Real* const psi2= ptile2.GetRealData(PlasmaIdx::psi_half_step).data();
         const amrex::Real* const w2 = ptile2.GetRealData(PlasmaIdx::w).data();
-        const int* const ion_lev2 = ptile2.GetIntData(PlasmaIdx::ion_lev).data();
+        const int* const ion_lev2 = species2.m_can_ionize ?
+            ptile2.GetIntData(PlasmaIdx::ion_lev).data() : nullptr;
         PlasmaBins::index_type * const indices2 = bins2.permutationPtr();
         PlasmaBins::index_type const * const offsets2 = bins2.offsetsPtr();
         amrex::Real q2 = species2.GetCharge();
@@ -332,7 +336,7 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
                 ElasticCollisionPerez(
                     cell_start1, cell_stop1, cell_start2, cell_stop2,
                     indices1, indices2,
-                    ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, ion_lev2, ion_lev2, // passing ion_lev2 for beam particles, will never be used
+                    ux1, uy1, psi1, ux2, uy2, psi2, w1, w2, nullptr, ion_lev2, // passing nullptr for beam particles, will never be used
                     q1, q2, m1, m2, -1.0_rt, -1.0_rt, can_ionize1, can_ionize2,
                     dt, CoulombLog, inv_dV, clight, inv_c_SI, inv_c2_SI,
                     normalized_units, background_density_SI, false, true, engine );
