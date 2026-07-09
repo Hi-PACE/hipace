@@ -945,8 +945,6 @@ GatherLaser (const int lev,
 
         const amrex::Real laser_norm_qm = (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass)
             * (m_charge/phys_const.q_e) * (phys_const.m_e/m_mass);
-        const amrex::Real laser_norm_c = phys_const.c * (phys_const.m_e/phys_const.q_e)
-            * (phys_const.m_e/phys_const.q_e);
 
         // Use OMP ParallelFor to use multiple threads when running on CPU
         omp::ParallelFor(

@@ -80,8 +80,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
         const amrex::Real charge_mass_clight_ratio = plasma.m_charge/(plasma.m_mass * phys_const.c);
 
         const auto comps = plasma.m_comps;
-        const bool read_from_temp = plasma.m_is_on_temp_slice;
-        AMREX_ALWAYS_ASSERT(!(read_from_temp || temp_slice) || comps.use_temp_slice);
+        const bool read_from_prev = plasma.m_is_on_temp_slice;
+        AMREX_ALWAYS_ASSERT(!(read_from_prev || temp_slice) || comps.use_temp_slice);
 
         // Use OMP ParallelFor to use multiple threads when running on CPU
         omp::ParallelFor(
@@ -118,7 +118,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                 amrex::Real xp = 0._rt;
                 amrex::Real yp = 0._rt;
 
-                if (!read_from_temp) {
+                if (!read_from_prev) {
                     xp = ptd.rdata(PlasmaIdx::x)[ip];
                     yp = ptd.rdata(PlasmaIdx::y)[ip];
                     if (temp_slice) {
