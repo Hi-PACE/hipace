@@ -45,8 +45,11 @@ ion.u_mean = 0.0 0.0 0.0
 ion.element = H
 ion.mass_Da = 1.008
 ion.initial_ion_level = 0
-ion.can_laser_ionize = 1
+
 ion.ionization_product = elec
+ion.can_field_ionize = 1
+
+ion.can_laser_ionize = 1
 
 amr.max_level = 0
 
