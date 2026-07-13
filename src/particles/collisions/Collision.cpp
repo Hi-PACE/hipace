@@ -64,7 +64,7 @@ namespace {
 
 void
 Collision::ReadParameters(
-    const std::vector<std::string>& plasma_species_names,
+    const std::vector<std::string>&,
     std::string const collision_name)
 {
     amrex::ParmParse pp(collision_name);
@@ -142,8 +142,8 @@ Collision::doElectronImpact (
     const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        ion_atomic_number == 1 || 
-        ion_atomic_number == 18, 
+        ion_atomic_number == 1 ||
+        ion_atomic_number == 18,
         "The current implementation of electron-impact ionization only supports Hydrogen and Argon. Please check the input file and the physical element specified for target."
     );
 
@@ -266,10 +266,10 @@ Collision::doElectronImpact (
 
             // expensive bisection only runs once Pion has actually fired
             auto out = ComputeImpactIonizationOutgoing(
-                ux1, uy1, uz1, g1, 
+                ux1, uy1, uz1, g1,
                 ux2, uy2, uz2, g2,
-                m1, m2, m3, 
-                Eion_eV, c2, inv_c2, 
+                m1, m2, m3,
+                Eion_eV, c2, inv_c2,
                 engine
             );
             if (!out.valid) return CollisionOutcome{};
@@ -348,7 +348,8 @@ Collision::doElectronImpact (
 template <class F, class G>
 void
 Collision::doCollisionImp (
-        int lev, const amrex::Geometry& geom,
+        int,
+        const amrex::Geometry& geom,
         MultiPlasma& multi_plasma,
         F const& collision_function,
         G const& ionization_function)
@@ -364,9 +365,6 @@ Collision::doCollisionImp (
 
     PlasmaBins bins1 = findParticlesInEachTile(geom.Domain(), 1, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(geom.Domain(), 1, species2, geom);
-
-    // amrex::Print() << "Plasma bins 1 = " << bins1.numBins() << "\n";
-    // amrex::Print() << "Plasma bins 2 = " << bins2.numBins() << "\n";
 
     // offset: start/end positions of particles for each cell
     // perm: permutation array mapping cell entries to particle indices
@@ -462,19 +460,6 @@ Collision::doCollisionImp (
                 while (idx1 < N1 && idx2 < N2) {
                     const int j1 = perm1[offset1_start + idx1];
                     const int j2 = perm2[offset2_start + idx2];
-
-                    // DEBUG
-                    if (j1 < 0 || j1 >= np1 || j2 < 0 || j2 >= np2) {
-                        AMREX_DEVICE_PRINTF(
-                            "OOB: tile np1=%d np2=%d j1=%d j2=%d icell=%d "
-                            "offset1=[%d,%d) offset2=[%d,%d) idx1=%d idx2=%d\n",
-                            np1, np2, j1, j2, icell,
-                            offset1_start, offset1_stop,
-                            offset2_start, offset2_stop,
-                            idx1, idx2
-                        );
-                        return;
-                    }
 
                     const auto outcome = collision_function(
                         ptd1, j1, ptd2, j2,

@@ -50,7 +50,7 @@ public:
         int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma,
         F const& collision_function,
-        G const& ionizaiton_function);
+        G const& ionization_function);
 
     /**
      * \param[in] lev MR level

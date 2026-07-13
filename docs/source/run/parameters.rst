@@ -511,7 +511,7 @@ When both are specified, the per-species value is used.
     Options are: ``electron``, ``positron``, ``H``, ``D``, ``T``, ``He``, ``Li``, ``Be``, ``B``, ….
 
 * ``<plasma name>.can_field_ionize`` (`bool`) optional (default `0`)
-    Whether this plasma can be ionized by fields, as for example from a driving particle beam. 
+    Whether this plasma can be ionized by fields, as for example from a driving particle beam.
 
 * ``<plasma name>.can_laser_ionize`` (`bool`) optional (default `0`)
     Whether this plasma can be ionized by a laser.
@@ -1480,7 +1480,7 @@ Please note that the impact ionization module is currently under development, an
 * ``<impact name>.new_electron`` (string) optional
     The name of the product species for impact ionization.
     The species must be defined according to `Plasma parameters` and should be an electron species.
-    In electron impacts, initial and newly created electrons can be treated as one single species 
+    In electron impacts, initial and newly created electrons can be treated as one single species
     simply by using the same name for the projectile and the new electrons.
     However, to treat the new electrons as a separate species, a different name can be used.
     In that case, the new electrons won't be contributing to further ionizations.

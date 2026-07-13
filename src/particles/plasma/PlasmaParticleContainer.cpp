@@ -932,7 +932,7 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                     w*gamma,        // 11   [ga]
                     w*gamma*gamma,  // 12   [ga^2]
                     energy,         // 13   [(ga-1)*(1-vz)]
-                    raw_w,          // 14   raw(w)
+                    raw_w,          // 14   sum(w*(1-vz))
                     1               // 15   Np
                 };
             });
@@ -945,8 +945,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
         for (int i=0; i<m_insitu_nrp; ++i) {
             m_insitu_rdata[islice + i * m_nslices] = real_arr[i] *
-                // sum(w), [(ga-1)*(1-vz)] and raw(w) are not multiplied by sum_w_inv
-                ( i == 0 || i == 13 || i == 14 ? 1 : sum_w_inv );
+                // sum(w), [(ga-1)*(1-vz)] and sum(w*(1-vz)) are not multiplied by sum_w_inv
+                ( i == 0 || i == (m_insitu_nrp-2) || i == (m_insitu_nrp-1) ? 1 : sum_w_inv );
             m_insitu_sum_rdata[i] += real_arr[i];
         }
 
@@ -1012,7 +1012,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
         {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
         {"[(ga-1)*(1-vz)]", &m_insitu_rdata[13*nslices], nslices},
-        {"raw(w)"  , &m_insitu_rdata[14*nslices], nslices},
+        {"sum(w*(1-vz))"  , &m_insitu_rdata[14*nslices], nslices},
         {"sum(w)"  , &m_insitu_rdata[0], nslices},
         {"Np"      , &m_insitu_idata[0], nslices},
         {"average" , {
@@ -1031,7 +1031,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         }},
         {"total"   , {
             {"[(ga-1)*(1-vz)]",&m_insitu_sum_rdata[13]},
-            {"raw(w)", &m_insitu_sum_rdata[14]},
+            {"sum(w*(1-vz))", &m_insitu_sum_rdata[14]},
             {"sum(w)", &m_insitu_sum_rdata[0]},
             {"Np"    , &m_insitu_sum_idata[0]}
         }}
