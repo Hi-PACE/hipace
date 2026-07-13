@@ -117,7 +117,7 @@ namespace coll_ion
         {
             Real const lorentz_coeff_1 =
                 ( boost_v2 * vcDv1 - gc ) * m1 * g1;
-            
+
             p1sx = px1 + vcx*lorentz_coeff_1;
             p1sy = py1 + vcy*lorentz_coeff_1;
             p1sz = pz1 + vcz*lorentz_coeff_1;
@@ -136,7 +136,7 @@ namespace coll_ion
         if (vcms > 0.0_rt) {
             Real const lorentz_coeff_2 =
                 ( boost_v2 * vcDv2 - gc ) * m2 * g2;
-            
+
             p2sx = px2 + vcx*lorentz_coeff_2;
             p2sy = py2 + vcy*lorentz_coeff_2;
             p2sz = pz2 + vcz*lorentz_coeff_2;
@@ -163,12 +163,12 @@ namespace coll_ion
 
         // Kinetic energy available to the 3 outgoing particles in COM [J]
         Real const Eout = Ecm - Eion;
-        if (Eout <= 0.0_rt)   // Energy not sufficient for ionization 
+        if (Eout <= 0.0_rt)   // Energy not sufficient for ionization
         { return false;
         } else { return true;
         }
     }
-    
+
     struct IonizationResult
     {
         Real sigma;
@@ -184,10 +184,12 @@ namespace coll_ion
      * outermost occupied shell).  Degenerate sub-shells sharing the same
      * binding energy are grouped and counted together (factor `n`).
      *
-     * @param atomic_number  Atomic number Z of the target element.
-     * @param zstar          Current ion charge (number of removed electrons).
-     * @param e              Incident-electron kinetic energy [eV].
-     * @return               Ionization cross section [m^2].
+     * \param[in] atomic_number             Atomic number of the target element
+     * \param[in] zstar                     Current ionization state (number of removed electrons)
+     * \param[in] e                         Incident-electron kinetic energy (eV)
+     * \param[in] p_binding_energies        Pointer to table of binding energies
+     * \param[in] p_ionization_energies     Pointer to table of ionization energies
+     * \return Ionization cross section: sigma (m^2) and ionization energy: ionization_en (eV)
      */
     AMREX_GPU_HOST_DEVICE inline
     IonizationResult sigma_E(int atomic_number, int zstar, Real e, const Real* p_binding_energies, const Real* p_ionization_energies)
@@ -208,7 +210,7 @@ namespace coll_ion
 
             int  idx_k   = base_idx + k;
             int  idx_k_p = base_idx + (k + 1);
-            
+
             // Add current electron to the running group
             n++;
 

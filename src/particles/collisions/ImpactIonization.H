@@ -1,6 +1,6 @@
 /* This file has been derived from
  * https://github.com/BLAST-WarpX/warpx/blob/development/Source/Particles/Collision/BinaryCollision/DSMC/SplitAndScatterFunc.H
- * 
+ *
  * Copyright 2023-2024 The WarpX Community
  *
  * This file is part of WarpX.
@@ -30,9 +30,9 @@
  *            particle 1 : scattered projectile electron
  *            particle 2 : target ion/ionized neutral
  *            particle 3 : secondary electron
- *        The two outgoing electrons are assigned independent isotropic random directions. 
- *        Their momentum magnitudes are assumed to be equal, |p1| = |p3| = C, 
- *        which is consistent with an equal-energy-share assumption for equal-mass electrons. 
+ *        The two outgoing electrons are assigned independent isotropic random directions.
+ *        Their momentum magnitudes are assumed to be equal, |p1| = |p3| = C,
+ *        which is consistent with an equal-energy-share assumption for equal-mass electrons.
  *        The ion momentum is then fixed by momentum conservation:
  *
  *            p2 = -(p1 + p3).
@@ -41,10 +41,10 @@
  *
  *            K1(C) + K2(C) + K3(C) = Eout,
  *
- *        where Ki is the relativistic kinetic energy of particle i and Eout is the COM kinetic energy 
+ *        where Ki is the relativistic kinetic energy of particle i and Eout is the COM kinetic energy
  *        remaining after subtracting the ionization energy. The root is found by bisection.
  *
- *        The model assumes that particles 1 and 3 are electrons with equal mass. 
+ *        The model assumes that particles 1 and 3 are electrons with equal mass.
  *        Compile with USE_ASSERTION=TRUE to enable checks for NaN or Inf updated momenta.
  */
 
@@ -154,7 +154,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
     {
         T_R const lorentz_coeff_1 =
             ( boost_v2 * vcDv1 - gc ) * m1 * g1;
-        
+
         p1sx = px1 + vcx*lorentz_coeff_1;
         p1sy = py1 + vcy*lorentz_coeff_1;
         p1sz = pz1 + vcz*lorentz_coeff_1;
@@ -173,7 +173,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
     if (vcms > T_R(0.0)) {
         T_R const lorentz_coeff_2 =
             ( boost_v2 * vcDv2 - gc ) * m2 * g2;
-        
+
         p2sx = px2 + vcx*lorentz_coeff_2;
         p2sy = py2 + vcy*lorentz_coeff_2;
         p2sz = pz2 + vcz*lorentz_coeff_2;
@@ -276,7 +276,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
     while (k_rel(C_hi) < Eout) {
         C_hi *= T_R(2.0);
         if (C_hi > T_R(1.0e6) * std::sqrt(T_R(2.0) * m1 * Eout)) {
-            AMREX_DEVICE_PRINTF("ImpactIonization: failed to bracket relativistic C\n");
+            AMREX_DEVICE_PRINTF("ImpactIonization: failed to bracket relativistic C, C_hi=%e\n", C_hi);
             return out;
         }
     }
@@ -299,7 +299,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
     T_R const p3fsx = C * e3x;
     T_R const p3fsy = C * e3y;
     T_R const p3fsz = C * e3z;
-    
+
     // Boost final-state momenta from COM back to lab
     T_R const g1f_s = std::sqrt(T_R(1.0) + (p1fsx*p1fsx + p1fsy*p1fsy + p1fsz*p1fsz)/(m1*m1*c2));
     T_R const g2f_s = std::sqrt(T_R(1.0) + (p2fsx*p2fsx + p2fsy*p2fsy + p2fsz*p2fsz)/(m2*m2*c2));

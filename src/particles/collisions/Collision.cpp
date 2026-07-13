@@ -142,8 +142,8 @@ Collision::doElectronImpact (
     const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        ion_atomic_number == 1 || 
-        ion_atomic_number == 18, 
+        ion_atomic_number == 1 ||
+        ion_atomic_number == 18,
         "The current implementation of electron-impact ionization only supports Hydrogen and Argon. Please check the input file and the physical element specified for target."
     );
 
@@ -266,10 +266,10 @@ Collision::doElectronImpact (
 
             // expensive bisection only runs once Pion has actually fired
             auto out = ComputeImpactIonizationOutgoing(
-                ux1, uy1, uz1, g1, 
+                ux1, uy1, uz1, g1,
                 ux2, uy2, uz2, g2,
-                m1, m2, m3, 
-                Eion_eV, c2, inv_c2, 
+                m1, m2, m3,
+                Eion_eV, c2, inv_c2,
                 engine
             );
             if (!out.valid) return CollisionOutcome{};
