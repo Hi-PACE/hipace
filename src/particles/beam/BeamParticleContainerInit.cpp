@@ -1188,7 +1188,7 @@ InitBeamFromFile (const std::string input_file,
     const input_type * const s_z_ptr = m_do_spin_tracking ? s_z_data.get() : nullptr;
     const input_type * const w_w_ptr = w_w_data.get();
     const bool do_spin_tracking = m_do_spin_tracking;
-    const amrex::Real position_offset = m_position_offset;
+    const amrex::RealVect position_offset = m_position_offset;
 
     amrex::ParallelFor(amrex::Long(num_to_add),
         [=] AMREX_GPU_DEVICE (const amrex::Long i) {
