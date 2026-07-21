@@ -46,7 +46,8 @@ PlasmaDensityAccessor::define_parser (const amrex::ParserExecutor<3>& exe) {
 }
 
 void
-PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_ptr<float>& f_data,
+PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
+                                         const std::string& path, std::shared_ptr<float>& f_data,
                                          std::shared_ptr<double>& d_data,
                                          const std::string& density_mesh_name) {
 #ifdef HIPACE_USE_OPENPMD
@@ -72,21 +73,10 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
 
     auto comp = mesh[openPMD::RecordComponent::SCALAR];
 
-    auto extent = comp.getExtent();
-    auto strides = extent;
-
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         mesh.dataOrder() == openPMD::Mesh::DataOrder::C,
         "Must use DataOrder::C in file " + path + "\n"
     );
-
-    for (int i=static_cast<int>(strides.size())-1; i>=0; --i) {
-        if (i == static_cast<int>(strides.size())-1) {
-            strides[i] = 1;
-        } else {
-            strides[i] = strides[i+1] * extent[i+1];
-        }
-    }
 
     const std::vector<std::string> axis_labels = mesh.axisLabels();
     std::map<std::string, int> axis_labels_map;
@@ -95,6 +85,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
         axis_labels_map[axis_labels[i]] = i;
     }
 
+    auto extent = comp.getExtent();
     std::vector<double> offset = mesh.gridGlobalOffset();
     std::vector<double> position = comp.position<double>();
     std::vector<double> spacing = mesh.gridSpacing<double>();
@@ -102,8 +93,6 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
     amrex::IntVect idx_perm;
 
     bool use_mode = false;
-    std::uint64_t mode_stride = 0;
-    std::uint64_t mode_bigend = 0;
 
     if (mesh.geometry() == openPMD::Mesh::Geometry::cartesian) {
         m_profile_type = 1;
@@ -121,10 +110,6 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
 
         if (axis_labels_map.size() + 1 == extent.size()) {
             use_mode = true;
-            mode_stride = strides[0];
-            mode_bigend = extent[0] - 1;
-            extent.erase(extent.begin());
-            strides.erase(strides.begin());
         }
 
         idx_perm[0] = axis_labels_map.count("r") > 0 ? axis_labels_map["r"] : -1;
@@ -142,17 +127,51 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
         "Unknown Axis label, must be subset of xyz or rz in file " + path + "\n"
     );
 
+    openPMD::Offset file_read_offset(extent.size(), 0);
+    openPMD::Extent file_read_extent = extent;
+
+    const int z_index = mesh.geometry() == openPMD::Mesh::Geometry::cartesian ? 2 : 1;
+    if (idx_perm[z_index] != -1) {
+        const int z_idx_file = idx_perm[z_index];
+        const int z_idx_extent = idx_perm[z_index] + use_mode ? 1 : 0;
+
+        const amrex::Real pos_offset = static_cast<amrex::Real>(
+            offset[z_idx_file] + spacing[z_idx_file] * position[z_idx_file]);
+        const amrex::Real dz_inv = static_cast<amrex::Real>(1. / spacing[z_idx_file]);
+        const amrex::Real zmid = (z_pos - pos_offset) * dz_inv;
+
+        constexpr int interp_order = 2;
+        auto [sz, k] = shape_factor<interp_order>(zmid, 0);
+
+        int k_lo = std::max(0, std::min(extent[z_idx_extent]-1, k));
+        int k_hi = std::max(0, std::min(extent[z_idx_extent]-1, k + interp_order + 1));
+        file_read_offset[z_idx_extent] = k_lo;
+        file_read_extent[z_idx_extent] = k_hi - k_lo + 1;
+        extent[z_idx_extent] = file_read_extent[z_idx_extent];
+    }
+
+    auto strides = extent;
+    for (int i=static_cast<int>(strides.size())-1; i>=0; --i) {
+        if (i == static_cast<int>(strides.size())-1) {
+            strides[i] = 1;
+        } else {
+            strides[i] = strides[i+1] * extent[i+1];
+        }
+    }
+
+    if (use_mode) {
+        m_strides[2] = strides[0];
+        m_bigend[2] = extent[0] - 1;
+        extent.erase(extent.begin());
+        strides.erase(strides.begin());
+    }
+
     for (int i=0; i<3; ++i) {
         m_strides[i] = idx_perm[i] != -1 ? strides[idx_perm[i]] : 0;
         m_bigend[i] = idx_perm[i] != -1 ? extent[idx_perm[i]] - 1 : 0;
         m_pos_offset[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(
             offset[idx_perm[i]] + spacing[idx_perm[i]] * position[idx_perm[i]]) : 0;
         m_dx_inv[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(1. / spacing[idx_perm[i]]) : 0;
-    }
-
-    if (use_mode) {
-        m_strides[2] = mode_stride;
-        m_bigend[2] = mode_bigend;
     }
 
     m_unitSI = static_cast<amrex::Real>(comp.unitSI());
@@ -170,7 +189,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
             reinterpret_cast<float*>(amrex::The_Managed_Arena()->alloc(num_cells*sizeof(float))),
             [](float *p){ amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
 
-        comp.loadChunk(f_data, {0u}, {-1u});
+        comp.loadChunk(f_data, file_read_offset, file_read_extent);
 
         m_f_ptr = f_data.get();
 
@@ -182,7 +201,7 @@ PlasmaDensityAccessor::define_from_file (const std::string& path, std::shared_pt
             reinterpret_cast<double*>(amrex::The_Managed_Arena()->alloc(num_cells*sizeof(double))),
             [](double *p){ amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
 
-        comp.loadChunk(d_data, {0u}, {-1u});
+        comp.loadChunk(d_data, file_read_offset, file_read_extent);
 
         m_d_ptr = d_data.get();
 

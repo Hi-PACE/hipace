@@ -98,19 +98,15 @@ PlasmaParticleContainer::ReadParameters ()
                     "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
     std::string density_func_str = "0.";
-    bool density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
-    if (density_func_specified) {
+    m_density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
+    if (m_density_func_specified) {
         m_density_func.define_parser(
             makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"}));
     }
 
-    std::string density_path = "";
-    bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", density_path, pp_alt);
+    bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", m_density_path, pp_alt);
     if (density_file_specified) {
-        std::string density_mesh_name = "density";
-        queryWithParserAlt(pp, "density_mesh_name", density_mesh_name, pp_alt);
-        m_density_func.define_from_file(density_path, m_f_density_data, m_d_density_data,
-                                        density_mesh_name);
+        queryWithParserAlt(pp, "density_mesh_name", m_density_mesh_name, pp_alt);
     }
 
     std::string density_table_file_name{};
@@ -131,7 +127,7 @@ PlasmaParticleContainer::ReadParameters ()
                                          "Unable to get any data out of 'density_table_file'");
     }
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        (int(density_func_specified) + int(density_file_specified) + int(m_use_density_table)) == 1,
+        (int(m_density_func_specified) + int(density_file_specified) + int(m_use_density_table)) == 1,
         "Plasma: Must specify exactly one of either 'density(x,y,z)', "
         "'read_density_from_path' or 'density_table_file'");
 
@@ -327,11 +323,15 @@ PlasmaParticleContainer::ReorderParticles (const int islice)
 void
 PlasmaParticleContainer::UpdateDensityFunction (const amrex::Real pos_z)
 {
-    if (!m_use_density_table) return;
-    auto iter = m_density_table.lower_bound(pos_z);
-    if (iter == m_density_table.end()) --iter;
-    m_density_func.define_parser(
-        makeFunctionWithParser<3>(iter->second, m_parser, {"x", "y", "z"}));
+    if (m_density_func_specified) {
+        m_density_func.define_from_file(pos_z, m_density_path, m_f_density_data, m_d_density_data,
+                                        m_density_mesh_name);
+    } else if (m_use_density_table) {
+        auto iter = m_density_table.lower_bound(pos_z);
+        if (iter == m_density_table.end()) --iter;
+        m_density_func.define_parser(
+            makeFunctionWithParser<3>(iter->second, m_parser, {"x", "y", "z"}));
+    }
 }
 
 void

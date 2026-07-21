@@ -238,6 +238,9 @@ public:
     std::shared_ptr<double> m_d_density_data; /**< owns data for m_density_func */
     PlasmaDensityAccessor m_density_func; /**< Density function for the plasma */
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
+    bool m_density_func_specified; /**< if a density value from file was specified */
+    std::string m_density_path = ""; /**< path of plasma density file */
+    std::string m_density_mesh_name = "density"; /**< name of mesh for density from file */
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */
     std::map<amrex::Real, std::string> m_density_table;
