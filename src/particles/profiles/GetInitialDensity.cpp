@@ -143,8 +143,8 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
         constexpr int interp_order = 2;
         auto [sz, k] = shape_factor<interp_order>(zmid, 0);
 
-        int k_lo = std::max(0, std::min(extent[z_idx_extent]-1, k));
-        int k_hi = std::max(0, std::min(extent[z_idx_extent]-1, k + interp_order + 1));
+        int k_lo = std::max(0, std::min(static_cast<int>(extent[z_idx_extent])-1, k));
+        int k_hi = std::max(0, std::min(static_cast<int>(extent[z_idx_extent])-1, k + interp_order + 1));
         file_read_offset[z_idx_extent] = k_lo;
         file_read_extent[z_idx_extent] = k_hi - k_lo + 1;
         extent[z_idx_extent] = file_read_extent[z_idx_extent];
