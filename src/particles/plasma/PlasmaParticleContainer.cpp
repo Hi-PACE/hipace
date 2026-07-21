@@ -98,14 +98,14 @@ PlasmaParticleContainer::ReadParameters ()
                     "density(x,y,z) = <density> * (1 + <parabolic_curvature>*(x^2 + y^2) )" );
 
     std::string density_func_str = "0.";
-    m_density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
-    if (m_density_func_specified) {
+    bool density_func_specified = queryWithParserAlt(pp, "density(x,y,z)", density_func_str, pp_alt);
+    if (density_func_specified) {
         m_density_func.define_parser(
             makeFunctionWithParser<3>(density_func_str, m_parser, {"x", "y", "z"}));
     }
 
-    bool density_file_specified = queryWithParserAlt(pp, "read_density_from_path", m_density_path, pp_alt);
-    if (density_file_specified) {
+    m_density_file_specified = queryWithParserAlt(pp, "read_density_from_path", m_density_path, pp_alt);
+    if (m_density_file_specified) {
         queryWithParserAlt(pp, "density_mesh_name", m_density_mesh_name, pp_alt);
     }
 
@@ -127,7 +127,7 @@ PlasmaParticleContainer::ReadParameters ()
                                          "Unable to get any data out of 'density_table_file'");
     }
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        (int(m_density_func_specified) + int(density_file_specified) + int(m_use_density_table)) == 1,
+        (int(density_func_specified) + int(m_density_file_specified) + int(m_use_density_table)) == 1,
         "Plasma: Must specify exactly one of either 'density(x,y,z)', "
         "'read_density_from_path' or 'density_table_file'");
 
@@ -323,7 +323,7 @@ PlasmaParticleContainer::ReorderParticles (const int islice)
 void
 PlasmaParticleContainer::UpdateDensityFunction (const amrex::Real pos_z)
 {
-    if (m_density_func_specified) {
+    if (m_density_file_specified) {
         m_density_func.define_from_file(pos_z, m_density_path, m_f_density_data, m_d_density_data,
                                         m_density_mesh_name);
     } else if (m_use_density_table) {
