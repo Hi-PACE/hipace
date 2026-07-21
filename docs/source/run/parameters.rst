@@ -883,6 +883,9 @@ Option: ``from_file``
     Whether to initialize the beam on the CPU instead of the GPU.
     Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
 
+* ``<beam name> or beams.position_offset`` (3 `float`) optional (default `0 0 0`)
+    Add an offset to the position of all beam particles.
+
 Option: ``from_list``
 ^^^^^^^^^^^^^^^^^^^^^
 

@@ -304,6 +304,7 @@ private:
     amrex::Array<std::string, AMREX_SPACEDIM> m_file_coordinates_xyz;
     int m_num_iteration {0}; /**< the iteration of the openPMD beam */
     std::string m_species_name; /**< the name of the particle species in the beam file */
+    amrex::RealVect m_position_offset {0, 0, 0}; /**< add an offset to the position of the beam */
 
     // from list
 
