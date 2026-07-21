@@ -18,7 +18,7 @@
 
 
 template <int depos_order>
-AMREX_GPU_DEVICE
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void InterpolateEzInZ (
     amrex::Real& Ezp,
     const amrex::Real xp, const amrex::Real yp, const amrex::Real zp,
@@ -53,7 +53,7 @@ void InterpolateEzInZ (
 }
 
 
-AMREX_GPU_DEVICE
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void PushSpin (
     amrex::RealVect& spin,
     const amrex::Real ExmByp, const amrex::Real EypBxp, const amrex::Real Ezp,
@@ -87,7 +87,7 @@ void PushSpin (
 }
 
 
-AMREX_GPU_DEVICE
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 void ApplyRadiationReaction (
     amrex::Real& ux_next, amrex::Real& uy_next, amrex::Real& uz_next,
     const amrex::Real ExmByp, const amrex::Real EypBxp, const amrex::Real Ezp,
