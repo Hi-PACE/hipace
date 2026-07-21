@@ -159,19 +159,28 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
         }
     }
 
+    std::uint64_t mode_stride = 0;
+    std::uint64_t mode_bigend = 0;
+    openPMD::Offset idx_offset = file_read_offset;
     if (use_mode) {
-        m_strides[2] = strides[0];
-        m_bigend[2] = extent[0] - 1;
+        mode_stride = strides[0];
+        mode_bigend = extent[0] - 1;
         extent.erase(extent.begin());
         strides.erase(strides.begin());
+        idx_offset.erase(idx_offset.begin());
     }
 
     for (int i=0; i<3; ++i) {
         m_strides[i] = idx_perm[i] != -1 ? strides[idx_perm[i]] : 0;
         m_bigend[i] = idx_perm[i] != -1 ? extent[idx_perm[i]] - 1 : 0;
-        m_pos_offset[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(
-            offset[idx_perm[i]] + spacing[idx_perm[i]] * position[idx_perm[i]]) : 0;
+        m_pos_offset[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(offset[idx_perm[i]] +
+            spacing[idx_perm[i]] * (position[idx_perm[i]] + idx_offset[idx_perm[i]])) : 0;
         m_dx_inv[i] = idx_perm[i] != -1 ? static_cast<amrex::Real>(1. / spacing[idx_perm[i]]) : 0;
+    }
+
+    if (use_mode) {
+        m_strides[2] = mode_stride;
+        m_bigend[2] = mode_bigend;
     }
 
     m_unitSI = static_cast<amrex::Real>(comp.unitSI());
