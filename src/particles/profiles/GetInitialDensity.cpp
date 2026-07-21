@@ -133,7 +133,7 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
     const int z_index = mesh.geometry() == openPMD::Mesh::Geometry::cartesian ? 2 : 1;
     if (idx_perm[z_index] != -1) {
         const int z_idx_file = idx_perm[z_index];
-        const int z_idx_extent = idx_perm[z_index] + use_mode ? 1 : 0;
+        const int z_idx_extent = idx_perm[z_index] + (use_mode ? 1 : 0);
 
         const amrex::Real pos_offset = static_cast<amrex::Real>(
             offset[z_idx_file] + spacing[z_idx_file] * position[z_idx_file]);
