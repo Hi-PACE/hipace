@@ -46,7 +46,7 @@ PlasmaDensityAccessor::define_parser (const amrex::ParserExecutor<3>& exe) {
 }
 
 void
-PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
+PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos, bool per_slice,
                                          const std::string& path, std::shared_ptr<float>& f_data,
                                          std::shared_ptr<double>& d_data,
                                          const std::string& density_mesh_name) {
@@ -131,7 +131,7 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
     openPMD::Extent file_read_extent = extent;
 
     const int z_index = mesh.geometry() == openPMD::Mesh::Geometry::cartesian ? 2 : 1;
-    if (idx_perm[z_index] != -1) {
+    if (per_slice && idx_perm[z_index] != -1) {
         const int z_idx_file = idx_perm[z_index];
         const int z_idx_extent = idx_perm[z_index] + (use_mode ? 1 : 0);
 
@@ -144,7 +144,8 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
         auto [sz, k] = shape_factor<interp_order>(zmid, 0);
 
         int k_lo = std::max(0, std::min(static_cast<int>(extent[z_idx_extent])-1, k));
-        int k_hi = std::max(0, std::min(static_cast<int>(extent[z_idx_extent])-1, k + interp_order + 1));
+        int k_hi = std::max(0, std::min(static_cast<int>(extent[z_idx_extent])-1,
+            k + interp_order + 1));
         file_read_offset[z_idx_extent] = k_lo;
         file_read_extent[z_idx_extent] = k_hi - k_lo + 1;
         extent[z_idx_extent] = file_read_extent[z_idx_extent];
@@ -194,6 +195,7 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
 
     if (input_type == openPMD::Datatype::FLOAT) {
 
+        f_data.reset();
         f_data.reset(
             reinterpret_cast<float*>(amrex::The_Managed_Arena()->alloc(num_cells*sizeof(float))),
             [](float *p){ amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });
@@ -206,6 +208,7 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos,
 
         m_profile_type += 1;
 
+        d_data.reset();
         d_data.reset(
             reinterpret_cast<double*>(amrex::The_Managed_Arena()->alloc(num_cells*sizeof(double))),
             [](double *p){ amrex::The_Managed_Arena()->free(reinterpret_cast<void*>(p)); });

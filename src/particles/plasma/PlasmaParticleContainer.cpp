@@ -106,7 +106,12 @@ PlasmaParticleContainer::ReadParameters ()
 
     m_density_file_specified = queryWithParserAlt(pp, "read_density_from_path", m_density_path, pp_alt);
     if (m_density_file_specified) {
+        queryWithParserAlt(pp, "read_density_per_slice", m_read_density_per_slice, pp_alt);
         queryWithParserAlt(pp, "density_mesh_name", m_density_mesh_name, pp_alt);
+        if (!m_read_density_per_slice) {
+            m_density_func.define_from_file(0, false, m_density_path, m_f_density_data,
+                                            m_d_density_data, m_density_mesh_name);
+        }
     }
 
     std::string density_table_file_name{};
@@ -323,9 +328,9 @@ PlasmaParticleContainer::ReorderParticles (const int islice)
 void
 PlasmaParticleContainer::UpdateDensityFunction (const amrex::Real pos_z)
 {
-    if (m_density_file_specified) {
-        m_density_func.define_from_file(pos_z, m_density_path, m_f_density_data, m_d_density_data,
-                                        m_density_mesh_name);
+    if (m_density_file_specified && m_read_density_per_slice) {
+        m_density_func.define_from_file(pos_z, true, m_density_path, m_f_density_data,
+                                        m_d_density_data, m_density_mesh_name);
     } else if (m_use_density_table) {
         auto iter = m_density_table.lower_bound(pos_z);
         if (iter == m_density_table.end()) --iter;

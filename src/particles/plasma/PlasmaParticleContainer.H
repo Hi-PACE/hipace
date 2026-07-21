@@ -240,6 +240,7 @@ public:
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
     bool m_density_file_specified; /**< if a density value from file was specified */
     std::string m_density_path = ""; /**< path of plasma density file */
+    bool m_read_density_per_slice = false; /**< if the density from file should be loaded per-slice */
     std::string m_density_mesh_name = "density"; /**< name of mesh for density from file */
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */
