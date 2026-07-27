@@ -127,7 +127,9 @@ OpenPMDWriter::InitDiagnostics ()
     m_outputSeries = std::make_unique< openPMD::Series >(
         filename, openPMD::Access::CREATE);
 
-    // TODO: meta-data: author, mesh path, extensions, software
+    m_outputSeries->setSoftware("HiPACE++", Hipace::Version());
+
+    // TODO: meta-data: author, mesh path, extensions
 }
 
 void
