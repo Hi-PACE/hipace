@@ -271,6 +271,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                                                         m_file_coordinates_xyz, pp_alt);
         queryWithParserAlt(pp, "plasma_density", m_plasma_density, pp_alt);
         queryWithParserAlt(pp, "iteration", m_num_iteration, pp_alt);
+        queryWithParserAlt(pp, "position_offset", m_position_offset, pp_alt);
         bool species_specified = queryWithParser(pp, "openPMD_species_name", m_species_name);
         if(!species_specified) {
             m_species_name = m_name;

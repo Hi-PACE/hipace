@@ -852,6 +852,9 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
 
+    // get plasma and beam histograms of particles that exited the domain after push
+    m_diags.FillBoundaryHistDiagnostics(islice, m_multi_plasma, m_multi_beam, m_3D_geom);
+
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
     // collisions for plasmas and beams

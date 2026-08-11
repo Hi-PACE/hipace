@@ -274,7 +274,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                     }
 
                     pidx += current_size;
-                    ptd.id(pidx) = 1; // plasma id is only used to distinguish between valid/invalid
+                    ptd.id(pidx) = PlasmaID::valid;
                     ptd.cpu(pidx) = 0; // level 0
                     ptd.rdata(PlasmaIdx::x)[pidx] = x;
                     ptd.rdata(PlasmaIdx::y)[pidx] = y;
@@ -345,7 +345,7 @@ InitParticles (const amrex::RealVect& a_u_std,
                 for (int imirror=0; imirror<3; ++imirror) {
                     const amrex::Long midx = (imirror+1)*total_non_mirrored_particles + pidx;
 
-                    ptd.id(midx) = 1; // plasma id is only used to distinguish between valid/invalid
+                    ptd.id(midx) = PlasmaID::valid;
                     ptd.cpu(midx) = 0; // level 0
                     ptd.rdata(PlasmaIdx::x)[midx] = x_arr[imirror];
                     ptd.rdata(PlasmaIdx::y)[midx] = y_arr[imirror];

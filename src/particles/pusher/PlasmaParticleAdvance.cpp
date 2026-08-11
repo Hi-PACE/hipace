@@ -174,7 +174,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     xp += dz*(ux * (1._rt/psi));
                     yp += dz*(uy * (1._rt/psi));
 
-                    if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
+                    if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
                     ptd.pos(0, ip) = xp;
                     ptd.pos(1, ip) = yp;
 
@@ -253,7 +253,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                         psi += ab5_coeffs[iab] * ptd.rdata(PlasmaIdx::Fpsi1 + p)[ip];
                     }
 
-                    if (enforceBC(ptd, ip, xp, yp, ux, uy, PlasmaIdx::w)) return;
+                    if (enforceBC(ptd, ip, xp, yp, ux, uy)) return;
                     ptd.pos(0, ip) = xp;
                     ptd.pos(1, ip) = yp;
 

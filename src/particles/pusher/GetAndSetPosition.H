@@ -51,13 +51,12 @@ struct EnforceBC
      * \param[in] y y position of particle
      * \param[in] ux x momentum of particle
      * \param[in] uy y momentum of particle
-     * \param[in] w_index index to the weight component
      */
     template<class PTD>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     bool operator() (const PTD& ptd,
         const int ip, amrex::Real& x, amrex::Real& y,
-        amrex::Real& ux, amrex::Real& uy, const int w_index) const noexcept
+        amrex::Real& ux, amrex::Real& uy) const noexcept
     {
         bool invalid = false;
         if (x < m_plo[0] || y < m_plo[1] || x > m_phi[0] || y > m_phi[1]) {
@@ -88,8 +87,7 @@ struct EnforceBC
                 y += m_plo[1];
                 invalid = false;
             } else {
-                ptd.rdata(w_index)[ip] = amrex::Real(0);
-                ptd.id(ip).make_invalid();
+                ptd.id(ip) = PlasmaID::invalid_at_boundary;
                 invalid = true;
             }
         }

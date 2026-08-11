@@ -887,6 +887,9 @@ Option: ``from_file``
     Whether to initialize the beam on the CPU instead of the GPU.
     Initializing the beam on the CPU can be much slower but is necessary if the full beam does not fit into GPU memory.
 
+* ``<beam name> or beams.position_offset`` (3 `float`) optional (default `0 0 0`)
+    Add an offset to the position of all beam particles.
+
 Option: ``from_list``
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -1255,6 +1258,10 @@ Particles outside the histogram bounds are discarded.
     This is more efficient than adding z as a custom histogram axis using
     ``hist_function`` or ``hist_function2``. If disabled the histogram contains data from
     all z slices in the range given by ``patch_lo`` and ``patch_hi``.
+
+* ``<diag name>.hist_exit_boundary`` (`bool`) optional (default `false`)
+    Collect data from particles that exit the simulation domain transversely through the
+    ``boundary.particle = Absorbing`` boundary condition.
 
 In-situ diagnostics
 ^^^^^^^^^^^^^^^^^^^

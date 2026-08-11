@@ -51,7 +51,7 @@ namespace
         amrex::Real yp = y;
         amrex::Real uxp = ux;
         amrex::Real uyp = uy;
-        if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
+        if (enforceBC(ptd, ip, xp, yp, uxp, uyp)) return;
 
         ptd.rdata(BeamIdx::x )[ip] = xp;
         ptd.rdata(BeamIdx::y )[ip] = yp;
@@ -97,7 +97,7 @@ namespace
         amrex::Real yp = y;
         amrex::Real uxp = ux;
         amrex::Real uyp = uy;
-        if (enforceBC(ptd, ip, xp, yp, uxp, uyp, BeamIdx::w)) return;
+        if (enforceBC(ptd, ip, xp, yp, uxp, uyp)) return;
 
         ptd.rdata(BeamIdx::x )[ip] = xp;
         ptd.rdata(BeamIdx::y )[ip] = yp;
@@ -1188,13 +1188,14 @@ InitBeamFromFile (const std::string input_file,
     const input_type * const s_z_ptr = m_do_spin_tracking ? s_z_data.get() : nullptr;
     const input_type * const w_w_ptr = w_w_data.get();
     const bool do_spin_tracking = m_do_spin_tracking;
+    const amrex::RealVect position_offset = m_position_offset;
 
     amrex::ParallelFor(amrex::Long(num_to_add),
         [=] AMREX_GPU_DEVICE (const amrex::Long i) {
             AddOneBeamParticle(ptd,
-                static_cast<amrex::Real>(r_x_ptr[i] * unit_rx),
-                static_cast<amrex::Real>(r_y_ptr[i] * unit_ry),
-                static_cast<amrex::Real>(r_z_ptr[i] * unit_rz),
+                static_cast<amrex::Real>(r_x_ptr[i] * unit_rx) + position_offset[0],
+                static_cast<amrex::Real>(r_y_ptr[i] * unit_ry) + position_offset[1],
+                static_cast<amrex::Real>(r_z_ptr[i] * unit_rz) + position_offset[2],
                 static_cast<amrex::Real>(u_x_ptr[i] * unit_ux), // = gamma * beta
                 static_cast<amrex::Real>(u_y_ptr[i] * unit_uy),
                 static_cast<amrex::Real>(u_z_ptr[i] * unit_uz),
