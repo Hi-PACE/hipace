@@ -470,7 +470,9 @@ When both are specified, the per-species value is used.
 
 * ``<plasma name> or plasmas.read_density_from_path`` (`string`) optional (default "")
     Alternative to ``<plasma name>.density(x,y,z)``. Specify the path to an openPMD file that contains the species' number density for each location of the simulation. Both geometries (Cartesian ``xyz`` and Cylindrical ``rz`` + modes)  are supported, however not all dimensions need to be included. The mesh in the file can be chosen with ``<plasma name> or plasmas.density_mesh_name`` (default ``density``) and must contain a single ``SCALAR`` component. Examples of scripts to generate such files can be found in ``tools/write_plasma_density.py`` and ``tools/write_plasma_density_rz.py``.
-    When loading large 3D density profiles, it can help to set ``<plasma name> or plasmas.read_density_per_slice``
+
+* ``<plasma name> or plasmas.read_density_per_slice`` (`bool`) optional (default `0`)
+    When loading large 3D density profiles with ``read_density_from_path``, it can help to set this
     to true so that only the part of the file that is needed for the current time step is loaded into
     memory, instead of reading the full file upfront. For small files or when using an adaptive timestep,
     this could lead to additional overhead.
