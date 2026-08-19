@@ -526,8 +526,8 @@ InitBeamFixedWeightPDF3D ()
             const amrex::Real energy_spread_local = m_twiss_func[1](zmid);
             const amrex::Real gamma_mean = energy_mean_local * pc.q_e / (m_mass * pc.c * pc.c);
             const amrex::Real gamma_spread = energy_spread_local * pc.q_e / (m_mass * pc.c * pc.c);
-            amrex::Real uz_mean_local = std::sqrt(gamma_mean * gamma_mean - 1);
-            amrex::Real uz_std_local = gamma_mean * gamma_spread / uz_mean_local;
+            uz_mean_local = std::sqrt(gamma_mean * gamma_mean - 1);
+            uz_std_local = gamma_mean * gamma_spread / uz_mean_local;
         } else {
             uz_mean_local = m_pdf_u_func[2](zmid);
             uz_std_local = m_pdf_u_func[5](zmid);
