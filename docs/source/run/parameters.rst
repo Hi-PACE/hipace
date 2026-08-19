@@ -612,17 +612,20 @@ which are valid only for certain beam types, are introduced further below under
 
 
 * ``<beam name>.injection_type`` (`string`)
-    The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight``, ``fixed_ppc``,
+    The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight_twiss``, ``fixed_weight``, ``fixed_ppc``,
     ``from_file`` and ``from_list``.
-    ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
-    the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
-    user-specified probability density function. It is more general and faster, and uses
-    less memory than ``fixed_weight``.
-    ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
-    ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
-    varying weights. It can be either a Gaussian or a flattop beam.
-    ``from_file`` reads a beam from openPMD files.
-    ``from_list`` reads a beam from arrays provided directly in the input script.
+
+        * ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
+          the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
+          user-specified probability density function. It is more general and faster, and uses
+          less memory than ``fixed_weight``.
+        * ``fixed_weight_twiss`` similar to ``fixed_weight_pdf`` but takes Courant-Snyder
+          parameters as input for transverse beam properties
+        * ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
+        * ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
+          varying weights. It can be either a Gaussian or a flattop beam.
+        * ``from_file`` reads a beam from openPMD files.
+        * ``from_list`` reads a beam from arrays provided directly in the input script.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -692,9 +695,10 @@ Option: ``fixed_weight_pdf``
     the code to generate the absolute beam profile.
     Examples (assuming ``z_center``, ``z_std``, ``z_length``, ``z_slope``, ``z_min`` and ``z_max``
     are defined with ``my_constants``):
-    - Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
-    - Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
-    - Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
+      * Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
+      * Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
+      * Flattop: ``(z<z_max)*(z>z_min)``
+      * Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
 
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam (either ``total_charge`` or ``density`` must be specified).
@@ -739,6 +743,84 @@ Option: ``fixed_weight_pdf``
 * ``<beam name>.z_foc`` (`float`) optional (default `0.`)
     Distance at which the beam will be focused, calculated from the position at which the beam is initialized.
     The beam is assumed to propagate ballistically in-between.
+
+* ``<beam name>.radius`` (`float`) optional (default `infinity`)
+    Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
+    injected. If ``<beam name>.density`` is specified, beam particles outside of the radius get
+    deleted. If ``<beam name>.total_charge`` is specified, beam particles outside of the radius get
+    new random transverse positions to conserve the total charge.
+
+* ``<beam name>.pdf_ref_ratio`` (`int`) optional (default `4`)
+    Into how many segments the pdf is divided per zeta slice for its first-order numerical evaluation.
+
+Option: ``fixed_weight_twiss``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.num_particles`` (`int`)
+    Number of constant weight particles to generate the beam.
+
+* ``<beam name>.pdf`` (`float`)
+    Longitudinal density profile of the beam, given as a probability density function
+    (the transverse profile is Gaussian). This is a parser function of z, giving the charge density
+    integrated in both transverse directions `x` and `y` (this is proportional to the beam current
+    profile in the limit :math:`v_z \simeq c`). The probability density function is automatically
+    normalized, and combined with ``<beam name>.total_charge`` or ``<beam name>.density`` within
+    the code to generate the absolute beam profile.
+    Examples (assuming ``z_center``, ``z_std``, ``z_length``, ``z_slope``, ``z_min`` and ``z_max``
+    are defined with ``my_constants``):
+      * Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
+      * Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
+      * Flattop: ``(z<z_max)*(z>z_min)``
+      * Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
+
+* ``<beam name>.total_charge`` (`float`)
+    Total charge of the beam (either ``total_charge`` or ``density`` must be specified).
+    Only available when running in SI units.
+    The absolute value of this parameter is used when initializing the beam.
+    Note that in contrast to the ``fixed_weight`` injection type, using ``<beam name>.radius`` or
+    a special pdf to emulate ``z_min`` and ``z_max`` will result in beam particles being redistributed to
+    other locations rather than being deleted. Therefore, the resulting beam will have exactly the
+    specified total charge, but cutting a significant fraction of the charge is not recommended.
+
+* ``<beam name>.density`` (`float`)
+    Peak density of the beam (either ``total_charge`` or ``density`` must be specified).
+    The absolute value of this parameter is used when initializing the beam.
+    Note that this is the peak density of the analytical profile specified by `pdf`, `position_mean` and
+    `position_std`, within the limits of the resolution of the numerical evaluation of the pdf. The actual
+    resulting beam profile consists of randomly distributed particles and will likely feature density
+    fluctuations exceeding the specified peak density.
+
+* ``<beam name>.energy_mean`` (`float`)
+    The mean energy of the beam in eV, including the rest mass of the beam particles.
+    Can be a function of z.
+    The normalized momentum is calculated as :math:`u_z = \sqrt{\gamma^2 - 1}`
+    with :math:`\mu_{\gamma} = \mu_{E} \frac{q_e}{m c^2}` and
+    :math:`\sigma_{\gamma} = \sigma_{E} \frac{q_e}{m c^2}`.
+
+* ``<beam name>.energy_spread`` (`float`)
+    The energy spread of the beam in eV. Can be a function of z.
+
+* ``<beam name>.position_mean`` (2 `float`) optional (default `0 0`)
+    The mean position of the beam in ``x, y``, separated by a space. Both values can be a function of z.
+
+* ``<beam name>.twiss_alpha`` (2 `float`) optional (default `0 0`)
+    The Courant-Snyder parameter describing position-momentum correlations in rad in ``x, y``,
+    separated by a space. Both values can be a function of z.
+
+* ``<beam name>.twiss_beta`` (2 `float`)
+    The Courant-Snyder parameter describing beam size in meters in ``x, y``,
+    separated by a space. Both values can be a function of z.
+
+* ``<beam name>.emittance`` (2 `float`)
+    The emittance normalized to the longitudinal momentum in m rad in ``x, y``,
+    separated by a space. Both values can be a function of z.
+
+* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
+    Symmetrizes the beam in the transverse phase space. For each particle with (`x`, `y`, `ux`,
+    `uy`), three further particles are generated with (`-x`, `y`, `-ux`, `uy`), (`x`, `-y`, `ux`,
+    `-uy`), and (`-x`, `-y`, `-ux`, `-uy`). The total number of particles will still be
+    ``beam_name.num_particles``, therefore this option requires that the beam particle number must be
+    divisible by 4.
 
 * ``<beam name>.radius`` (`float`) optional (default `infinity`)
     Maximum radius ``<beam name>.radius`` :math:`= \sqrt{x^2 + y^2}` within that particles are
