@@ -290,16 +290,16 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         m_twiss_func[1] = makeFunctionWithParser<1>(energy_spread, m_pdf_parsers.back(), {"z"});
         for (int i=0; i<2; ++i) {
             m_pdf_parsers.emplace_back();
-            m_pdf_pos_func[2+i] =
+            m_twiss_func[2+i] =
                 makeFunctionWithParser<1>(pos_mean[i], m_pdf_parsers.back(), {"z"});
             m_pdf_parsers.emplace_back();
-            m_pdf_pos_func[4+i] =
+            m_twiss_func[4+i] =
                 makeFunctionWithParser<1>(twiss_alpha[i], m_pdf_parsers.back(), {"z"});
             m_pdf_parsers.emplace_back();
-            m_pdf_pos_func[6+i] =
+            m_twiss_func[6+i] =
                 makeFunctionWithParser<1>(twiss_beta[i], m_pdf_parsers.back(), {"z"});
             m_pdf_parsers.emplace_back();
-            m_pdf_pos_func[8+i] =
+            m_twiss_func[8+i] =
                 makeFunctionWithParser<1>(emittance[i], m_pdf_parsers.back(), {"z"});
         }
 
