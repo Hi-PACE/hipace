@@ -447,6 +447,8 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         InitBeamFixedWeightSlice(slice, which_slice);
     } else if (m_injection_type == "fixed_weight_pdf") {
         InitBeamFixedWeightPDFSlice(slice, which_slice);
+    } else if (m_injection_type == "fixed_weight_twiss") {
+        InitBeamFixedWeightTwissSlice(slice, which_slice);
     } else { // from_file and from_list
         HIPACE_PROFILE("BeamParticleContainer::initializeSlice()");
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
