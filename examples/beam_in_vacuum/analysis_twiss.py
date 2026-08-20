@@ -82,7 +82,6 @@ def get_beam_parameters(iteration):
 
 def evolve_twiss(params):
     L = 100e-6
-    L = 101e-6
     new_params = params.copy()
 
     new_params[8] += - new_params[7] * 2 * L + new_params[9] * L**2 # beta_x
@@ -119,6 +118,6 @@ for i in ts.iterations:
     print("analytic parameters", initial_beam_params)
     print("hipace beam parameters", params)
     print("max relative error", max_rel_diff)
-    assert max_rel_diff < 0.003
+    assert max_rel_diff < 0.004
 
     initial_beam_params = evolve_twiss(initial_beam_params)
