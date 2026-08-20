@@ -12,7 +12,7 @@
 
 import numpy as np
 import argparse
-from openpmd_viewer import LpaDiagnostics
+from openpmd_viewer.addons import LpaDiagnostics
 
 parser = argparse.ArgumentParser(description='Script to analyze the correctness of the beam in vacuum')
 parser.add_argument('--output-dir',

@@ -22,6 +22,6 @@ beam.position_mean = 0 0
 beam.twiss_alpha = 1.4 -1.5
 beam.twiss_beta = 1e-3 1.1e-3
 beam.emittance = 1.2e-6 1.3e-6
-beam.num_particles = 10^6
+beam.num_particles = 4e5
 
 diagnostic.diag_type = xz
