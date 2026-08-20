@@ -81,7 +81,7 @@ def get_beam_parameters(iteration):
 
 
 def evolve_twiss(params):
-    L = 100e-6
+    L = 200e-6
     new_params = params.copy()
 
     new_params[8] += - new_params[7] * 2 * L + new_params[9] * L**2 # beta_x

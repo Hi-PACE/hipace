@@ -2,8 +2,8 @@ amr.n_cell = 64 64 64
 
 amr.max_level = 0
 
-max_step = 10
-hipace.dt = 100e-6/clight
+max_step = 5
+hipace.dt = 200e-6/clight
 diagnostic.output_period = 1
 
 boundary.field = Dirichlet
