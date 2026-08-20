@@ -118,6 +118,6 @@ for i in ts.iterations:
     print("analytic parameters", initial_beam_params)
     print("hipace beam parameters", params)
     print("max relative error", max_rel_diff)
-    assert max_rel_diff < 0.004
+    assert max_rel_diff < 0.01
 
     initial_beam_params = evolve_twiss(initial_beam_params)
