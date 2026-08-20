@@ -258,6 +258,7 @@ if(BUILD_TESTING)
             reset.2Rank
             beam_in_vacuum.SI.1Rank
             beam_in_vacuum.normalized.1Rank
+            beam_in_vacuum_twiss.SI.1Rank
             slice_IO.1Rank
             output_coarsening.2Rank
             beam_in_vacuum_open_boundary.normalized.1Rank

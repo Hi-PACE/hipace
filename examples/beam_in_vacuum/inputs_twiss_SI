@@ -1,0 +1,27 @@
+amr.n_cell = 64 64 64
+
+amr.max_level = 0
+
+max_step = 10
+hipace.dt = 100e-6/clight
+diagnostic.output_period = 1
+
+boundary.field = Dirichlet
+boundary.particle = Absorbing
+geometry.prob_lo = -10.e-6   -10.e-6   -50.e-6    # physical domain
+geometry.prob_hi =  10.e-6    10.e-6    50.e-6
+
+beams.names = beam
+
+beam.injection_type = fixed_weight_twiss
+beam.pdf = exp(-0.5*(z/7e-6)^2)
+beam.total_charge = 3e-10
+beam.energy_mean = 1e9 # 1 GeV
+beam.energy_spread = 10e6 # 10 MeV
+beam.position_mean = 0 0
+beam.twiss_alpha = 1.4 -1.5
+beam.twiss_beta = 1e-3 1.1e-3
+beam.emittance = 1.2e-6 1.3e-6
+beam.num_particles = 10^6
+
+diagnostic.diag_type = xz

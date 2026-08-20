@@ -300,7 +300,7 @@ private:
 
     /** functions for energy, energy_spread, pos mean, alpha x/y, beta x/y, emittance x/y */
     amrex::Array<amrex::ParserExecutor<1>, 10> m_twiss_func;
-
+    /** Use m_twiss_func to get the average momentum for the adaptive time step */
     bool m_use_energy_from_twiss = false;
 
     // from_file:
