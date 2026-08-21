@@ -151,7 +151,7 @@ PlasmaParticleContainer::ReadParameters ()
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(temperature_is_specified && thermal_momentum_is_specified),
-         "Please specify exlusively either a temperature or the thermal momentum");
+         "Please specify exclusively either a temperature or the thermal momentum");
 
     if (temperature_is_specified) {
         const PhysConst phys_const_SI = make_constants_SI();

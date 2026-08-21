@@ -186,7 +186,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             "Please either specify the peak density with '<beam name>.density', "
             "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
-            "Please specify exlusively either total_charge or density of the beam");
+            "Please specify exclusively either total_charge or density of the beam");
         queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
@@ -259,7 +259,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             "Please either specify the peak density with '<beam name>.density', "
             "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified != m_peak_density_is_specified ,
-            "Please specify exlusively either total_charge or density of the beam");
+            "Please specify exclusively either total_charge or density of the beam");
 
         InitBeamFixedWeightPDF3D();
         m_total_num_particles = m_num_particles;
@@ -271,23 +271,23 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         m_pdf_parsers.emplace_back();
         m_pdf_func = makeFunctionWithParser<1>(pdf_func_str, m_pdf_parsers.back(), {"z"});
 
-        std::string energy_mean = "";
-        std::string energy_spread = "";
+        std::string energy_mean_MeV = "";
+        std::string energy_spread_MeV = "";
         std::array<std::string, 2> pos_mean{"0","0"};
         std::array<std::string, 2> twiss_alpha{"0","0"};
         std::array<std::string, 2> twiss_beta{"",""};
         std::array<std::string, 2> emittance{"",""};
-        getWithParser(pp, "energy_mean", energy_mean);
-        getWithParser(pp, "energy_spread", energy_spread);
+        getWithParser(pp, "energy_mean_MeV", energy_mean_MeV);
+        getWithParser(pp, "energy_spread_MeV", energy_spread_MeV);
         queryWithParser(pp, "position_mean", pos_mean);
         queryWithParser(pp, "twiss_alpha", twiss_alpha);
         getWithParser(pp, "twiss_beta", twiss_beta);
         getWithParser(pp, "emittance", emittance);
 
         m_pdf_parsers.emplace_back();
-        m_twiss_func[0] = makeFunctionWithParser<1>(energy_mean, m_pdf_parsers.back(), {"z"});
+        m_twiss_func[0] = makeFunctionWithParser<1>(energy_mean_MeV, m_pdf_parsers.back(), {"z"});
         m_pdf_parsers.emplace_back();
-        m_twiss_func[1] = makeFunctionWithParser<1>(energy_spread, m_pdf_parsers.back(), {"z"});
+        m_twiss_func[1] = makeFunctionWithParser<1>(energy_spread_MeV, m_pdf_parsers.back(), {"z"});
         for (int i=0; i<2; ++i) {
             m_pdf_parsers.emplace_back();
             m_twiss_func[2+i] =
@@ -322,7 +322,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             "Please either specify the peak density with '<beam name>.density', "
             "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified != m_peak_density_is_specified,
-            "Please specify exlusively either total_charge or density of the beam");
+            "Please specify exclusively either total_charge or density of the beam");
 
         // Use same function as fixed_weight_pdf
         InitBeamFixedWeightPDF3D();

@@ -499,6 +499,10 @@ InitBeamFixedWeightPDF3D ()
     amrex::Real avg_uz_sq = 0._rt;
 
     const PhysConst pc = get_phys_const();
+    const PhysConst pc_SI = make_constants_SI();
+    // To convert MeV to gamma
+    const amrex::Real gamma_factor =
+        1e6_rt * pc_SI.q_e / (m_mass * (pc_SI.m_e / pc.m_e) * pc_SI.c * pc_SI.c);
 
     for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice>=0; --slice) {
         const amrex::Real zmin = zoffset + slice*zscale;
@@ -524,8 +528,8 @@ InitBeamFixedWeightPDF3D ()
         if (m_use_energy_from_twiss) {
             const amrex::Real energy_mean_local = m_twiss_func[0](zmid);
             const amrex::Real energy_spread_local = m_twiss_func[1](zmid);
-            const amrex::Real gamma_mean = energy_mean_local * pc.q_e / (m_mass * pc.c * pc.c);
-            const amrex::Real gamma_spread = energy_spread_local * pc.q_e / (m_mass * pc.c * pc.c);
+            const amrex::Real gamma_mean = energy_mean_local * gamma_factor;
+            const amrex::Real gamma_spread = energy_spread_local * gamma_factor;
             uz_mean_local = std::sqrt(gamma_mean * gamma_mean - 1);
             uz_std_local = gamma_mean * gamma_spread / uz_mean_local;
         } else {
@@ -758,7 +762,10 @@ InitBeamFixedWeightTwissSlice (int slice, int which_slice)
             1._rt/(hi_weight+lo_weight) : 1._rt/(hi_weight-lo_weight);
         const auto enforceBC = EnforceBC();
         const PhysConst pc = get_phys_const();
-        const amrex::Real gamma_factor = pc.q_e / (m_mass * pc.c * pc.c);
+        const PhysConst pc_SI = make_constants_SI();
+        // To convert MeV to gamma
+        const amrex::Real gamma_factor =
+            1e6_rt * pc_SI.q_e / (m_mass * (pc_SI.m_e / pc.m_e) * pc_SI.c * pc_SI.c);
 
         amrex::ParallelForRNG(
             num_to_add,
