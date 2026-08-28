@@ -1,6 +1,6 @@
 /* Copyright 2021-2022
  *
- * This file is part of HiPACE++.
+ * This file is part of HiPACE++ .
  *
  * Authors: AlexanderSinn, MaxThevenet, Severin Diederichs
  * License: BSD-3-Clause-LBNL
@@ -97,7 +97,7 @@ public:
      *
      * \param[in,out] fields the general field class, modified by this function
      * \param[in] which_slice slice in which the densities are deposited
-     * \param[in] gm Geometry of the simulation, to get the cell size etc.
+     * \param[in] gm Geometry of the simulation (to get the cell size etc.)
      * \param[in] lev MR level
      */
     void DepositNeutralizingBackground (
