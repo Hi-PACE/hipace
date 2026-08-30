@@ -1,0 +1,100 @@
+#ifndef HIPACE_COLLISION_H_
+#define HIPACE_COLLISION_H_
+
+#include "particles/plasma/MultiPlasma.H"
+
+#include <AMReX.H>
+
+#include <string>
+
+/**
+ * \brief This class handles Coulomb collisions between 2 particle species
+ * (can be plasma-plasma or beam-plasma, the species can be the same)
+ */
+class Collision
+{
+    std::string m_inout_species1_name = "";
+    std::string m_inout_species2_name = "";
+    std::string m_out_species3_name = "";
+    std::string m_collision_type = "";
+    bool m_has_collision_product = false;
+    amrex::Gpu::Buffer<amrex::Real> m_crosssection_data;
+
+public:
+
+    /** Read parameters from the input file */
+    void ReadParameters (
+        const std::vector<std::string>& plasma_species_names,
+        std::string const collision_name);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     **/
+    void doCollision (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     * \param[in] collision_function return if a pair of particles collides
+     * \param[in] ionizaiton_function initialize product particle
+     **/
+    template <class F, class G>
+    void doCollisionImp (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     * \param[in] collision_function return if a pair of particles collides
+     * \param[in] ionizaiton_function initialize product particle
+     **/
+    template <class F, class G>
+    void doCollisionImpSameSpecies (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     * \param[in] collision_function return if a pair of particles collides
+     * \param[in] ionizaiton_function initialize product particle
+     **/
+    template <class F, class G>
+    void doCollisionImpDifferentSpecies (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma,
+        F const& collision_function,
+        G const& ionizaiton_function);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     **/
+    void doCollisionA (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma);
+
+    /**
+     * \param[in] lev MR level
+     * \param[in] geom corresponding geometry object
+     * \param[in,out] multi_plasma all plasmas
+     **/
+    void doCollisionB (
+        int lev, const amrex::Geometry& geom,
+        MultiPlasma& multi_plasma);
+};
+
+#endif // HIPACE_COLLISION_H_
