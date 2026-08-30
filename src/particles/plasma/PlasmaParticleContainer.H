@@ -156,12 +156,14 @@ public:
      * \param[in] a_radius plasma radius. Only particles with x**2+y**2<a_radius**2 are injected
      * \param[in] a_hollow_core_radius hollow core plasma radius.
      *            Only particles with x**2+y**2>a_hollow_core_radius**2 are injected
+     * \param[in] a_temperature_width Spatial extent of the temperature profile, assuming Gaussian shape.
      */
     void InitParticles (
         const amrex::RealVect& a_thermal_momentum_std,
         const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real a_radius,
-        const amrex::Real a_hollow_core_radius);
+        const amrex::Real a_hollow_core_radius,
+        const amrex::Real a_temperature_width);
 
     /** Initialize ADK prefactors of ionizable plasmas
      *
@@ -278,6 +280,7 @@ public:
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     /** whether to add a neutralizing background of immobile particles of opposite charge */
+    amrex::Real m_temperature_width {std::numeric_limits<amrex::Real>::max()};
     bool m_neutralize_background = true;
 
     // general:
