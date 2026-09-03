@@ -1145,14 +1145,14 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                 amrex::Real darealdzeta = 0._rt;
                 amrex::Real daimagdzeta = 0._rt;
                 amrex::Real a2dphidzeta = 0._rt;
-                if (islice > m_laser_geom_3D.Domain().smallEnd(2) && 
+                if (islice > m_laser_geom_3D.Domain().smallEnd(2) &&
                     islice < m_laser_geom_3D.Domain().bigEnd(2)){
                     // Here n00jp1 is j+1 and n00jp2 contains j-1.
                     darealdzeta = (arr(i,j,n00jp1_r) - arr(i,j,n00jp2_r))
                                 * dz2i;
                     daimagdzeta = (arr(i,j,n00jp1_i) - arr(i,j,n00jp2_i)) * dz2i;
                     a2dphidzeta = areal * daimagdzeta - aimag * darealdzeta;
-                }   
+                }
                 const amrex::Real dt_a_real =  -clight * darealdzeta -omega0 * aimag;
                 const amrex::Real dt_a_imag =  -clight * daimagdzeta + omega0 * areal;
                 const amrex::Real dt_a_abssq =  abssq(dt_a_real, dt_a_imag);
@@ -1229,7 +1229,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
     const int nslices_int = m_laser_geom_3D.Domain().length(2);
     const std::size_t nslices = static_cast<std::size_t>(nslices_int);
     const int is_normalized_units = Hipace::m_normalized_units;
-    
+
     const amrex::Real a2_integral = m_insitu_sum_rdata[1];
     const amrex::Real inv_a2_integral =
         a2_integral > 0. ? 1. / a2_integral : 0.;
