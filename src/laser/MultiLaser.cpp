@@ -1265,7 +1265,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
             0.,
             avg_y2 - avg_y * avg_y
         ));
-    
+
     const amrex::Real waist_x = 2. * sigma_x;
     const amrex::Real waist_y = 2. * sigma_y;
 
