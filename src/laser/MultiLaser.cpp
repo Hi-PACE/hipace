@@ -1242,6 +1242,33 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
     const amrex::Real avg_dphidzeta =
         m_insitu_sum_rdata[9] * inv_a2_integral;
 
+    const amrex::Real avg_x =
+    m_insitu_sum_rdata[2] * inv_a2_integral;
+
+    const amrex::Real avg_x2 =
+        m_insitu_sum_rdata[3] * inv_a2_integral;
+
+    const amrex::Real avg_y =
+        m_insitu_sum_rdata[4] * inv_a2_integral;
+
+    const amrex::Real avg_y2 =
+        m_insitu_sum_rdata[5] * inv_a2_integral;
+
+    const amrex::Real sigma_x =
+        std::sqrt(std::max(
+            0.,
+            avg_x2 - avg_x * avg_x
+        ));
+
+    const amrex::Real sigma_y =
+        std::sqrt(std::max(
+            0.,
+            avg_y2 - avg_y * avg_y
+        ));
+    
+    const amrex::Real waist_x = 2. * sigma_x;
+    const amrex::Real waist_y = 2. * sigma_y;
+
     // Physical pulse energy for an SI-units simulation.
     const PhysConst phc = get_phys_const();
 
@@ -1282,9 +1309,13 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
         {"[|D_t(a)|^2]",
             &m_insitu_rdata[10*nslices], nslices},
         {"average", {
-            {"d_x(phi)",    &avg_dphidx},
-            {"d_y(phi)",    &avg_dphidy},
-            {"d_zeta(phi)", &avg_dphidzeta}
+            {"x_mean",       &avg_x},
+            {"y_mean",       &avg_y},
+            {"waist_x",      &waist_x},
+            {"waist_y",      &waist_y},
+            {"d_x(phi)",     &avg_dphidx},
+            {"d_y(phi)",     &avg_dphidy},
+            {"d_zeta(phi)",  &avg_dphidzeta}
         }},
         {"integrated", {
             {"max(|a|^2)"     , &m_insitu_sum_rdata[0]},
