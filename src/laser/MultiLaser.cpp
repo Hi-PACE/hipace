@@ -1147,7 +1147,6 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                 amrex::Real a2dphidzeta = 0._rt;
                 if (islice > m_laser_geom_3D.Domain().smallEnd(2) &&
                     islice < m_laser_geom_3D.Domain().bigEnd(2)){
-                    // Here n00jp1 is j+1 and n00jp2 contains j-1.
                     darealdzeta = (arr(i,j,n00jp1_r) - arr(i,j,n00jp2_r))
                                 * dz2i;
                     daimagdzeta = (arr(i,j,n00jp1_i) - arr(i,j,n00jp2_i)) * dz2i;
@@ -1178,8 +1177,8 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                     a2dphidx,       // 7  [|a|^2*d_x(phi)]
                     a2dphidy,       // 8  [|a|^2*d_y(phi)]
                     a2dphidzeta,    // 9  [|a|^2*d_zeta(phi)]
-                    dt_a_abssq,     // 11 |(-c*d_zeta+i*omega0)a|^2
-                    aaxis           // 10    axis(a)
+                    dt_a_abssq,     // 10 |(-c*d_zeta+i*omega0)a|^2
+                    aaxis           // 11    axis(a)
                 };
             });
     }
