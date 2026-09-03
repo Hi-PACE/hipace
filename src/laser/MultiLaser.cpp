@@ -1086,9 +1086,20 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
     const amrex::Real dx = m_laser_geom_3D.CellSize(0);
     const amrex::Real dy = m_laser_geom_3D.CellSize(1);
     const amrex::Real dz = m_laser_geom_3D.CellSize(2);
+    const amrex::Real dx2i = 1. / (2. * dx);
+    const amrex::Real dy2i = 1. / (2. * dy);
     const amrex::Real dz2i = 1./(2. * dz);
     const amrex::Real dxdydz = dx * dy * dz;
 
+    const int ix_lo = m_laser_geom_3D.Domain().smallEnd(0);
+    const int ix_hi = m_laser_geom_3D.Domain().bigEnd(0);
+    const int iy_lo = m_laser_geom_3D.Domain().smallEnd(1);
+    const int iy_hi = m_laser_geom_3D.Domain().bigEnd(1);
+
+    const bool has_zeta_neighbors =
+        islice > m_laser_geom_3D.Domain().smallEnd(2) &&
+        islice < m_laser_geom_3D.Domain().bigEnd(2);
+    
     const int xmid_lo = m_laser_geom_3D.Domain().smallEnd(0) + (m_laser_geom_3D.Domain().length(0) - 1) / 2;
     const int xmid_hi = m_laser_geom_3D.Domain().smallEnd(0) + (m_laser_geom_3D.Domain().length(0)) / 2;
     const int ymid_lo = m_laser_geom_3D.Domain().smallEnd(1) + (m_laser_geom_3D.Domain().length(1) - 1) / 2;
@@ -1110,6 +1121,39 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                 const amrex::Real areal = arr(i,j, n00j00_r);
                 const amrex::Real aimag = arr(i,j, n00j00_i);
                 const amrex::Real aabssq = abssq(areal, aimag);
+                // Im(conj(a) * d_q(a)) = |a|^2 * d_q(phi)
+
+                amrex::Real a2dphidx = 0._rt;
+                if (i > ix_lo && i < ix_hi) {
+                    const amrex::Real darealdx =
+                        (arr(i+1,j,n00j00_r) - arr(i-1,j,n00j00_r)) * dx2i;
+                    const amrex::Real daimagdx =
+                        (arr(i+1,j,n00j00_i) - arr(i-1,j,n00j00_i)) * dx2i;
+
+                    a2dphidx = areal * daimagdx - aimag * darealdx;
+                }
+
+                amrex::Real a2dphidy = 0._rt;
+                if (j > iy_lo && j < iy_hi) {
+                    const amrex::Real darealdy =
+                        (arr(i,j+1,n00j00_r) - arr(i,j-1,n00j00_r)) * dy2i;
+                    const amrex::Real daimagdy =
+                        (arr(i,j+1,n00j00_i) - arr(i,j-1,n00j00_i)) * dy2i;
+
+                    a2dphidy = areal * daimagdy - aimag * darealdy;
+                }
+
+                amrex::Real a2dphidzeta = 0._rt;
+                if (has_zeta_neighbors) {
+                    // Here n00jp1 is j+1 and n00jp2 contains j-1.
+                    const amrex::Real darealdzeta =
+                        (arr(i,j,n00jp1_r) - arr(i,j,n00jp2_r)) * dz2i;
+                    const amrex::Real daimagdzeta =
+                        (arr(i,j,n00jp1_i) - arr(i,j,n00jp2_i)) * dz2i;
+
+                    a2dphidzeta =
+                        areal * daimagdzeta - aimag * darealdzeta;
+}
                 // At this point, n00jp2 actually contains the data of n00jm1
                 const amrex::Real chidzabssq = arr(i,j, chi) * (
                      - abssq(arr(i,j, n00jp2_r), arr(i,j, n00jp2_i))
@@ -1117,7 +1161,7 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                     ) * dz2i;
                 const amrex::Real x = i * dx + poff_x;
                 const amrex::Real y = j * dy + poff_y;
-
+                
                 const bool is_on_axis = (i==xmid_lo || i==xmid_hi) && (j==ymid_lo || j==ymid_hi);
                 const Complex aaxis{is_on_axis ? areal : 0._rt, is_on_axis ? aimag : 0._rt};
 
@@ -1129,7 +1173,10 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                     aabssq*y,       // 4    [|a|^2*y]
                     aabssq*y*y,     // 5    [|a|^2*y*y]
                     chidzabssq,     // 6    [chi*d_z|a|^2]
-                    aaxis           // 7    axis(a)
+                    a2dphidx,       // 7  [|a|^2*d_x(phi)]
+                    a2dphidy,       // 8  [|a|^2*d_y(phi)]
+                    a2dphidzeta,    // 9  [|a|^2*d_zeta(phi)]
+                    aaxis           // 10    axis(a)
                 };
             });
     }
@@ -1179,7 +1226,35 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
     const int nslices_int = m_laser_geom_3D.Domain().length(2);
     const std::size_t nslices = static_cast<std::size_t>(nslices_int);
     const int is_normalized_units = Hipace::m_normalized_units;
+    
+    const amrex::Real a2_integral = m_insitu_sum_rdata[1];
+    const amrex::Real inv_a2_integral =
+        a2_integral > 0. ? 1. / a2_integral : 0.;
 
+    const amrex::Real avg_dphidx =
+        m_insitu_sum_rdata[7] * inv_a2_integral;
+
+    const amrex::Real avg_dphidy =
+        m_insitu_sum_rdata[8] * inv_a2_integral;
+
+    const amrex::Real avg_dphidzeta =
+        m_insitu_sum_rdata[9] * inv_a2_integral;
+
+    // Physical pulse energy for an SI-units simulation.
+    const PhysConst phc = get_phys_const();
+    const amrex::Real omega0 =
+        2. * MathConst::pi * phc.c / m_lambda0;
+
+    const amrex::Real polarization_factor =
+        m_linear_polarization ? 1. : 2.;
+
+    const amrex::Real efield_per_a =
+        phc.m_e * phc.c * omega0 / phc.q_e;
+
+    const amrex::Real laser_energy =
+        0.5 * polarization_factor * phc.ep0
+        * efield_per_a * efield_per_a
+        * a2_integral;
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
     const amrex::Vector<insitu_utils::DataNode> all_data{
@@ -1197,6 +1272,18 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
         {"[|a|^2*y*y]"    , &m_insitu_rdata[5*nslices], nslices},
         {"[chi*d_z|a|^2]" , &m_insitu_rdata[6*nslices], nslices},
         {"axis(a)"        , &m_insitu_cdata[0], nslices},
+        {"[|a|^2*d_x(phi)]",
+            &m_insitu_rdata[7*nslices], nslices},
+        {"[|a|^2*d_y(phi)]",
+            &m_insitu_rdata[8*nslices], nslices},
+        {"[|a|^2*d_zeta(phi)]",
+            &m_insitu_rdata[9*nslices], nslices},
+
+        {"average", {
+            {"d_x(phi)",    &avg_dphidx},
+            {"d_y(phi)",    &avg_dphidy},
+            {"d_zeta(phi)", &avg_dphidzeta}
+        }},
         {"integrated", {
             {"max(|a|^2)"     , &m_insitu_sum_rdata[0]},
             {"[|a|^2]"        , &m_insitu_sum_rdata[1]},
@@ -1204,6 +1291,10 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
             {"[|a|^2*x*x]"    , &m_insitu_sum_rdata[3]},
             {"[|a|^2*y]"      , &m_insitu_sum_rdata[4]},
             {"[|a|^2*y*y]"    , &m_insitu_sum_rdata[5]},
+            {"[|a|^2*d_x(phi)]", &m_insitu_sum_rdata[7]},
+            {"[|a|^2*d_y(phi)]", &m_insitu_sum_rdata[8]},
+            {"[|a|^2*d_zeta(phi)]", &m_insitu_sum_rdata[9]},
+            {"laser_energy", &laser_energy},
             {"[chi*d_z|a|^2]" , &m_insitu_sum_rdata[6]}
         }}
     };
