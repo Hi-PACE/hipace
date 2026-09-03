@@ -1103,7 +1103,7 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
     const amrex::Real mid_factor = (xmid_lo == xmid_hi ? 1._rt : 0.5_rt)
                                  * (ymid_lo == ymid_hi ? 1._rt : 0.5_rt);
 
-                                 const PhysConst phc = get_phys_const();
+    const PhysConst phc = get_phys_const();
     const amrex::Real clight = phc.c;
     const amrex::Real omega0 = 2. * MathConst::pi * clight / m_lambda0;
     amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpMax, amrex::ReduceOpSum[m_insitu_nrp-1+m_insitu_ncp]> reduce_op;
@@ -1256,7 +1256,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
         * phc.ep0
         * vector_potential_per_a
         * vector_potential_per_a
-        * m_insitu_sum_rdata[10];       
+        * m_insitu_sum_rdata[10];
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
     const amrex::Vector<insitu_utils::DataNode> all_data{
