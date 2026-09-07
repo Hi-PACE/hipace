@@ -1109,6 +1109,7 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
     amrex::TypeMultiplier<amrex::ReduceOps, amrex::ReduceOpMax, amrex::ReduceOpSum[m_insitu_nrp-1+m_insitu_ncp]> reduce_op;
     amrex::TypeMultiplier<amrex::ReduceData, amrex::Real[m_insitu_nrp], Complex[m_insitu_ncp]> reduce_data(reduce_op);
     using ReduceTuple = typename decltype(reduce_data)::Type;
+    const bool has_zeta_neighbors = islice > m_laser_geom_3D.Domain().smallEnd(2) && islice < m_laser_geom_3D.Domain().bigEnd(2);
 
     for ( amrex::MFIter mfi(m_slices, DfltMfi); mfi.isValid(); ++mfi ) {
         Array3<amrex::Real const> const arr = m_slices.const_array(mfi);
@@ -1145,8 +1146,7 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                 amrex::Real darealdzeta = 0._rt;
                 amrex::Real daimagdzeta = 0._rt;
                 amrex::Real a2dphidzeta = 0._rt;
-                if (islice > m_laser_geom_3D.Domain().smallEnd(2) &&
-                    islice < m_laser_geom_3D.Domain().bigEnd(2)){
+                if (has_zeta_neighbors){
                     darealdzeta = (arr(i,j,n00jp1_r) - arr(i,j,n00jp2_r))
                                 * dz2i;
                     daimagdzeta = (arr(i,j,n00jp1_i) - arr(i,j,n00jp2_i)) * dz2i;
@@ -1254,21 +1254,6 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
     const amrex::Real avg_y2 =
         m_insitu_sum_rdata[5] * inv_a2_integral;
 
-    const amrex::Real sigma_x =
-        std::sqrt(std::max(
-            0.,
-            avg_x2 - avg_x * avg_x
-        ));
-
-    const amrex::Real sigma_y =
-        std::sqrt(std::max(
-            0.,
-            avg_y2 - avg_y * avg_y
-        ));
-
-    const amrex::Real waist_x = 2. * sigma_x;
-    const amrex::Real waist_y = 2. * sigma_y;
-
     // Physical pulse energy for an SI-units simulation.
     const PhysConst phc = get_phys_const();
 
@@ -1283,8 +1268,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
         * vector_potential_per_a
         * vector_potential_per_a
         * m_insitu_sum_rdata[10];
-    // specify the structure of the data later available in python
-    // avoid pointers to temporary objects as second argument, stack variables are ok
+        
     const amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"     , &time},
         {"step"     , &step},
@@ -1311,8 +1295,6 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
         {"average", {
             {"x_mean",       &avg_x},
             {"y_mean",       &avg_y},
-            {"waist_x",      &waist_x},
-            {"waist_y",      &waist_y},
             {"d_x(phi)",     &avg_dphidx},
             {"d_y(phi)",     &avg_dphidy},
             {"d_zeta(phi)",  &avg_dphidzeta}
