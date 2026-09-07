@@ -1268,7 +1268,7 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
         * vector_potential_per_a
         * vector_potential_per_a
         * m_insitu_sum_rdata[10];
-        
+
     const amrex::Vector<insitu_utils::DataNode> all_data{
         {"time"     , &time},
         {"step"     , &step},
