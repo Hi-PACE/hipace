@@ -1152,8 +1152,8 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                     daimagdzeta = (arr(i,j,n00jp1_i) - arr(i,j,n00jp2_i)) * dz2i;
                     a2dphidzeta = areal * daimagdzeta - aimag * darealdzeta;
                 }
-                const amrex::Real dt_a_real =  -clight * darealdzeta -omega0 * aimag;
-                const amrex::Real dt_a_imag =  -clight * daimagdzeta + omega0 * areal;
+                const amrex::Real dt_a_real =  -clight * darealdzeta +omega0 * aimag;
+                const amrex::Real dt_a_imag =  -clight * daimagdzeta - omega0 * areal;
                 const amrex::Real dt_a_abssq =  abssq(dt_a_real, dt_a_imag);
                 // At this point, n00jp2 actually contains the data of n00jm1
                 const amrex::Real chidzabssq = arr(i,j, chi) * (
@@ -1245,14 +1245,8 @@ MultiLaser::InSituWriteToFile (int step, amrex::Real time, bool is_last_step)
     const amrex::Real avg_x =
     m_insitu_sum_rdata[2] * inv_a2_integral;
 
-    const amrex::Real avg_x2 =
-        m_insitu_sum_rdata[3] * inv_a2_integral;
-
     const amrex::Real avg_y =
         m_insitu_sum_rdata[4] * inv_a2_integral;
-
-    const amrex::Real avg_y2 =
-        m_insitu_sum_rdata[5] * inv_a2_integral;
 
     // Physical pulse energy for an SI-units simulation.
     const PhysConst phc = get_phys_const();
