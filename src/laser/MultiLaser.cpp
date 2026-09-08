@@ -1067,7 +1067,7 @@ MultiLaser::InitLaserSlice (const int islice, const int comp)
 }
 
 void
-MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step)
+MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step, const amrex::Real dt)
 {
     if (!UseLaser(islice)) return;
     if (!m_insitu_period.doDiagnostics(step, time, is_last_step)) return;
@@ -1152,8 +1152,25 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                     daimagdzeta = (arr(i,j,n00jp1_i) - arr(i,j,n00jp2_i)) * dz2i;
                     a2dphidzeta = areal * daimagdzeta - aimag * darealdzeta;
                 }
-                const amrex::Real dt_a_real =  -clight * darealdzeta +omega0 * aimag;
-                const amrex::Real dt_a_imag =  -clight * daimagdzeta - omega0 * areal;
+                const amrex::Real dt2i = 1._rt / (2._rt * dt);
+
+                amrex::Real dtaudreal;
+                amrex::Real dtaudimag;
+
+                if (time == 0) {
+                    dtaudreal = 0;
+                    dtaudimag = 0;
+                } 
+                else{
+                    dtaudreal =
+                        (arr(i,j,n00j00_r) - arr(i,j,nm1j00_r)) * dt2i * 2;
+
+                    dtaudimag =
+                        (arr(i,j,n00j00_i) - arr(i,j,nm1j00_i)) * dt2i * 2;
+                }
+                
+                const amrex::Real dt_a_real =  -clight * darealdzeta +omega0 * aimag + dtaudreal;
+                const amrex::Real dt_a_imag =  -clight * daimagdzeta -omega0 * areal + dtaudimag;
                 const amrex::Real dt_a_abssq =  abssq(dt_a_real, dt_a_imag);
                 // At this point, n00jp2 actually contains the data of n00jm1
                 const amrex::Real chidzabssq = arr(i,j, chi) * (
