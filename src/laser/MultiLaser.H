@@ -149,7 +149,7 @@ public:
      * \param[in] time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step);
+    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step, const amrex::Real dt);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
