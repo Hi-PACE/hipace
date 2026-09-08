@@ -148,6 +148,7 @@ public:
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
+     * \param[in] dt time step of the simulation
      */
     void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step, const amrex::Real dt);
 
@@ -155,7 +156,6 @@ public:
      * \param[in] step current time step
      * \param[in] time physical time
      * \param[in] is_last_step if this is the last time step of the simulation
-     * \param[in] dt time step of the simulation
      */
     void InSituWriteToFile (int step, amrex::Real time, bool is_last_step);
 
