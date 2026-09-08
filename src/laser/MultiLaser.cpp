@@ -1160,7 +1160,7 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                 if (time == 0) {
                     dtaudreal = 0;
                     dtaudimag = 0;
-                } 
+                }
                 else{
                     dtaudreal =
                         (arr(i,j,n00j00_r) - arr(i,j,nm1j00_r)) * dt2i * 2;
