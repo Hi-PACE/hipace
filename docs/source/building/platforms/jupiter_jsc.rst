@@ -24,7 +24,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    module load HDF5
    module load ccache # optional, accelerates recompilation
    # optimize CUDA compilation for GH200
-   export AMREX_CUDA_ARCH=9.0
+   export CUDAARCHS=90
 
 Install HiPACE++ (the first time, and whenever you want the latest version):
 
