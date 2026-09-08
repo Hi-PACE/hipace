@@ -1168,7 +1168,7 @@ MultiLaser::InSituComputeDiags (int step, int islice, amrex::Real time, bool is_
                     dtaudimag =
                         (arr(i,j,n00j00_i) - arr(i,j,nm1j00_i)) * dt2i * 2;
                 }
-                
+
                 const amrex::Real dt_a_real =  -clight * darealdzeta +omega0 * aimag + dtaudreal;
                 const amrex::Real dt_a_imag =  -clight * daimagdzeta -omega0 * areal + dtaudimag;
                 const amrex::Real dt_a_abssq =  abssq(dt_a_real, dt_a_imag);
