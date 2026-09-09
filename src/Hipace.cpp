@@ -819,7 +819,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     m_fields.InSituComputeDiags(step, islice, m_3D_geom[0], m_physical_time, is_last_step);
 
     // get laser insitu diagnostics
-    m_multi_laser.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
+    m_multi_laser.InSituComputeDiags(step, islice, m_physical_time, is_last_step, m_dt);
 
     // copy fields, laser, plasma and beam to diagnostic array
     m_diags.FillDiagnostics(

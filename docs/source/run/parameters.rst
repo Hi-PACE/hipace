@@ -1348,9 +1348,9 @@ For the field in-situ diagnostics, the following quantities are calculated per s
 These quantities can be used to calculate the energy stored in the fields.
 
 For the laser in-situ diagnostics, the following quantities are calculated per slice and stored:
-``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a), [chi*d_z|a|^2]``.
+``max(|a|^2), [|a|^2], [|a|^2*x], [|a|^2*x*x], [|a|^2*y], [|a|^2*y*y], axis(a), [chi*d_z|a|^2], [|a|^2*d_x(phi)], [|a|^2*d_y(phi)], [|a|^2*d_zeta(phi)],[|D_t(a)|^2]``.
 Thereby, ``max(|a|^2)`` is the highest value of ``|a|^2`` in the current slice
-and ``axis(a)`` gives the complex value of the laser envelope, in the center of every slice.
+and ``axis(a)`` gives the complex value of the laser envelope, in the center of every slice.  ``laser_energy`` is stored per time step.
 
 Additionally, some metadata is also available:
 ``time, step, n_slices, charge, mass, z_lo, z_hi, normalized_density_factor``.
