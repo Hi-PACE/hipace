@@ -696,7 +696,7 @@ Diagnostic::FillBoundaryHistDiagnostics (int islice, MultiPlasma& plasmas, Multi
             islice > 0 &&
             fd.m_hist_exit_boundary)
         {
-            // particles where already pushed so they are on the next slice now
+            // particles were already pushed so they are on the next slice now
             HistogramDepositionCopy(fd, islice - 1, plasmas, beams, field_geom);
             species_names_with_boundary_hist.insert(
                 fd.m_hist_species_names.begin(), fd.m_hist_species_names.end());

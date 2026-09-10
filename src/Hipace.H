@@ -46,7 +46,8 @@ namespace ParticleBoundary {
     enum type {
         Reflecting,
         Periodic,
-        Absorbing
+        Absorbing,
+        Thermal
     };
 }
 
@@ -147,8 +148,9 @@ public:
 
     /**
      * \brief does Coulomb collisions between plasmas and beams
+     * \param[in] islice slice number
      */
-    void doCoulombCollision ();
+    void doCoulombCollision (int islice);
 
     /**
      * \brief add external fields to the field grid
@@ -225,6 +227,8 @@ public:
     bool m_has_last_step = false;
     /** Level of verbosity */
     inline static int m_verbose = 0;
+    /** Print interval for slice number (only for a single timestep simulation) */
+    inline static int m_print_slice_interval = 0;
     /** Relative transverse B field error tolerance in the predictor corrector loop
      */
     inline static amrex::Real m_predcorr_B_error_tolerance = 4e-2;
@@ -336,6 +340,8 @@ public:
     inline static FieldBoundary::type m_boundary_field = FieldBoundary::Dirichlet;
     /** type of boundary used for particles */
     inline static ParticleBoundary::type m_boundary_particles = ParticleBoundary::Absorbing;
+    /** boundary temperature (if using Thermal particle boundaries) */
+    inline static amrex::Real m_boundary_temperature {0};
     /** lower bound of bounding box for the particles */
     inline static std::array<amrex::Real, 2> m_boundary_particle_lo;
     /** upper bound of bounding box for the particles */

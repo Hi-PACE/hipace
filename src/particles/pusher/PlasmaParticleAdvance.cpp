@@ -18,7 +18,6 @@
 #include "utils/GPUUtil.H"
 #include "utils/OMPUtil.H"
 #include "utils/DualNumbers.H"
-#include "particles/particles_utils/ParticleUtil.H"
 
 #include <string>
 
@@ -273,6 +272,50 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 #endif
                 } // loop over subcycles
             });
+
+        // to rethermalise particles at the boundary here.
+        if (Hipace::m_boundary_particles == ParticleBoundary::Thermal) {
+
+            const PhysConst phys_const_SI = make_constants_SI();
+
+            amrex::Real u_std = std::sqrt(Hipace::m_boundary_temperature * phys_const_SI.q_e / 
+                                (plasma.m_mass * (phys_const_SI.m_e / phys_const.m_e) *
+                                (phys_const_SI.c * phys_const_SI.c) ) );
+
+            amrex::ParallelForRNG(int(pti.numParticles()),
+                [=] AMREX_GPU_DEVICE (int ip, const amrex::RandomEngine& engine) {
+
+                    // return if particle not at boundary
+                    if (ptd.id(ip) != PlasmaID::to_be_thermalised) return;
+
+                    // use positions at t+1 and velocities at t+1/2
+                    amrex::Real xp = ptd.pos(0, ip);
+                    amrex::Real yp = ptd.pos(1, ip);
+                    amrex::Real ux = 0._rt;
+                    amrex::Real uy = 0._rt;
+                    amrex::Real uz = 0._rt;
+
+                    // reflect positions and get thermal velocities with overloaded boundary enforcing functor
+                    enforceBC(ptd, ip, xp, yp, ux, uy, uz, u_std, engine);
+
+                    ptd.pos(0, ip) = xp;
+                    ptd.pos(1, ip) = yp;
+                    amrex::Real psi = plasma_psi(ux, uy, uz, 0._rt);
+
+                    // set values which will be used for the next push
+                    if (!temp_slice) {
+                        ptd.rdata(PlasmaIdx::ux_half_step)[ip] = ux;
+                        ptd.rdata(PlasmaIdx::uy_half_step)[ip] = uy;
+                        ptd.rdata(PlasmaIdx::psi_half_step)[ip] = psi;
+                        ptd.rdata(PlasmaIdx::x_prev)[ip] = xp;
+                        ptd.rdata(PlasmaIdx::y_prev)[ip] = yp;
+                    }
+
+                    ptd.rdata(PlasmaIdx::ux)[ip] = ux;
+                    ptd.rdata(PlasmaIdx::uy)[ip] = uy;
+                    ptd.rdata(PlasmaIdx::psi)[ip] = psi;
+            });
+        }
     }
 
 #ifdef HIPACE_USE_AB5_PUSH

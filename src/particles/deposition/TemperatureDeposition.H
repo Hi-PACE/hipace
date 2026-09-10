@@ -13,7 +13,7 @@
 #include "utils/Constants.H"
 #include "Hipace.H"
 
-/** Depose current of particles in species plasma into the current 2D slice in fields
+/** Depose moments of particles in species plasma into the current 2D slice in fields
  * \param[in] plasma species of which the current is deposited
  * \param[in,out] fields the general field class, modified by this function
  * \param[in] gm Geometry of the simulation, to get the cell size etc.
