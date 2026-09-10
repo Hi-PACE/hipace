@@ -23,7 +23,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    module load HDF5
    module load ccache # optional, accelerates recompilation
    # optimize CUDA compilation for A100
-   export AMREX_CUDA_ARCH=8.0 # 8.0 for A100, 7.0 for V100
+   export CUDAARCHS=80 # 80 for A100, 70 for V100
 
 Install HiPACE++ (the first time, and whenever you want the latest version):
 
