@@ -1024,17 +1024,23 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Psi);
 
         // Ez: right-hand side 1/(episilon0 *c0 )*(d_x(jx) + d_y(jy))
+//        LinCombination(getStagingArea(lev),
+//            1._rt/(phys_const.ep0*phys_const.c),
+//            derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+//            1._rt/(phys_const.ep0*phys_const.c),
+//            derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
         LinCombination(getStagingArea(lev),
             1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::x>{getField(lev, WhichSlice::This, "jx"), geom[lev]},
+            getField(lev, WhichSlice::This, "jx"),
             1._rt/(phys_const.ep0*phys_const.c),
-            derivative<Direction::y>{getField(lev, WhichSlice::This, "jy"), geom[lev]});
+            getField(lev, WhichSlice::This, "jy"));
 
         SetBoundaryCondition(geom, lev, WhichSlice::This, "Ez", getStagingArea(lev),
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Ez);
 
+/*
         // Bz: right-hand side mu_0*(d_y(jx) - d_x(jy))
         LinCombination(getStagingArea(lev),
             phys_const.mu0,
@@ -1046,6 +1052,7 @@ Fields::SolvePoissonPsiExmByEypBxEzBz (amrex::Vector<amrex::Geometry> const& geo
             m_poisson_solver[lev]->BoundaryOffset(), m_poisson_solver[lev]->BoundaryFactor());
 
         m_poisson_solver[lev]->SolvePoissonEquation(lhs_Bz);
+*/
     }
 
     EnforcePeriodic(false, {Comps[WhichSlice::This]["Psi"],

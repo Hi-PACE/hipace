@@ -85,7 +85,7 @@ void doGatherShapeN (const amrex::Real xp,
         }
     }
 
-    constexpr int derivative_type = 1;
+    constexpr int derivative_type = 0;
 
     HIPACE_LOOP_UNROLL
     for (int iy=0; iy<=depos_order_xy+derivative_type; iy++){
