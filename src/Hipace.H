@@ -147,8 +147,9 @@ public:
 
     /**
      * \brief does Coulomb collisions between plasmas and beams
+     * \param[in] islice slice number
      */
-    void doCoulombCollision ();
+    void doCoulombCollision (int islice);
 
     /**
      * \brief add external fields to the field grid

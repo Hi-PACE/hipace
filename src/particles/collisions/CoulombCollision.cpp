@@ -25,6 +25,8 @@ CoulombCollision::ReadParameters(
 
     // default Coulomb log is -1, if < 0 (e.g. not specified), will be computed automatically
     pp.query("CoulombLog", m_CoulombLog);
+    // how often the collision operator should be applied - every m_collide_every'th slice
+    pp.query("collide_every", m_collide_every);
 
     for (int i=0; i<(int) beam_species_names.size(); i++) {
         if (beam_species_names[i] == collision_species[0]) m_nbeams += 1;
@@ -58,11 +60,13 @@ CoulombCollision::ReadParameters(
 }
 
 void
-CoulombCollision::doPlasmaPlasmaCoulombCollision (
+CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collide_every,
     int lev, const amrex::Box& bx, const amrex::Geometry& geom, PlasmaParticleContainer& species1,
     PlasmaParticleContainer& species2, bool is_same_species, amrex::Real CoulombLog,
     amrex::Real background_density_SI)
 {
+    if (islice%collide_every != 0) {return;}
+
     HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
 
@@ -104,10 +108,11 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             const amrex::Real inv_dV = geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
             // static_cast<double> to avoid precision problems in FP32
             const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                             PhysConstSI::q_e*PhysConstSI::q_e /
-                                             (PhysConstSI::ep0*PhysConstSI::m_e));
-            const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
+                                            PhysConstSI::q_e*PhysConstSI::q_e /
+                                            (PhysConstSI::ep0*PhysConstSI::m_e));
+            amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
+            dt = dt * collide_every;
 
             amrex::ParallelForRNG(
                 n_cells,
@@ -183,10 +188,11 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
             const amrex::Real inv_dV = geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
             // static_cast<double> to avoid precision problems in FP32
             const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                             PhysConstSI::q_e*PhysConstSI::q_e /
-                                             (PhysConstSI::ep0*PhysConstSI::m_e));
-            const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
+                                            PhysConstSI::q_e*PhysConstSI::q_e /
+                                            (PhysConstSI::ep0*PhysConstSI::m_e));
+            amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
+            dt = dt * collide_every;
             // Extract particles in the tile that `mfi` points to
             // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
             // ParticleTileType& ptile_2 = species_2->ParticlesAt(lev, mfi);
@@ -211,7 +217,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
 
                     // Do not collide if one species is missing in the cell
                     if ( cell_stop1 - cell_start1 < 1 ||
-                         cell_stop2 - cell_start2 < 1 ) return;
+                        cell_stop2 - cell_start2 < 1 ) return;
                     // shuffle
                     ShuffleFisherYates(indices1, cell_start1, cell_stop1, engine);
                     ShuffleFisherYates(indices2, cell_start2, cell_stop2, engine);
@@ -234,11 +240,13 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision (
 }
 
 void
-CoulombCollision::doBeamPlasmaCoulombCollision (
+CoulombCollision::doBeamPlasmaCoulombCollision ( int islice,  int collide_every,
     int lev, const amrex::Box& bx, const amrex::Geometry& geom,
     BeamParticleContainer& species1, PlasmaParticleContainer& species2, amrex::Real CoulombLog,
     amrex::Real background_density_SI)
 {
+    if (islice%collide_every != 0) {return;}
+    
     HIPACE_PROFILE("CoulombCollision::doBeamPlasmaCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
 
