@@ -54,7 +54,7 @@ void
 MultiPlasma::InitIonization (amrex::Vector<amrex::Geometry> gm)
 {
     for (auto& plasma : m_all_plasmas) {
-        if(plasma.m_can_ionize) {
+        if(plasma.m_can_field_ionize || plasma.m_can_laser_ionize) {
             for (int i=0; i<m_names.size(); ++i) {
                 if(m_names[i] == plasma.m_product_name) {
                     plasma.m_product_pc = &m_all_plasmas[i];

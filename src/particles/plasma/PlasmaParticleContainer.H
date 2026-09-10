@@ -293,6 +293,7 @@ public:
     bool m_can_ionize = false; /**< whether this plasma can ionize from anything */
     bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
     bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
+    bool m_can_impact_ionize = false; /**< whether this plasma can ionize from particle impact */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
     int m_max_ion_lev = 0; /**< maximum ionization level */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
@@ -324,7 +325,7 @@ private:
     std::string m_name; /**< name of the species */
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real plasma properties for in-situ per-slice reduced diagnostics. */
-    static constexpr int m_insitu_nrp = 14;
+    static constexpr int m_insitu_nrp = 15;
     /** Number of int plasma properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nip = 1;
     /** Per-slice real plasma properties */

@@ -13,6 +13,7 @@
 #include "utils/DeprecatedInput.H"
 #include "utils/GPUUtil.H"
 #include "utils/InsituUtil.H"
+#include "utils/IonizationEnergiesTable.H"
 #ifdef HIPACE_USE_OPENPMD
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
@@ -65,15 +66,30 @@ PlasmaParticleContainer::ReadParameters ()
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_mass != 0, "The plasma particle mass must be specified");
 
     bool ion_lev_specified = queryWithParser(pp, "initial_ion_level", m_init_ion_lev);
-    m_can_field_ionize = pp.contains("ionization_product");
 
-    queryWithParser(pp, "can_ionize", m_can_field_ionize);
-    m_can_laser_ionize = false;
+    queryWithParser(pp, "can_field_ionize", m_can_field_ionize);
     queryWithParser(pp, "can_laser_ionize", m_can_laser_ionize);
+    queryWithParser(pp, "can_impact_ionize", m_can_impact_ionize);
 
-    m_can_ionize = m_can_field_ionize || m_can_laser_ionize;
+    m_can_ionize = m_can_field_ionize || m_can_laser_ionize || m_can_impact_ionize;
+
+    DeprecatedInput(m_name, "can_ionize", "can_field_ionize");
+
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        (m_can_field_ionize || m_can_laser_ionize) == pp.contains("ionization_product"),
+        "When specifying ionization_product, can_*_ionize must be set to 1 via field or laser");
 
     if(m_can_ionize) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(element != "",
+            "For ionization, the element of the plasma must be specified. Please check the input file.");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(element) != 0,
+            "There are no ionization energies available for this element. "
+            "Please update src/utils/IonizationEnergiesTable.H using write_atomic_data_cpp.py");
+        // Get atomic number and ionization energies from file
+        const int ion_element_id = ion_map_ids[element];
+        const int ion_atomic_number = ion_atomic_numbers[ion_element_id];
+        m_max_ion_lev = ion_atomic_number;
+
         m_neutralize_background = false; // change default
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_init_ion_lev >= 0,
             "The initial ion level must be specified");
@@ -899,6 +915,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                 const amrex::Real w = ptd.rdata(PlasmaIdx::w)[ip] * gamma * psi_inv;
                 // No quasi-static weighting factor to calculate quasi-static energy
                 const amrex::Real energy = ptd.rdata(PlasmaIdx::w)[ip] * (gamma - 1._rt);
+                // Weight with no quasi-static weighting factor
+                const amrex::Real raw_w = ptd.rdata(PlasmaIdx::w)[ip];
                 return {            // Tuple contains:
                     w,              // 0    sum(w)
                     w*x,            // 1    [x]
@@ -914,7 +932,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
                     w*gamma,        // 11   [ga]
                     w*gamma*gamma,  // 12   [ga^2]
                     energy,         // 13   [(ga-1)*(1-vz)]
-                    1               // 14   Np
+                    raw_w,          // 14   raw(w)
+                    1               // 15   Np
                 };
             });
 
@@ -926,8 +945,8 @@ PlasmaParticleContainer::InSituComputeDiags (int islice)
 
         for (int i=0; i<m_insitu_nrp; ++i) {
             m_insitu_rdata[islice + i * m_nslices] = real_arr[i] *
-                // sum(w) and [(ga-1)*(1-vz)] are not multiplied by sum_w_inv
-                ( i == 0 || i == (m_insitu_nrp-1) ? 1 : sum_w_inv );
+                // sum(w), [(ga-1)*(1-vz)] and raw(w) are not multiplied by sum_w_inv
+                ( i == 0 || i == 13 || i == 14 ? 1 : sum_w_inv );
             m_insitu_sum_rdata[i] += real_arr[i];
         }
 
@@ -993,6 +1012,7 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
         {"[ga]"    , &m_insitu_rdata[11*nslices], nslices},
         {"[ga^2]"  , &m_insitu_rdata[12*nslices], nslices},
         {"[(ga-1)*(1-vz)]", &m_insitu_rdata[13*nslices], nslices},
+        {"raw(w)"  , &m_insitu_rdata[14*nslices], nslices},
         {"sum(w)"  , &m_insitu_rdata[0], nslices},
         {"Np"      , &m_insitu_idata[0], nslices},
         {"average" , {
@@ -1010,8 +1030,9 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
             {"[ga^2]", &(m_insitu_sum_rdata[12] *= sum_w0_inv)}
         }},
         {"total"   , {
-            {"sum(w)", &m_insitu_sum_rdata[0]},
             {"[(ga-1)*(1-vz)]",&m_insitu_sum_rdata[13]},
+            {"raw(w)", &m_insitu_sum_rdata[14]},
+            {"sum(w)", &m_insitu_sum_rdata[0]},
             {"Np"    , &m_insitu_sum_idata[0]}
         }}
     };
