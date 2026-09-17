@@ -11,6 +11,8 @@
 #include "diagnostics/Diagnostic.H"
 #include "particles/beam/MultiBeam.H"
 #include "particles/beam/BeamParticleContainer.H"
+#include "particles/plasma/MultiPlasma.H"
+#include "particles/plasma/PlasmaParticleContainer.H"
 #include "laser/MultiLaser.H"
 
 #include <AMReX_REAL.H>
@@ -40,7 +42,8 @@ private:
      * \param[in] np total number of particles in the bunch
      * \param[in] geom Geometry of the simulation, to get the cell size etc.
      */
-    void SetupPos(openPMD::ParticleSpecies& currSpecies, BeamParticleContainer& beam,
+    template <typename ParticleContainer>
+    void SetupPos(openPMD::ParticleSpecies& currSpecies, ParticleContainer& particle,
                   const unsigned long long& np, const amrex::Geometry& geom);
 
     /** \brief setup the openPMD parameters do dump the SoA beam data
@@ -63,6 +66,19 @@ private:
     void WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration& iteration,
                                 const amrex::Geometry& geom,
                                 const amrex::Vector< std::string > beamnames);
+
+    /** \brief writing openPMD plasma particle data
+     *
+     * \param[in] plasmas multi plasma container which is written to openPMD file
+     * \param[in,out] iteration openPMD iteration to which the data is written
+     * \param[in] geom Geometry of the simulation, to get the cell size etc.
+     * \param[in] plasmanames list of the names of the plasma species to be written to file
+     * \param[in] islice current slice number
+     */
+    void WritePlasmaParticleData (MultiPlasma& plasmas, openPMD::Iteration& iteration,
+                                const amrex::Geometry& geom,
+                                const amrex::Vector< std::string > plasmanames,
+                                int islice);
 
     /** \brief writing openPMD field data
      *
@@ -87,6 +103,15 @@ private:
         "momentum_x", "momentum_y", "momentum_z"
     };
 
+    /** Named Plasma SoA attributes per particle as defined in PlasmaIdx
+     */
+    amrex::Vector<std::string> m_real_names_plasma {
+        "position_x", "position_y",
+        "weighting",
+        "momentum_x", "momentum_y",
+        "psi"
+    };
+
     /** Named Beam runtime SoA attributes */
     amrex::Vector<std::string> m_real_names_spin {
         "spin_x", "spin_y", "spin_z"
@@ -101,8 +126,11 @@ private:
     /** vector of length nbeams with the numbers of particles already written to file */
     amrex::Vector<uint64_t> m_offset;
 
+    /** vectors of size (nspecies (beam/particle), ncomponents, nparticles) */
     std::vector<std::vector<amrex::Gpu::PinnedVector<uint64_t>>> m_uint64_beam_data {};
     std::vector<std::vector<amrex::Gpu::PinnedVector<amrex::ParticleReal>>> m_real_beam_data {};
+
+    std::vector<std::vector<amrex::Gpu::PinnedVector<amrex::ParticleReal>>> m_real_plasma_data {};
 
 public:
     /** Constructor */
@@ -124,6 +152,13 @@ public:
      */
     void InitBeamData (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
 
+    /** \brief Initialize IO buffer for plasma particles
+     *
+     * \param[in] beams multi beam container which is written to openPMD file
+     * \param[in] beamnames list of the names of the beam to be written to file
+     */
+    void InitPlasmaData (MultiPlasma& plasmas, const amrex::Vector< std::string > plasmanames);
+
     /** \brief writing openPMD beam data
      *
      * \param[in] a_multi_beam multi beam container which is written to openPMD file
@@ -136,6 +171,20 @@ public:
         MultiBeam& a_multi_beam, const amrex::Real physical_time, const int output_step,
         const amrex::Vector< std::string > beamnames,
         amrex::Vector<amrex::Geometry> const& geom3D);
+
+    /** \brief writing openPMD plasma data
+     *
+     * \param[in] a_multi_plasma multi plasma container which is written to openPMD file
+     * \param[in] physical_time Physical time of the currenerationt it.
+     * \param[in] output_step current iteration to be written to file
+     * \param[in] plasmanames list of the names of the plasma to be written to file
+     * \param[in] geom3D 3D Geometry of the simulation, to get the cell size etc.
+     * \param[in] islice current slice number
+     */
+    void WritePlasmaDiagnostics (
+        MultiPlasma& a_multi_plasma, const amrex::Real physical_time, const int output_step,
+        const amrex::Vector< std::string > plasmanames,
+        amrex::Vector<amrex::Geometry> const& geom3D, int islice);
 
     /** \brief writing openPMD field data
      *
@@ -154,6 +203,13 @@ public:
      * \param[in] beamnames list of the names of the beam to be written to file
      */
     void CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > beamnames);
+
+    /** \brief Copy plasma data into IO buffer
+     *
+     * \param[in] plasmas multi beam container which is written to openPMD file
+     * \param[in] plasmanames list of the names of the beam to be written to file
+     */
+    void CopyPlasmas (MultiPlasma& plasmas, const amrex::Vector< std::string > plasmanames);
 
     /** \brief Resets and flushes the openPMD series of all levels
      */

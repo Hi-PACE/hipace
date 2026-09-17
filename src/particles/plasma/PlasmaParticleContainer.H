@@ -231,6 +231,9 @@ public:
     /** Returns name of the plasma */
     const std::string& GetName () const {return m_name;}
 
+    /** Returns total number of macroparticles of the plasma */
+    uint64_t GetNumParticles();
+
     /** Compute in-situ plasma diagnostics of current slice, store in member variable
      * \param[in] islice current slice, on which diags are computed.
      */

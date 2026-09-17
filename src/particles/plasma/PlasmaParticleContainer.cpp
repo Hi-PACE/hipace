@@ -1040,3 +1040,11 @@ PlasmaParticleContainer::InSituWriteToFile (int step, amrex::Real time, const am
     for (auto& x : m_insitu_sum_rdata) x = 0.;
     for (auto& x : m_insitu_sum_idata) x = 0;
 }
+
+uint64_t PlasmaParticleContainer::GetNumParticles() {
+        uint64_t np {0};
+        for (PlasmaParticleIterator pti(*this); pti.isValid(); ++pti){
+            np += pti.numParticles();
+        }
+        return np;
+    }

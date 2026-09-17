@@ -91,6 +91,12 @@ public:
     /** \brief return names of the beams to output */
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
 
+    /** \brief return names of the plasmas to output */
+    amrex::Vector<std::string>& getPlasmaNames () { return m_output_plasma_names; }
+
+    /** \brief return names of the plasmas to output */
+    int& getPlasmaSliceInterval () { return m_plasma_slice_interval; }
+
     /** \brief return data for all field diagnostics */
     amrex::Vector<DiagnosticData>& getDiagData () { return m_diag_data; }
 
@@ -227,10 +233,12 @@ public:
                                  const amrex::Vector<amrex::Geometry>& field_geom);
 
 private:
-    amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
+    amrex::Vector<std::string> m_output_beam_names; /**< Beam names to Write to output file */
+    amrex::Vector<std::string> m_output_plasma_names; /**< Plasma names to Write to output file */
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
     utils::DiagPeriod m_beam_output_period = "0";
+    int m_plasma_slice_interval {0};
     amrex::Vector<DiagnosticData> m_diag_data; /**< individual field diag data */
 };
 

@@ -369,11 +369,15 @@ private:
 
     void InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
+    void DoPlasmaDiagnostics (const int step, const int islice, const amrex::Real time, const bool is_last_step);
     void WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
     void FlushDiagnostics ();
 
-    /** \brief get diagnostics Component names of Fields to output */
+    /** \brief get names of beams to output */
     amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); }
+
+    /** \brief get names of beams to output */
+    amrex::Vector<std::string>& getDiagPlasmaNames () { return m_diags.getPlasmaNames(); }
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

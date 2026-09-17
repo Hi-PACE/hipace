@@ -145,6 +145,18 @@ OpenPMDWriter::WriteBeamDiagnostics (
 }
 
 void
+OpenPMDWriter::WritePlasmaDiagnostics (
+    MultiPlasma& a_multi_plasma, const amrex::Real physical_time, const int output_step,
+    const amrex::Vector< std::string > plasmanames,
+    amrex::Vector<amrex::Geometry> const& geom3D, int islice)
+{
+    openPMD::Iteration iteration = m_outputSeries->iterations[output_step];
+    iteration.setTime(physical_time);
+
+    WritePlasmaParticleData(a_multi_plasma, iteration, geom3D[0], plasmanames, islice);
+}
+
+void
 OpenPMDWriter::WriteFieldDiagnostics (
     const amrex::Vector<DiagnosticData>& field_diag,
     const MultiLaser& a_multi_laser, const amrex::Real physical_time, const int output_step)
@@ -247,7 +259,7 @@ OpenPMDWriter::WriteFieldData (
 }
 
 void
-OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
+OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector<std::string> beamnames)
 {
     HIPACE_PROFILE("OpenPMDWriter::InitBeamData()");
 
@@ -357,7 +369,7 @@ OpenPMDWriter::WriteBeamParticleData (MultiBeam& beams, openPMD::Iteration& iter
 }
 
 void
-OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > beamnames)
+OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector<std::string> beamnames)
 {
     HIPACE_PROFILE("OpenPMDWriter::CopyBeams()");
 
@@ -365,7 +377,7 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
     for (int ibeam = 0; ibeam < nbeams; ibeam++) {
 
         std::string name = beams.get_name(ibeam);
-        if(std::find(beamnames.begin(), beamnames.end(), name) ==  beamnames.end() ) continue;
+        if(std::find(beamnames.begin(), beamnames.end(), name) == beamnames.end()) continue;
 
         auto& beam = beams.getBeam(ibeam);
 
@@ -421,7 +433,102 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
 }
 
 void
-OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleContainer& beam,
+OpenPMDWriter::InitPlasmaData (MultiPlasma& plasmas, const amrex::Vector<std::string> plasmanames)
+{
+    const int nplasmas = plasmanames.size();
+    m_real_plasma_data.resize(nplasmas);
+    const int ncomponents = m_real_names_plasma.size();
+
+    for (int iplasma=0; iplasma<nplasmas; iplasma++) {
+        m_real_plasma_data[iplasma].resize(ncomponents);
+
+        auto& plasma = plasmas.GetPlasma(plasmanames[iplasma]);
+
+        uint64_t num_particles = plasma.GetNumParticles();
+
+        for (int icomp=0; icomp<ncomponents; icomp++) {
+            m_real_plasma_data[iplasma][icomp].resize(num_particles);
+        }
+    }
+}
+
+void
+OpenPMDWriter::CopyPlasmas(MultiPlasma& plasmas, const amrex::Vector< std::string > plasmanames) {
+    HIPACE_PROFILE("OpenPMDWriter::CopyPlasmas()");
+
+    for (int iplasma=0; iplasma<plasmanames.size(); iplasma++) {
+
+        auto& plasma = plasmas.GetPlasma(plasmanames[iplasma]);
+
+        // loop over components to be written
+        for (std::size_t icomp=0; icomp<m_real_names_plasma.size(); icomp++) {
+
+            uint64_t done_particles = 0;
+
+            // Write from each particle tile iteratively
+            for (PlasmaParticleIterator pti(plasma); pti.isValid(); ++pti) {
+                auto& ptile = pti.GetParticleTile();
+                int num_particles_tile = pti.numParticles();
+
+                amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
+                    ptile.GetRealData(icomp).begin(),
+                    ptile.GetRealData(icomp).begin() + num_particles_tile,
+                    m_real_plasma_data[iplasma][icomp].data() + done_particles);
+
+                done_particles += num_particles_tile;
+            }
+        }
+    }
+}
+
+void
+OpenPMDWriter::WritePlasmaParticleData(MultiPlasma& plasmas, openPMD::Iteration& iteration,
+                            const amrex::Geometry& geom,
+                            const amrex::Vector< std::string > plasmanames,
+                            int islice)
+{
+    HIPACE_PROFILE("OpenPMDWriter::WritePlasmaParticleData()");
+
+    // sync GPU to get ids
+    amrex::Gpu::streamSynchronize();
+
+    const int nplasmas = plasmanames.size();
+    for (int iplasma = 0; iplasma < nplasmas; iplasma++) {
+
+        std::string name = plasmanames[iplasma] + "_" + std::to_string(islice);
+
+        openPMD::ParticleSpecies plasma_species = iteration.particles[name];
+
+        auto& plasma = plasmas.GetPlasma(plasmanames[iplasma]);
+
+        amrex::Vector<std::string> real_names = m_real_names_plasma;
+
+        // initialize beam IO on first slice
+        const uint64_t num_particles_total = plasma.GetNumParticles();
+
+        SetupPos(plasma_species, plasma, num_particles_total, geom);
+        SetupRealProperties(plasma_species, real_names, num_particles_total);
+
+        if (num_particles_total == 0) {
+            amrex::ErrorStream() << "WARNING: Plasma '" << plasmanames[iplasma]
+                                 << "' has no particles! No output will be written.\n";
+            continue;
+        }
+
+        for (std::size_t icomp=0; icomp<m_real_plasma_data[iplasma].size(); icomp++) {
+            // handle scalar and non-scalar records by name
+            auto [record_name, component_name] = utils::name2openPMD(real_names[icomp]);
+            auto& currRecord = plasma_species[record_name];
+            auto& currRecordComp = currRecord[component_name];
+            // not read until the data is flushed
+            currRecordComp.storeChunkRaw(m_real_plasma_data[iplasma][icomp].data(), {0ull}, {num_particles_total});
+        }
+    }
+}
+
+template <typename ParticleContainer>
+void
+OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, ParticleContainer& particle,
                          const unsigned long long& np, const amrex::Geometry& geom)
 {
     const PhysConst phys_const_SI = make_constants_SI();
@@ -437,9 +544,9 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     auto const scalar = openPMD::RecordComponent::SCALAR;
     currSpecies["id"][scalar].resetDataset( idType );
     currSpecies["charge"][scalar].resetDataset( realType );
-    currSpecies["charge"][scalar].makeConstant( beam.m_charge );
+    currSpecies["charge"][scalar].makeConstant( particle.m_charge );
     currSpecies["mass"][scalar].resetDataset( realType );
-    currSpecies["mass"][scalar].makeConstant( beam.m_mass );
+    currSpecies["mass"][scalar].makeConstant( particle.m_mass );
 
     // meta data
     currSpecies["positionOffset"].setUnitDimension( utils::getUnitDimension("positionOffset") );
@@ -449,8 +556,8 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     // calculate the multiplier to convert from Hipace to SI units
     double hipace_to_SI_pos = 1.;
     double hipace_to_SI_weight = 1.;
-    double hipace_to_SI_momentum = beam.m_mass * phys_const_SI.c;
-    double hipace_to_unitSI_momentum = beam.m_mass * phys_const_SI.c;
+    double hipace_to_SI_momentum = particle.m_mass * phys_const_SI.c;
+    double hipace_to_unitSI_momentum = particle.m_mass * phys_const_SI.c;
     double hipace_to_SI_charge = 1.;
     double hipace_to_SI_mass = 1.;
 
@@ -463,7 +570,7 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
         const double kp_inv = (double)phys_const_SI.c / omega_p;
         hipace_to_SI_pos = kp_inv;
         hipace_to_SI_weight = n_0 * dx[0] * dx[1] * dx[2] * kp_inv * kp_inv * kp_inv;
-        hipace_to_SI_momentum = beam.m_mass * phys_const_SI.m_e * phys_const_SI.c;
+        hipace_to_SI_momentum = particle.m_mass * phys_const_SI.m_e * phys_const_SI.c;
         hipace_to_SI_charge = phys_const_SI.q_e;
         hipace_to_SI_mass = phys_const_SI.m_e;
     }
@@ -471,7 +578,7 @@ OpenPMDWriter::SetupPos (openPMD::ParticleSpecies& currSpecies, BeamParticleCont
     // temporary workaround until openPMD-viewer does not autonormalize momentum
     if(m_openpmd_viewer_workaround) {
         if(Hipace::m_normalized_units) {
-            hipace_to_unitSI_momentum = beam.m_mass * phys_const_SI.c;
+            hipace_to_unitSI_momentum = particle.m_mass * phys_const_SI.c;
         }
     }
 
@@ -499,7 +606,7 @@ OpenPMDWriter::SetupRealProperties (openPMD::ParticleSpecies& currSpecies,
 
     /* we have 7 or 10 SoA real attributes: x, y, z, weight, ux, uy, uz, (sx, sy, sz) */
     int const NumSoARealAttributes = real_comp_names.size();
-    std::set< std::string > addedRecords; // add meta-data per record only once
+    std::set<std::string> addedRecords; // add meta-data per record only once
 
     for (int i = 0; i < NumSoARealAttributes; ++i)
     {
