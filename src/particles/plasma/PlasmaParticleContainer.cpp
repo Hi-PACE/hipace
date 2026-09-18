@@ -149,6 +149,7 @@ PlasmaParticleContainer::ReadParameters ()
     queryWithParser(pp, "u_mean", m_u_mean);
     bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
     bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
+    queryWithParser(pp, "temperature_width", m_temperature_width);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         !(temperature_is_specified && thermal_momentum_is_specified),
          "Please specify exclusively either a temperature or the thermal momentum");
@@ -294,7 +295,7 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
             "to use the fine plasma patch feature");
     }
 
-    InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
+    InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius, m_temperature_width);
 
     if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
