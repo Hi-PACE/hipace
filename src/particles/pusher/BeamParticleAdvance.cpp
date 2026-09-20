@@ -449,8 +449,8 @@ AdvanceBeamParticlesSlice (
                             // is the same for all undulators, the first element in the array.
                             // Likewise for B0 for now. Later, we could let both adjust provided
                             // lr stays constant.
-                            const amrex::Real undulator_l = (undulator_nperiod[iu]-1./n_subcycles)*undulator_period[0];
-                            if (zprop + clight*i*dt >= 0 && zprop + clight*i*dt < undulator_l)
+                            const amrex::Real undulator_l = (undulator_nperiod[iu])*undulator_period[0];
+                            if (zprop + clight*(i+0.5)*dt >= 0 && zprop + clight*(i+0.5)*dt < undulator_l)
                             {
                                 amrex::Real mag_B0 = undulator_B0[0];
                                 amrex::Real mag_period = undulator_period[0];
