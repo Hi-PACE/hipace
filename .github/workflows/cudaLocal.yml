@@ -21,32 +21,62 @@ concurrency:
 
 jobs:
   build_nvcc:
-    name: local V100 NVCC 11.1 DP
-    runs-on: self-hosted
-    if: github.event.pull_request.draft == false
+    name: local V100 NVCC 12.6 DP
+    runs-on: desy-gpu-runner
+    if: github.repository_owner == 'Hi-PACE'
     env:
       CXXFLAGS: "-Werror"
+    container:
+      image: nvcr.io/nvidia/cuda:12.6.3-devel-ubuntu22.04
     steps:
     - uses: actions/checkout@v6
 
-    - name: Build & Install
+    - name: Install Dependencies
       run: |
-        source $HOME/profile.hipace
-        which nvcc || echo "nvcc not in PATH!"
+        # Print user name
+        echo "I Am G$(whoami)"
+        whoami
+        id
 
-        cmake -S . -B build                                \
+        # echo "Check nvidia-smi"
+        # nvidia-smi
+
+        # Print OS version
+        cat /etc/*-release
+        # Print CPU information
+        lscpu
+
+        export TZ=Europe/Berlin
+        ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+        apt-get -qqq update -y --no-install-recommends
+        apt-get install -y --no-install-recommends \
+          git \
+          libopenmpi-dev \
+          openmpi-bin \
+          libhdf5-openmpi-dev \
+          python3-venv \
+          python3-pip
+        python3 -m pip install --upgrade pip --user
+        python3 -m pip install --upgrade \
+          pipx matplotlib numpy scipy openpmd-viewer openpmd-api --user
+        python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
+        python3 -m pipx install cmake
+        python3 -m pip install -U -e ./tools
+    - name: Compile
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        cmake -S . -B build     \
           -DCMAKE_VERBOSE_MAKEFILE=ON                      \
           -DAMReX_CUDA_ARCH=7.0                            \
           -DHiPACE_COMPUTE=CUDA                            \
           -DHiPACE_PRECISION=DOUBLE                        \
           -DAMReX_CUDA_ERROR_CROSS_EXECUTION_SPACE_CALL=ON \
           -DAMReX_CUDA_ERROR_CAPTURE_THIS=ON
-        cmake --build build -j 8
+        cmake --build build -j 30
     - name: Run Tests
       run: |
-        source $HOME/profile.hipace
-        python3 -m pip install --upgrade pip --user
-        python3 -m pip install --upgrade matplotlib numpy scipy openpmd-viewer openpmd-api --user
-        python3 -m pip install git+https://github.com/LASY-org/lasy.git@development
-        python3 -m pip install -U -e ./tools
+        export PATH="$HOME/.local/bin:$PATH"
+        export OMPI_ALLOW_RUN_AS_ROOT=1
+        export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
         ctest --test-dir build --output-on-failure
