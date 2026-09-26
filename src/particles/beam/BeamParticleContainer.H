@@ -192,6 +192,8 @@ public:
         return icomp < BeamIdx::int_nattribs_in_buffer;
     }
 
+    amrex::Real m_avg_uz_prev {0};
+
 private:
     int m_slice_permutation = 0;
     std::array<BeamTile, WhichBeamSlice::N> m_slices {};
@@ -245,8 +247,11 @@ public:
     amrex::Gpu::Buffer<amrex::Real> m_thickquad_l;
     amrex::Gpu::Buffer<amrex::Real> m_thickquad_k1ga;
     int m_nphaseshifter {0};
-    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_dz;
     amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_z;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_dz;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_drift;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_lr;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_gamma;
 
 private:
     std::string m_name; /**< name of the species */

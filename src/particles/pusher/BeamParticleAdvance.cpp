@@ -184,6 +184,9 @@ AdvanceBeamParticlesSlice (
     int nthickquad = beam.m_nthickquad;
     amrex::Real* AMREX_RESTRICT phaseshifter_z = beam.m_phaseshifter_z.data();
     amrex::Real* AMREX_RESTRICT phaseshifter_dz = beam.m_phaseshifter_dz.data();
+    amrex::Real* AMREX_RESTRICT phaseshifter_gamma = beam.m_phaseshifter_gamma.data();
+    amrex::Real* AMREX_RESTRICT phaseshifter_drift = beam.m_phaseshifter_drift.data();
+    amrex::Real* AMREX_RESTRICT phaseshifter_lr = beam.m_phaseshifter_lr.data();
     int nphaseshifter = beam.m_nphaseshifter;
 
     const int psi_comp = Comps[WhichSlice::This]["Psi"];
@@ -286,6 +289,8 @@ AdvanceBeamParticlesSlice (
         rr_factor *= std::sqrt(static_cast<double>(Hipace::m_background_density_SI)
                 / (PhysConstSI::ep0 * PhysConstSI::m_e)) * PhysConstSI::q_e;
     }
+
+    amrex::Real const avg_uz_prev = beam.m_avg_uz_prev;
 
     // don't include slipped particles in count as they were already pushed
     Hipace::m_num_beam_particles_pushed += double(beam.getNumParticles(WhichBeamSlice::This));
@@ -594,7 +599,10 @@ AdvanceBeamParticlesSlice (
                 // Apply thin optics: phase shifters
                 for (int iz=0; iz<nphaseshifter; iz++) {
                     if (clight*(time+i*dt) <= phaseshifter_z[iz] && clight*(time+i*dt+dt) > phaseshifter_z[iz] ) {
-                        zp -= phaseshifter_dz[iz];
+                        amrex::Real gamma = phaseshifter_gamma[iz]>0 ? phaseshifter_gamma[iz] : avg_uz_prev;
+                        amrex::Real slip = phaseshifter_drift[iz]/2/gamma/gamma/phaseshifter_lr[iz];
+                        amrex::Real dz = (std::floor(slip)-slip+1)*phaseshifter_lr[iz];
+                        zp -= dz + phaseshifter_dz[iz];
                     }
                 }
 

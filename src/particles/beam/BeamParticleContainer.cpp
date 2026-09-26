@@ -98,10 +98,20 @@ BeamParticleContainer::ReadParameters ()
         m_undulator_fcK.copyToDeviceAsync();
     }
 
-    if (queryWithParser(pp, "phaseshifter_dz", m_phaseshifter_dz)) {
-        m_nphaseshifter = m_phaseshifter_dz.size();
-        getWithParser(pp, "phaseshifter_z", m_phaseshifter_z);
-        AMREX_ALWAYS_ASSERT(m_phaseshifter_z.size() == static_cast<std::size_t>(m_nphaseshifter));
+    if (queryWithParser(pp, "phaseshifter_z", m_phaseshifter_z)) {
+        m_nphaseshifter = m_phaseshifter_z.size();
+        getWithParser(pp, "phaseshifter_drift", m_phaseshifter_drift);
+        getWithParser(pp, "phaseshifter_lr", m_phaseshifter_lr);
+        AMREX_ALWAYS_ASSERT(m_phaseshifter_drift.size() == static_cast<std::size_t>(m_nphaseshifter));
+        AMREX_ALWAYS_ASSERT(m_phaseshifter_lr.size() == static_cast<std::size_t>(m_nphaseshifter));
+        m_phaseshifter_gamma.resize(m_nphaseshifter);
+        m_phaseshifter_dz.resize(m_nphaseshifter);
+        for (int i=0; i<m_nphaseshifter; ++i) {
+            m_phaseshifter_gamma[i] = -1;
+            m_phaseshifter_dz[i] = 0;
+        }
+        queryWithParser(pp, "phaseshifter_gamma", m_phaseshifter_gamma);
+        queryWithParser(pp, "phaseshifter_dz", m_phaseshifter_dz);
     }
 
     queryWithParserAlt(pp, "insitu_period", m_insitu_period.m_func_str, pp_alt);
@@ -657,6 +667,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
     const int is_normalized_units = Hipace::m_normalized_units;
 
+    m_avg_uz_prev = m_insitu_sum_rdata[11] * sum_w0_inv;
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
     amrex::Vector<insitu_utils::DataNode> all_data{
