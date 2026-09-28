@@ -136,6 +136,23 @@ namespace ParticleUtil
         u[1] = u_mean[1] + uy_th;
         u[2] = u_mean[2] + uz_th;
     }
+
+    /** Return momentum of 1 particle from a Gaussian flux random draw with u_mean = 0
+     * \param[in,out] u_n normal momentum component of 1 particle, modified by this function
+     * \param[in] u_std standard deviation of the random distribution in each dimension
+     * \param[in] engine random number engine
+     */
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void get_gaussian_flux_random_momentum (amrex::Real& u_n,
+                                       const amrex::Real u_std,
+                                       const amrex::RandomEngine& engine)
+    {
+        amrex::Real R = 1._rt - amrex::Random(engine);
+
+        amrex::Real u_n_th = u_std * std::sqrt(2*std::log(1._rt/R));
+        u_n  = u_n_th;
+    }
+
 }
 
 #endif

@@ -90,6 +90,7 @@ struct EnforceBC
                 invalid = false;
             } else if (m_particle_boundary == ParticleBoundary::Thermal) {
                 ptd.id(ip) = PlasmaID::to_be_thermalised;
+                invalid = false;
             } else {                       // ParticleBoundary::Absorbing
                 ptd.id(ip) = PlasmaID::invalid_at_boundary;
                 invalid = true;
@@ -120,8 +121,8 @@ struct EnforceBC
         // only called to reflect particle positions and provide the thermal
         // velocities to the particles
 
-        // get a random thermal velocity vector
-        amrex::Real u[3] = {0.,0.,0.};
+        // fill generic velocities
+        amrex::Real uth[3] = {0.,0.,0.};
         ParticleUtil::get_gaussian_random_momentum(u, {0., 0., 0.}, {u_std, u_std, u_std}, engine);
         ux = u[0];
         uy = u[1];
@@ -131,28 +132,45 @@ struct EnforceBC
         const amrex::Real len_x = m_phi[0] - m_plo[0];
         const amrex::Real len_y = m_phi[1] - m_plo[1];
 
+        // get gaussian fluc velocities depending on plane of reflection
         if (x < m_plo[0] || x > m_phi[0]) { // reflect particle in x
-            if (x < m_plo[0]) ux = (ux > 0) ? ux : -ux;
-            else ux = (ux < 0) ? ux : -ux;
+            bool crossed_lo = ( x < m_plo[0] );
 
+            // reflect particle position
             x = std::fmod(x - m_plo[0], 2*len_x);
             if (x < 0) x += 2*len_x;
             x += m_plo[0];
             if (x > m_phi[0]) {
                 x = 2*m_phi[0] - x;
             }
+
+            // Get Gaussian flux momentum for x and thermal for other directions
+            ParticleUtil::get_gaussian_flux_random_momentum(ux, u_std, engine);
+
+            if (crossed_lo) ux = std::copysign(ux, 1._rt);
+            else            ux = std::copysign(ux, -1._rt);
         }
+
+        else ux = u[0];
+
         if (y < m_plo[1] || y > m_phi[1]) { // reflect particle in y
-            if (y < m_plo[1]) uy = (uy > 0) ? uy : -uy;
-            else uy = (uy < 0) ? uy : -uy;
-            
+            bool crossed_lo = ( y < m_plo[1] );
+
             y = std::fmod(y - m_plo[1], 2*len_y);
             if (y < 0) y += 2*len_y;
             y += m_plo[1];
             if (y > m_phi[1]) {
                 y = 2*m_phi[1] - y;
             }
+
+            // Get Gaussian flux momentum for x and thermal for other directions
+            ParticleUtil::get_gaussian_flux_random_momentum(uy, u_std, engine);
+
+            if (crossed_lo) uy = std::copysign(uy, 1._rt);
+            else            uy = std::copysign(uy, -1._rt);
         }
+        else uy = u[1];
+
         // plasma particle is now valid again
         ptd.id(ip) = PlasmaID::valid;
     }

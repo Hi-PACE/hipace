@@ -278,7 +278,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
 
             const PhysConst phys_const_SI = make_constants_SI();
 
-            amrex::Real u_std = std::sqrt(Hipace::m_boundary_temperature * phys_const_SI.q_e / 
+            amrex::Real u_std = std::sqrt(Hipace::m_boundary_temperature * phys_const_SI.q_e /
                                 (plasma.m_mass * (phys_const_SI.m_e / phys_const.m_e) *
                                 (phys_const_SI.c * phys_const_SI.c) ) );
 
