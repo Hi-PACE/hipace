@@ -132,7 +132,8 @@ PlasmaParticleContainer::ReadParameters ()
                                          "Unable to get any data out of 'density_table_file'");
     }
 
-    m_particle_file_specified = queryWithParser(pp, "read_particles_from_path", m_particles_path);
+    m_particle_file_specified =
+        queryWithParserAlt(pp, "read_particles_from_path", m_particles_path, pp_alt);
 
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         (int(density_func_specified) + int(m_density_file_specified)
