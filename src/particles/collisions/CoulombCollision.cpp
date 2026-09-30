@@ -26,7 +26,11 @@ CoulombCollision::ReadParameters(
     // default Coulomb log is -1, if < 0 (e.g. not specified), will be computed automatically
     pp.query("CoulombLog", m_CoulombLog);
     // how often the collision operator should be applied - every m_collide_every'th slice
-    pp.query("collide_every", m_collide_every);
+    pp.query("collision_period", m_collision_period);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        m_collision_period >= 1,
+        "collision_period must be a positive number"
+    );
 
     for (int i=0; i<(int) beam_species_names.size(); i++) {
         if (beam_species_names[i] == collision_species[0]) m_nbeams += 1;
@@ -240,13 +244,11 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collide_every
 }
 
 void
-CoulombCollision::doBeamPlasmaCoulombCollision ( int islice,  int collide_every,
+CoulombCollision::doBeamPlasmaCoulombCollision (
     int lev, const amrex::Box& bx, const amrex::Geometry& geom,
     BeamParticleContainer& species1, PlasmaParticleContainer& species2, amrex::Real CoulombLog,
     amrex::Real background_density_SI)
 {
-    if (islice%collide_every != 0) {return;}
-
     HIPACE_PROFILE("CoulombCollision::doBeamPlasmaCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
 

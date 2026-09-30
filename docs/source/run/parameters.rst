@@ -1455,6 +1455,9 @@ As collisions depend on the physical density, in normalized units `hipace.backgr
     Coulomb logarithm used for this collision.
     If not specified, the Coulomb logarithm is determined from the temperature in each cell.
 
+* ``<collision_name>.collision_period`` (`integer`) optional (default `1`)
+    Number of :math:`\zeta` slices between calculating the elastic collision operator (useful when you are in a fairly collisionless regime, but still want to calculate elastic collisions). The timestep used for collisions is multiplied by this factor. Only applies to plasma-plasma collisions.
+
 Radiation reaction
 ^^^^^^^^^^^^^^^^^^
 
