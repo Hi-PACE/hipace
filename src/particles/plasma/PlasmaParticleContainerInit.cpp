@@ -475,7 +475,8 @@ InitParticlesFromFile ()
     using namespace amrex::literals;
     clearParticles();
 
-    for (amrex::MFIter mfi = MakeMFIter(0, DfltMfi); mfi.isValid(); ++mfi)
+    // only read particles on one tile
+    if (amrex::MFIter mfi = MakeMFIter(0, DfltMfi); mfi.isValid())
     {
         auto& particle_tile = DefineAndReturnParticleTile(0, mfi);
 
@@ -540,9 +541,6 @@ InitParticlesFromFile ()
         } else {
             amrex::Abort("Unknown datatype used in Plasma input file. Must use double or float");
         }
-
-        // only read particles once
-        break;
     }
 #else
     amrex::Abort("plasma particle initialization via read_particles_from_path requires"
