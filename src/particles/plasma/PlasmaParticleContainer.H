@@ -163,6 +163,10 @@ public:
         const amrex::Real a_radius,
         const amrex::Real a_hollow_core_radius);
 
+    /** Initialize 1 xy slice of particles, from an openPMD file
+     */
+    void InitParticlesFromFile ();
+
     /** Initialize ADK prefactors of ionizable plasmas
      *
      * \param[in] geom Geometry of the simulation, to get the cell size
@@ -279,6 +283,11 @@ public:
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
+
+    // init from file:
+
+    bool m_particle_file_specified; /**< if particles from file was specified */
+    std::string m_particles_path = ""; /**< path to particles from file */
 
     // general:
 

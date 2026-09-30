@@ -131,42 +131,50 @@ PlasmaParticleContainer::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(!m_density_table.empty(),
                                          "Unable to get any data out of 'density_table_file'");
     }
+
+    m_particle_file_specified = queryWithParser(pp, "read_particles_from_path", m_particles_path);
+
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        (int(density_func_specified) + int(m_density_file_specified) + int(m_use_density_table)) == 1,
+        (int(density_func_specified) + int(m_density_file_specified)
+        + int(m_use_density_table) + int(m_particle_file_specified)) == 1,
         "Plasma: Must specify exactly one of either 'density(x,y,z)', "
-        "'read_density_from_path' or 'density_table_file'");
+        "'read_density_from_path', 'density_table_file' or 'read_particles_from_path'");
 
-    queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
-    queryWithParserAlt(pp, "radius", m_radius, pp_alt);
-    queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
-    queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
-    queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
-                                     "The hollow core plasma radius must not be smaller than the "
-                                     "plasma radius itself");
-    queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
-    getWithParserAlt(pp, "ppc", m_ppc, pp_alt);
-    queryWithParser(pp, "u_mean", m_u_mean);
-    bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
-    bool temperature_is_specified = queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-        !(temperature_is_specified && thermal_momentum_is_specified),
-         "Please specify exclusively either a temperature or the thermal momentum");
-
-    if (temperature_is_specified) {
-        const PhysConst phys_const_SI = make_constants_SI();
-        for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
-            m_u_std[idim] = std::sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
-                                       /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
-                                       phys_const_SI.c * phys_const_SI.c ) );
+    if (!m_particle_file_specified) {
+        queryWithParserAlt(pp, "min_density", m_min_density, pp_alt);
+        queryWithParserAlt(pp, "radius", m_radius, pp_alt);
+        queryWithParserAlt(pp, "hollow_core_radius", m_hollow_core_radius, pp_alt);
+        queryWithParserAlt(pp, "do_symmetrize", m_do_symmetrize, pp_alt);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_hollow_core_radius < m_radius,
+            "The hollow core plasma radius must not be smaller than the plasma radius itself");
+        getWithParserAlt(pp, "ppc", m_ppc, pp_alt);
+        queryWithParser(pp, "u_mean", m_u_mean);
+        bool thermal_momentum_is_specified = queryWithParser(pp, "u_std", m_u_std);
+        bool temperature_is_specified =
+            queryWithParser(pp, "temperature_in_ev", m_temperature_in_ev);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            !(temperature_is_specified && thermal_momentum_is_specified),
+             "Please specify exclusively either a temperature or the thermal momentum");
+        if (temperature_is_specified) {
+            const PhysConst phys_const_SI = make_constants_SI();
+            for (int idim=0; idim < AMREX_SPACEDIM; ++idim) {
+                m_u_std[idim] = std::sqrt( (m_temperature_in_ev * phys_const_SI.q_e)
+                                        /(m_mass * (phys_const_SI.m_e / phys_const.m_e) *
+                                        phys_const_SI.c * phys_const_SI.c ) );
+            }
         }
+        queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
     }
+
+    queryWithParserAlt(pp, "max_qsa_weighting_factor", m_max_qsa_weighting_factor, pp_alt);
 
     queryWithParserAlt(pp, "reorder_period", m_reorder_period, pp_alt);
     amrex::Array<int, 2> idx_array
-        {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
+    {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
+
+    queryWithParserAlt(pp, "insitu_radius", m_insitu_radius, pp_alt);
     queryWithParserAlt(pp, "insitu_period", m_insitu_period.m_func_str, pp_alt);
     m_insitu_period.compile();
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
@@ -176,7 +184,7 @@ PlasmaParticleContainer::ReadParameters ()
         amrex::Print() <<
             "It is recommended to use hipace.output_folder instead of plasmas.insitu_file_prefix\n";
     }
-    queryWithParserAlt(pp, "prevent_centered_particle", m_prevent_centered_particle, pp_alt);
+
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
 }
 
@@ -314,7 +322,11 @@ PlasmaParticleContainer::InitData (const amrex::Vector<amrex::Geometry>& geom3d)
             "to use the fine plasma patch feature");
     }
 
-    InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
+    if (m_particle_file_specified) {
+        InitParticlesFromFile();
+    } else {
+        InitParticles(m_u_std, m_u_mean, m_radius, m_hollow_core_radius);
+    }
 
     if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
