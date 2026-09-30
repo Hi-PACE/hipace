@@ -269,6 +269,12 @@ Hipace::ReadParameters ()
             "be specified via 'hipace.background_density_SI'");
     }
 
+    queryWithParser(pph, "impact_ionization", m_impact_names);
+    for (int i = 0; i != m_impact_names.size(); ++i) {
+        m_all_impacts.emplace_back(Collision());
+        m_all_impacts.back().ReadParameters(m_multi_plasma.m_names, m_impact_names[i]);
+    }
+
     // external fields applied to the grid
     amrex::Array<std::string, 5> field_str = {"0", "0", "0", "0", "0"};
     m_use_grid_external_fields = queryWithParser(pph, "grid_external_fields(x,y,z,t)", field_str);
@@ -859,6 +865,10 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // collisions for plasmas and beams
     doCoulombCollision();
+
+    for (auto& impact : m_all_impacts) {
+        impact.doCollision(0, m_slice_geom[0], m_multi_plasma);
+    }
 
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
