@@ -121,18 +121,16 @@ struct EnforceBC
         // only called to reflect particle positions and provide the thermal
         // velocities to the particles
 
-        // fill generic velocities
-        amrex::Real uth[3] = {0.,0.,0.};
+        // fill generic random velocities
+        amrex::Real u[3] = {0.,0.,0.};
         ParticleUtil::get_gaussian_random_momentum(u, {0., 0., 0.}, {u_std, u_std, u_std}, engine);
-        ux = u[0];
-        uy = u[1];
         uz = u[2];
 
         // use same method for reflecting as in the ParticleBoundary::Reflecting case
         const amrex::Real len_x = m_phi[0] - m_plo[0];
         const amrex::Real len_y = m_phi[1] - m_plo[1];
 
-        // get gaussian fluc velocities depending on plane of reflection
+        // get gaussian flux velocities depending on plane of reflection
         if (x < m_plo[0] || x > m_phi[0]) { // reflect particle in x
             bool crossed_lo = ( x < m_plo[0] );
 
@@ -147,12 +145,9 @@ struct EnforceBC
             // Get Gaussian flux momentum for x and thermal for other directions
             ParticleUtil::get_gaussian_flux_random_momentum(ux, u_std, engine);
 
-            if (crossed_lo) ux = std::copysign(ux, 1._rt);
-            else            ux = std::copysign(ux, -1._rt);
+            if (!crossed_lo) ux = -ux;
+            uy = u[1];
         }
-
-        else ux = u[0];
-
         if (y < m_plo[1] || y > m_phi[1]) { // reflect particle in y
             bool crossed_lo = ( y < m_plo[1] );
 
@@ -166,10 +161,9 @@ struct EnforceBC
             // Get Gaussian flux momentum for x and thermal for other directions
             ParticleUtil::get_gaussian_flux_random_momentum(uy, u_std, engine);
 
-            if (crossed_lo) uy = std::copysign(uy, 1._rt);
-            else            uy = std::copysign(uy, -1._rt);
+            if (!crossed_lo) uy = -uy;
+            ux = u[0];
         }
-        else uy = u[1];
 
         // plasma particle is now valid again
         ptd.id(ip) = PlasmaID::valid;

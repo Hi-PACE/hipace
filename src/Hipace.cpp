@@ -682,6 +682,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
 
+    if (islice%24 == 0) std::cout << "On slice: ", islice;
+
     int current_N_level = 1;
 
     for (int lev=1; lev<m_N_level; ++lev) {

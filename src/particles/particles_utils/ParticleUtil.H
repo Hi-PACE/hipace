@@ -147,9 +147,9 @@ namespace ParticleUtil
                                        const amrex::Real u_std,
                                        const amrex::RandomEngine& engine)
     {
-        amrex::Real R = 1._rt - amrex::Random(engine);
+        amrex::Real R = amrex::RandomPositive(engine);
 
-        amrex::Real u_n_th = u_std * std::sqrt(2*std::log(1._rt/R));
+        amrex::Real u_n_th = u_std * std::sqrt(2*std::log(R));
         u_n  = u_n_th;
     }
 
