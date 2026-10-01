@@ -118,7 +118,6 @@ Hipace::ReadParameters ()
     }
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
-    queryWithParser(pph, "print_slice_period", m_print_slice_period);  // INHERE
     m_numprocs = amrex::ParallelDescriptor::NProcs();
     if (m_ignore_noncritical_warnings) {
         if (m_numprocs > m_max_step + 1 && amrex::ParallelDescriptor::IOProcessor()) {
