@@ -118,6 +118,7 @@ Hipace::ReadParameters ()
     }
     queryWithParser(pph, "max_time", m_max_time);
     queryWithParser(pph, "verbose", m_verbose);
+    queryWithParser(pph, "print_slice_period", m_print_slice_period);  // INHERE
     m_numprocs = amrex::ParallelDescriptor::NProcs();
     if (m_ignore_noncritical_warnings) {
         if (m_numprocs > m_max_step + 1 && amrex::ParallelDescriptor::IOProcessor()) {
@@ -681,8 +682,6 @@ void
 Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_step)
 {
     HIPACE_PROFILE("Hipace::SolveOneSlice()");
-
-    if (islice%24 == 0) std::cout << "On slice: ", islice;
 
     int current_N_level = 1;
 
