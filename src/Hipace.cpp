@@ -1301,7 +1301,7 @@ Hipace::doCoulombCollision (int islice)
 
             // TODO: enable tiling
 
-            CoulombCollision::doBeamPlasmaCoulombCollision( islice, m_all_collisions[i].m_collide_every,
+            CoulombCollision::doBeamPlasmaCoulombCollision( islice, m_all_collisions[i].m_collision_period,
                 lev, m_slice_geom[0].Domain(), m_slice_geom[0], species1, species2,
                 m_all_collisions[i].m_CoulombLog, m_background_density_SI);
         } else {
@@ -1311,7 +1311,7 @@ Hipace::doCoulombCollision (int islice)
 
             // TODO: enable tiling
 
-            CoulombCollision::doPlasmaPlasmaCoulombCollision( islice, m_all_collisions[i].m_collide_every,
+            CoulombCollision::doPlasmaPlasmaCoulombCollision( islice, m_all_collisions[i].m_collision_period,
                 lev, m_slice_geom[0].Domain(), m_slice_geom[0], species1, species2, m_all_collisions[i].m_isSameSpecies,
                 m_all_collisions[i].m_CoulombLog, m_background_density_SI);
         }

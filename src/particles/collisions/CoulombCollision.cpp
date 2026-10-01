@@ -25,7 +25,7 @@ CoulombCollision::ReadParameters(
 
     // default Coulomb log is -1, if < 0 (e.g. not specified), will be computed automatically
     pp.query("CoulombLog", m_CoulombLog);
-    // how often the collision operator should be applied - every m_collide_every'th slice
+    // how often the collision operator should be applied - every m_collision_period slices
     pp.query("collision_period", m_collision_period);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
         m_collision_period >= 1,
@@ -64,12 +64,12 @@ CoulombCollision::ReadParameters(
 }
 
 void
-CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collide_every,
+CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collision_period,
     int lev, const amrex::Box& bx, const amrex::Geometry& geom, PlasmaParticleContainer& species1,
     PlasmaParticleContainer& species2, bool is_same_species, amrex::Real CoulombLog,
     amrex::Real background_density_SI)
 {
-    if (islice%collide_every != 0) {return;}
+    if (islice%collision_period != 0) {return;}
 
     HIPACE_PROFILE("CoulombCollision::doCoulombCollision()");
     AMREX_ALWAYS_ASSERT(lev == 0);
@@ -116,7 +116,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collide_every
                                             (PhysConstSI::ep0*PhysConstSI::m_e));
             amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
-            dt = dt * collide_every;
+            dt = dt * collision_period;
 
             amrex::ParallelForRNG(
                 n_cells,
@@ -196,7 +196,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collide_every
                                             (PhysConstSI::ep0*PhysConstSI::m_e));
             amrex::Real dt = normalized_units ? geom.CellSize(2)/wp
                                                     : geom.CellSize(2)/PhysConstSI::c;
-            dt = dt * collide_every;
+            dt = dt * collision_period;
             // Extract particles in the tile that `mfi` points to
             // ParticleTileType& ptile_1 = species_1->ParticlesAt(lev, mfi);
             // ParticleTileType& ptile_2 = species_2->ParticlesAt(lev, mfi);
