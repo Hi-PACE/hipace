@@ -100,16 +100,18 @@ BeamParticleContainer::ReadParameters ()
 
     if (queryWithParser(pp, "phaseshifter_z", m_phaseshifter_z)) {
         m_nphaseshifter = m_phaseshifter_z.size();
-        getWithParser(pp, "phaseshifter_drift", m_phaseshifter_drift);
-        getWithParser(pp, "phaseshifter_lr", m_phaseshifter_lr);
-        AMREX_ALWAYS_ASSERT(m_phaseshifter_drift.size() == static_cast<std::size_t>(m_nphaseshifter));
-        AMREX_ALWAYS_ASSERT(m_phaseshifter_lr.size() == static_cast<std::size_t>(m_nphaseshifter));
+        m_phaseshifter_drift.resize(m_nphaseshifter);
+        m_phaseshifter_lr.resize(m_nphaseshifter);
         m_phaseshifter_gamma.resize(m_nphaseshifter);
         m_phaseshifter_dz.resize(m_nphaseshifter);
         for (int i=0; i<m_nphaseshifter; ++i) {
+            m_phaseshifter_drift[i] = -1.;
+            m_phaseshifter_lr[i] = 1.;
             m_phaseshifter_gamma[i] = -1;
             m_phaseshifter_dz[i] = 0;
         }
+        queryWithParser(pp, "phaseshifter_drift", m_phaseshifter_drift);
+        queryWithParser(pp, "phaseshifter_lr", m_phaseshifter_lr);
         queryWithParser(pp, "phaseshifter_gamma", m_phaseshifter_gamma);
         queryWithParser(pp, "phaseshifter_dz", m_phaseshifter_dz);
     }
