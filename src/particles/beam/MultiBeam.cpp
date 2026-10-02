@@ -7,6 +7,7 @@
  */
 #include "MultiBeam.H"
 #include "particles/deposition/BeamDepositCurrent.H"
+#include "particles/deposition/HelmholtzDeposition.H"
 #include "particles/sorting/SliceSort.H"
 #include "particles/pusher/BeamParticleAdvance.H"
 #include "utils/DeprecatedInput.H"
@@ -19,6 +20,9 @@ MultiBeam::ReadParameters ()
     amrex::ParmParse pp("beams");
     queryWithParser(pp, "names", m_names);
     if (m_names[0] == "no_beam") return;
+
+    queryWithParser(pp, "tstart_push", m_tstart_push);
+
     DeprecatedInput("beams", "insitu_freq", "insitu_period");
     DeprecatedInput("beams", "all_from_file",
         "injection_type = from_file\nand beams.input_file = <file name>\n");
@@ -62,6 +66,14 @@ MultiBeam::DepositCurrentSlice (
 }
 
 void
+MultiBeam::HelmholtzDeposition (Helmholtz& helmholtz, const int which_beam_slice, amrex::Real time)
+{
+    for (int i=0; i<m_nbeams; i++) {
+        ::HelmholtzDeposition(m_all_beams[i], helmholtz, which_beam_slice, time);
+    }
+}
+
+void
 MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 {
     for (int i=0; i<m_nbeams; i++) {
@@ -72,14 +84,15 @@ MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 void
 MultiBeam::AdvanceBeamParticlesSlice (
     const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
-    int const current_N_level)
+    int const current_N_level, const Helmholtz& helmholtz)
 {
+    if (Hipace::GetInstance().m_physical_time < m_tstart_push) return;
     for (int i=0; i<m_nbeams; i++) {
         if (m_all_beams[i].m_do_push){
-            ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level);
+            ::AdvanceBeamParticlesSlice(
+                m_all_beams[i], fields, gm, slice, current_N_level, helmholtz);
         }
     }
-
 }
 
 void

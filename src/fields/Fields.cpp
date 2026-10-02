@@ -495,7 +495,8 @@ Multiply (amrex::MultiFab dst, const amrex::Real factor, const FV& src)
 
 void
 Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
-              const amrex::Vector<amrex::Geometry>& field_geom, MultiLaser& multi_laser)
+              const amrex::Vector<amrex::Geometry>& field_geom, MultiLaser& multi_laser,
+              Helmholtz& helmholtz)
 {
     HIPACE_PROFILE("Fields::Copy()");
     constexpr int depos_order_xy = 1;
@@ -566,6 +567,9 @@ Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
     auto& laser_mf = multi_laser.getSlices();
     auto laser_func = interpolated_field_xy<depos_order_xy,
         guarded_field_xy>{{laser_mf}, multi_laser.GetLaserGeom()};
+    auto& helmholtz_mf = helmholtz.getSlices();
+    auto helmholtz_func = interpolated_field_xy<depos_order_xy,
+        guarded_field_xy>{{helmholtz_mf}, helmholtz.GetHelmholtzGeom()};
 
     m_rel_z_vec.copyToDeviceAsync();
 
@@ -623,6 +627,19 @@ Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
                             rel_z_data[k-k_min] * laser_array(x,y,m+1)
                         };
                     }
+                });
+        } else if (fd.m_base_diag_type == DiagnosticData::diag_type::helmholtz &&
+                   helmholtz.UseHelmholtz(i_slice)) {
+            auto helmholtz_array = helmholtz_func.array(mfi);
+            amrex::Array4<amrex::Real> diag_array = fd.m_F_real.array();
+
+            amrex::ParallelFor(diag_box, fd.m_nfields,
+                               [=] AMREX_GPU_DEVICE(int i, int j, int k, int n) noexcept
+                {
+                    const amrex::Real x = i * dx + poff_diag_x;
+                    const amrex::Real y = j * dy + poff_diag_y;
+                    const int m = n[diag_comps];
+                    diag_array(i,j,k,n) += rel_z_data[k-k_min] * helmholtz_array(x, y, m);
                 });
         }
     }

@@ -59,6 +59,63 @@ BeamParticleContainer::ReadParameters ()
     queryWithParser(pp, "do_z_push", m_do_z_push);
     queryWithParserAlt(pp, "do_push", m_do_push, pp_alt);
     queryWithParserAlt(pp, "do_radiation_reaction", m_do_radiation_reaction, pp_alt);
+
+    if (queryWithParser(pp, "thinquad_K", m_thinquad_K)) {
+        m_nthinquad = m_thinquad_K.size();
+        getWithParser(pp, "thinquad_z", m_thinquad_z);
+        AMREX_ALWAYS_ASSERT(m_thinquad_z.size() == static_cast<std::size_t>(m_nthinquad));
+    }
+
+    if (queryWithParser(pp, "thickquad_k1ga", m_thickquad_k1ga)) {
+        m_nthickquad = m_thickquad_k1ga.size();
+        getWithParser(pp, "thickquad_z", m_thickquad_z);
+        AMREX_ALWAYS_ASSERT(m_thickquad_z.size() == static_cast<std::size_t>(m_nthickquad));
+        getWithParser(pp, "thickquad_l", m_thickquad_l);
+        AMREX_ALWAYS_ASSERT(m_thickquad_l.size() == static_cast<std::size_t>(m_nthickquad));
+    }
+
+    if (queryWithParser(pp, "undulator_z", m_undulator_z)) {
+        m_nundulator = m_undulator_z.size();
+        getWithParser(pp, "undulator_B0", m_undulator_B0);
+        AMREX_ALWAYS_ASSERT(m_undulator_B0.size() == static_cast<std::size_t>(m_nundulator));
+        getWithParser(pp, "undulator_period", m_undulator_period);
+        AMREX_ALWAYS_ASSERT(m_undulator_period.size() == static_cast<std::size_t>(m_nundulator));
+        getWithParser(pp, "undulator_nperiod", m_undulator_nperiod);
+        AMREX_ALWAYS_ASSERT(m_undulator_nperiod.size() == static_cast<std::size_t>(m_nundulator));
+        m_undulator_kx.resize(m_nundulator);
+        m_undulator_ky.resize(m_nundulator);
+        m_undulator_fcK.resize(m_nundulator);
+        for (int i=0; i<m_nundulator; ++i) {
+            m_undulator_kx[i] = 0;
+            m_undulator_ky[i] = 2*MathConst::pi/m_undulator_period[i];
+            amrex::Real K = PhysConstSI::q_e * m_undulator_B0[i] * m_undulator_period[i] /
+                (2*MathConst::pi*PhysConstSI::m_e*PhysConstSI::c);
+            amrex::Real chi = K*K / 4 / (1+K*K/2);
+            m_undulator_fcK[i] = (amrex::parser_math_jn_host(0,chi)-amrex::parser_math_jn_host(1,chi)) * K;
+        }
+        m_undulator_kx.copyToDeviceAsync();
+        m_undulator_ky.copyToDeviceAsync();
+        m_undulator_fcK.copyToDeviceAsync();
+    }
+
+    if (queryWithParser(pp, "phaseshifter_z", m_phaseshifter_z)) {
+        m_nphaseshifter = m_phaseshifter_z.size();
+        m_phaseshifter_drift.resize(m_nphaseshifter);
+        m_phaseshifter_lr.resize(m_nphaseshifter);
+        m_phaseshifter_gamma.resize(m_nphaseshifter);
+        m_phaseshifter_dz.resize(m_nphaseshifter);
+        for (int i=0; i<m_nphaseshifter; ++i) {
+            m_phaseshifter_drift[i] = -1.;
+            m_phaseshifter_lr[i] = 1.;
+            m_phaseshifter_gamma[i] = -1;
+            m_phaseshifter_dz[i] = 0;
+        }
+        queryWithParser(pp, "phaseshifter_drift", m_phaseshifter_drift);
+        queryWithParser(pp, "phaseshifter_lr", m_phaseshifter_lr);
+        queryWithParser(pp, "phaseshifter_gamma", m_phaseshifter_gamma);
+        queryWithParser(pp, "phaseshifter_dz", m_phaseshifter_dz);
+    }
+
     queryWithParserAlt(pp, "insitu_period", m_insitu_period.m_func_str, pp_alt);
     m_insitu_period.compile();
     m_insitu_file_prefix = Hipace::m_output_folder + "/insitu";
@@ -76,8 +133,11 @@ BeamParticleContainer::ReadParameters ()
     amrex::Array<int, 2> idx_array
         {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
-    queryWithParserAlt(pp, "output_ratio", m_output_ratio, pp_alt);
+    bool output_ratio_specified  = queryWithParserAlt(pp, "output_ratio", m_output_ratio, pp_alt);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_output_ratio >= 1, "output_ratio must be >= 1");
+    bool output_ids_specified = queryWithParserAlt(pp, "output_ids", m_output_ids, pp_alt);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(output_ratio_specified + output_ids_specified < 2,
+        "cannot specify both <beam>.output_ratio and <beam>.output_ids");
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
     amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
     m_use_external_fields = queryWithParserAlt(pp, "external_E(x,y,z,t)", field_str, pp_alt);
@@ -135,6 +195,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     amrex::ParmParse pp(m_name);
     amrex::ParmParse pp_alt("beams");
     amrex::Real ptime {0.};
+
     if (m_injection_type == "fixed_ppc") {
 
         queryWithParser(pp, "ppc", m_ppc);
@@ -674,6 +735,7 @@ BeamParticleContainer::InSituWriteToFile (int step, amrex::Real time, const amre
         geom.CellSizeArray().product() : 1; // dx * dy * dz in normalized units, 1 otherwise
     const int is_normalized_units = Hipace::m_normalized_units;
 
+    m_avg_uz_prev = m_insitu_sum_rdata[11] * sum_w0_inv;
     // specify the structure of the data later available in python
     // avoid pointers to temporary objects as second argument, stack variables are ok
     amrex::Vector<insitu_utils::DataNode> all_data{

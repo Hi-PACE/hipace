@@ -1,0 +1,77 @@
+################################################
+## WORK IN PROGRESS, NOT READY FOR PRODUCTION ##
+################################################
+
+# Beam
+my_constants.gamma = 1e3*E_GeV/.511+1
+my_constants.Lbeam = 100e-6
+my_constants.w0 = 100e-6
+my_constants.E_GeV = 2.4
+
+# Chicane
+my_constants.theta = .1
+my_constants.Lmag = 0.01
+my_constants.dslope = 0.08/cos(theta)
+my_constants.Bmag = gamma * m_e * clight * theta / q_e / Lmag
+my_constants.z1 = 0.1
+my_constants.z2 = z1 + Lmag + dslope
+my_constants.z3 = z2 + Lmag + 0.1
+my_constants.z4 = z3 + Lmag + dslope
+my_constants.dz = 0.0001
+
+beams.chicBs = Bmag -Bmag -Bmag Bmag
+beams.chicLs = Lmag Lmag Lmag Lmag
+beams.chicZs = z1 z2 z3 z4
+beams.tstart_push = z1/clight
+
+hipace.dt = "dz/clight"
+max_step = 100000
+hipace.max_time = "(z4 + 2*Lmag) / clight"
+comms_buffer.on_gpu = 1
+hipace.do_device_synchronize = 0
+
+hipace.verbose = 4
+hipace.output_input = 0
+my_constants.output_period = 200
+
+comms_buffer.async_memcpy = 0
+boundary.field = Dirichlet
+boundary.particle = Reflecting
+geometry.prob_lo     = -30e-3 -100e-3 -2500e-6
+geometry.prob_hi      = 60e-3  100e-3   300e-6
+amr.n_cell = 512 128 800
+
+plasmas.names = no_plasma
+
+beams.names = beam beamsub
+beams.insitu_period = output_period
+
+beam.injection_type = fixed_weight_pdf
+beam.pdf = exp(-.5*z**2/Lbeam**2)
+beam.position_mean = 0 0
+beam.position_std = w0 w0
+beam.total_charge = 200e-12
+beam.u_mean = 0 0 gamma
+beam.u_std = 0.4e-6/w0 0.4e-6/w0 gamma*1e-7
+beam.num_particles = 2e7
+beam.n_subcycles = 10
+
+beamsub.injection_type = fixed_weight_pdf
+beamsub.pdf = exp(-.5*z**2/Lbeam**2)
+beamsub.position_mean = 0 0
+beamsub.position_std = w0 w0
+beamsub.total_charge = 200e-27
+beamsub.u_mean = 0 0 gamma
+beamsub.u_std = 0.4e-6/w0 0.4e-6/w0 gamma*1e-7
+beamsub.num_particles = 1e5
+beamsub.n_subcycles = 10
+
+helmholtz.use_helmholtz = 1
+helmholtz.insitu_period = output_period
+
+diagnostic.names = helmholtz_diag
+diagnostic.diag_type = xz
+diagnostic.beam_data = beamsub
+diagnostic.beam_output_period = output_period
+diagnostic.output_period = output_period
+diagnostic.base_geometry = helmholtz

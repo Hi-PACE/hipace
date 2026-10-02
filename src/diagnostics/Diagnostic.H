@@ -19,6 +19,7 @@ class Fields;
 class MultiBeam;
 class MultiLaser;
 class MultiPlasma;
+class Helmholtz;
 
 
 /** \brief This struct holds data for one field diagnostic on one MR level */
@@ -28,6 +29,7 @@ struct DiagnosticData
     enum struct diag_type {
         field,
         laser,
+        helmholtz,
         histogram
     } m_base_diag_type = diag_type::field;  /**< which geometry the diagnostics is based on */
     /** Number of iterations between consecutive output dumps.
@@ -83,10 +85,10 @@ class Diagnostic
 public:
 
     /** Read parameters from the input file */
-    void ReadParameters (int nlev, bool use_laser);
+    void ReadParameters (int nlev, bool use_laser, bool use_helmholtz);
 
     /** \brief Determine which data to output */
-    void Initialize (int nlev, bool use_laser);
+    void Initialize (int nlev, bool use_laser, bool use_helmholtz);
 
     /** \brief return names of the beams to output */
     amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
@@ -168,13 +170,14 @@ public:
      *
      * \param[in] field_geom geometry of the full simulation domain for all field MR levels
      * \param[in] laser_geom geometry of the full simulation domain for the laser
+     * \param[in] helmholtz_geom geometry of the full simulation domain for the helmholtz grid
      * \param[in] output_step current step index
      * \param[in] output_time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
     void ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
-                         amrex::Geometry const& laser_geom, int output_step,
-                         amrex::Real output_time, bool is_last_step);
+                         amrex::Geometry const& laser_geom, amrex::Geometry const& helmholtz_geom,
+                         int output_step, amrex::Real output_time, bool is_last_step);
 
     /** \brief calculate where data from slice islice will go to using zeroth-order interpolation
      * returns if this slice is needed and the destination slice index
@@ -207,12 +210,13 @@ public:
      * \param[in] lasers MultiLaser object
      * \param[in] plasmas MultiPlasma object
      * \param[in] beams MultiBeam object
+     * \param[in] helmholtz Helmholtz object
      * \param[in] field_geom geometry for all field MR levels
      */
     void
     FillDiagnostics (int islice, int current_N_level,
                      Fields& fields, MultiLaser& lasers,
-                     MultiPlasma& plasmas, MultiBeam& beams,
+                     MultiPlasma& plasmas, MultiBeam& beams, Helmholtz& helmholtz,
                      const amrex::Vector<amrex::Geometry>& field_geom);
 
     /** \brief Collect histograms from particles that exited the domain

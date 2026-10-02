@@ -17,6 +17,7 @@
 #include "utils/AdaptiveTimeStep.H"
 #include "utils/GridCurrent.H"
 #include "laser/MultiLaser.H"
+#include "helmholtz/Helmholtz.H"
 #include "utils/Constants.H"
 #include "utils/GridIonization.H"
 #include "utils/Parser.H"
@@ -280,6 +281,8 @@ public:
     inline static bool m_use_amrex_mlmg = false;
     /** Whether the simulation uses a laser pulse */
     inline static bool m_use_laser = false;
+    /** Whether the simulation uses Helmholtz */
+    inline static bool m_use_helmholtz = false;
     /** Background plasma density in SI, used to compute collisions, ionization,
      * or radiation reaction in normalized units */
     inline static amrex::Real m_background_density_SI = 0.;
@@ -291,6 +294,8 @@ public:
     AdaptiveTimeStep m_adaptive_time_step;
     /** Laser instance (soon to be multi laser container) */
     MultiLaser m_multi_laser;
+    /** Helmholtz solver instance */
+    Helmholtz m_helmholtz;
     /** GridCurrent instance */
     GridCurrent m_grid_current;
     /** GridIonization instance */

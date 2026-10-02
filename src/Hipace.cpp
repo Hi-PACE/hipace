@@ -82,9 +82,10 @@ Hipace::Hipace () :
     m_multi_plasma.ReadParameters();
     m_adaptive_time_step.ReadParameters(m_multi_beam.get_nbeams());
     m_multi_laser.ReadParameters();
+    m_helmholtz.ReadParameters();
     m_grid_current.ReadParameters();
     m_grid_ionization.ReadParameters();
-    m_diags.ReadParameters(m_N_level, m_multi_laser.UseLaser());
+    m_diags.ReadParameters(m_N_level, m_multi_laser.UseLaser(), m_helmholtz.UseHelmholtz());
 #ifdef HIPACE_USE_OPENPMD
     m_openpmd_writer.ReadParameters();
 #endif
@@ -256,6 +257,10 @@ Hipace::ReadParameters ()
 
     m_use_laser = m_multi_laser.UseLaser();
 
+    m_helmholtz.MakeHelmholtzGeometry(m_3D_geom[0]);
+
+    m_use_helmholtz = m_helmholtz.UseHelmholtz();
+
     queryWithParser(pph, "collisions", m_collision_names);
     /** Initialize the collision objects */
     m_ncollisions = m_collision_names.size();
@@ -307,7 +312,9 @@ Hipace::InitData ()
         m_fields.AllocData(lev, m_3D_geom[lev], m_slice_ba[lev], m_slice_dm[lev]);
     }
 
-    m_diags.Initialize(m_N_level, m_multi_laser.UseLaser());
+    m_helmholtz.InitData();
+
+    m_diags.Initialize(m_N_level, m_multi_laser.UseLaser(), m_use_helmholtz);
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
 
@@ -319,7 +326,7 @@ Hipace::InitData ()
 
     m_adaptive_time_step.BroadcastTimeStep(m_dt);
 
-    m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2), m_multi_beam, m_multi_laser);
+    m_multi_buffer.initialize(m_3D_geom[0].Domain().length(2), m_multi_beam, m_multi_laser, m_helmholtz);
 
     amrex::ParmParse pph("hipace");
     queryWithParser(pph, "initial_time", m_initial_time);
@@ -515,7 +522,7 @@ Hipace::Evolve ()
 
         const amrex::Box& bx = m_3D_ba[0][0];
 
-        if (m_multi_laser.UseLaser()) {
+        if (m_multi_laser.UseLaser() || m_use_helmholtz) {
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                 !m_adaptive_time_step.m_do_adaptive_time_step,
                 "Adaptive time step cannot be used with laser pulses."
@@ -609,6 +616,7 @@ Hipace::Evolve ()
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
         m_multi_plasma.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
         m_multi_laser.InSituWriteToFile(step, m_physical_time, is_last_step);
+        m_helmholtz.InSituWriteToFile(step, m_physical_time, is_last_step);
 
         if (!m_explicit) {
             // averaging predictor corrector loop diagnostics
@@ -693,7 +701,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     }
 
     if (islice == m_3D_geom[0].Domain().bigEnd(2)) {
-        m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This);
+        m_multi_buffer.get_data(islice, m_multi_beam, m_multi_laser, m_helmholtz, WhichBeamSlice::This);
         m_multi_beam.ReorderParticles( WhichBeamSlice::This, step, m_slice_geom[0]);
     }
 
@@ -724,6 +732,10 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // deposit current
     for (int lev=0; lev<current_N_level; ++lev) {
+
+        // do nothing if Helmholtz on
+        if (m_use_helmholtz) { break; }
+
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
             m_multi_plasma.DepositCurrent(m_fields, WhichSlice::This, true, false,
@@ -751,8 +763,15 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         m_grid_current.DepositCurrentSlice(m_fields, m_3D_geom[lev], lev, islice);
     }
 
-    // Psi ExmBy EypBx Ez Bz solve
-    m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
+    if (m_use_helmholtz && !m_helmholtz.DepositNext()) {
+        m_multi_beam.HelmholtzDeposition(m_helmholtz, WhichBeamSlice::This, m_physical_time);
+        m_helmholtz.AdvanceSlice(islice, m_dt, step);
+    }
+
+    if (!m_use_helmholtz) {
+        // Psi ExmBy EypBx Ez Bz solve
+        m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
+    }
 
     // Calculate grid ionization and update chi
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -765,8 +784,13 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     m_multi_laser.AdvanceSlice(islice, m_fields, m_dt, is_first_step, m_3D_geom[0]);
 
     if (islice-1 >= m_3D_geom[0].Domain().smallEnd(2)) {
-        m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, WhichBeamSlice::Next);
+        m_multi_buffer.get_data(islice-1, m_multi_beam, m_multi_laser, m_helmholtz, WhichBeamSlice::Next);
         m_multi_beam.ReorderParticles( WhichBeamSlice::Next, step, m_slice_geom[0]);
+    }
+
+    if (m_use_helmholtz && m_helmholtz.DepositNext()) {
+        m_multi_beam.HelmholtzDeposition(m_helmholtz, WhichBeamSlice::Next, m_physical_time);
+        m_helmholtz.AdvanceSlice(islice, m_dt, step);
     }
 
     if (m_N_level > 1) {
@@ -776,6 +800,10 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // Bx By solve
     if (m_explicit) {
         for (int lev=0; lev<current_N_level; ++lev) {
+
+            // do nothing if Helmholtz on
+            if (m_use_helmholtz) { break; }
+
             // The algorithm used was derived in
             // [Wang, T. et al. Phys. Rev. Accel. Beams 25, 104603 (2022)],
             // it is implemented in the WAND-PIC quasistatic PIC code.
@@ -821,11 +849,15 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // get laser insitu diagnostics
     m_multi_laser.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
 
+    // get helmholtz insitu diagnostics
+    m_helmholtz.InSituComputeDiags(step, m_physical_time, islice, is_last_step);
+
     // copy fields, laser, plasma and beam to diagnostic array
     m_diags.FillDiagnostics(
         islice, current_N_level,
         m_fields, m_multi_laser,
         m_multi_plasma, m_multi_beam,
+        m_helmholtz,
         m_3D_geom
     );
 
@@ -850,7 +882,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     m_adaptive_time_step.GatherMinAccSlice(m_multi_beam, m_3D_geom[0], m_fields);
 
     // Push beam particles
-    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level);
+    m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level, m_helmholtz);
 
     // get plasma and beam histograms of particles that exited the domain after push
     m_diags.FillBoundaryHistDiagnostics(islice, m_multi_plasma, m_multi_beam, m_3D_geom);
@@ -863,7 +895,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
 
-    m_multi_buffer.put_data(islice, m_multi_beam, m_multi_laser, WhichBeamSlice::This, is_last_step);
+    m_multi_buffer.put_data(islice, m_multi_beam, m_multi_laser, m_helmholtz,
+                            WhichBeamSlice::This, is_last_step);
 
     // shift all levels
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -873,6 +906,8 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     m_multi_beam.shiftBeamSlices();
 
     m_multi_laser.ShiftLaserSlices(islice);
+
+    m_helmholtz.ShiftHelmholtzSlices(islice);
 }
 
 void
@@ -913,6 +948,10 @@ Hipace::ResetAllQuantities ()
 {
     if (m_use_laser) {
         m_multi_laser.getSlices().setVal(0.);
+    }
+
+    if (m_use_helmholtz) {
+        m_helmholtz.getSlices().setVal(0.);
     }
 
     for (int lev=0; lev<m_N_level; ++lev) {
@@ -1330,7 +1369,8 @@ Hipace::InitDiagnostics (const int step, const amrex::Real time, const bool is_l
         m_openpmd_writer.InitBeamData(m_multi_beam, getDiagBeamNames());
     }
 #endif
-    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(), step, time, is_last_step);
+    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(), m_helmholtz.GetHelmholtzGeom(),
+                           step, time, is_last_step);
 }
 
 void

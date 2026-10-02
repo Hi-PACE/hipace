@@ -193,6 +193,8 @@ public:
         return icomp < BeamIdx::int_nattribs_in_buffer;
     }
 
+    amrex::Real m_avg_uz_prev {0};
+
 private:
     int m_slice_permutation = 0;
     std::array<BeamTile, WhichBeamSlice::N> m_slices {};
@@ -228,6 +230,30 @@ public:
     amrex::Real m_spin_anom = 0.00115965218128;
     /** ratio of beam particles that are written to the openPMD output */
     int m_output_ratio = 1;
+    amrex::Array<int, 2> m_output_ids {-1, -1};
+
+    int m_nundulator {0};
+    amrex::Gpu::Buffer<amrex::Real> m_undulator_z;
+    amrex::Gpu::Buffer<amrex::Real> m_undulator_B0;
+    amrex::Gpu::Buffer<amrex::Real> m_undulator_period;
+    amrex::Gpu::Buffer<amrex::Real> m_undulator_fcK;
+    amrex::Gpu::Buffer<amrex::Real> m_undulator_nperiod;
+    amrex::Gpu::Buffer<amrex::Real> m_undulator_kx;
+    amrex::Gpu::Buffer<amrex::Real> m_undulator_ky;
+    int m_nthinquad {0};
+    amrex::Gpu::Buffer<amrex::Real> m_thinquad_K;
+    amrex::Gpu::Buffer<amrex::Real> m_thinquad_z;
+    int m_nthickquad {0};
+    amrex::Gpu::Buffer<amrex::Real> m_thickquad_z;
+    amrex::Gpu::Buffer<amrex::Real> m_thickquad_l;
+    amrex::Gpu::Buffer<amrex::Real> m_thickquad_k1ga;
+    int m_nphaseshifter {0};
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_z;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_dz;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_drift;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_lr;
+    amrex::Gpu::Buffer<amrex::Real> m_phaseshifter_gamma;
+
 private:
     std::string m_name; /**< name of the species */
     /** injection type, fixed_width or fixed_ppc */

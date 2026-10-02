@@ -225,6 +225,7 @@ OpenPMDWriter::WriteFieldData (
 
         switch (fd.m_base_diag_type) {
             case DiagnosticData::diag_type::field:
+            case DiagnosticData::diag_type::helmholtz:
             case DiagnosticData::diag_type::histogram:
                 field_comp.storeChunkRaw(fd.m_F_real.dataPtr(icomp), chunk_offset, chunk_size);
                 break;
@@ -267,6 +268,10 @@ OpenPMDWriter::InitBeamData (MultiBeam& beams, const amrex::Vector< std::string 
 
         if (beam.m_output_ratio > 1) {
             np_total = (np_total + beam.m_output_ratio - 1) / beam.m_output_ratio;
+        }
+
+        if (beam.m_output_ids[0] > -1) {
+            np_total = beam.m_output_ids[1] - beam.m_output_ids[0] + 1;
         }
 
         m_uint64_beam_data[ibeam].resize(m_int_names.size());
@@ -377,6 +382,22 @@ OpenPMDWriter::CopyBeams (MultiBeam& beams, const amrex::Vector< std::string > b
             np = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),
                 [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
                     return i < int(np) && ptd.idcpu(i) % output_ratio == 0;
+                }
+            );
+        }
+
+        const int output_id_min = beam.m_output_ids[0];
+        const int output_id_max = beam.m_output_ids[1];
+
+        if (output_id_min > -1) {
+            np = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),
+                [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
+                    uint64_t id = ptd.idcpu(i);
+                    amrex::ParticleIDWrapper{id}.make_invalid();
+                    int keep = (i < int(np)) &&
+                        (id >= output_id_min) &&
+                        (id <= output_id_max);
+                    return keep;
                 }
             );
         }

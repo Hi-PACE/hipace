@@ -1,0 +1,80 @@
+################################################
+## WORK IN PROGRESS, NOT READY FOR PRODUCTION ##
+################################################
+
+# Beam
+my_constants.gamma = 300/0.511
+my_constants.Lbeam = 25*lr
+my_constants.w0 = 100e-6
+my_constants.lbox = 8
+
+# Undulator
+my_constants.lu = 15.e-3
+my_constants.K = 2
+my_constants.nperiod = 300 # 50
+my_constants.ku = 2*pi/lu
+my_constants.B0 = m_e*clight*ku*K/q_e
+my_constants.lr = lu/2/gamma**2*(1+K**2/2)
+
+# Numerics
+my_constants.nsteps_per_period = 20 # 40
+my_constants.dz_per_wavelength = 40 # 100
+my_constants.phase = pi/nsteps_per_period
+my_constants.zmin = -3*Lbeam-nperiod*lr
+my_constants.zmax =  4*Lbeam
+my_constants.nx = 128 # 256
+
+hipace.dt = lu/clight/nsteps_per_period
+max_step = nsteps_per_period*nperiod
+comms_buffer.on_gpu = 1
+hipace.do_device_synchronize = 0
+
+comms_buffer.async_memcpy = 1
+boundary.field = Dirichlet
+boundary.particle = Reflecting
+geometry.prob_lo     = -lbox*w0 -lbox*w0 zmin
+geometry.prob_hi     =  lbox*w0  lbox*w0 zmax
+amr.n_cell = "nx" "nx" "((zmax-zmin)/lr*dz_per_wavelength+1)"
+
+plasmas.names = no_plasma
+
+beams.names = beam beamsub
+beams.insitu_period = nsteps_per_period
+
+beam.injection_type = fixed_weight_pdf # fixed_weight
+beam.pdf = exp(-.5*z**2/Lbeam**2)    # * (1+0.1*cos(kr*z))
+beam.position_mean = 0 0
+beam.position_std = w0 w0
+beam.total_charge = 100e-12 # 1.1e-9
+beam.u_mean = 0 0 gamma
+beam.u_std = gamma*1e-6 gamma*1e-6 gamma*1e-4
+beam.num_particles = 2e7
+beam.n_subcycles = 10
+beam.use_mag = 1
+beam.mag_B0 = B0
+beam.mag_period = lu
+beam.mag_phase = phase
+
+beamsub.injection_type = fixed_weight_pdf # fixed_weight
+beamsub.pdf = exp(-.5*z**2/Lbeam**2)        #  * (1+0.1*cos(kr*z))
+beamsub.position_mean = 0 0
+beamsub.position_std = w0 w0
+beamsub.total_charge = 1e-100
+beamsub.u_mean = 0 0 gamma
+beamsub.u_std = gamma*1e-6 gamma*1e-6 gamma*1e-4
+beamsub.num_particles = 2e5
+beamsub.n_subcycles = 10
+beamsub.use_mag = 1
+beamsub.mag_B0 = B0
+beamsub.mag_period = lu
+beamsub.mag_phase = phase
+
+helmholtz.use_helmholtz = 1
+helmholtz.insitu_period = nsteps_per_period
+
+diagnostic.names = helmholtz_diag
+diagnostic.diag_type = xz
+diagnostic.beam_data = beamsub
+diagnostic.beam_output_period = 10*nsteps_per_period
+diagnostic.output_period = 10*nsteps_per_period
+diagnostic.base_geometry = helmholtz
