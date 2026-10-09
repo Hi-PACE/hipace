@@ -1177,7 +1177,7 @@ Please make sure to always clear or rename the output folder before running a ne
       * Laser diagnostic: ``laser``
       * Beam diagnostic: ``beam``
       * Plasma diagnostic at one zeta-slice: ``plasma_slice``
-      * Plasma and beam diagnostic of particles exeting the domain transversely: ``particle_boundary``
+      * Plasma and beam diagnostic of particles exiting the domain transversely: ``particle_boundary``
     If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag beam_diag``, the default for this parameter
     becomes ``level_0 level_1 level_2 laser beam`` respectively.
 
@@ -1207,18 +1207,23 @@ Beam diagnostics
 Plasma slice diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+This diagnostic outputs all plasma particles at one particular zeta slice of the domain.
+The format of the particle data is the one that hipace uses internally to allow for
+checkpoint-restart of the plasma particles in zeta. This means that the particle
+weight is defined differently and `1+psi` is given instead of `uz`.
+
 * ``<diag name>.species`` (`string`) optional (default `all`)
     Names of the plasma species written to file, separated by a space.
     The species names need to be ``all``, ``none`` or a subset of ``plasmas.names``.
 
 * ``<diag name>.plasma_output_slice`` (`int`) optional (default `0`)
-    On which zeta slice slice the plasma output should be done. Note that the simulation iterates
+    On which zeta slice the plasma output should be done. Note that the simulation iterates
     backwards over zeta, so the default of slice 0 is the last slice to be computed.
 
 Particle boundary diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This diagnostic collect data from particles that exit the simulation domain transversely through the
+This diagnostic collects data from particles that exit the simulation domain transversely through the
 ``boundary.particle = Absorbing`` boundary condition. For each particle that exits, the 3D position,
 momentum, weight and id is output. Note that for plasma particles this weight depends linearly on the
 time step ``hipace.dt`` of the simulation.

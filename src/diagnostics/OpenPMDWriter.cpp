@@ -261,7 +261,7 @@ OpenPMDWriter::WriteParticleData (DiagnosticData& fd, openPMD::Iteration& iterat
         const std::string& species_name = fd.m_species_names[i];
 
         openPMD::ParticleSpecies particle_species = iteration.particles[fd.m_comps_output[i]];
-        std::size_t np_total = static_cast<std::size_t>(fd.m_spceis_data[i].numParticles());
+        std::size_t np_total = static_cast<std::size_t>(fd.m_species_data[i].numParticles());
 
         SetupAttributes(species_name, particle_species, np_total, beams, plasmas, geom,
             fd.m_base_diag_type == DiagnosticData::diag_type::plasma_slice);
@@ -270,7 +270,7 @@ OpenPMDWriter::WriteParticleData (DiagnosticData& fd, openPMD::Iteration& iterat
 
         auto dataset_idcpu = openPMD::Dataset(openPMD::determineDatatype<uint64_t>(), {np_total});
         if (fd.m_idcpu_name[i] != "") {
-            uint64_t * const uint64_data = fd.m_spceis_data[i].GetIdCPUData().data();
+            uint64_t * const uint64_data = fd.m_species_data[i].GetIdCPUData().data();
 
             for (uint64_t j=0; j<np_total; ++j) {
                 uint64_t id = uint64_data[j];
@@ -302,7 +302,7 @@ OpenPMDWriter::WriteParticleData (DiagnosticData& fd, openPMD::Iteration& iterat
             currRecordComp.resetDataset(dataset_real);
             if (np_total != 0) {
                 currRecordComp.storeChunkRaw(
-                    fd.m_spceis_data[i].GetRealData(idx).data(), {0ull}, {np_total});
+                    fd.m_species_data[i].GetRealData(idx).data(), {0ull}, {np_total});
             }
         }
 
@@ -317,7 +317,7 @@ OpenPMDWriter::WriteParticleData (DiagnosticData& fd, openPMD::Iteration& iterat
             currRecordComp.resetDataset(dataset_int);
             if (np_total != 0) {
                 currRecordComp.storeChunkRaw(
-                    fd.m_spceis_data[i].GetIntData(idx).data(), {0ull}, {np_total});
+                    fd.m_species_data[i].GetIntData(idx).data(), {0ull}, {np_total});
             }
         }
     }
