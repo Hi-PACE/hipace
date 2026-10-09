@@ -230,9 +230,12 @@ Hipace::ReadParameters ()
         m_boundary_particles = ParticleBoundary::Periodic;
     } else if (particle_boundary == "Absorbing") {
         m_boundary_particles = ParticleBoundary::Absorbing;
+    } else if (particle_boundary == "Thermal") {
+        m_boundary_particles = ParticleBoundary::Thermal;
+        queryWithParser(ppb, "temperature_in_ev", m_boundary_temperature);
     } else {
         amrex::Abort("Unknown particle boundary '" + particle_boundary +
-            "', must be 'Reflecting', 'Periodic' or 'Absorbing'");
+            "', must be 'Reflecting', 'Periodic', 'Absorbing', or 'Thermal'");
     }
 
     MakeGeometry();
@@ -858,7 +861,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
     // collisions for plasmas and beams
-    doCoulombCollision();
+    doCoulombCollision(islice);
 
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
@@ -1286,7 +1289,7 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
 }
 
 void
-Hipace::doCoulombCollision ()
+Hipace::doCoulombCollision (int islice)
 {
 
     // collisions for all particles calculated on level 0
@@ -1311,7 +1314,7 @@ Hipace::doCoulombCollision ()
 
             // TODO: enable tiling
 
-            CoulombCollision::doPlasmaPlasmaCoulombCollision(
+            CoulombCollision::doPlasmaPlasmaCoulombCollision( islice, m_all_collisions[i].m_collision_period,
                 lev, m_slice_geom[0].Domain(), m_slice_geom[0], species1, species2, m_all_collisions[i].m_isSameSpecies,
                 m_all_collisions[i].m_CoulombLog, m_background_density_SI);
         }

@@ -84,7 +84,7 @@ struct DiagnosticData
     /** ratio of beam particles that are written to the openPMD output */
     int m_output_ratio = 1;
     amrex::Vector<std::string> m_species_names;
-    amrex::Vector<amrex::ParticleTileRT<amrex::Real, int>> m_spceis_data;
+    amrex::Vector<amrex::ParticleTileRT<amrex::Real, int>> m_species_data;
     amrex::Vector<std::string> m_idcpu_name;
     amrex::Vector<std::vector<std::string>> m_real_names;
     amrex::Vector<std::vector<std::string>> m_int_names;
@@ -247,7 +247,7 @@ private:
                              MultiPlasma& plasmas, MultiBeam& beams,
                              const amrex::Vector<amrex::Geometry>& field_geom);
 
-    /** \brief Given a list of input componetes, handle "all" and "remove_..." and make sure
+    /** \brief Given a list of input components, handle "all" and "remove_..." and make sure
      * all are available
      *
      * \param[in] specified_comps components from user input

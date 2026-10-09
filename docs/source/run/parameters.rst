@@ -231,6 +231,14 @@ Geometry
 
         * ``Absorbing`` Particles exiting the domain are deleted.
 
+        * ``Thermal`` Particles hitting the boundary are reflected back in with a thermalised velocity.
+            Can then specify the temperature using ``boundary.temperature_in_ev``.
+
+* ``boundary.temperature_in_ev`` (`float`) optional (default `1e-4`)
+    Particles thermalised from the walls of the domain have their velocities sampled from a Gaussian for the tangential component
+    to the boundary's plane, and from a Flux Gaussian for the normal component to the boundary's plane. The width of each of these
+    distributions is characterised by :math:`u=\sqrt{k_B T/Mc^2}`, where :math:`M` is the mass of the particle.
+
 * ``boundary.particle_lo`` (2 `float`) optional (default `<first two values of geometry.prob_lo>`)
     The lower location of the domain boundary the particles experience. By default, this is equal
     to the boundary of the fields however it may be shrunk to reduce noise originating from
@@ -1180,7 +1188,7 @@ Please make sure to always clear or rename the output folder before running a ne
       * Laser diagnostic: ``laser``
       * Beam diagnostic: ``beam``
       * Plasma diagnostic at one zeta-slice: ``plasma_slice``
-      * Plasma and beam diagnostic of particles exeting the domain transversely: ``particle_boundary``
+      * Plasma and beam diagnostic of particles exiting the domain transversely: ``particle_boundary``
     If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag beam_diag``, the default for this parameter
     becomes ``level_0 level_1 level_2 laser beam`` respectively.
 
@@ -1210,18 +1218,23 @@ Beam diagnostics
 Plasma slice diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+This diagnostic outputs all plasma particles at one particular zeta slice of the domain.
+The format of the particle data is the one that hipace uses internally to allow for
+checkpoint-restart of the plasma particles in zeta. This means that the particle
+weight is defined differently and `1+psi` is given instead of `uz`.
+
 * ``<diag name>.species`` (`string`) optional (default `all`)
     Names of the plasma species written to file, separated by a space.
     The species names need to be ``all``, ``none`` or a subset of ``plasmas.names``.
 
 * ``<diag name>.plasma_output_slice`` (`int`) optional (default `0`)
-    On which zeta slice slice the plasma output should be done. Note that the simulation iterates
+    On which zeta slice the plasma output should be done. Note that the simulation iterates
     backwards over zeta, so the default of slice 0 is the last slice to be computed.
 
 Particle boundary diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This diagnostic collect data from particles that exit the simulation domain transversely through the
+This diagnostic collects data from particles that exit the simulation domain transversely through the
 ``boundary.particle = Absorbing`` boundary condition. For each particle that exits, the 3D position,
 momentum, weight and id is output. Note that for plasma particles this weight depends linearly on the
 time step ``hipace.dt`` of the simulation.
@@ -1484,6 +1497,9 @@ As collisions depend on the physical density, in normalized units `hipace.backgr
 * ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
     Coulomb logarithm used for this collision.
     If not specified, the Coulomb logarithm is determined from the temperature in each cell.
+
+* ``<collision_name>.collision_period`` (`integer`) optional (default `1`)
+    Number of :math:`\zeta` slices between applying the elastic collision operator (useful when you are in a fairly collisionless regime, but still want to calculate elastic collisions). The timestep used for collisions is multiplied by this factor. Only applies to plasma-plasma collisions.
 
 Radiation reaction
 ^^^^^^^^^^^^^^^^^^

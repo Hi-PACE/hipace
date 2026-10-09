@@ -718,7 +718,7 @@ Diagnostic::InitDiagnosticsStep (amrex::Vector<amrex::Geometry>& field_geom,
 
             const std::size_t num_species = fd.m_species_names.size();
 
-            fd.m_spceis_data.resize(num_species);
+            fd.m_species_data.resize(num_species);
             fd.m_idcpu_name.resize(num_species);
             fd.m_real_names.resize(num_species);
             fd.m_int_names.resize(num_species);
@@ -771,7 +771,7 @@ Diagnostic::InitDiagnosticsStep (amrex::Vector<amrex::Geometry>& field_geom,
                     fd.m_int_names[i] = {};
                 }
 
-                fd.m_spceis_data[i].define(
+                fd.m_species_data[i].define(
                     fd.m_real_names[i].size(),
                     fd.m_int_names[i].size(),
                     &fd.m_real_names[i],
@@ -779,10 +779,10 @@ Diagnostic::InitDiagnosticsStep (amrex::Vector<amrex::Geometry>& field_geom,
                     amrex::The_Pinned_Arena()
                 );
 
-                fd.m_spceis_data[i].resize(0);
+                fd.m_species_data[i].resize(0);
 
                 if (fd.m_base_diag_type == DiagnosticData::diag_type::beam) {
-                    fd.m_spceis_data[i].reserve(np_total, amrex::GrowthStrategy::Exact);
+                    fd.m_species_data[i].reserve(np_total, amrex::GrowthStrategy::Exact);
                 }
             }
         }
@@ -894,33 +894,33 @@ Diagnostic::CopyBeams (DiagnosticData& fd, MultiBeam& beams)
             auto& slice = beam.getBeamSlice(WhichBeamSlice::This);
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                fd.m_spceis_data[i].NumRealComps() <= slice.NumRealComps() &&
-                fd.m_spceis_data[i].NumIntComps() <= slice.NumIntComps(),
+                fd.m_species_data[i].NumRealComps() <= slice.NumRealComps() &&
+                fd.m_species_data[i].NumIntComps() <= slice.NumIntComps(),
                 "List of real names in particle diagnostic does not match the beam");
 
-            const auto old_size = fd.m_spceis_data[i].numParticles();
+            const auto old_size = fd.m_species_data[i].numParticles();
             const auto new_size = old_size + np;
-            fd.m_spceis_data[i].resize(new_size, amrex::GrowthStrategy::Geometric);
+            fd.m_species_data[i].resize(new_size, amrex::GrowthStrategy::Geometric);
 
             if (fd.m_idcpu_name[i] != "") {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     slice.GetIdCPUData().begin(),
                     slice.GetIdCPUData().begin() + np,
-                    fd.m_spceis_data[i].GetIdCPUData().data() + old_size);
+                    fd.m_species_data[i].GetIdCPUData().data() + old_size);
             }
 
             for (std::size_t idx=0; idx<fd.m_real_names[i].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     slice.GetRealData(idx).begin(),
                     slice.GetRealData(idx).begin() + np,
-                    fd.m_spceis_data[i].GetRealData(idx).data() + old_size);
+                    fd.m_species_data[i].GetRealData(idx).data() + old_size);
             }
 
             for (std::size_t idx=0; idx<fd.m_int_names[i].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     slice.GetIntData(idx).begin(),
                     slice.GetIntData(idx).begin() + np,
-                    fd.m_spceis_data[i].GetIntData(idx).begin() + old_size);
+                    fd.m_species_data[i].GetIntData(idx).begin() + old_size);
             }
         }
     }
@@ -945,34 +945,34 @@ Diagnostic::CopyPlasmas (DiagnosticData& fd, MultiPlasma& plasmas)
             }
 
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
-                fd.m_spceis_data[i].NumRealComps() == pti.GetParticleTile().NumRealComps() &&
-                fd.m_spceis_data[i].NumIntComps() == pti.GetParticleTile().NumIntComps(),
+                fd.m_species_data[i].NumRealComps() == pti.GetParticleTile().NumRealComps() &&
+                fd.m_species_data[i].NumIntComps() == pti.GetParticleTile().NumIntComps(),
                 "List of real names in particle diagnostic does not match the beam");
 
-            const auto old_size = fd.m_spceis_data[i].numParticles();
+            const auto old_size = fd.m_species_data[i].numParticles();
             const auto new_size = old_size + np;
             // only one chunk of particles is expected per diagnostic
-            fd.m_spceis_data[i].resize(new_size, amrex::GrowthStrategy::Exact);
+            fd.m_species_data[i].resize(new_size, amrex::GrowthStrategy::Exact);
 
             if (fd.m_idcpu_name[i] != "") {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     pti.GetParticleTile().GetIdCPUData().begin(),
                     pti.GetParticleTile().GetIdCPUData().begin() + np,
-                    fd.m_spceis_data[i].GetIdCPUData().data() + old_size);
+                    fd.m_species_data[i].GetIdCPUData().data() + old_size);
             }
 
             for (std::size_t idx=0; idx<fd.m_real_names[i].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     pti.GetParticleTile().GetRealData(idx).begin(),
                     pti.GetParticleTile().GetRealData(idx).begin() + np,
-                    fd.m_spceis_data[i].GetRealData(idx).data() + old_size);
+                    fd.m_species_data[i].GetRealData(idx).data() + old_size);
             }
 
             for (std::size_t idx=0; idx<fd.m_int_names[i].size(); idx++) {
                 amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost,
                     pti.GetParticleTile().GetIntData(idx).begin(),
                     pti.GetParticleTile().GetIntData(idx).begin() + np,
-                    fd.m_spceis_data[i].GetIntData(idx).begin() + old_size);
+                    fd.m_species_data[i].GetIntData(idx).begin() + old_size);
             }
         }
     }
@@ -1004,12 +1004,12 @@ Diagnostic::CopyParticlesBoundary (DiagnosticData& fd, int islice, MultiPlasma& 
                     continue;
                 }
 
-                const auto old_size = fd.m_spceis_data[i].numParticles();
+                const auto old_size = fd.m_species_data[i].numParticles();
                 const auto new_size = old_size + np;
-                fd.m_spceis_data[i].resize(new_size, amrex::GrowthStrategy::Geometric);
+                fd.m_species_data[i].resize(new_size, amrex::GrowthStrategy::Geometric);
 
                 auto ptd_plasma = pti.GetParticleTile().getParticleTileData();
-                auto ptd_diag = fd.m_spceis_data[i].getParticleTileData();
+                auto ptd_diag = fd.m_species_data[i].getParticleTileData();
                 const amrex::Real plasma_z = gm[0].ProbLo(2) +
                     (islice + amrex::Real(1) - gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
                 const amrex::Real dzeta_inv = gm[0].InvCellSize(2);
@@ -1051,12 +1051,12 @@ Diagnostic::CopyParticlesBoundary (DiagnosticData& fd, int islice, MultiPlasma& 
                 continue;
             }
 
-            const auto old_size = fd.m_spceis_data[i].numParticles();
+            const auto old_size = fd.m_species_data[i].numParticles();
             const auto new_size = old_size + np;
-            fd.m_spceis_data[i].resize(new_size, amrex::GrowthStrategy::Geometric);
+            fd.m_species_data[i].resize(new_size, amrex::GrowthStrategy::Geometric);
 
             auto ptd_beam = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
-            auto ptd_diag = fd.m_spceis_data[i].getParticleTileData();
+            auto ptd_diag = fd.m_species_data[i].getParticleTileData();
 
             amrex::ParallelFor(np,
                 [=] AMREX_GPU_DEVICE (uint64_t ip) {
