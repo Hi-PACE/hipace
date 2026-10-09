@@ -233,9 +233,12 @@ Hipace::ReadParameters ()
         m_boundary_particles = ParticleBoundary::Periodic;
     } else if (particle_boundary == "Absorbing") {
         m_boundary_particles = ParticleBoundary::Absorbing;
+    } else if (particle_boundary == "Thermal") {
+        m_boundary_particles = ParticleBoundary::Thermal;
+        queryWithParser(ppb, "temperature_in_ev", m_boundary_temperature);
     } else {
         amrex::Abort("Unknown particle boundary '" + particle_boundary +
-            "', must be 'Reflecting', 'Periodic' or 'Absorbing'");
+            "', must be 'Reflecting', 'Periodic', 'Absorbing', or 'Thermal'");
     }
 
     MakeGeometry();
