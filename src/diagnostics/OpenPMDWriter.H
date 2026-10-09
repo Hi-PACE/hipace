@@ -31,6 +31,12 @@ class MultiLaser;
 class MultiPlasma;
 
 #ifdef HIPACE_USE_OPENPMD
+
+namespace utils {
+    std::pair<std::string, std::string>
+    name2openPMD (std::string const& fullName);
+}
+
 /** \brief class handling the IO with openPMD */
 class OpenPMDWriter
 {

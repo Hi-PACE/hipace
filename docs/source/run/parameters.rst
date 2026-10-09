@@ -485,6 +485,9 @@ When both are specified, the per-species value is used.
     memory, instead of reading the full file upfront. For small files or when using an adaptive timestep,
     this could lead to additional overhead.
 
+* ``<plasma name> or plasmas.read_particles_from_path```(`string`) optional (default "")
+    Alternative to ``<plasma name>.density(x,y,z)``. Specify the path to an openPMD file that contains plasma particles to initialize. The file must contain all particle components that hipace internally uses, such as the output files produced by the ``plasma_slice`` diagnostic.
+
 * ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
