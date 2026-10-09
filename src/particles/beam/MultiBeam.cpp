@@ -18,7 +18,11 @@ MultiBeam::ReadParameters ()
 {
     amrex::ParmParse pp("beams");
     queryWithParser(pp, "names", m_names);
-    if (m_names[0] == "no_beam") return;
+    if (m_names[0] == "no_beam") {
+        m_names.clear();
+        m_nbeams = 0;
+        return;
+    }
     DeprecatedInput("beams", "insitu_freq", "insitu_period");
     DeprecatedInput("beams", "all_from_file",
         "injection_type = from_file\nand beams.input_file = <file name>\n");

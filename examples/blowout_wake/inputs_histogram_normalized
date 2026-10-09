@@ -30,7 +30,7 @@ plasma.ppc = 2 2
 plasma.element = electron
 plasma.temperature_in_ev = 1
 
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz
 diagnostic.output_period = "current_step == max_step"
 diagnostic.beam_output_period = 0
 
@@ -38,7 +38,7 @@ diagnostic.names = lev0 hist_z_uz1 hist_z_uz2 hist_temperature hist_all
 
 lev0.field_data = By ExmBy Ez Psi Sx chi jx_beam jz_beam rhomjz
 
-hist_z_uz1.base_geometry = histogram
+hist_z_uz1.type = histogram
 hist_z_uz1.hist_species_names = beam
 hist_z_uz1.hist_num_bins = 100 200
 hist_z_uz1.hist_bins_lo = -6 1980
@@ -46,7 +46,7 @@ hist_z_uz1.hist_bins_hi =  6 2020
 hist_z_uz1.hist_function = "z"
 hist_z_uz1.hist_function2 = "uz"
 
-hist_z_uz2.base_geometry = histogram
+hist_z_uz2.type = histogram
 hist_z_uz2.hist_species_names = beam
 hist_z_uz2.hist_num_bins = 200
 hist_z_uz2.hist_bins_lo = 1980
@@ -54,14 +54,14 @@ hist_z_uz2.hist_bins_hi = 2020
 hist_z_uz2.hist_function = "uz"
 hist_z_uz2.hist_add_z_axis = true
 
-hist_temperature.base_geometry = histogram
+hist_temperature.type = histogram
 hist_temperature.hist_species_names = plasma
 hist_temperature.hist_num_bins = 200
 hist_temperature.hist_bins_lo = 0
 hist_temperature.hist_bins_hi = 0.02
 hist_temperature.hist_function = "sqrt(ux^2 + uy^2 + uz^2)"
 
-hist_all.base_geometry = histogram
+hist_all.type = histogram
 hist_all.hist_species_names = beam plasma
 hist_all.hist_num_bins = 200 200
 hist_all.hist_bins_lo = -10 -10

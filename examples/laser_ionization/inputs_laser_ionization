@@ -10,7 +10,7 @@ my_constants.nc = 1.75e27
 my_constants.n0 = nc/10000
 
 my_constants.w0_um = 1.e8
-my_constants.tau_fs = 30/1.17741 
+my_constants.tau_fs = 30/1.17741
 my_constants.lambda0_nm = 800
 
 hipace.file_prefix = laser_ionization.1Rank
@@ -57,4 +57,4 @@ hipace.depos_order_xy = 0
 boundary.field = Dirichlet
 boundary.particle = Periodic
 
-diagnostic.diag_type = xyz
+diagnostic.dimensions = xyz

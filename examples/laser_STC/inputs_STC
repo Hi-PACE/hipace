@@ -24,4 +24,4 @@ laser.beta = 3e-18
 laser.zeta = 2.4e-22
 laser.STC_theta_xy = pi/2
 diagnostic.field_data = laserEnvelope
-diagnostic.diag_type = xyz
+diagnostic.dimensions = xyz

@@ -22,7 +22,6 @@
 #include "utils/Parser.H"
 #include "utils/MultiBuffer.H"
 #include "diagnostics/Diagnostic.H"
-#include "diagnostics/OpenPMDWriter.H"
 
 #include <AMReX_AmrCore.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
@@ -182,6 +181,9 @@ public:
      */
     static std::string Version ();
 
+    /** \brief get diagnostics file prefix */
+    const std::string_view getDiagFilePrefix () const { return m_diags.getFilePrefix(); }
+
     /** 3D Geometry, vector over MR levels */
     amrex::Vector<amrex::Geometry> m_3D_geom;
     /** 3D DistributionMapping. Does not represent the parallelization pipeline correctly */
@@ -297,10 +299,6 @@ public:
     GridCurrent m_grid_current;
     /** GridIonization instance */
     GridIonization m_grid_ionization;
-#ifdef HIPACE_USE_OPENPMD
-    /** openPMD writer instance */
-    OpenPMDWriter m_openpmd_writer;
-#endif
 
     // Performance Counters
 
@@ -370,14 +368,6 @@ private:
     std::vector<std::string> m_collision_names;
     /** Vector of binary collisions */
     amrex::Vector< CoulombCollision > m_all_collisions;
-
-    void InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
-    void FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
-    void WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step);
-    void FlushDiagnostics ();
-
-    /** \brief get diagnostics Component names of Fields to output */
-    amrex::Vector<std::string>& getDiagBeamNames () { return m_diags.getBeamNames(); }
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.

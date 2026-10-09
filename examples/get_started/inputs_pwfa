@@ -52,4 +52,4 @@ ion.element = H
 fields.insitu_period = 1
 beams.insitu_period = 1
 
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz

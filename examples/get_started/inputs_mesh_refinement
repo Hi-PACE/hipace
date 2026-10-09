@@ -76,7 +76,7 @@ ion.initial_ion_level = 2
 
 # Diagnostic
 
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz
 diagnostic.output_period = 100
 diagnostic.beam_output_period = 0
 beams.insitu_period = 1

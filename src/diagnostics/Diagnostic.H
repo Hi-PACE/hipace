@@ -9,9 +9,11 @@
 #define DIAGNOSTIC_H_
 
 #include "utils/IOUtil.H"
+#include "diagnostics/OpenPMDWriter.H"
 
 #include <AMReX_MultiFab.H>
 #include <AMReX_Vector.H>
+#include <AMReX_Particles.H>
 
 #include <vector>
 
@@ -28,7 +30,10 @@ struct DiagnosticData
     enum struct diag_type {
         field,
         laser,
-        histogram
+        histogram,
+        beam,
+        plasma_slice,
+        particle_boundary
     } m_base_diag_type = diag_type::field;  /**< which geometry the diagnostics is based on */
     /** Number of iterations between consecutive output dumps.
      * Default is 0, meaning no output */
@@ -73,6 +78,20 @@ struct DiagnosticData
     amrex::Parser m_hist_parser_w;
     amrex::ParserExecutor<9> m_hist_exe_w;
     bool m_hist_exit_boundary = false; /**< look at particles that are exiting the domain */
+
+    // particles
+
+    /** ratio of beam particles that are written to the openPMD output */
+    int m_output_ratio = 1;
+    amrex::Vector<std::string> m_species_names;
+    amrex::Vector<amrex::ParticleTileRT<amrex::Real, int>> m_species_data;
+    amrex::Vector<std::string> m_idcpu_name;
+    amrex::Vector<std::vector<std::string>> m_real_names;
+    amrex::Vector<std::vector<std::string>> m_int_names;
+
+    // plasma_slice
+
+    int m_plasma_output_slice = 0;
 };
 
 
@@ -83,71 +102,12 @@ class Diagnostic
 public:
 
     /** Read parameters from the input file */
-    void ReadParameters (int nlev, bool use_laser);
+    void ReadParameters (int nlev, bool use_laser, bool has_beam);
 
     /** \brief Determine which data to output */
-    void Initialize (int nlev, bool use_laser);
-
-    /** \brief return names of the beams to output */
-    amrex::Vector<std::string>& getBeamNames () { return m_output_beam_names; }
-
-    /** \brief return data for all field diagnostics */
-    amrex::Vector<DiagnosticData>& getDiagData () { return m_diag_data; }
-
-    /** \brief determines if a single field diagnostic has any output on in this time step
-     *
-     * \param[in] fd field diagnostic
-     * \param[in] output_step current step index
-     * \param[in] output_time physical time of the current step
-     * \param[in] is_last_step if this is the last time step of the simulation
-     */
-    static bool hasFieldOutput (const DiagnosticData& fd, int output_step,
-                                amrex::Real output_time, bool is_last_step)
-    {
-        return (fd.m_nfields > 0) &&
-            fd.m_output_period.doDiagnostics(output_step, output_time, is_last_step);
-    }
-
-    /** \brief determines if any field diagnostic has any output on in this time step
-     *
-     * \param[in] output_step current step index
-     * \param[in] output_time physical time of the current step
-     * \param[in] is_last_step if this is the last time step of the simulation
-     */
-    [[nodiscard]] bool
-    hasAnyFieldOutput (int output_step, amrex::Real output_time, bool is_last_step) const
-    {
-        for (const auto& fd : m_diag_data) {
-            if (hasFieldOutput(fd, output_step, output_time, is_last_step)) return true;
-        }
-        return false;
-    }
-
-    /** \brief determines if any beam diagnostic has any output on in this time step
-     *
-     * \param[in] output_step current step index
-     * \param[in] output_time physical time of the current step
-     * \param[in] is_last_step if this is the last time step of the simulation
-     */
-    [[nodiscard]] bool
-    hasBeamOutput (int output_step, amrex::Real output_time, bool is_last_step) const
-    {
-        return m_output_beam_names.size() > 0 &&
-            m_beam_output_period.doDiagnostics(output_step, output_time, is_last_step);
-    }
-
-    /** \brief determines if any field or beam diagnostic has any output on in this time step
-     *
-     * \param[in] output_step current step index
-     * \param[in] output_time physical time of the current step
-     * \param[in] is_last_step if this is the last time step of the simulation
-     */
-    [[nodiscard]] bool
-    hasAnyOutput (int output_step, amrex::Real output_time, bool is_last_step) const
-    {
-        return hasAnyFieldOutput(output_step, output_time, is_last_step) ||
-               hasBeamOutput(output_step, output_time, is_last_step);
-    }
+    void Initialize (int nlev, bool use_laser,
+        const amrex::Vector<std::string>& beam_names,
+        const amrex::Vector<std::string>& plasma_names);
 
     /** \brief determines if rho is requested as a diagnostic
      */
@@ -164,40 +124,30 @@ public:
     [[nodiscard]] bool
     needsTempIndividual () const;
 
+    [[nodiscard]] const std::string_view
+    getFilePrefix () const {
+#ifdef HIPACE_USE_OPENPMD
+        return m_openpmd_writer.m_file_prefix;
+#else
+        return "";
+#endif
+    }
+
     /** \brief resizes the FArrayBox of the diagnostics to the currently calculated box
      *
      * \param[in] field_geom geometry of the full simulation domain for all field MR levels
      * \param[in] laser_geom geometry of the full simulation domain for the laser
+     * \param[in] plasmas MultiPlasma object
+     * \param[in] beams MultiBeam object
      * \param[in] output_step current step index
      * \param[in] output_time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
      */
-    void ResizeFDiagFAB (amrex::Vector<amrex::Geometry>& field_geom,
-                         amrex::Geometry const& laser_geom, int output_step,
-                         amrex::Real output_time, bool is_last_step);
-
-    /** \brief calculate where data from slice islice will go to using zeroth-order interpolation
-     * returns if this slice is needed and the destination slice index
-     *
-     * \param[in] fd diag data object
-     * \param[in] islice current slice
-     * \param[in] geom3d 3d domain used for the z direction
-     */
-    static std::pair<bool, int>
-    ReverseShapeFactor (const DiagnosticData& fd, int islice, const amrex::Geometry& geom3d);
-
-    /** \brief Collect histograms from particles and copy them to the CPU memory
-     *
-     * \param[in] fd field diagnostic
-     * \param[in] islice current slice
-     * \param[in] plasmas MultiPlasma object
-     * \param[in] beams MultiBeam object
-     * \param[in] field_geom geometry for all field MR levels
-     */
     void
-    HistogramDepositionCopy (DiagnosticData& fd, int islice,
-                             MultiPlasma& plasmas, MultiBeam& beams,
-                             const amrex::Vector<amrex::Geometry>& field_geom);
+    InitDiagnosticsStep (amrex::Vector<amrex::Geometry>& field_geom,
+                         amrex::Geometry const& laser_geom,
+                         MultiPlasma& plasmas, MultiBeam& beams, int output_step,
+                         amrex::Real output_time, bool is_last_step);
 
     /** \brief Fill diagnostic arrays with the simulation data available on the current slice
      *
@@ -223,15 +173,131 @@ public:
      * \param[in] field_geom geometry for all field MR levels
      */
     void
-    FillBoundaryHistDiagnostics (int islice, MultiPlasma& plasmas, MultiBeam& beams,
-                                 const amrex::Vector<amrex::Geometry>& field_geom);
+    FillBoundaryDiagnostics (int islice, MultiPlasma& plasmas, MultiBeam& beams,
+                             const amrex::Vector<amrex::Geometry>& field_geom);
+
+    /** \brief Write diagnostics to file
+     *
+     * \param[in] multi_laser multi laser to get lambda0
+     * \param[in] beams multi beam to get charge and mass
+     * \param[in] plasmas multi plamsa to get charge and mass
+     * \param[in] geom 3D Geometry of the simulation, to get the cell size
+     * \param[in] physical_time Physical time of the current iteration.
+     * \param[in] output_step current iteration to be written to file
+     * \param[in] output_time physical time of the current step
+     * \param[in] is_last_step if this is the last time step of the simulation
+     */
+    void
+    WriteDiagnostics (const MultiLaser& multi_laser, const MultiBeam& beams,
+                      const MultiPlasma& plasmas, const amrex::Geometry& geom,
+                      const amrex::Real physical_time, const int output_step,
+                      amrex::Real output_time, bool is_last_step);
 
 private:
-    amrex::Vector<std::string> m_output_beam_names; /**< Component names to Write to output file */
-    /** Number of iterations between consecutive output dumps.
-     * Default is 0, meaning no output */
-    utils::DiagPeriod m_beam_output_period = "0";
-    amrex::Vector<DiagnosticData> m_diag_data; /**< individual field diag data */
+
+    /** \brief determines if a single diagnostic has any output on in this time step
+     *
+     * \param[in] fd diagnostic
+     * \param[in] output_step current step index
+     * \param[in] output_time physical time of the current step
+     * \param[in] is_last_step if this is the last time step of the simulation
+     */
+    static bool hasOutput (const DiagnosticData& fd, int output_step,
+                                amrex::Real output_time, bool is_last_step)
+    {
+        return (fd.m_nfields > 0) &&
+            fd.m_output_period.doDiagnostics(output_step, output_time, is_last_step);
+    }
+
+    /** \brief determines if any diagnostic has any output on in this time step
+     *
+     * \param[in] output_step current step index
+     * \param[in] output_time physical time of the current step
+     * \param[in] is_last_step if this is the last time step of the simulation
+     */
+    [[nodiscard]] bool
+    hasAnyOutput (int output_step, amrex::Real output_time, bool is_last_step) const
+    {
+        for (const auto& fd : m_diag_data) {
+            if (hasOutput(fd, output_step, output_time, is_last_step)) return true;
+        }
+        return false;
+    }
+
+    /** \brief calculate where data from slice islice will go to using zeroth-order interpolation
+     * returns if this slice is needed and the destination slice index
+     *
+     * \param[in] fd diag data object
+     * \param[in] islice current slice
+     * \param[in] geom3d 3d domain used for the z direction
+     */
+    static std::pair<bool, int>
+    ReverseShapeFactor (const DiagnosticData& fd, int islice, const amrex::Geometry& geom3d);
+
+    /** \brief Collect histograms from particles and copy them to the CPU memory
+     *
+     * \param[in] fd field diagnostic
+     * \param[in] islice current slice
+     * \param[in] plasmas MultiPlasma object
+     * \param[in] beams MultiBeam object
+     * \param[in] field_geom geometry for all field MR levels
+     */
+    void
+    HistogramDepositionCopy (DiagnosticData& fd, int islice,
+                             MultiPlasma& plasmas, MultiBeam& beams,
+                             const amrex::Vector<amrex::Geometry>& field_geom);
+
+    /** \brief Given a list of input components, handle "all" and "remove_..." and make sure
+     * all are available
+     *
+     * \param[in] specified_comps components from user input
+     * \param[in] available_comps all available components
+     * \param[in,out] is_global_comp_used used compes from diagnostic. input parameter
+     * \param[in] use_local_comps if the componets come from diagnostic. or diag name.
+     * \param[in] error_msg error to print if component is not available
+     */
+    static std::set<std::string>
+    ParseCompsList (const amrex::Vector<std::string>& specified_comps,
+                    const std::set<std::string>& available_comps,
+                    std::map<std::string, bool>& is_global_comp_used,
+                    bool use_local_comps, const std::string& error_msg);
+
+public: // for CUDA device lambda
+
+    /** \brief Collect beam particles and copy them to the CPU memory
+     *
+     * \param[in] fd field diagnostic
+     * \param[in] beams MultiBeam object
+     */
+    void
+    CopyBeams (DiagnosticData& fd, MultiBeam& beams);
+
+    /** \brief Collect plasma particles and copy them to the CPU memory
+     *
+     * \param[in] fd field diagnostic
+     * \param[in] plasmas MultiPlasma object
+     */
+    void
+    CopyPlasmas (DiagnosticData& fd, MultiPlasma& plasmas);
+
+    /** \brief Collect beam and plasma particles at the boundary and copy them to the CPU memory
+     *
+     * \param[in] fd field diagnostic
+     * \param[in] islice current slice
+     * \param[in] plasmas MultiPlasma object
+     * \param[in] beams MultiBeam object
+     * \param[in] gm geometry for all field MR levels
+     */
+    void
+    CopyParticlesBoundary (DiagnosticData& fd, int islice, MultiPlasma& plasmas, MultiBeam& beams,
+                           const amrex::Vector<amrex::Geometry>& gm);
+private:
+
+    amrex::Vector<DiagnosticData> m_diag_data; /**< individual diag data */
+#ifdef HIPACE_USE_OPENPMD
+    /** openPMD writer instance */
+    OpenPMDWriter m_openpmd_writer;
+#endif
 };
 
 #endif // DIAGNOSTIC_H_

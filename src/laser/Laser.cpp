@@ -241,6 +241,7 @@ Laser::GetEnvelopeFromFile (amrex::Geometry laser_geom_3D) {
 
     series.flush();
 #else
+    amrex::ignore_unused(laser_geom_3D);
     amrex::Abort("loading a laser envelope from an external file requires openPMD support: "
                  "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
 #endif // HIPACE_USE_OPENPMD

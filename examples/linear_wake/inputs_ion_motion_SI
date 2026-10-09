@@ -49,4 +49,4 @@ ions.neutralize_background = false
 "ions.density(x,y,z)" = ne
 ions.ppc = 1 1
 
-diagnostic.diag_type = xyz
+diagnostic.dimensions = xyz

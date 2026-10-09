@@ -224,6 +224,7 @@ PlasmaDensityAccessor::define_from_file (const amrex::Real z_pos, bool per_slice
     series.flush();
 
 #else
+    amrex::ignore_unused(z_pos, per_slice, path, f_data, d_data, density_mesh_name);
     amrex::Abort("loading a plasma density from an external file requires openPMD support: "
                  "Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
 #endif

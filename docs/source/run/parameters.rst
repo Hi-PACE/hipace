@@ -682,12 +682,6 @@ which are valid only for certain beam types, are introduced further below under
     The ideal index type is different for beam push and beam deposition so some experimentation
     may be required to find the overall fastest setting for a specific simulation.
 
-* ``<beam name> or beams.output_ratio`` (`int`) optional (default `1`)
-    Set the fraction of beam particles that should be written to the openPMD output.
-    For example, an output ratio of 100 will output every 100th beam particle.
-    This is implemented using the particle ID, which is set in ascending order at
-    the beginning of a simulation.
-
 Option: ``fixed_weight_pdf``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1166,52 +1160,90 @@ Please make sure to always clear or rename the output folder before running a ne
     `here <https://github.com/Hi-PACE/hipace/pull/1334>`__.
 
 * ``hipace.output_folder`` (`string`) optional (default ``"diags"``)
-    Set the output path of diagnostic data. By default all types of diagnostics will output
+    Set the output path of all diagnostic data. By default all types of diagnostics will output
     into subfolders of this folder.
 
 * ``hipace.file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/hdf5/"``)
-    Path of the output.
+    Path of the openPMD output.
 
 * ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
     OpenPMD backend. This can either be ``h5``, ``bp``, or ``json``. The default is chosen by what is
     available. If both Adios2 and HDF5 are available, ``h5`` is used. Note that ``json`` is extremely
     slow and is not recommended for production runs.
 
+* ``diagnostic.names`` (`string`) optional (default `lev0`)
+    The names of all diagnostics (excluding in-situ), separated by a space.
+    Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
+    To run without diagnostics, choose the name ``no_diag``.
+    Depending on whether mesh refinement, a laser and a beam is used, the default becomes
+    a subset of ``lev0 lev1 lev2 laser_diag beam_diag``.
+
+* ``<diag name>.type`` (`string`) optional (default `level_0`)
+    Which type of data the diagnostics should have.
+    Available types are:
+      * Field diagnostic for different mesh refinement levels: ``level_0``, ``level_1``, ``level_2``
+      * Laser diagnostic: ``laser``
+      * Beam diagnostic: ``beam``
+      * Plasma diagnostic at one zeta-slice: ``plasma_slice``
+      * Plasma and beam diagnostic of particles exiting the domain transversely: ``particle_boundary``
+    If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag beam_diag``, the default for this parameter
+    becomes ``level_0 level_1 level_2 laser beam`` respectively.
+
+* ``<diag name>.output_period`` (`integer` or `string`) optional (default `0`)
+    Output period for the diagnostic. No output is given for ``<diag name>.output_period = 0``.
+    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
+    See the documentation of ``diagnostic.output_period`` for more details.
+
 Beam diagnostics
 ^^^^^^^^^^^^^^^^
 
 * ``diagnostic.beam_output_period`` (`integer` or `string`) optional (default `0`)
     Output period for the beam. No output is given for ``diagnostic.beam_output_period = 0``.
-    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
+    This value is used as a default for ``<diag name>.output_period`` if ``<diag name>.type = beam``.
     See the documentation of ``diagnostic.output_period`` for more details.
 
-* ``diagnostic.beam_data`` (`string`) optional (default `all`)
-    Names of the beams written to file, separated by a space. The beam names need to be ``all``,
-    ``none`` or a subset of ``beams.names``.
+* ``<diag name>.species`` (`string`) optional (default `all`)
+    Names of the beams written to file, separated by a space.
+    The beam names need to be ``all``, ``none`` or a subset of ``beams.names``.
 
-Field diagnostics
-^^^^^^^^^^^^^^^^^
+* ``<diag name>.output_ratio`` (`int`) optional (default `1`)
+    Set the fraction of beam particles that should be written to the openPMD output.
+    For example, an output ratio of 100 will output every 100th beam particle.
+    This is implemented using the particle ID, which is set in ascending order at
+    the beginning of a simulation.
 
-* ``diagnostic.names`` (`string`) optional (default `lev0`)
-    The names of all field diagnostics, separated by a space.
-    Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
-    To run without field diagnostics, choose the name ``no_field_diag``.
-    Depending on whether mesh refinement or a laser is used, the default becomes
-    a subset of ``lev0 lev1 lev2 laser_diag``.
+Plasma slice diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``<diag name> or diagnostic.base_geometry`` (`string`) optional (default `level_0`)
-    Which geometry the diagnostics should be based on.
-    Available geometries are `level_0`, `level_1`, `level_2`, `laser` and `histogram`,
-    depending on if MR or a laser is used.
-    If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
-    becomes ``level_0 level_1 level_2 laser`` respectively.
+This diagnostic outputs all plasma particles at one particular zeta slice of the domain.
+The format of the particle data is the one that hipace uses internally to allow for
+checkpoint-restart of the plasma particles in zeta. This means that the particle
+weight is defined differently and `1+psi` is given instead of `uz`.
 
-* ``<diag name>.output_period`` (`integer` or `string`) optional (default `0`)
-    Output period for fields. No output is given for ``<diag name>.output_period = 0``.
-    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
-    See the documentation of ``diagnostic.output_period`` for more details.
+* ``<diag name>.species`` (`string`) optional (default `all`)
+    Names of the plasma species written to file, separated by a space.
+    The species names need to be ``all``, ``none`` or a subset of ``plasmas.names``.
 
-* ``<diag name> or diagnostic.diag_type`` (`string`)
+* ``<diag name>.plasma_output_slice`` (`int`) optional (default `0`)
+    On which zeta slice the plasma output should be done. Note that the simulation iterates
+    backwards over zeta, so the default of slice 0 is the last slice to be computed.
+
+Particle boundary diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This diagnostic collects data from particles that exit the simulation domain transversely through the
+``boundary.particle = Absorbing`` boundary condition. For each particle that exits, the 3D position,
+momentum, weight and id is output. Note that for plasma particles this weight depends linearly on the
+time step ``hipace.dt`` of the simulation.
+
+* ``<diag name>.species`` (`string`) optional (default `all`)
+    Names of the plasma and beam species written to file, separated by a space.
+    The species names need to be ``all``, ``none`` or a subset of ``plasmas.names`` and ``beams.names``.
+
+Field and Laser diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``<diag name> or diagnostic.dimensions`` (`string`)
     Type of field output. Available options are `xyz`, `xz`, `yz` and `xy_integrated`.
     `xyz` generates a 3D field output.
     Use 3D output with parsimony, it may increase disk Space usage and simulation time significantly.
@@ -1286,9 +1318,9 @@ Particle Histogram diagnostics
 This diagnostic allows the direct computation of histograms of arbitrary particle
 quantities during the simulation runtime. It supports both plasma and beam particles.
 It is part of the standard field diagnostic and is enabled by setting
-``<diag name>.base_geometry = histogram``. Histograms may have one or two user-defined axes.
+``<diag name>.type = histogram``. Histograms may have one or two user-defined axes.
 Optionally, the simulation z-axis can be included as an additional axis or integrated over.
-All field diagnostic parameters apply, except ``field_data`` and ``diag_type``.
+All field diagnostic parameters apply, except ``field_data`` and ``dimensions``.
 For example, ``patch_lo`` and ``patch_hi`` can be used to restrict the particles included in
 the histogram in coordinate space, but do not modify the histogram axes.
 Each particle species produces a separate histogram that is output as
