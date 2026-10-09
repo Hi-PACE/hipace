@@ -236,7 +236,7 @@ Geometry
 
 * ``boundary.temperature_in_ev`` (`float`) optional (default `1e-4`)
     Particles thermalised from the walls of the domain have their velocities sampled from a Gaussian for the tangential component
-    to the boundary's plane, and from a Flux Gussian for the normal component to the boundary's plane. The width of each of these
+    to the boundary's plane, and from a Flux Gaussian for the normal component to the boundary's plane. The width of each of these
     distributions is characterised by :math:`u=\sqrt{k_B T/Mc^2}`, where :math:`M` is the mass of the particle.
 
 * ``boundary.particle_lo`` (2 `float`) optional (default `<first two values of geometry.prob_lo>`)
