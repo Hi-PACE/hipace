@@ -91,7 +91,7 @@ struct EnforceBC
             } else if (m_particle_boundary == ParticleBoundary::Thermal) {
                 ptd.id(ip) = PlasmaID::to_be_thermalised;
                 invalid = false;
-            } else {                       // ParticleBoundary::Absorbing
+            } else { // ParticleBoundary::Absorbing
                 ptd.id(ip) = PlasmaID::invalid_at_boundary;
                 invalid = true;
             }
