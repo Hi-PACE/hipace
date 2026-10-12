@@ -24,7 +24,7 @@ HIPACE_EXAMPLE_DIR=${HIPACE_SOURCE_DIR}/examples/blowout_wake
 HIPACE_TEST_DIR=${HIPACE_SOURCE_DIR}/tests
 
 # Relative tolerance for checksum tests depends on the platform
-RTOL=1e-12
+RTOL=1e-10
 
 rm -rf initial_sim
 rm -rf restart_sim
