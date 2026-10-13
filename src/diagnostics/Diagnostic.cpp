@@ -926,12 +926,12 @@ Diagnostic::CopyBeams (DiagnosticData& fd, MultiBeam& beams)
 
         if (output_id_min > -1) {
             np = amrex::partitionParticles(beam.getBeamSlice(WhichBeamSlice::This),
-                [=] AMREX_GPU_DEVICE (auto& ptd, int i) {
-                    uint64_t id = ptd.idcpu(i);
+                [=] AMREX_GPU_DEVICE (auto& ptd, int ip) {
+                    uint64_t id = ptd.idcpu(ip);
                     amrex::ParticleIDWrapper{id}.make_invalid();
-                    int keep = (i < int(np)) &&
-                        (id >= output_id_min) &&
-                        (id <= output_id_max);
+                    int keep = (ip < int(np)) &&
+                        (id >= static_cast<uint64_t>(output_id_min)) &&
+                        (id <= static_cast<uint64_t>(output_id_max));
                     return keep;
                 }
             );

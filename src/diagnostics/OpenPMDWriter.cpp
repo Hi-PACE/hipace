@@ -146,6 +146,7 @@ OpenPMDWriter::WriteDiagnostics (
                 switch (fd.m_base_diag_type) {
                     case DiagnosticData::diag_type::field:
                     case DiagnosticData::diag_type::laser:
+                    case DiagnosticData::diag_type::helmholtz:
                     case DiagnosticData::diag_type::histogram:
                         WriteFieldData(fd, multi_laser, iteration);
                         break;

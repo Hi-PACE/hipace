@@ -347,7 +347,6 @@ AdvanceBeamParticlesSlice (
                         amrex::Real zi = clight*(time+i*dt);
                         amrex::Real zf = clight*(time+i*dt+dt);
                         amrex::Real zl = thinquad_z[iq];
-                        amrex::Real dz = clight*dt;
                         // Propagate until thin lens
                         const amrex::Real xq = xp + ux/uz * (zl-zi);
                         const amrex::Real yq = yp + uy/uz * (zl-zi);
