@@ -38,11 +38,30 @@ struct EnforceBC
      */
     EnforceBC () noexcept
     {
+        using namespace amrex::literals;
+
         m_particle_boundary = Hipace::m_boundary_particles;
-        m_plo[0] = Hipace::m_boundary_particle_lo[0];
-        m_plo[1] = Hipace::m_boundary_particle_lo[1];
-        m_phi[0] = Hipace::m_boundary_particle_hi[0];
-        m_phi[1] = Hipace::m_boundary_particle_hi[1];
+        if (m_particle_boundary == ParticleBoundary::Thermal_Cylindrical) {
+            // -xmid
+            m_plo[0] =
+                -0.5_rt * (Hipace::m_boundary_particle_lo[0] + Hipace::m_boundary_particle_hi[0]);
+            // -ymid
+            m_plo[1] =
+                -0.5_rt * (Hipace::m_boundary_particle_lo[1] + Hipace::m_boundary_particle_hi[1]);
+            // r^2
+            amrex::Real r = 0.5_rt * std::min(
+                Hipace::m_boundary_particle_hi[0] - Hipace::m_boundary_particle_lo[0],
+                Hipace::m_boundary_particle_hi[1] - Hipace::m_boundary_particle_lo[1]
+            );
+            m_phi[0] = r * r;
+            // r
+            m_phi[1] = r;
+        } else {
+            m_plo[0] = Hipace::m_boundary_particle_lo[0];
+            m_plo[1] = Hipace::m_boundary_particle_lo[1];
+            m_phi[0] = Hipace::m_boundary_particle_hi[0];
+            m_phi[1] = Hipace::m_boundary_particle_hi[1];
+        }
     }
 
     /** \brief enforces the boundary condition to the particle
@@ -61,7 +80,12 @@ struct EnforceBC
         amrex::Real& ux, amrex::Real& uy) const noexcept
     {
         bool invalid = false;
-        if (x < m_plo[0] || y < m_plo[1] || x > m_phi[0] || y > m_phi[1]) {
+        if (m_particle_boundary == ParticleBoundary::Thermal_Cylindrical) {
+            if ((x + m_plo[0]) * (x + m_plo[0]) + (y + m_plo[1]) * (y + m_plo[1]) > m_phi[0]) {
+                ptd.id(ip) = PlasmaID::to_be_thermalised;
+                invalid = false;
+            }
+        } else if (x < m_plo[0] || y < m_plo[1] || x > m_phi[0] || y > m_phi[1]) {
             const amrex::Real len_x = m_phi[0] - m_plo[0];
             const amrex::Real len_y = m_phi[1] - m_plo[1];
             if (m_particle_boundary == ParticleBoundary::Reflecting) {
@@ -113,11 +137,13 @@ struct EnforceBC
      */
     template<class PTD>
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    void operator() (const PTD& ptd,
+    void ApplyThermalBoundary (const PTD& ptd,
         const int ip, amrex::Real& x, amrex::Real& y,
         amrex::Real& ux, amrex::Real& uy, amrex::Real& uz, amrex::Real u_std,
         const amrex::RandomEngine& engine) const noexcept
     {
+        using namespace amrex::literals;
+
         // only called to reflect particle positions and provide the thermal
         // velocities to the particles
 
@@ -126,45 +152,62 @@ struct EnforceBC
         ParticleUtil::get_gaussian_random_momentum(u, {0., 0., 0.}, {u_std, u_std, u_std}, engine);
         uz = u[2];
 
-        // use same method for reflecting as in the ParticleBoundary::Reflecting case
-        const amrex::Real len_x = m_phi[0] - m_plo[0];
-        const amrex::Real len_y = m_phi[1] - m_plo[1];
-
-        // get gaussian flux velocities depending on plane of reflection
-        if (x < m_plo[0] || x > m_phi[0]) { // reflect particle in x
-            bool crossed_lo = ( x < m_plo[0] );
-
-            // reflect particle position
-            x = std::fmod(x - m_plo[0], 2*len_x);
-            if (x < 0) x += 2*len_x;
+        if (m_particle_boundary == ParticleBoundary::Thermal_Cylindrical) {
             x += m_plo[0];
-            if (x > m_phi[0]) {
-                x = 2*m_phi[0] - x;
-            }
-
-            // Get Gaussian flux momentum for x and thermal for other directions
-            ParticleUtil::get_gaussian_flux_random_momentum(ux, u_std, engine);
-
-            if (!crossed_lo) ux = -ux;
-            uy = u[1];
-        }
-        if (y < m_plo[1] || y > m_phi[1]) { // reflect particle in y
-            bool crossed_lo = ( y < m_plo[1] );
-
-            y = std::fmod(y - m_plo[1], 2*len_y);
-            if (y < 0) y += 2*len_y;
             y += m_plo[1];
-            if (y > m_phi[1]) {
-                y = 2*m_phi[1] - y;
+
+            const amrex::Real r = std::sqrt(x*x + y*y);
+            const amrex::Real new_r = std::max(2*m_phi[1] - r, 0.95_rt * m_phi[1]);
+            const amrex::Real xy_factor = new_r / r;
+            const amrex::Real theta = std::atan2(y, x);
+
+            x = x * xy_factor - m_plo[0];
+            y = y * xy_factor - m_plo[1];
+
+            ParticleUtil::get_gaussian_flux_random_momentum(u[0], u_std, engine);
+            ux = std::cos(theta) * (-u[0]) - std::sin(theta) * u[1];
+            uy = std::sin(theta) * (-u[0]) + std::cos(theta) * u[1];
+        } else {
+
+            // use same method for reflecting as in the ParticleBoundary::Reflecting case
+            const amrex::Real len_x = m_phi[0] - m_plo[0];
+            const amrex::Real len_y = m_phi[1] - m_plo[1];
+
+            // get gaussian flux velocities depending on plane of reflection
+            if (x < m_plo[0] || x > m_phi[0]) { // reflect particle in x
+                bool crossed_lo = ( x < m_plo[0] );
+
+                // reflect particle position
+                x = std::fmod(x - m_plo[0], 2*len_x);
+                if (x < 0) x += 2*len_x;
+                x += m_plo[0];
+                if (x > m_phi[0]) {
+                    x = 2*m_phi[0] - x;
+                }
+
+                // Get Gaussian flux momentum for x and thermal for other directions
+                ParticleUtil::get_gaussian_flux_random_momentum(ux, u_std, engine);
+
+                if (!crossed_lo) ux = -ux;
+                uy = u[1];
             }
+            if (y < m_plo[1] || y > m_phi[1]) { // reflect particle in y
+                bool crossed_lo = ( y < m_plo[1] );
 
-            // Get Gaussian flux momentum for x and thermal for other directions
-            ParticleUtil::get_gaussian_flux_random_momentum(uy, u_std, engine);
+                y = std::fmod(y - m_plo[1], 2*len_y);
+                if (y < 0) y += 2*len_y;
+                y += m_plo[1];
+                if (y > m_phi[1]) {
+                    y = 2*m_phi[1] - y;
+                }
 
-            if (!crossed_lo) uy = -uy;
-            ux = u[0];
+                // Get Gaussian flux momentum for x and thermal for other directions
+                ParticleUtil::get_gaussian_flux_random_momentum(uy, u_std, engine);
+
+                if (!crossed_lo) uy = -uy;
+                ux = u[0];
+            }
         }
-
         // plasma particle is now valid again
         ptd.id(ip) = PlasmaID::valid;
     }
