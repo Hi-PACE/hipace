@@ -148,8 +148,9 @@ public:
      * \param[in] islice current slice, on which diags are computed.
      * \param[in] time physical time of the current step
      * \param[in] is_last_step if this is the last time step of the simulation
+     * \param[in] dt time step of the simulation
      */
-    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step);
+    void InSituComputeDiags (int step, int islice, amrex::Real time, bool is_last_step, const amrex::Real dt);
 
     /** Dump in-situ reduced diagnostics to file.
      * \param[in] step current time step
@@ -239,7 +240,7 @@ private:
 
     // Data for in-situ diagnostics:
     /** Number of real laser properties for in-situ per-slice reduced diagnostics. */
-    static constexpr int m_insitu_nrp = 7;
+    static constexpr int m_insitu_nrp = 11;
     /** Number of real complex properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_ncp = 1;
     /** How often the insitu laser diagnostics should be computed and written
