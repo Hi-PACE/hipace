@@ -16,9 +16,11 @@
 #define HIPACE_GETANDSETPOSITION_H_
 
 #include "Hipace.H"
+#include "particles/particles_utils/ParticleUtil.H"
 
 #include <AMReX.H>
 #include <AMReX_REAL.H>
+#include <AMReX_Random.H>
 
 #include <limits>
 
@@ -86,13 +88,85 @@ struct EnforceBC
                 if (y < 0) y += len_y;
                 y += m_plo[1];
                 invalid = false;
-            } else {
+            } else if (m_particle_boundary == ParticleBoundary::Thermal) {
+                ptd.id(ip) = PlasmaID::to_be_thermalised;
+                invalid = false;
+            } else { // ParticleBoundary::Absorbing
                 ptd.id(ip) = PlasmaID::invalid_at_boundary;
                 invalid = true;
             }
         }
-
         return invalid;
+    }
+
+    /** \brief enforces Thermal boundary condition to the particle
+     * at index `ip`
+     * \param[inout] ptd ParticleTileData
+     * \param[in] ip index of the particle
+     * \param[inout] x x position of particle
+     * \param[inout] y y position of particle
+     * \param[inout] ux x momentum of particle
+     * \param[inout] uy y momentum of particle
+     * \param[inout] uz z momentum of particle
+     * \param[inout] u_std momentum spread from thermal boundary velocity
+     * \param[inout] engine amrex's random number generator
+     */
+    template<class PTD>
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    void operator() (const PTD& ptd,
+        const int ip, amrex::Real& x, amrex::Real& y,
+        amrex::Real& ux, amrex::Real& uy, amrex::Real& uz, amrex::Real u_std,
+        const amrex::RandomEngine& engine) const noexcept
+    {
+        // only called to reflect particle positions and provide the thermal
+        // velocities to the particles
+
+        // fill generic random velocities
+        amrex::Real u[3] = {0.,0.,0.};
+        ParticleUtil::get_gaussian_random_momentum(u, {0., 0., 0.}, {u_std, u_std, u_std}, engine);
+        uz = u[2];
+
+        // use same method for reflecting as in the ParticleBoundary::Reflecting case
+        const amrex::Real len_x = m_phi[0] - m_plo[0];
+        const amrex::Real len_y = m_phi[1] - m_plo[1];
+
+        // get gaussian flux velocities depending on plane of reflection
+        if (x < m_plo[0] || x > m_phi[0]) { // reflect particle in x
+            bool crossed_lo = ( x < m_plo[0] );
+
+            // reflect particle position
+            x = std::fmod(x - m_plo[0], 2*len_x);
+            if (x < 0) x += 2*len_x;
+            x += m_plo[0];
+            if (x > m_phi[0]) {
+                x = 2*m_phi[0] - x;
+            }
+
+            // Get Gaussian flux momentum for x and thermal for other directions
+            ParticleUtil::get_gaussian_flux_random_momentum(ux, u_std, engine);
+
+            if (!crossed_lo) ux = -ux;
+            uy = u[1];
+        }
+        if (y < m_plo[1] || y > m_phi[1]) { // reflect particle in y
+            bool crossed_lo = ( y < m_plo[1] );
+
+            y = std::fmod(y - m_plo[1], 2*len_y);
+            if (y < 0) y += 2*len_y;
+            y += m_plo[1];
+            if (y > m_phi[1]) {
+                y = 2*m_phi[1] - y;
+            }
+
+            // Get Gaussian flux momentum for x and thermal for other directions
+            ParticleUtil::get_gaussian_flux_random_momentum(uy, u_std, engine);
+
+            if (!crossed_lo) uy = -uy;
+            ux = u[0];
+        }
+
+        // plasma particle is now valid again
+        ptd.id(ip) = PlasmaID::valid;
     }
 };
 
