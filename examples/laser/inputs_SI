@@ -30,4 +30,4 @@ hipace.depos_order_xy = 0
 boundary.field = Dirichlet
 boundary.particle = Periodic
 
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz

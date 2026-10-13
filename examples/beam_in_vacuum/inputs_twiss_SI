@@ -24,4 +24,4 @@ beam.twiss_beta = 1e-3 1.1e-3
 beam.emittance = 1.2e-6 1.3e-6
 beam.num_particles = 4e5
 
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz

@@ -1,0 +1,35 @@
+amr.n_cell = 64 64 100
+
+my_constants.kp_inv = 10.e-6
+my_constants.kp = 1. / kp_inv
+my_constants.wp = clight * kp
+my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
+
+amr.max_level = 0
+
+max_step = 0
+
+hipace.depos_order_xy = 2
+hipace.MG_tolerance_rel = 1e-7
+
+boundary.field = Dirichlet
+boundary.particle = Absorbing
+geometry.prob_lo     = -6*kp_inv -6*kp_inv -16*kp_inv
+geometry.prob_hi     =  6*kp_inv  6*kp_inv   0*kp_inv
+
+beams.names = no_beam
+
+plasmas.names = elec ion
+plasmas.neutralize_background = false
+plasmas.read_particles_from_path = "initial_sim/openpmd_%T.h5"
+
+elec.element = electron
+
+ion.element = H
+
+diagnostic.names = lev0 plasma_slice_diag
+diagnostic.output_period = 1
+diagnostic.dimensions = xz
+
+plasma_slice_diag.type = plasma_slice
+plasma_slice_diag.plasma_output_slice = 49

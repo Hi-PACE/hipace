@@ -37,5 +37,5 @@ plasma.ppc = 1 1                        # particles per cell in x,y
 
 ### Diagnostics
 ################################
-diagnostic.diag_type = xz               # 2D xz slice output. Options: xyz, xz, yz
+diagnostic.dimensions = xz               # 2D xz slice output. Options: xyz, xz, yz
 beams.insitu_period = 1                 # in-situ diagnostic period for beam(s)

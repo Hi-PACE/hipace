@@ -47,4 +47,4 @@ ion.initial_ion_level = 0
 ion.ionization_product = elec
 ion.can_field_ionize = 1
 
-diagnostic.diag_type = xyz
+diagnostic.dimensions = xyz
