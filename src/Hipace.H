@@ -22,6 +22,7 @@
 #include "utils/Parser.H"
 #include "utils/MultiBuffer.H"
 #include "diagnostics/Diagnostic.H"
+#include "particles/collisions/Collision.H"
 
 #include <AMReX_AmrCore.H>
 #ifdef AMREX_USE_LINEAR_SOLVERS
@@ -369,6 +370,9 @@ private:
     std::vector<std::string> m_collision_names;
     /** Vector of binary collisions */
     amrex::Vector< CoulombCollision > m_all_collisions;
+    /** Impact ionization */
+    amrex::Vector<std::string> m_impact_names;
+    amrex::Vector<Collision> m_all_impacts;
 
     /** \brief Predictor-corrector loop to calculate Bx and By.
      * 1. an initial Bx and By value is guessed.
