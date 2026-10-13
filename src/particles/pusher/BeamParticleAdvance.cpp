@@ -341,10 +341,36 @@ AdvanceBeamParticlesSlice (
 
                 const amrex::Real gammap_inv = amrex::Math::rsqrt( 1._rt + ux*ux + uy*uy + uz*uz);
 
+                // Apply thin optics: quadrupoles
+                for (int iq=0; iq<nthinquad; iq++) {
+                    if (clight*(time+i*dt) <= thinquad_z[iq] && clight*(time+i*dt+dt) > thinquad_z[iq] ) {
+                        amrex::Real zi = clight*(time+i*dt);
+                        amrex::Real zf = clight*(time+i*dt+dt);
+                        amrex::Real zl = thinquad_z[iq];
+                        amrex::Real dz = clight*dt;
+                        // Propagate until thin lens
+                        const amrex::Real xq = xp + ux/uz * (zl-zi);
+                        const amrex::Real yq = yp + uy/uz * (zl-zi);
+                        ux -= thinquad_K[iq] * xq;
+                        uy += thinquad_K[iq] * yq;
+                        // Propagate after thin lens
+                        xp = xq + ux/uz * (zf-zl);
+                        yp = yq + uy/uz * (zf-zl);
+                    }
+                }
+
+                // Apply thin optics: phase shifters
+                for (int iz=0; iz<nphaseshifter; iz++) {
+                    if (clight*(time+i*dt) <= phaseshifter_z[iz] && clight*(time+i*dt+dt) > phaseshifter_z[iz] ) {
+                        amrex::Real gamma = phaseshifter_gamma[iz]>0 ? phaseshifter_gamma[iz] : avg_uz_prev;
+                        amrex::Real slip = phaseshifter_drift[iz]/2/gamma/gamma/phaseshifter_lr[iz];
+                        amrex::Real dz = phaseshifter_drift[iz] > 0._rt ? (std::floor(slip)-slip+1)*phaseshifter_lr[iz] : 0._rt;
+                        zp -= dz + phaseshifter_dz[iz];
+                    }
+                }
+
                 // first we do half a step in x,y
                 // This is not required in z, which is pushed in one step later
-                amrex::Real xpi = xp;
-                amrex::Real ypi = yp;
                 xp += dt * clight * 0.5_rt * gammap_inv * ux;
                 yp += dt * clight * 0.5_rt * gammap_inv * uy;
 
@@ -579,31 +605,6 @@ AdvanceBeamParticlesSlice (
                 yp += dt * clight * 0.5_rt * gamma_next_inv * uy_next;
                 if (do_z_push && !(c_use_helmholtz.value && helm_mode_is_envelope)) {
                     zp += dt * clight * ( uz_next * gamma_next_inv - 1._rt );
-                }
-
-                // Apply thin optics: quadrupoles
-                for (int iq=0; iq<nthinquad; iq++) {
-                    if (clight*(time+i*dt) <= thinquad_z[iq] && clight*(time+i*dt+dt) > thinquad_z[iq] ) {
-                        amrex::Real zi = clight*(time+i*dt);
-                        amrex::Real zf = clight*(time+i*dt+dt);
-                        amrex::Real dz = clight*dt;
-                        const amrex::Real xq = (thinquad_z[iq]-zi)/dz * xp + (zf-thinquad_z[iq])/dz * xpi;
-                        const amrex::Real yq = (thinquad_z[iq]-zi)/dz * yp + (zf-thinquad_z[iq])/dz * ypi;
-                        ux_next -= thinquad_K[iq] * xq;
-                        uy_next += thinquad_K[iq] * yq;
-                        xp -= (zf-thinquad_z[iq]) * thinquad_K[iq] * xq  * gamma_next_inv;
-                        yp += (zf-thinquad_z[iq]) * thinquad_K[iq] * yq  * gamma_next_inv;
-                    }
-                }
-
-                // Apply thin optics: phase shifters
-                for (int iz=0; iz<nphaseshifter; iz++) {
-                    if (clight*(time+i*dt) <= phaseshifter_z[iz] && clight*(time+i*dt+dt) > phaseshifter_z[iz] ) {
-                        amrex::Real gamma = phaseshifter_gamma[iz]>0 ? phaseshifter_gamma[iz] : avg_uz_prev;
-                        amrex::Real slip = phaseshifter_drift[iz]/2/gamma/gamma/phaseshifter_lr[iz];
-                        amrex::Real dz = (std::floor(slip)-slip+1)*phaseshifter_lr[iz];
-                        zp -= dz + phaseshifter_dz[iz];
-                    }
                 }
 
                 ux = ux_next;
