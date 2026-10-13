@@ -46,7 +46,8 @@ namespace ParticleBoundary {
         Reflecting,
         Periodic,
         Absorbing,
-        Thermal
+        Thermal,
+        Thermal_Cylindrical
     };
 }
 

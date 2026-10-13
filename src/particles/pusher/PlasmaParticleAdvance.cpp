@@ -274,7 +274,8 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
             });
 
         // to rethermalise particles at the boundary here.
-        if (Hipace::m_boundary_particles == ParticleBoundary::Thermal) {
+        if (Hipace::m_boundary_particles == ParticleBoundary::Thermal ||
+            Hipace::m_boundary_particles == ParticleBoundary::Thermal_Cylindrical) {
 
             const PhysConst phys_const_SI = make_constants_SI();
 
@@ -296,7 +297,7 @@ AdvancePlasmaParticles (PlasmaParticleContainer& plasma, const Fields & fields,
                     amrex::Real uz = 0._rt;
 
                     // reflect positions and get thermal velocities with overloaded boundary enforcing functor
-                    enforceBC(ptd, ip, xp, yp, ux, uy, uz, u_std, engine);
+                    enforceBC.ApplyThermalBoundary(ptd, ip, xp, yp, ux, uy, uz, u_std, engine);
 
                     ptd.pos(0, ip) = xp;
                     ptd.pos(1, ip) = yp;

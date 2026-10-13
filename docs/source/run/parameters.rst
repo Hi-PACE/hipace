@@ -231,8 +231,9 @@ Geometry
 
         * ``Absorbing`` Particles exiting the domain are deleted.
 
-        * ``Thermal`` Particles hitting the boundary are reflected back in with a thermalised velocity.
-            Can then specify the temperature using ``boundary.temperature_in_ev``.
+        * ``Thermal`` Particles hitting the boundary are reflected back in with a thermalised velocity. Can then specify the temperature using ``boundary.temperature_in_ev``.
+
+        * ``Thermal_Cylindrical`` Same as ``Thermal`` but the boundary has the shape of a circle transversely.
 
 * ``boundary.temperature_in_ev`` (`float`) optional (default `1e-4`)
     Particles thermalised from the walls of the domain have their velocities sampled from a Gaussian for the tangential component
