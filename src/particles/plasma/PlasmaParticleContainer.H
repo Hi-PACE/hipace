@@ -103,22 +103,18 @@ struct PlasmaIdx
         ux_half_step,       // momentum half a step behind the current slice for leapfrog pusher
         uy_half_step,       // at the same step for AB5 pusher
         psi_half_step,      // never effected by temp slice
-        real_nattribs,
 
         // optional:
 
-        aabssq=real_nattribs,   // Laser value at the particle position
-        real_nattribs_laser=1,
+        aabssq,             // Laser value at the particle position
 
         x_prev=0, y_prev,   // positions on the last non-temp slice
-        real_nattribs_temp_slice,
 
         Fx1=0, Fx2, Fx3, Fx4, Fx5,           // AB5 force terms
         Fy1, Fy2, Fy3, Fy4, Fy5,             //
         Fux1, Fux2, Fux3, Fux4, Fux5,        //
         Fuy1, Fuy2, Fuy3, Fuy4, Fuy5,        //
         Fpsi1, Fpsi2, Fpsi3, Fpsi4, Fpsi5,   //
-        real_nattribs_ab5_push
     };
     enum {
         // optional:
