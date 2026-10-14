@@ -1464,7 +1464,7 @@ MultiGrid::vcycle ()
         m_rhs.const_array().dataPtr()
     };
 
-    if (m_cuda_graph_vcycle.count(key) == 0) {
+    if (!m_cuda_graph_vcycle.contains(key)) {
         cudaStreamBeginCapture(amrex::Gpu::gpuStream(), cudaStreamCaptureModeGlobal);
 #endif
 

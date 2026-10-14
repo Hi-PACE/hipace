@@ -26,12 +26,13 @@ FFTPoissonSolverDirichletQuick::FFTPoissonSolverDirichletQuick (
 namespace {
 
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::Real dst2_in (T&& in, int i, int j, int n) {
+amrex::Real dst2_in (const T& in, int i, int j, int n) {
     return 2*i < n ? in(2*i, j) : -in(2*(n-i)-1, j);
 }
 
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::Real dst2_out (T&& in, int i, int j, int n, const amrex::GpuComplex<amrex::Real>* omega) {
+amrex::Real dst2_out (
+    const T& in, int i, int j, int n, const amrex::GpuComplex<amrex::Real>* omega) {
     if (2*i+1 < n) {
         return - (in(i+1, j) * omega[i+1]).imag();
     } else {
@@ -41,7 +42,7 @@ amrex::Real dst2_out (T&& in, int i, int j, int n, const amrex::GpuComplex<amrex
 
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 amrex::GpuComplex<amrex::Real> dst3_in (
-    T&& in, int i, int j, int n, const amrex::GpuComplex<amrex::Real>* omega) {
+    const T& in, int i, int j, int n, const amrex::GpuComplex<amrex::Real>* omega) {
 
     if (i == 0) {
         return {in(n-1, j), 0};
@@ -53,7 +54,7 @@ amrex::GpuComplex<amrex::Real> dst3_in (
 }
 
 template<class T> AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-amrex::Real dst3_out (T&& in, int i, int j, int n) {
+amrex::Real dst3_out (const T& in, int i, int j, int n) {
     return i%2 == 0 ? in(i/2, j) : -in(n-1-i/2, j);
 }
 
@@ -300,21 +301,21 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
     amrex::Real * const eig_x_ptr = m_eig_x.dataPtr();
     amrex::Real * const eig_y_ptr = m_eig_y.dataPtr();
 
-    const amrex::Real sine_x_factor = 1._rt / ( 2._rt * nx);
-    const amrex::Real sine_y_factor = 1._rt / ( 2._rt * ny);
-    const amrex::Real norm_fac = -4._rt * nx * ny;
+    const amrex::Real sine_x_factor = 1._rt / ( 2._rt * amrex::Real(nx));
+    const amrex::Real sine_y_factor = 1._rt / ( 2._rt * amrex::Real(ny));
+    const amrex::Real norm_fac = -4._rt * amrex::Real(nx * ny);
     const amrex::Real invdxsq = gm.InvCellSize(0)*gm.InvCellSize(0)*norm_fac;
     const amrex::Real invdysq = gm.InvCellSize(1)*gm.InvCellSize(1)*norm_fac;
 
     amrex::ParallelFor(nx,
         [=] AMREX_GPU_DEVICE (int i) noexcept {
-            const amrex::Real x_fac = amrex::Math::sinpi(sine_x_factor * (i+1));
+            const amrex::Real x_fac = amrex::Math::sinpi(sine_x_factor * amrex::Real(i+1));
             eig_x_ptr[i] = x_fac*x_fac*invdxsq;
         });
 
     amrex::ParallelFor(ny,
         [=] AMREX_GPU_DEVICE (int i) noexcept {
-            const amrex::Real y_fac = amrex::Math::sinpi(sine_y_factor * (i+1));
+            const amrex::Real y_fac = amrex::Math::sinpi(sine_y_factor * amrex::Real(i+1));
             eig_y_ptr[i] = y_fac*y_fac*invdysq;
         });
 
@@ -345,7 +346,7 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
     amrex::GpuComplex<amrex::Real>* const omega_x_ptr = m_omega_x.dataPtr();
     amrex::ParallelFor(nx/2+1,
         [=] AMREX_GPU_DEVICE (int i) {
-            auto [imag, real] = amrex::Math::sincospi(-i/amrex::Real(2._rt*nx));
+            auto [imag, real] = amrex::Math::sincospi(-amrex::Real(i)/(2._rt * amrex::Real(nx)));
             omega_x_ptr[i] = {real, imag};
         });
 
@@ -353,7 +354,7 @@ FFTPoissonSolverDirichletQuick::define (amrex::BoxArray const& a_realspace_ba,
     amrex::GpuComplex<amrex::Real>* const omega_y_ptr = m_omega_y.dataPtr();
     amrex::ParallelFor(ny/2+1,
         [=] AMREX_GPU_DEVICE (int i) {
-            auto [imag, real] = amrex::Math::sincospi(-i/amrex::Real(2._rt*ny));
+            auto [imag, real] = amrex::Math::sincospi(-amrex::Real(i)/(2._rt * amrex::Real(ny)));
             omega_y_ptr[i] = {real, imag};
         });
 }

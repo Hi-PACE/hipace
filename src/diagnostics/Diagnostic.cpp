@@ -80,7 +80,7 @@ Diagnostic::needsRhoIndividual () const {
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
             // we don't know the names of all the plasmas here so just look for "rho_..."
-            if (c.find("rho_") == 0) {
+            if (c.starts_with("rho_")) {
                 return true;
             }
         }
@@ -97,9 +97,9 @@ Diagnostic::needsTempIndividual () const {
         queryWithParserAlt(pp, "field_data", comps, ppd);
         for (auto& c : comps) {
             // we don't know the names of all the plasmas here so just look for "ux_..."
-            if (c.find("w_") == 0 ||
-                c.find("ux_") == 0 || c.find("uy_") == 0 || c.find("uz_") == 0 ||
-                c.find("ux^2_") == 0 || c.find("uy^2_") == 0 || c.find("uz^2_") == 0) {
+            if (c.starts_with("w_") ||
+                c.starts_with("ux_") || c.starts_with("uy_") || c.starts_with("uz_") ||
+                c.starts_with("ux^2_") || c.starts_with("uy^2_") || c.starts_with("uz^2_")) {
                 return true;
             }
         }
@@ -617,18 +617,19 @@ Diagnostic::InitDiagnosticsStep (amrex::Vector<amrex::Geometry>& field_geom,
         amrex::RealBox diag_domain = geom.ProbDomain();
         for(int dir=0; dir<=2; ++dir) {
             // make diag_domain correspond to box
-            diag_domain.setLo(dir, geom.ProbLo(dir)
-                + (domain.smallEnd(dir) - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
-            diag_domain.setHi(dir, geom.ProbHi(dir)
-                + (domain.bigEnd(dir) - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
+            diag_domain.setLo(dir, geom.ProbLo(dir) + amrex::Real(domain.smallEnd(dir)
+                - geom.Domain().smallEnd(dir)) * geom.CellSize(dir));
+            diag_domain.setHi(dir, geom.ProbHi(dir) + amrex::Real(domain.bigEnd(dir)
+                - geom.Domain().bigEnd(dir)) * geom.CellSize(dir));
         }
 
         // trim the 3D box to slice box for slice IO
         for(int dir=0; dir<=2; ++dir) {
             if (fd.m_remove_axis[dir]) {
-                const amrex::Real half_cell_size = diag_domain.length(dir) /
-                                                   ( 2. * domain.length(dir) );
-                const amrex::Real mid = (diag_domain.lo(dir) + diag_domain.hi(dir)) / 2.;
+                const amrex::Real half_cell_size =
+                    diag_domain.length(dir) / ( amrex::Real(2) * amrex::Real(domain.length(dir)) );
+                const amrex::Real mid =
+                    (diag_domain.lo(dir) + diag_domain.hi(dir)) / amrex::Real(2);
                 // Flatten the box down to 1 cell in the approprate direction.
                 domain.setSmall(dir, 0);
                 domain.setBig(dir, 0);

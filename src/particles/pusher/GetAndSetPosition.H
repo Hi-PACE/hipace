@@ -37,6 +37,7 @@ struct EnforceBC
     /** Constructor.
      */
     EnforceBC () noexcept
+        : m_particle_boundary{Hipace::m_boundary_particles}
     {
         using namespace amrex::literals;
 

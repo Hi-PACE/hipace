@@ -59,8 +59,10 @@ InitParticles (const amrex::RealVect& a_u_std,
     amrex::Array<amrex::Real, n_lev> scale_fac_lev {};
     for (int lev = 0; lev < n_lev; ++lev) {
         const int num_ppc = ppc_lev[lev][0] * ppc_lev[lev][1];
-        scale_fac_lev[lev] = num_ppc <= 0 ? 0. :
-            (Hipace::m_normalized_units ? 1./num_ppc : dx[0]*dx[1]*dx[2]/num_ppc);
+        scale_fac_lev[lev] = num_ppc <= 0 ? amrex::Real(0) :
+            (Hipace::m_normalized_units ?
+                amrex::Real(1)/amrex::Real(num_ppc) :
+                dx[0]*dx[1]*dx[2]/amrex::Real(num_ppc));
     }
 
     amrex::IntVect box_nodal{amrex::IndexType::CELL,amrex::IndexType::CELL,amrex::IndexType::CELL};
@@ -112,8 +114,8 @@ InitParticles (const amrex::RealVect& a_u_std,
             amrex::ParallelFor(to2D(tile_box),
                 [=] AMREX_GPU_DEVICE (int i, int j) noexcept
                 {
-                    const amrex::Real x = plo[0] + (i + 0.5_rt + x_offset)*dx[0];
-                    const amrex::Real y = plo[1] + (j + 0.5_rt + y_offset)*dx[1];
+                    const amrex::Real x = plo[0] + (amrex::Real(i) + 0.5_rt + x_offset)*dx[0];
+                    const amrex::Real y = plo[1] + (amrex::Real(j) + 0.5_rt + y_offset)*dx[1];
                     const int fine_val = static_cast<int>(std::round(fine_patch_func(x, y)));
                     arr_fine(i, j, comp_a) = std::min(max_lev+0, std::max(0, fine_val))
                                              * (fine_transition_cells + 1);
@@ -154,8 +156,8 @@ InitParticles (const amrex::RealVect& a_u_std,
 
             if (!do_init) return {false, 0, 0, 0};
 
-            const amrex::Real x = plo[0] + (i + r[0] + x_offset)*dx[0];
-            const amrex::Real y = plo[1] + (j + r[1] + y_offset)*dx[1];
+            const amrex::Real x = plo[0] + (amrex::Real(i) + r[0] + x_offset)*dx[0];
+            const amrex::Real y = plo[1] + (amrex::Real(j) + r[1] + y_offset)*dx[1];
 
             const amrex::Real rsq = x*x + y*y;
             const amrex::Real density = density_func(x, y, c_t);
@@ -566,7 +568,7 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     amrex::ParmParse pp(m_name);
     std::string physical_element;
     getWithParser(pp, "element", physical_element);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.count(physical_element) != 0,
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(ion_map_ids.contains(physical_element),
         "There are no ionization energies available for this element. "
         "Please update src/utils/IonizationEnergiesTable.H using write_atomic_data_cpp.py");
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE((std::abs(m_product_pc->m_charge / m_charge +1) < 1e-3),
@@ -594,9 +596,10 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
     const amrex::Real l_eff = std::sqrt(UH/h_ionization_energies[0]) - 1._rt;
 
     // Plasma frequency in SI units to denormalize ionization
-    const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                     PhysConstSI::q_e*PhysConstSI::q_e /
-                                     (PhysConstSI::ep0 * PhysConstSI::m_e) );
+    const amrex::Real wp = amrex::Real(
+        std::sqrt(static_cast<double>(background_density_SI) *
+            PhysConstSI::q_e*PhysConstSI::q_e /
+            (PhysConstSI::ep0*PhysConstSI::m_e)));
     const amrex::Real dt = normalized_units ? geom.CellSize(2)/wp : geom.CellSize(2)/phys_const.c;
 
     m_adk_power.resize(ion_atomic_number);
@@ -607,16 +610,18 @@ InitIonizationModule (const amrex::Geometry& geom, const amrex::Real background_
 
     for (int i=0; i<ion_atomic_number; ++i)
     {
-        const amrex::Real n_eff = (i+1) * std::sqrt(UH/h_ionization_energies[i]);
-        const amrex::Real C2 = std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
-                         * std::tgamma(n_eff-l_eff));
-        m_adk_power[i] = -(2 * n_eff - 1.);
+        const amrex::Real n_eff = amrex::Real(i+1) * std::sqrt(UH/h_ionization_energies[i]);
+        const amrex::Real C2 = amrex::Real(std::pow(2,2*n_eff)/(n_eff*std::tgamma(n_eff+l_eff+1)
+                         * std::tgamma(n_eff-l_eff)));
+        m_adk_power[i] = -amrex::Real(2._rt * n_eff - 1._rt);
         const amrex::Real Uion = h_ionization_energies[i];
-        m_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2.*UH) )
-            * std::pow(2*std::pow((Uion/UH),3./2.)*Ea,2*n_eff - 1);
-        m_adk_exp_prefactor[i] = -2./3. * std::pow( Uion/UH,3./2.) * Ea;
-        m_laser_adk_prefactor[i] = (3./MathConst::pi) * std::pow(Uion/UH, -3./2.) / Ea;
-        m_laser_dp_prefactor[i] = std::sqrt(3./2./Ea) * std::pow(UH/Uion, 3./4.);
+        m_adk_prefactor[i] = dt * wa * C2 * ( Uion / (2._rt * UH) )
+            * std::pow(2*std::pow((Uion/UH), amrex::Real(3./2.))*Ea, 2 * n_eff - 1);
+        m_adk_exp_prefactor[i] = amrex::Real(-2./3.) * std::pow( Uion/UH, amrex::Real(3./2.)) * Ea;
+        m_laser_adk_prefactor[i] = amrex::Real(3./MathConst::pi)
+            * std::pow(Uion/UH, amrex::Real(-3./2.)) / Ea;
+        m_laser_dp_prefactor[i] = std::sqrt(amrex::Real(3./2.)/Ea)
+            * std::pow(UH/Uion, amrex::Real(3./4.));
     }
 
     m_adk_power.copyToDeviceAsync();

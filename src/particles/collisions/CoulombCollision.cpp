@@ -9,7 +9,7 @@ void
 CoulombCollision::ReadParameters(
     const std::vector<std::string>& plasma_species_names,
     const std::vector<std::string>& beam_species_names,
-    std::string const collision_name)
+    std::string const& collision_name)
 {
     using namespace amrex::literals;
 
@@ -32,9 +32,9 @@ CoulombCollision::ReadParameters(
         "collision_period must be a positive number"
     );
 
-    for (int i=0; i<(int) beam_species_names.size(); i++) {
-        if (beam_species_names[i] == collision_species[0]) m_nbeams += 1;
-        if (beam_species_names[i] == collision_species[1]) m_nbeams += 1;
+    for (auto& beamname : beam_species_names) {
+        if (beamname == collision_species[0]) m_nbeams += 1;
+        if (beamname == collision_species[1]) m_nbeams += 1;
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
                 m_nbeams <= 1,
                 "<collision name>.species must contain at maximum one beam species name!");
@@ -89,7 +89,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collision_per
     {
         // Logically particles per-cell, and return indices of particles in each cell
         PlasmaBins bins1 = findParticlesInEachTile(bx, 1, species1, geom);
-        int const n_cells = bins1.numBins();
+        int const n_cells = static_cast<int>(bins1.numBins());
 
         // Counter to check there is only 1 box
         int count = 0;
@@ -156,7 +156,7 @@ CoulombCollision::doPlasmaPlasmaCoulombCollision ( int islice, int collision_per
         PlasmaBins bins1 = findParticlesInEachTile(bx, 1, species1, geom);
         PlasmaBins bins2 = findParticlesInEachTile(bx, 1, species2, geom);
 
-        int const n_cells = bins1.numBins();
+        int const n_cells = static_cast<int>(bins1.numBins());
 
         // Counter to check there is only 1 box
         int count = 0;
@@ -267,7 +267,7 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
     BeamBins bins1 = findBeamParticlesInEachTile(bx, 1, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(bx, 1, species2, geom);
 
-    int const n_cells = bins2.numBins();
+    int const n_cells = static_cast<int>(bins2.numBins());
 
     // Counter to check there is only 1 box
     int count = 0;
@@ -302,9 +302,10 @@ CoulombCollision::doBeamPlasmaCoulombCollision (
         // volume is used to calculate density, but weights already represent density in normalized units
         const amrex::Real inv_dV = geom.InvCellSize(0)*geom.InvCellSize(1)*geom.InvCellSize(2);
         // static_cast<double> to avoid precision problems in FP32
-        const amrex::Real wp = std::sqrt(static_cast<double>(background_density_SI) *
-                                         PhysConstSI::q_e*PhysConstSI::q_e /
-                                         (PhysConstSI::ep0*PhysConstSI::m_e));
+        const amrex::Real wp = amrex::Real(
+            std::sqrt(static_cast<double>(background_density_SI) *
+                PhysConstSI::q_e*PhysConstSI::q_e /
+                (PhysConstSI::ep0*PhysConstSI::m_e)));
         const amrex::Real dt = normalized_units ? Hipace::GetInstance().m_dt/wp
                                                 : Hipace::GetInstance().m_dt;
 

@@ -36,7 +36,12 @@ public:
                                amrex::Geometry const& gm);
 
     /** virtual destructor */
-    virtual ~FFTPoissonSolverPeriodic () override final {}
+    ~FFTPoissonSolverPeriodic () final = default;
+
+    FFTPoissonSolverPeriodic (const FFTPoissonSolverPeriodic& rhs) = delete;
+    FFTPoissonSolverPeriodic (FFTPoissonSolverPeriodic&& rhs) = delete;
+    FFTPoissonSolverPeriodic& operator= (const FFTPoissonSolverPeriodic& rhs) = delete;
+    FFTPoissonSolverPeriodic& operator= (FFTPoissonSolverPeriodic&& rhs) = delete;
 
     /**
      * \brief Define real space and spectral space boxes and multifabs, multiplier
@@ -56,13 +61,13 @@ public:
      *
      * \param[in] lhs_mf Destination array, where the result is stored.
      */
-    virtual void SolvePoissonEquation (amrex::MultiFab& lhs_mf) override final;
+    void SolvePoissonEquation (amrex::MultiFab& lhs_mf) final;
 
     /** Position and relative factor used to apply inhomogeneous Dirichlet boundary conditions
      * Note: inhomogeneous Dirichlet boundary conditions do not work with this solver
      */
-    virtual amrex::Real BoundaryOffset() override final { return 1.; }
-    virtual amrex::Real BoundaryFactor() override final { return 1.; }
+    amrex::Real BoundaryOffset() final { return 1.; }
+    amrex::Real BoundaryFactor() final { return 1.; }
 
 private:
     /** Spectral fields, contains (complex) field in Fourier space */

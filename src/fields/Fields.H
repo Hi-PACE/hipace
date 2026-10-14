@@ -26,7 +26,7 @@ class MultiLaser;
 
 /** \brief describes which slice with respect to the currently calculated is used */
 struct WhichSlice {
-    enum slice { Next=0, This, Previous, RhomJzIons, Salame, PCIter, PCPrevIter, N };
+    enum slice : int { Next=0, This, Previous, RhomJzIons, Salame, PCIter, PCPrevIter, N };
 };
 
 struct assert_map : std::map<std::string, int> {
@@ -55,7 +55,7 @@ inline int N_Comps {0};
 
 /** \brief Direction of each dimension. Can be used for clean handling 2D vs. 3D in the future */
 struct Direction{
-    enum dir{x=0, y, z};
+    enum dir : int {x=0, y, z};
 };
 
 /** \brief Function to help converting field indexes to positions and backwards. Usage:
@@ -71,7 +71,7 @@ GetPosOffset (const int dir, const amrex::Geometry& geom, const amrex::Box& box)
     using namespace amrex::literals;
     // match boxes at center point
     return 0.5_rt * (geom.ProbLo(dir) + geom.ProbHi(dir)
-           - geom.CellSize(dir) * (box.smallEnd(dir) + box.bigEnd(dir)));
+           - geom.CellSize(dir) * static_cast<amrex::Real>(box.smallEnd(dir) + box.bigEnd(dir)));
 }
 
 /** \brief Main class handling all field data structures and operations
@@ -112,7 +112,7 @@ public:
      * \param[in] islice slice index
      * \param[in] comp component name of field (see Comps)
      */
-    amrex::MultiFab getField (const int lev, const int islice, const std::string comp) {
+    amrex::MultiFab getField (const int lev, const int islice, const std::string& comp) {
         return amrex::MultiFab(getSlices(lev), amrex::make_alias, Comps[islice][comp], 1);
     }
     /** get amrex::MultiFab of the poisson staging area
@@ -166,8 +166,8 @@ public:
      * \param[in] factor multiply the boundary value by this factor
      */
     void SetBoundaryCondition (amrex::Vector<amrex::Geometry> const& geom, const int lev,
-                               const int which_slice, std::string component,
-                               amrex::MultiFab&& staging_area,
+                               const int which_slice, const std::string& component,
+                               amrex::MultiFab staging_area,
                                amrex::Real offset, amrex::Real factor);
 
     /** \brief Interpolate values from coarse grid (lev-1) to the boundary of the fine grid (lev).
@@ -235,7 +235,7 @@ public:
      * \param[in] do_sum if the fields are currents and needs to be summed
      * \param[in] comp_idx vector of component indexes such as Comps[WhichSlice::This]["Ez"]
      */
-    void EnforcePeriodic (const bool do_sum, std::vector<int>&& comp_idx);
+    void EnforcePeriodic (const bool do_sum, std::vector<int> comp_idx);
     /** \brief Sets the initial guess of the B field from the two previous slices
      *
      * This modifies component Bx or By of slice 1 in m_fields.m_slices

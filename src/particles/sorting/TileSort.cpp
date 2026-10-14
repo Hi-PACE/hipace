@@ -31,8 +31,8 @@ findParticlesInEachTile (
         // Extract box properties
         const auto lo = lbound(cbx);
         const auto dxi = amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>({
-                geom.InvCellSizeArray()[0]/bin_size,
-                geom.InvCellSizeArray()[1]/bin_size,
+                geom.InvCellSizeArray()[0] / amrex::Real(bin_size),
+                geom.InvCellSizeArray()[1] / amrex::Real(bin_size),
                 1.});
         const auto plo = geom.ProbLoArray();
 
@@ -70,8 +70,8 @@ findBeamParticlesInEachTile (
     // Extract box properties
     const auto lo = lbound(cbx);
     const auto dxi = amrex::GpuArray<amrex::Real,AMREX_SPACEDIM>({
-            geom.InvCellSizeArray()[0]/bin_size,
-            geom.InvCellSizeArray()[1]/bin_size,
+            geom.InvCellSizeArray()[0] / amrex::Real(bin_size),
+            geom.InvCellSizeArray()[1] / amrex::Real(bin_size),
             1.});
     const auto plo = geom.ProbLoArray();
 

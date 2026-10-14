@@ -81,17 +81,12 @@ struct Array2 {
 };
 
 template<class T> inline
-Array2<T> to_array2 (amrex::Array4<T>&& in) {
-    return Array2<T>{in};
-}
-
-template<class T> inline
 Array2<T> to_array2 (const amrex::Array4<T>& in) {
     return Array2<T>{in};
 }
 
 template<class T> inline
-T to_array2 (T&& in) {
+T to_array2 (const T& in) {
     return in;
 }
 
@@ -182,21 +177,6 @@ struct Array3 {
     }
 #endif
 };
-
-template<class T> inline
-Array3<T> to_array3 (amrex::Array4<T>&& in) {
-    return Array3<T>{in};
-}
-
-template<class T> inline
-Array3<T> to_array3 (const amrex::Array4<T>& in) {
-    return Array3<T>{in};
-}
-
-template<class T> inline
-T to_array3 (T&& in) {
-    return in;
-}
 
 inline amrex::MFItInfo DfltMfi; // Default MFIter
 inline amrex::MFItInfo DfltMfiTlng; // Default MFIter with Tiling

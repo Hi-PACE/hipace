@@ -29,7 +29,7 @@ namespace PhysConstSI
 /** \brief Namespace containing math constants */
 namespace MathConst
 {
-    static constexpr amrex::Real pi = 3.14159265358979323846;
+    static constexpr amrex::Real pi = 3.14159265358979323846; // NOLINT(modernize-use-std-numbers)
 }
 
 /** \brief Struct containing physical constants, our main strategy to handle both SI and

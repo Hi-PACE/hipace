@@ -31,7 +31,7 @@ void doStreamSynchronize ()
 
 // Note that objects are destructed in the reverse order of declaration
 template<int detail_level>
-struct synchronizeOnDestruct {
+struct synchronizeOnDestruct { // NOLINT(cppcoreguidelines-special-member-functions)
     AMREX_FORCE_INLINE
     ~synchronizeOnDestruct () {
         doStreamSynchronize<detail_level>();

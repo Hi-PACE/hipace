@@ -161,7 +161,7 @@ AdvanceBeamParticlesSlice (
     const int n_subcycles = beam.m_n_subcycles;
     const bool radiation_reaction = beam.m_do_radiation_reaction;
     const amrex::Real time = Hipace::GetInstance().m_physical_time;
-    const amrex::Real dt = Hipace::GetInstance().m_dt / n_subcycles;
+    const amrex::Real dt = Hipace::GetInstance().m_dt / amrex::Real(n_subcycles);
     const bool spin_tracking = beam.m_do_spin_tracking;
     const amrex::Real spin_anom = beam.m_spin_anom;
 
@@ -232,8 +232,8 @@ AdvanceBeamParticlesSlice (
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(Hipace::m_background_density_SI != 0,
             "For radiation reactions with normalized units, a background plasma density != 0 must "
             "be specified via 'hipace.background_density_SI'");
-        rr_factor *= std::sqrt(static_cast<double>(Hipace::m_background_density_SI)
-                / (PhysConstSI::ep0 * PhysConstSI::m_e)) * PhysConstSI::q_e;
+        rr_factor *= amrex::Real(std::sqrt(static_cast<double>(Hipace::m_background_density_SI)
+                / (PhysConstSI::ep0 * PhysConstSI::m_e)) * PhysConstSI::q_e);
     }
 
     // don't include slipped particles in count as they were already pushed

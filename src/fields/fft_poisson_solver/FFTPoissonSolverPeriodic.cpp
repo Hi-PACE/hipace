@@ -80,9 +80,9 @@ FFTPoissonSolverPeriodic::define ( amrex::BoxArray const& realspace_ba,
         amrex::ParallelFor(to2D(bx), [=] AMREX_GPU_DEVICE (int i, int j) noexcept
         {
             // kx is always positive (first axis of the real-to-complex FFT)
-            amrex::Real kx = dkx*i;
+            amrex::Real kx = dkx * amrex::Real(i);
             // The first half of ky is positive ; the other is negative
-            amrex::Real ky = (j<mid_point_y) ? dky*j : dky*(j-Ny);
+            amrex::Real ky = (j<mid_point_y) ? dky * amrex::Real(j) : dky * amrex::Real(j-Ny);
             if ((i!=0) && (j!=0)) {
                 inv_k2_arr(i,j) = 1._rt/(kx*kx + ky*ky);
             } else {
@@ -138,7 +138,7 @@ FFTPoissonSolverPeriodic::SolvePoissonEquation (amrex::MultiFab& lhs_mf)
         Array2<amrex::Real> tmp_real_arr = m_stagingArea.array(mfi);
         Array2<amrex::Real> lhs_arr = lhs_mf.array(mfi);
         const amrex::Box fft_box = m_stagingArea[mfi].box();
-        const amrex::Real inv_N = 1./fft_box.numPts();
+        const amrex::Real inv_N = amrex::Real(1)/amrex::Real(fft_box.numPts());
         amrex::ParallelFor( to2D(mfi.growntilebox()),
             [=] AMREX_GPU_DEVICE(int i, int j) noexcept {
                 // Copy and normalize field
