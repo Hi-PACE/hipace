@@ -1,0 +1,46 @@
+amr.n_cell = 64 64 100
+
+my_constants.kp_inv = 10.e-6
+my_constants.kp = 1. / kp_inv
+my_constants.wp = clight * kp
+my_constants.ne = wp^2 * m_e * epsilon0 / q_e^2
+
+amr.max_level = 0
+
+max_step = 0
+
+hipace.depos_order_xy = 2
+hipace.MG_tolerance_rel = 1e-7
+
+boundary.field = Dirichlet
+boundary.particle = Absorbing
+geometry.prob_lo     = -6*kp_inv -6*kp_inv  -8*kp_inv
+geometry.prob_hi     =  6*kp_inv  6*kp_inv   8*kp_inv
+
+beams.names = beam
+beam.injection_type = fixed_weight_pdf
+beam.pdf = "exp(-0.5*((z-3*kp_inv)/(0.8*kp_inv))^2)*(z>1*kp_inv)"
+beam.density = 10*ne
+beam.position_mean = 0 0
+beam.position_std = 0.2*kp_inv 0.2*kp_inv
+beam.u_mean = 0 0 2000
+beam.u_std = 0 0 0
+beam.num_particles = 5e5
+
+plasmas.names = elec ion
+plasmas.neutralize_background = false
+
+elec.density(x,y,z) = ne
+elec.ppc = 1 1
+elec.element = electron
+
+ion.density(x,y,z) = ne
+ion.ppc = 1 1
+ion.element = H
+
+diagnostic.names = lev0 plasma_slice_diag
+diagnostic.output_period = 1
+diagnostic.dimensions = xz
+
+plasma_slice_diag.type = plasma_slice
+plasma_slice_diag.plasma_output_slice = 49

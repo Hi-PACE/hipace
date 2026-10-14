@@ -14,6 +14,13 @@
 #include "utils/IonizationEnergiesTable.H"
 #include <cmath>
 
+#ifdef HIPACE_USE_OPENPMD
+#include "diagnostics/OpenPMDWriter.H"
+#include <openPMD/openPMD.hpp>
+#include <iostream> // std::cout
+#include <memory>   // std::shared_ptr
+#endif  // HIPACE_USE_OPENPMD
+
 void
 PlasmaParticleContainer::
 InitParticles (const amrex::RealVect& a_u_std,
@@ -374,6 +381,171 @@ InitParticles (const amrex::RealVect& a_u_std,
             });
         }
     }
+}
+
+#ifdef HIPACE_USE_OPENPMD
+template <class input_type, class ParticleTile>
+void
+ReadOpenPMDParticles (openPMD::Series& series,
+                      openPMD::ParticleSpecies& species,
+                      const std::string& idcpu_name,
+                      std::vector<std::string>& real_names,
+                      std::vector<std::string>& int_names,
+                      ParticleTile& particle_tile)
+{
+    amrex::ParticleTileRT<input_type, int> pinned_tile;
+    pinned_tile.define(
+        static_cast<int>(real_names.size()),
+        static_cast<int>(int_names.size()),
+        &real_names,
+        &int_names,
+        amrex::The_Pinned_Arena()
+    );
+
+    auto [id_record, id_comp] = utils::name2openPMD(idcpu_name);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+        species.contains(id_record) && species[id_record].contains(id_comp),
+        "Plasma read_particles_from_path: File must contains species with record '" +
+        id_record + "' and component '" + id_comp + "'"
+    );
+    auto num_to_read = species[id_record][id_comp].getExtent()[0];
+    particle_tile.resize(num_to_read);
+    pinned_tile.resize(num_to_read, amrex::GrowthStrategy::Exact);
+
+    species[id_record][id_comp].loadChunkRaw(
+        pinned_tile.GetIdCPUData().data(), {0}, {num_to_read}
+    );
+
+    for (std::size_t i = 0; i<real_names.size(); ++i) {
+        auto [real_record, real_comp] = utils::name2openPMD(real_names[i]);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            species.contains(real_record) && species[real_record].contains(real_comp),
+            "Plasma read_particles_from_path: File must contains species with record '" +
+            real_record + "' and component '" + real_comp + "'"
+        );
+        species[real_record][real_comp].loadChunkRaw(
+            pinned_tile.GetRealData(i).data(), {0}, {num_to_read}
+        );
+    }
+
+    for (std::size_t i = 0; i<int_names.size(); ++i) {
+        auto [int_record, int_comp] = utils::name2openPMD(int_names[i]);
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            species.contains(int_record) && species[int_record].contains(int_comp),
+            "Plasma read_particles_from_path: File must contains species with record '" +
+            int_record + "' and component '" + int_comp + "'"
+        );
+        species[int_record][int_comp].loadChunkRaw(
+            pinned_tile.GetIntData(i).data(), {0}, {num_to_read}
+        );
+    }
+
+    series.flush();
+
+    auto ptd = particle_tile.getParticleTileData();
+    auto pinned_ptd = pinned_tile.getParticleTileData();
+
+    amrex::ParallelFor(num_to_read,
+        [=] AMREX_GPU_DEVICE (int i) {
+            uint64_t id = pinned_ptd.idcpu(i);
+            amrex::ParticleIDWrapper{id}.make_valid();
+            ptd.idcpu(i) = id;
+
+            for (int j = 0; j < ptd.m_n_real; ++j) {
+                ptd.rdata(j)[i] = static_cast<amrex::Real>(pinned_ptd.rdata(j)[i]);
+            }
+
+            for (int j = 0; j < ptd.m_n_int; ++j) {
+                ptd.idata(j)[i] = pinned_ptd.idata(j)[i];
+            }
+        }
+    );
+
+    // sync for pinned_tile
+    amrex::Gpu::streamSynchronize();
+}
+#endif
+
+void
+PlasmaParticleContainer::
+InitParticlesFromFile ()
+{
+#ifdef HIPACE_USE_OPENPMD
+    HIPACE_PROFILE("PlasmaParticleContainer::InitParticlesFromFile()");
+    using namespace amrex::literals;
+    clearParticles();
+
+    // only read particles on one tile
+    if (amrex::MFIter mfi = MakeMFIter(0, DfltMfi); mfi.isValid())
+    {
+        auto& particle_tile = DefineAndReturnParticleTile(0, mfi);
+
+        auto series = openPMD::Series(m_particles_path, openPMD::Access::READ_ONLY);
+
+        const amrex::Real current_time = Hipace::m_physical_time;
+
+        // find iteration that is closest to current_time
+        uint64_t closest_step = 0;
+        double min_diff = std::numeric_limits<double>::max();
+
+        for (auto const& [step, it] : series.iterations) {
+            double iteration_time = it.template time<double>() * it.timeUnitSI();
+            double diff = std::abs(iteration_time - current_time);
+
+            if (diff < min_diff) {
+                min_diff = diff;
+                closest_step = step;
+            }
+        }
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            series.iterations.contains(closest_step),
+            "Could not find iteration " + std::to_string(closest_step) +
+            " in file " + m_particles_path + "\n"
+        );
+
+        auto& iteration = series.iterations[closest_step];
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+            iteration.particles.contains(m_name),
+            "Could not find species " + m_name +
+            " in file " + m_particles_path + "\n"
+        );
+
+        auto& species = iteration.particles[m_name];
+
+        const std::string idcpu_name = "id";
+        auto real_names = particle_tile.GetRealNames();
+        auto int_names = particle_tile.GetIntNames();
+
+        openPMD::Datatype input_type = openPMD::Datatype::INT;
+
+        if (real_names.size() > 0) {
+            auto [real_record, real_comp] = utils::name2openPMD(real_names[0]);
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                species.contains(real_record) && species[real_record].contains(real_comp),
+                "Plasma read_particles_from_path: File must contains species with record '" +
+                real_record + "' and component '" + real_record + "'"
+            );
+            input_type = species[real_record][real_comp].getDatatype();
+        } else {
+            input_type = openPMD::Datatype::DOUBLE;
+        }
+
+        if (input_type == openPMD::Datatype::FLOAT) {
+            ReadOpenPMDParticles<float>(series, species,
+                idcpu_name, real_names, int_names, particle_tile);
+        } else if (input_type == openPMD::Datatype::DOUBLE) {
+            ReadOpenPMDParticles<double>(series, species,
+                idcpu_name, real_names, int_names, particle_tile);
+        } else {
+            amrex::Abort("Unknown datatype used in Plasma input file. Must use double or float");
+        }
+    }
+#else
+    amrex::Abort("plasma particle initialization via read_particles_from_path requires"
+                " openPMD support: Add HiPACE_OPENPMD=ON when compiling HiPACE++.\n");
+#endif
 }
 
 void

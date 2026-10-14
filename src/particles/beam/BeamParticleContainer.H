@@ -78,6 +78,7 @@ public:
      * and fixed weight using a probability density function (PDF) */
     void InitBeamFixedWeightPDF3D ();
     void InitBeamFixedWeightPDFSlice (int slice, int which_slice);
+    void InitBeamFixedWeightTwissSlice (int slice, int which_slice);
 
 #ifdef HIPACE_USE_OPENPMD
     /** Checks the input file first to determine its Datatype
@@ -320,6 +321,13 @@ private:
     amrex::Array<amrex::ParserExecutor<1>, 6> m_pdf_u_func;
     /** Owns data for all 11 Parser functions of fixed_weight_pdf */
     amrex::Vector<amrex::Parser> m_pdf_parsers;
+
+    // fixed_weight_twiss:
+
+    /** functions for energy, energy_spread, pos mean, alpha x/y, beta x/y, emittance x/y */
+    amrex::Array<amrex::ParserExecutor<1>, 10> m_twiss_func;
+    /** Use m_twiss_func to get the average momentum for the adaptive time step */
+    bool m_use_energy_from_twiss = false;
 
     // from_file:
 

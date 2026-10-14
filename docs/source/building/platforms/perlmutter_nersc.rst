@@ -24,7 +24,7 @@ Create a file ``profile.hipace`` and ``source`` it whenever you log in and want 
    export CRAY_ACCEL_TARGET=nvidia80
 
    # optimize CUDA compilation for A100
-   export AMREX_CUDA_ARCH=8.0
+   export CUDAARCHS=80
 
    # compiler environment hints
    export CC=cc

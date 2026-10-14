@@ -39,4 +39,4 @@ plasma.radius = 23.*kp_inv
 lasers.insitu_period = 10
 plasmas.insitu_period = 10
 
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz

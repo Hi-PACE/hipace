@@ -85,10 +85,8 @@ Hipace::Hipace () :
     m_helmholtz.ReadParameters();
     m_grid_current.ReadParameters();
     m_grid_ionization.ReadParameters();
-    m_diags.ReadParameters(m_N_level, m_multi_laser.UseLaser(), m_helmholtz.UseHelmholtz());
-#ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.ReadParameters();
-#endif
+    m_diags.ReadParameters(m_N_level, m_multi_laser.UseLaser(), m_helmholtz.UseHelmholtz(),
+                           m_multi_beam.get_nbeams() > 0);
     ReadParameters();
 }
 
@@ -234,9 +232,16 @@ Hipace::ReadParameters ()
         m_boundary_particles = ParticleBoundary::Periodic;
     } else if (particle_boundary == "Absorbing") {
         m_boundary_particles = ParticleBoundary::Absorbing;
+    } else if (particle_boundary == "Thermal") {
+        m_boundary_particles = ParticleBoundary::Thermal;
+        queryWithParser(ppb, "temperature_in_ev", m_boundary_temperature);
+    } else if (particle_boundary == "Thermal_Cylindrical") {
+        m_boundary_particles = ParticleBoundary::Thermal_Cylindrical;
+        queryWithParser(ppb, "temperature_in_ev", m_boundary_temperature);
     } else {
         amrex::Abort("Unknown particle boundary '" + particle_boundary +
-            "', must be 'Reflecting', 'Periodic' or 'Absorbing'");
+            "', must be 'Reflecting', 'Periodic', 'Absorbing', 'Thermal', "
+            "or 'Thermal_Cylindrical'");
     }
 
     MakeGeometry();
@@ -314,7 +319,8 @@ Hipace::InitData ()
 
     m_helmholtz.InitData();
 
-    m_diags.Initialize(m_N_level, m_multi_laser.UseLaser(), m_use_helmholtz);
+    m_diags.Initialize(m_N_level, m_multi_laser.UseLaser(), m_use_helmholtz,
+        m_multi_beam.m_names, m_multi_plasma.m_names);
 
     m_initial_time = m_multi_beam.InitData(m_3D_geom[0]);
 
@@ -600,7 +606,12 @@ Hipace::Evolve ()
         // need correct physical time for this
         const bool is_first_step = step == m_initial_step;
         const bool is_last_step = (step == m_max_step) || (m_physical_time == m_max_time);
-        InitDiagnostics(step, m_physical_time, is_last_step);
+        m_diags.InitDiagnosticsStep(
+            m_3D_geom, m_multi_laser.GetLaserGeom(),
+            m_helmholtz.GetHelmholtzGeom(),
+            m_multi_plasma, m_multi_beam,
+            step, m_physical_time, is_last_step
+        );
 
         // Solve slices
         for (int isl = bx.bigEnd(Direction::z); isl >= bx.smallEnd(Direction::z); --isl){
@@ -610,7 +621,8 @@ Hipace::Evolve ()
         m_adaptive_time_step.CalculateFromMinUz(
             m_physical_time, m_dt, m_multi_beam, m_multi_plasma);
 
-        WriteDiagnostics(step, m_physical_time, is_last_step);
+        m_diags.WriteDiagnostics(m_multi_laser, m_multi_beam, m_multi_plasma,
+            m_3D_geom[0], m_physical_time, step, m_physical_time, is_last_step);
 
         m_fields.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
         m_multi_beam.InSituWriteToFile(step, m_physical_time, m_3D_geom[0], is_last_step);
@@ -631,8 +643,6 @@ Hipace::Evolve ()
             m_predcorr_avg_iterations = 0.;
             m_predcorr_avg_B_error = 0.;
         }
-
-        FlushDiagnostics();
     }
 
     if (m_verbose >= 1) {
@@ -841,7 +851,6 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // get beam diagnostics after SALAME but before beam push
     m_multi_beam.InSituComputeDiags(step, islice, m_physical_time, is_last_step);
-    FillBeamDiagnostics(step, m_physical_time, is_last_step);
 
     // get field insitu diagnostics after all fields are computed & SALAME
     m_fields.InSituComputeDiags(step, islice, m_3D_geom[0], m_physical_time, is_last_step);
@@ -884,13 +893,13 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // Push beam particles
     m_multi_beam.AdvanceBeamParticlesSlice(m_fields, m_3D_geom, islice, current_N_level, m_helmholtz);
 
-    // get plasma and beam histograms of particles that exited the domain after push
-    m_diags.FillBoundaryHistDiagnostics(islice, m_multi_plasma, m_multi_beam, m_3D_geom);
+    // get plasma and beam particles that exited the domain after push
+    m_diags.FillBoundaryDiagnostics(islice, m_multi_plasma, m_multi_beam, m_3D_geom);
 
     m_multi_beam.shiftSlippedParticles(islice, m_3D_geom[0]);
 
     // collisions for plasmas and beams
-    doCoulombCollision();
+    doCoulombCollision(islice);
 
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);
@@ -1325,7 +1334,7 @@ Hipace::AddGridExternalFields (const int lev, const int islice)
 }
 
 void
-Hipace::doCoulombCollision ()
+Hipace::doCoulombCollision (int islice)
 {
 
     // collisions for all particles calculated on level 0
@@ -1350,64 +1359,9 @@ Hipace::doCoulombCollision ()
 
             // TODO: enable tiling
 
-            CoulombCollision::doPlasmaPlasmaCoulombCollision(
+            CoulombCollision::doPlasmaPlasmaCoulombCollision( islice, m_all_collisions[i].m_collision_period,
                 lev, m_slice_geom[0].Domain(), m_slice_geom[0], species1, species2, m_all_collisions[i].m_isSameSpecies,
                 m_all_collisions[i].m_CoulombLog, m_background_density_SI);
         }
     }
-}
-
-void
-Hipace::InitDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
-{
-#ifdef HIPACE_USE_OPENPMD
-    // need correct physical time for this check
-    if (m_diags.hasAnyOutput(step, time, is_last_step)) {
-        m_openpmd_writer.InitDiagnostics();
-    }
-    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
-        m_openpmd_writer.InitBeamData(m_multi_beam, getDiagBeamNames());
-    }
-#endif
-    m_diags.ResizeFDiagFAB(m_3D_geom, m_multi_laser.GetLaserGeom(), m_helmholtz.GetHelmholtzGeom(),
-                           step, time, is_last_step);
-}
-
-void
-Hipace::FillBeamDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
-{
-#ifdef HIPACE_USE_OPENPMD
-    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
-        m_openpmd_writer.CopyBeams(m_multi_beam, getDiagBeamNames());
-    }
-#else
-    amrex::ignore_unused(step, time, is_last_step);
-#endif
-}
-
-void
-Hipace::WriteDiagnostics (const int step, const amrex::Real time, const bool is_last_step)
-{
-#ifdef HIPACE_USE_OPENPMD
-    if (m_diags.hasAnyFieldOutput(step, time, is_last_step)) {
-        m_openpmd_writer.WriteFieldDiagnostics(m_diags.getDiagData(),
-            m_multi_laser, m_physical_time, step);
-    }
-
-    if (m_diags.hasBeamOutput(step, time, is_last_step)) {
-        m_openpmd_writer.WriteBeamDiagnostics(m_multi_beam, m_physical_time, step,
-            getDiagBeamNames(), m_3D_geom);
-    }
-#else
-    amrex::ignore_unused(step, time, is_last_step);
-    amrex::Print()<<"WARNING: HiPACE++ compiled without openPMD support, the simulation has no I/O.\n";
-#endif
-}
-
-void
-Hipace::FlushDiagnostics ()
-{
-#ifdef HIPACE_USE_OPENPMD
-    m_openpmd_writer.flush();
-#endif
 }

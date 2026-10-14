@@ -231,6 +231,15 @@ Geometry
 
         * ``Absorbing`` Particles exiting the domain are deleted.
 
+        * ``Thermal`` Particles hitting the boundary are reflected back in with a thermalised velocity. Can then specify the temperature using ``boundary.temperature_in_ev``.
+
+        * ``Thermal_Cylindrical`` Same as ``Thermal`` but the boundary has the shape of a circle transversely.
+
+* ``boundary.temperature_in_ev`` (`float`) optional (default `1e-4`)
+    Particles thermalised from the walls of the domain have their velocities sampled from a Gaussian for the tangential component
+    to the boundary's plane, and from a Flux Gaussian for the normal component to the boundary's plane. The width of each of these
+    distributions is characterised by :math:`u=\sqrt{k_B T/Mc^2}`, where :math:`M` is the mass of the particle.
+
 * ``boundary.particle_lo`` (2 `float`) optional (default `<first two values of geometry.prob_lo>`)
     The lower location of the domain boundary the particles experience. By default, this is equal
     to the boundary of the fields however it may be shrunk to reduce noise originating from
@@ -477,6 +486,9 @@ When both are specified, the per-species value is used.
     memory, instead of reading the full file upfront. For small files or when using an adaptive timestep,
     this could lead to additional overhead.
 
+* ``<plasma name> or plasmas.read_particles_from_path```(`string`) optional (default "")
+    Alternative to ``<plasma name>.density(x,y,z)``. Specify the path to an openPMD file that contains plasma particles to initialize. The file must contain all particle components that hipace internally uses, such as the output files produced by the ``plasma_slice`` diagnostic.
+
 * ``<plasma name> or plasmas.ppc`` (2 `integer`)
     The number of plasma particles per cell in x and y.
     Since in a quasi-static code, there is only a 2D plasma slice evolving along the longitudinal
@@ -612,17 +624,20 @@ which are valid only for certain beam types, are introduced further below under
 
 
 * ``<beam name>.injection_type`` (`string`)
-    The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight``, ``fixed_ppc``,
+    The injection type for the particle beam. Currently available are ``fixed_weight_pdf``, ``fixed_weight_twiss``, ``fixed_weight``, ``fixed_ppc``,
     ``from_file`` and ``from_list``.
-    ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
-    the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
-    user-specified probability density function. It is more general and faster, and uses
-    less memory than ``fixed_weight``.
-    ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
-    ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
-    varying weights. It can be either a Gaussian or a flattop beam.
-    ``from_file`` reads a beam from openPMD files.
-    ``from_list`` reads a beam from arrays provided directly in the input script.
+
+        * ``fixed_weight_pdf`` generates a beam with a fixed number of particles with a constant weight where
+          the transverse profile is Gaussian and the longitudinal profile is arbitrary according to a
+          user-specified probability density function. It is more general and faster, and uses
+          less memory than ``fixed_weight``.
+        * ``fixed_weight_twiss`` similar to ``fixed_weight_pdf`` but takes Courant-Snyder
+          parameters as input for transverse beam properties
+        * ``fixed_weight`` generates a Gaussian beam with a fixed number of particles with a constant weight.
+        * ``fixed_ppc`` generates a beam with a fixed number of particles per cell and
+          varying weights. It can be either a Gaussian or a flattop beam.
+        * ``from_file`` reads a beam from openPMD files.
+        * ``from_list`` reads a beam from arrays provided directly in the input script.
 
 * ``<beam name>.element`` (`string`) optional (default `electron`)
     The Physical Element of the plasma. Sets charge, mass and, if available,
@@ -671,12 +686,6 @@ which are valid only for certain beam types, are introduced further below under
     The ideal index type is different for beam push and beam deposition so some experimentation
     may be required to find the overall fastest setting for a specific simulation.
 
-* ``<beam name> or beams.output_ratio`` (`int`) optional (default `1`)
-    Set the fraction of beam particles that should be written to the openPMD output.
-    For example, an output ratio of 100 will output every 100th beam particle.
-    This is implemented using the particle ID, which is set in ascending order at
-    the beginning of a simulation.
-
 Option: ``fixed_weight_pdf``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -692,9 +701,10 @@ Option: ``fixed_weight_pdf``
     the code to generate the absolute beam profile.
     Examples (assuming ``z_center``, ``z_std``, ``z_length``, ``z_slope``, ``z_min`` and ``z_max``
     are defined with ``my_constants``):
-    - Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
-    - Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
-    - Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
+      * Gaussian: ``exp(-0.5*((z-z_center)/z_std)^2)``
+      * Cosine: ``(cos(2*pi*(z-z_center)/z_length)+1)*(2*abs(z-z_center)<z_length)``
+      * Flattop: ``(z<z_max)*(z>z_min)``
+      * Trapezoidal: ``(z<z_max)*(z>z_min)*(1+z_slope*z)``
 
 * ``<beam name>.total_charge`` (`float`)
     Total charge of the beam (either ``total_charge`` or ``density`` must be specified).
@@ -748,6 +758,63 @@ Option: ``fixed_weight_pdf``
 
 * ``<beam name>.pdf_ref_ratio`` (`int`) optional (default `4`)
     Into how many segments the pdf is divided per zeta slice for its first-order numerical evaluation.
+
+Option: ``fixed_weight_twiss``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``<beam name>.num_particles`` (`int`)
+    Number of constant weight particles to generate the beam.
+
+* ``<beam name>.pdf`` (`float`)
+    See entry ``<beam name>.pdf`` of section ``fixed_weight_pdf`` above.
+
+* ``<beam name>.total_charge`` (`float`)
+    See entry ``<beam name>.total_charge`` of section ``fixed_weight_pdf`` above.
+
+* ``<beam name>.density`` (`float`)
+    See entry ``<beam name>.density`` of section ``fixed_weight_pdf`` above.
+
+* ``<beam name>.energy_mean_MeV`` (`float`)
+    The mean energy of the beam in MeV, including the rest mass of the beam particles.
+    Can be a function of z.
+    The normalized momentum is calculated as :math:`u_z = \sqrt{\gamma^2 - 1}`
+    with :math:`\mu_{\gamma} = \mu_{E} \frac{q_e}{m c^2}` and
+    :math:`\sigma_{\gamma} = \sigma_{E} \frac{q_e}{m c^2}`.
+
+* ``<beam name>.energy_spread_MeV`` (`float`)
+    The energy spread of the beam in MeV. Can be a function of z.
+
+* ``<beam name>.position_mean`` (2 `float`) optional (default `0 0`)
+    The mean position of the beam in ``x, y``, separated by a space. Both values can be a function of z.
+
+* ``<beam name>.twiss_alpha`` (2 `float`) optional (default `0 0`)
+    The Courant-Snyder parameter describing position-momentum correlations in rad in ``x, y``,
+    separated by a space. Both values can be a function of z.
+    Internally, :math:`x'` is changed depending on the position as
+    :math:`x' = x' - x \cdot \mathrm{twiss\_alpha_x} / \mathrm{twiss\_beta_x}`.
+
+* ``<beam name>.twiss_beta`` (2 `float`)
+    The Courant-Snyder parameter describing beam size in meters in ``x, y``,
+    separated by a space. Both values can be a function of z.
+    Internally, the standard deviation of :math:`x` and :math:`x'` are calculated as
+    :math:`\sigma_x = \sqrt{\mathrm{geo\_emittance_x} \cdot \mathrm{twiss\_beta_x}}` and
+    :math:`\sigma_{x'} = \sqrt{\mathrm{geo\_emittance_x} / \mathrm{twiss\_beta_x}}` with
+    :math:`u_x = x' \cdot u_z` in case ``twiss_alpha`` is zero.
+
+* ``<beam name>.emittance`` (2 `float`)
+    The emittance normalized to the longitudinal momentum in m rad in ``x, y``,
+    separated by a space. Both values can be a function of z.
+    Internally, the geometric emittance is calculated as
+    :math:`\mathrm{geo\_emittance_x} = \mathrm{emittance_x} / u_z`.
+
+* ``<beam name>.do_symmetrize`` (`bool`) optional (default `0`)
+    See entry ``<beam name>.do_symmetrize`` of section ``fixed_weight_pdf`` above.
+
+* ``<beam name>.radius`` (`float`) optional (default `infinity`)
+    See entry ``<beam name>.radius`` of section ``fixed_weight_pdf`` above.
+
+* ``<beam name>.pdf_ref_ratio`` (`int`) optional (default `4`)
+    See entry ``<beam name>.pdf_ref_ratio`` of section ``fixed_weight_pdf`` above.
 
 Option: ``fixed_weight``
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1097,52 +1164,90 @@ Please make sure to always clear or rename the output folder before running a ne
     `here <https://github.com/Hi-PACE/hipace/pull/1334>`__.
 
 * ``hipace.output_folder`` (`string`) optional (default ``"diags"``)
-    Set the output path of diagnostic data. By default all types of diagnostics will output
+    Set the output path of all diagnostic data. By default all types of diagnostics will output
     into subfolders of this folder.
 
 * ``hipace.file_prefix`` (`string`) optional (default ``"<hipace.output_folder>/hdf5/"``)
-    Path of the output.
+    Path of the openPMD output.
 
 * ``hipace.openpmd_backend`` (`string`) optional (default `h5`)
     OpenPMD backend. This can either be ``h5``, ``bp``, or ``json``. The default is chosen by what is
     available. If both Adios2 and HDF5 are available, ``h5`` is used. Note that ``json`` is extremely
     slow and is not recommended for production runs.
 
+* ``diagnostic.names`` (`string`) optional (default `lev0`)
+    The names of all diagnostics (excluding in-situ), separated by a space.
+    Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
+    To run without diagnostics, choose the name ``no_diag``.
+    Depending on whether mesh refinement, a laser and a beam is used, the default becomes
+    a subset of ``lev0 lev1 lev2 laser_diag beam_diag``.
+
+* ``<diag name>.type`` (`string`) optional (default `level_0`)
+    Which type of data the diagnostics should have.
+    Available types are:
+      * Field diagnostic for different mesh refinement levels: ``level_0``, ``level_1``, ``level_2``
+      * Laser diagnostic: ``laser``
+      * Beam diagnostic: ``beam``
+      * Plasma diagnostic at one zeta-slice: ``plasma_slice``
+      * Plasma and beam diagnostic of particles exiting the domain transversely: ``particle_boundary``
+    If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag beam_diag``, the default for this parameter
+    becomes ``level_0 level_1 level_2 laser beam`` respectively.
+
+* ``<diag name>.output_period`` (`integer` or `string`) optional (default `0`)
+    Output period for the diagnostic. No output is given for ``<diag name>.output_period = 0``.
+    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
+    See the documentation of ``diagnostic.output_period`` for more details.
+
 Beam diagnostics
 ^^^^^^^^^^^^^^^^
 
 * ``diagnostic.beam_output_period`` (`integer` or `string`) optional (default `0`)
     Output period for the beam. No output is given for ``diagnostic.beam_output_period = 0``.
-    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
+    This value is used as a default for ``<diag name>.output_period`` if ``<diag name>.type = beam``.
     See the documentation of ``diagnostic.output_period`` for more details.
 
-* ``diagnostic.beam_data`` (`string`) optional (default `all`)
-    Names of the beams written to file, separated by a space. The beam names need to be ``all``,
-    ``none`` or a subset of ``beams.names``.
+* ``<diag name>.species`` (`string`) optional (default `all`)
+    Names of the beams written to file, separated by a space.
+    The beam names need to be ``all``, ``none`` or a subset of ``beams.names``.
 
-Field diagnostics
-^^^^^^^^^^^^^^^^^
+* ``<diag name>.output_ratio`` (`int`) optional (default `1`)
+    Set the fraction of beam particles that should be written to the openPMD output.
+    For example, an output ratio of 100 will output every 100th beam particle.
+    This is implemented using the particle ID, which is set in ascending order at
+    the beginning of a simulation.
 
-* ``diagnostic.names`` (`string`) optional (default `lev0`)
-    The names of all field diagnostics, separated by a space.
-    Multiple diagnostics can be used to limit the output to only a few relevant regions to save on file size.
-    To run without field diagnostics, choose the name ``no_field_diag``.
-    Depending on whether mesh refinement or a laser is used, the default becomes
-    a subset of ``lev0 lev1 lev2 laser_diag``.
+Plasma slice diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``<diag name> or diagnostic.base_geometry`` (`string`) optional (default `level_0`)
-    Which geometry the diagnostics should be based on.
-    Available geometries are `level_0`, `level_1`, `level_2`, `laser` and `histogram`,
-    depending on if MR or a laser is used.
-    If ``<diag name>`` is equal to ``lev0 lev1 lev2 laser_diag``, the default for this parameter
-    becomes ``level_0 level_1 level_2 laser`` respectively.
+This diagnostic outputs all plasma particles at one particular zeta slice of the domain.
+The format of the particle data is the one that hipace uses internally to allow for
+checkpoint-restart of the plasma particles in zeta. This means that the particle
+weight is defined differently and `1+psi` is given instead of `uz`.
 
-* ``<diag name>.output_period`` (`integer` or `string`) optional (default `0`)
-    Output period for fields. No output is given for ``<diag name>.output_period = 0``.
-    If ``diagnostic.output_period`` is defined, that value is used as the default for this.
-    See the documentation of ``diagnostic.output_period`` for more details.
+* ``<diag name>.species`` (`string`) optional (default `all`)
+    Names of the plasma species written to file, separated by a space.
+    The species names need to be ``all``, ``none`` or a subset of ``plasmas.names``.
 
-* ``<diag name> or diagnostic.diag_type`` (`string`)
+* ``<diag name>.plasma_output_slice`` (`int`) optional (default `0`)
+    On which zeta slice the plasma output should be done. Note that the simulation iterates
+    backwards over zeta, so the default of slice 0 is the last slice to be computed.
+
+Particle boundary diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This diagnostic collects data from particles that exit the simulation domain transversely through the
+``boundary.particle = Absorbing`` boundary condition. For each particle that exits, the 3D position,
+momentum, weight and id is output. Note that for plasma particles this weight depends linearly on the
+time step ``hipace.dt`` of the simulation.
+
+* ``<diag name>.species`` (`string`) optional (default `all`)
+    Names of the plasma and beam species written to file, separated by a space.
+    The species names need to be ``all``, ``none`` or a subset of ``plasmas.names`` and ``beams.names``.
+
+Field and Laser diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* ``<diag name> or diagnostic.dimensions`` (`string`)
     Type of field output. Available options are `xyz`, `xz`, `yz` and `xy_integrated`.
     `xyz` generates a 3D field output.
     Use 3D output with parsimony, it may increase disk Space usage and simulation time significantly.
@@ -1217,9 +1322,9 @@ Particle Histogram diagnostics
 This diagnostic allows the direct computation of histograms of arbitrary particle
 quantities during the simulation runtime. It supports both plasma and beam particles.
 It is part of the standard field diagnostic and is enabled by setting
-``<diag name>.base_geometry = histogram``. Histograms may have one or two user-defined axes.
+``<diag name>.type = histogram``. Histograms may have one or two user-defined axes.
 Optionally, the simulation z-axis can be included as an additional axis or integrated over.
-All field diagnostic parameters apply, except ``field_data`` and ``diag_type``.
+All field diagnostic parameters apply, except ``field_data`` and ``dimensions``.
 For example, ``patch_lo`` and ``patch_hi`` can be used to restrict the particles included in
 the histogram in coordinate space, but do not modify the histogram axes.
 Each particle species produces a separate histogram that is output as
@@ -1393,6 +1498,9 @@ As collisions depend on the physical density, in normalized units `hipace.backgr
 * ``<collision name>.CoulombLog`` (`float`) optional (default `-1.`)
     Coulomb logarithm used for this collision.
     If not specified, the Coulomb logarithm is determined from the temperature in each cell.
+
+* ``<collision_name>.collision_period`` (`integer`) optional (default `1`)
+    Number of :math:`\zeta` slices between applying the elastic collision operator (useful when you are in a fairly collisionless regime, but still want to calculate elastic collisions). The timestep used for collisions is multiplied by this factor. Only applies to plasma-plasma collisions.
 
 Radiation reaction
 ^^^^^^^^^^^^^^^^^^

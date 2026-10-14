@@ -498,6 +498,12 @@ InitBeamFixedWeightPDF3D ()
     amrex::Real avg_uz = 0._rt;
     amrex::Real avg_uz_sq = 0._rt;
 
+    const PhysConst pc = get_phys_const();
+    const PhysConst pc_SI = make_constants_SI();
+    // To convert MeV to gamma
+    const amrex::Real gamma_factor =
+        1e6_rt * pc_SI.q_e / (m_mass * (pc_SI.m_e / pc.m_e) * pc_SI.c * pc_SI.c);
+
     for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice>=0; --slice) {
         const amrex::Real zmin = zoffset + slice*zscale;
         const amrex::Real zmax = zoffset + (slice+1)*zscale;
@@ -517,8 +523,19 @@ InitBeamFixedWeightPDF3D ()
         }
 
         // calculate uz and uz_std for AdaptiveTimeStep
-        amrex::Real uz_mean_local = m_pdf_u_func[2](zmid);
-        amrex::Real uz_std_local = m_pdf_u_func[5](zmid);
+        amrex::Real uz_mean_local = 0;
+        amrex::Real uz_std_local = 0;
+        if (m_use_energy_from_twiss) {
+            const amrex::Real energy_mean_local = m_twiss_func[0](zmid);
+            const amrex::Real energy_spread_local = m_twiss_func[1](zmid);
+            const amrex::Real gamma_mean = energy_mean_local * gamma_factor;
+            const amrex::Real gamma_spread = energy_spread_local * gamma_factor;
+            uz_mean_local = std::sqrt(gamma_mean * gamma_mean - 1);
+            uz_std_local = gamma_mean * gamma_spread / uz_mean_local;
+        } else {
+            uz_mean_local = m_pdf_u_func[2](zmid);
+            uz_std_local = m_pdf_u_func[5](zmid);
+        }
         avg_uz += local_weight * uz_mean_local;
         avg_uz_sq += local_weight * (uz_mean_local*uz_mean_local + uz_std_local*uz_std_local);
 
@@ -671,6 +688,143 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
                 // Propagate each electron ballistically for z_foc
                 x -= z_foc*ux/uz;
                 y -= z_foc*uy/uz;
+
+                if (!do_symmetrize)
+                {
+                    AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
+                                            z, ux, uy, uz, weight, pid, i, enforceBC, is_valid);
+
+                } else {
+                    AddOneBeamParticleSlice(ptd, x_mean+x, y_mean+y,
+                                            z, ux, uy, uz, weight, pid, 4*i, enforceBC, is_valid);
+                    AddOneBeamParticleSlice(ptd, x_mean-x, y_mean+y,
+                                            z, -ux, uy, uz, weight, pid, 4*i+1, enforceBC, is_valid);
+                    AddOneBeamParticleSlice(ptd, x_mean+x, y_mean-y,
+                                            z, ux, -uy, uz, weight, pid, 4*i+2, enforceBC, is_valid);
+                    AddOneBeamParticleSlice(ptd, x_mean-x, y_mean-y,
+                                            z, -ux, -uy, uz, weight, pid, 4*i+3, enforceBC, is_valid);
+                }
+            });
+
+        loc_index += num_to_add;
+    }
+}
+
+void
+BeamParticleContainer::
+InitBeamFixedWeightTwissSlice (int slice, int which_slice)
+{
+    HIPACE_PROFILE("BeamParticleContainer::InitBeamFixedWeightTwissSlice()");
+    using namespace amrex::literals;
+
+    if (!Hipace::HeadRank() || m_num_particles == 0) { return; }
+
+    unsigned int num_to_add_full = 0;
+    for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
+        num_to_add_full += m_num_particles_slice[slice*m_pdf_ref_ratio+r];
+    }
+    if (m_do_symmetrize) {
+        resize(which_slice, 4*num_to_add_full, 0);
+    } else {
+        resize(which_slice, num_to_add_full, 0);
+    }
+
+    const uint64_t pid = m_id64;
+    m_id64 += m_do_symmetrize ? 4*num_to_add_full : num_to_add_full;
+
+    unsigned int loc_index = 0;
+    for (int r=m_pdf_ref_ratio-1; r>=0; --r) {
+        const unsigned int num_to_add = m_num_particles_slice[slice*m_pdf_ref_ratio+r];
+        if (num_to_add == 0) continue;
+
+        auto& particle_tile = getBeamSlice(which_slice);
+        // Access particles' SoA
+        const auto ptd = particle_tile.getParticleTileData();
+
+        const bool do_symmetrize = m_do_symmetrize;
+        const bool peak_density_is_specified = m_peak_density_is_specified;
+        const amrex::Real radius_sq = m_radius == std::numeric_limits<amrex::Real>::max() ?
+            std::numeric_limits<amrex::Real>::max() : m_radius * m_radius;
+        const amrex::Real weight = m_total_weight / m_num_particles;
+        const auto twiss_func = m_twiss_func;
+        const amrex::Geometry& geom = Hipace::GetInstance().m_3D_geom[0];
+        const amrex::Real dz = geom.CellSize(2) / m_pdf_ref_ratio;
+        const amrex::Real zmin = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r)*dz;
+        const amrex::Real zmax = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r+1)*dz;
+        const amrex::Real lo_weight = m_pdf_func(zmin);
+        const amrex::Real hi_weight = m_pdf_func(zmax);
+        AMREX_ALWAYS_ASSERT(lo_weight + hi_weight > 0._rt);
+        // the proper formula is not defined for hi_weight == lo_weight and may
+        // have precision issues around that point, so we use a Taylor expansion instead
+        // if the hi_weight and lo_weight are within 10% of each other.
+        const bool use_taylor = std::min(lo_weight, hi_weight)*1.1 > std::max(lo_weight, hi_weight);
+        const amrex::Real lo_hi_weight_inv = use_taylor ?
+            1._rt/(hi_weight+lo_weight) : 1._rt/(hi_weight-lo_weight);
+        const auto enforceBC = EnforceBC();
+        const PhysConst pc = get_phys_const();
+        const PhysConst pc_SI = make_constants_SI();
+        // To convert MeV to gamma
+        const amrex::Real gamma_factor =
+            1e6_rt * pc_SI.q_e / (m_mass * (pc_SI.m_e / pc.m_e) * pc_SI.c * pc_SI.c);
+
+        amrex::ParallelForRNG(
+            num_to_add,
+            [=] AMREX_GPU_DEVICE (unsigned int i, const amrex::RandomEngine& engine) noexcept
+            {
+                // if m_pdf_ref_ratio is greater than one, a single slice of beam particles
+                // needs to be initialized by multiple kernels so we need to keep track of the
+                // local index offset for each kernel
+                i += loc_index;
+
+                const amrex::Real w = amrex::Random(engine);
+                amrex::Real z = zmin;
+                if (use_taylor) {
+                    z += dz*(w - w*(w-1._rt)*(hi_weight-lo_weight)*lo_hi_weight_inv);
+                } else {
+                    z += dz*((std::sqrt(lo_weight*lo_weight
+                        +w*(hi_weight*hi_weight-lo_weight*lo_weight))-lo_weight)*lo_hi_weight_inv);
+                }
+
+                const amrex::Real energy_mean = twiss_func[0](z);
+                const amrex::Real energy_spread = twiss_func[1](z);
+                const amrex::Real x_mean = twiss_func[2](z);
+                const amrex::Real y_mean = twiss_func[3](z);
+                const amrex::Real twiss_alpha_x = twiss_func[4](z);
+                const amrex::Real twiss_alpha_y = twiss_func[5](z);
+                const amrex::Real twiss_beta_x = twiss_func[6](z);
+                const amrex::Real twiss_beta_y = twiss_func[7](z);
+                const amrex::Real emittance_x = twiss_func[8](z);
+                const amrex::Real emittance_y = twiss_func[9](z);
+
+                const amrex::Real gamma0 = energy_mean * gamma_factor;
+                const amrex::Real gamma0_std = energy_spread * gamma_factor;
+                const amrex::Real gamma = amrex::RandomNormal(gamma0, gamma0_std, engine);
+                const amrex::Real uz = std::sqrt(gamma * gamma - 1._rt);
+
+                const amrex::Real geo_emittance_x = emittance_x / uz;
+                const amrex::Real geo_emittance_y = emittance_y / uz;
+
+                const amrex::Real x_std = std::sqrt(geo_emittance_x * twiss_beta_x);
+                const amrex::Real y_std = std::sqrt(geo_emittance_y * twiss_beta_y);
+                const amrex::Real xp_std = std::sqrt(geo_emittance_x / twiss_beta_x);
+                const amrex::Real yp_std = std::sqrt(geo_emittance_y / twiss_beta_y);
+
+                amrex::Real x = 0._rt;
+                amrex::Real y = 0._rt;
+                bool is_valid = false;
+                do {
+                    x = amrex::RandomNormal(0, x_std, engine);
+                    y = amrex::RandomNormal(0, y_std, engine);
+                    is_valid = x*x + y*y <= radius_sq;
+                } while (!peak_density_is_specified && !is_valid);
+
+                const amrex::Real x_prime =
+                    amrex::RandomNormal(0, xp_std, engine) - x * twiss_alpha_x / twiss_beta_x;
+                const amrex::Real y_prime =
+                    amrex::RandomNormal(0, yp_std, engine) - y * twiss_alpha_y / twiss_beta_y;
+
+                const amrex::Real ux = x_prime * uz;
+                const amrex::Real uy = y_prime * uz;
 
                 if (!do_symmetrize)
                 {
