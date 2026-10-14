@@ -64,7 +64,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         const int    chi = deposit_chi    ? Comps[which_slice]["chi"]    : -1;
         const int rhomjz = deposit_rhomjz ? Comps[which_slice]["rhomjz"] : -1;
         const int      n = deposit_n      ? Comps[which_slice][n_str]    : -1;
-        const int   aabs = Hipace::m_use_laser ? Comps[WhichSlice::This]["aabs"] : -1;
 
         // Offset for converting positions to indexes
         const amrex::Real x_pos_offset = GetPosOffset(0, gm[lev], isl_fab.box());
@@ -84,8 +83,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         const amrex::Real clight = pc.c;
         const amrex::Real charge_invvol = charge * invvol;
         const amrex::Real charge_mu0_mass_ratio = charge * pc.mu0 / mass;
-        const amrex::Real laser_norm = (charge/pc.q_e) * (pc.m_e/mass)
-                                     * (charge/pc.q_e) * (pc.m_e/mass);
 
         amrex::Gpu::DeviceScalar<int> gpu_n_qsa_violation{};
         int* AMREX_RESTRICT p_n_qsa_violation = nullptr;
@@ -97,6 +94,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 &n_qsa_violation, &n_qsa_violation + 1, p_n_qsa_violation);
         }
 
+        const bool use_laser = Hipace::m_use_laser;
+        const bool can_ionize = plasma.m_can_ionize;
+
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(isl_fab.box().ixType().cellCentered(),
             "jx, jy, jz, and rho must be cell centered in all directions.");
 
@@ -104,13 +104,9 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
         amrex::AnyCTO(
             // use compile-time options
             amrex::TypeList<
-                amrex::CompileTimeOptions<0, 1, 2, 3>,  // depos_order
-                amrex::CompileTimeOptions<false, true>, // can_ionize
-                amrex::CompileTimeOptions<false, true>  // use_laser
+                amrex::CompileTimeOptions<0, 1, 2, 3>   // depos_order
             >{}, {
-                Hipace::m_depos_order_xy,
-                plasma.m_can_ionize,
-                Hipace::m_use_laser
+                Hipace::m_depos_order_xy
             },
             // call deposition function
             // The three functions passed as arguments to this lambda
@@ -118,28 +114,17 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             [&](auto is_valid, auto get_cell, auto deposit){
                 constexpr auto ctos = deposit.GetOptions();
                 constexpr int depos_order = ctos[0];
-                constexpr int use_laser = ctos[2];
                 constexpr int stencil_size = depos_order + 1;
-                if constexpr (use_laser) {
-                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
-                        int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
-                        isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-                        amrex::GpuArray<int, 1>{aabs},
-                        amrex::GpuArray<int, 7>{jx, jy, jz, rho, chi, rhomjz, n});
-                } else {
-                    SharedMemoryDeposition<stencil_size, stencil_size, true>(
-                        int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
-                        isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
-                        amrex::GpuArray<int, 0>{},
-                        amrex::GpuArray<int, 7>{jx, jy, jz, rho, chi, rhomjz, n});
-                }
+                SharedMemoryDeposition<stencil_size, stencil_size, true>(
+                    int(pti.numParticles()), is_valid, get_cell, deposit, isl_fab.array(),
+                    isl_fab.box(), pti.GetParticleTile().getParticleTileData(),
+                    amrex::GpuArray<int, 0>{},
+                    amrex::GpuArray<int, 7>{jx, jy, jz, rho, chi, rhomjz, n});
             },
             // is_valid
             // return whether the particle is valid and should deposit
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto /*depos_order*/,
-                                  auto can_ionize,
-                                  auto /*use_laser*/)
+                                  auto /*depos_order*/)
             {
                 // only deposit plasma currents on or below their according MR level
                 return ptd.id(ip).is_valid() &&
@@ -150,9 +135,7 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             // get_cell
             // return the lowest cell index that the particle deposits into
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
-                                  auto depos_order,
-                                  auto /*can_ionize*/,
-                                  auto /*use_laser*/) -> amrex::IntVectND<2>
+                                  auto depos_order) -> amrex::IntVectND<2>
             {
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
@@ -161,7 +144,6 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 auto [shape_x, i] = shape_factor<depos_order>(xmid, 0);
-
                 auto [shape_y, j] = shape_factor<depos_order>(ymid, 0);
 
                 return {i, j};
@@ -170,10 +152,8 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
             // deposit the charge / current of one particle
             [=] AMREX_GPU_DEVICE (int ip, auto ptd,
                                   Array3<amrex::Real> arr,
-                                  auto cache_idx, auto depos_idx,
-                                  auto depos_order,
-                                  auto can_ionize,
-                                  auto use_laser) noexcept
+                                  auto /*cache_idx*/, auto depos_idx,
+                                  auto depos_order) noexcept
             {
                 const amrex::Real psi_inv = 1._rt/ptd.rdata(PlasmaIdx::psi)[ip];
                 const amrex::Real xp = ptd.pos(0, ip);
@@ -184,22 +164,18 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                 // calculate charge of the plasma particles
                 amrex::Real q_invvol = charge_invvol * w;
                 amrex::Real q_mu0_mass_ratio = charge_mu0_mass_ratio;
-                [[maybe_unused]] amrex::Real laser_norm_ion = laser_norm;
-                if constexpr (can_ionize) {
+                if (can_ionize) {
                     const amrex::Real p_ion_lev = amrex::Real(ptd.idata(PlasmaIdx::ion_lev)[ip]);
                     q_invvol *= p_ion_lev;
                     q_mu0_mass_ratio *= p_ion_lev;
-                    laser_norm_ion *= p_ion_lev * p_ion_lev;
                 }
 
                 const amrex::Real xmid = (xp - x_pos_offset) * dx_inv;
                 const amrex::Real ymid = (yp - y_pos_offset) * dy_inv;
 
                 amrex::Real Aabssqp = 0._rt;
-                if constexpr (use_laser) {
-                    doLaserGatherShapeN<depos_order>(xp, yp, Aabssqp, arr, cache_idx[0],
-                                                    dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                    Aabssqp *= laser_norm_ion;
+                if (use_laser) {
+                    Aabssqp = ptd.rdata(PlasmaIdx::aabssq)[ip];
                 }
 
                 // calculate gamma/psi for plasma particles

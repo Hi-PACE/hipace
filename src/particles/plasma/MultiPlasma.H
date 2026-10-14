@@ -83,7 +83,7 @@ public:
 
     /** \brief Gather field values and push particles
      *
-     * \param[in,out] fields the general field class, modified by this function
+     * \param[in] fields the general field class
      * \param[in] gm Geometry of the simulation, to get the cell size etc.
      * \param[in] temp_slice if true, the temporary data (x_temp, ...) will be used
      * \param[in] lev MR level
@@ -92,6 +92,17 @@ public:
     void AdvanceParticles (
         const Fields & fields, amrex::Vector<amrex::Geometry> const& gm, bool temp_slice, int lev,
         int const current_N_level);
+
+    /** \brief Reset positions after push to temp slice */
+    void ResetPositions ();
+
+    /** \brief Gather Laser field to the particles
+     *
+     * \param[in] lev MR level
+     * \param[in] gm Geometry of the simulation, to get the cell size etc.
+     * \param[in] fields the general field class
+     */
+    void GatherLaser (int lev, amrex::Geometry const& gm, const Fields & fields);
 
     /** \brief Loop over plasma species and deposit their neutralizing background, if needed
      *
