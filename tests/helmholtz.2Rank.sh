@@ -35,7 +35,7 @@ RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=2e-5
 ################
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
-        hipace.file_prefix = $TEST_NAME
+        hipace.output_folder = $TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py --mode='unaveraged' --output-dir=$TEST_NAME

@@ -107,11 +107,7 @@ helmholtz.zfilter_source = 1
 helmholtz.insitu_period = insitu_period
 helmholtz.field_real(x,y,z) = "Fseed * exp(-(x**2+y**2)/Wseed**2) * cos(krcos*z)"
 
-diagnostic.names = helmholtz_diag
-diagnostic.diag_type = xz
-diagnostic.beam_data = beam
+diagnostic.dimensions = xz
 diagnostic.beam_output_period = output_period
 diagnostic.output_period = output_period
-diagnostic.base_geometry = helmholtz
-
 hipace.output_folder = diags
