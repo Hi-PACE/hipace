@@ -203,10 +203,10 @@ Diagnostic::Initialize (int nlev, bool use_laser, bool use_helmholtz,
     }
     if (use_helmholtz) {
         std::string diag_name = "helmholtz_diag";
-        std::string geom_name = "helmholtz";
-        diag_name_to_default_geometry.emplace(diag_name, geom_name);
-        type_name_to_diag_type.emplace(geom_name, DiagnosticData::diag_type::helmholtz);
-        type_name_to_output_comps_map[geom_name] = HelmholtzComps;
+        std::string type_name = "helmholtz";
+        diag_name_to_default_geometry.emplace(diag_name, type_name);
+        type_name_to_diag_type.emplace(type_name, DiagnosticData::diag_type::helmholtz);
+        type_name_to_output_comps_map[type_name] = HelmholtzComps;
     }
     if (beam_names.size() > 0 || plasma_names.size() > 0) { // histogram
         std::string type_name = "histogram";
@@ -558,6 +558,7 @@ Diagnostic::InitDiagnosticsStep (amrex::Vector<amrex::Geometry>& field_geom,
 
         if (!(fd.m_base_diag_type == DiagnosticData::diag_type::field ||
             fd.m_base_diag_type == DiagnosticData::diag_type::laser ||
+            fd.m_base_diag_type == DiagnosticData::diag_type::helmholtz ||
             fd.m_base_diag_type == DiagnosticData::diag_type::histogram))
         {
             continue;
