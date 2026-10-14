@@ -38,7 +38,7 @@ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
         hipace.output_folder = $TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --mode='unaveraged' --output-dir=$TEST_NAME
+$HIPACE_EXAMPLE_DIR/analysis.py --mode='averaged' --output-dir=$TEST_NAME
 
 # Compare the results with checksum benchmark
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \

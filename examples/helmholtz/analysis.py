@@ -7,6 +7,8 @@
 # Authors: MaxThevenet, Tianyun Long
 # License: BSD-3-Clause-LBNL
 
+import sys
+sys.path.append('/Users/maxencethevenet/src/hipace/tools')
 
 import argparse
 import numpy as np
