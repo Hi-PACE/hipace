@@ -60,7 +60,7 @@ rm -rf $TEST_NAME
          helmholtz.mode = "full_field" \
          my_constants.part_per_slice = 128 \
          my_constants.Fseed = Eseed \
-         my_constants.nx=64 \
+         my_constants.nx=32 \
          max_step="nsteps_per_period*(Q1+lq/2)/lu" \
          hipace.file_prefix = $TEST_NAME
 
