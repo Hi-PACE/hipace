@@ -138,6 +138,18 @@ struct PlasmaComps {
     int offset_ab5 = -1;
 };
 
+struct PlasmaID
+{
+    enum {
+        valid = 1,
+        from_field_ionization = 2,
+        from_laser_ionization = 3,
+        invalid = -1,
+        invalid_at_boundary = -2,
+        to_be_thermalised = -3
+    };
+};
+
 /** \brief Container for particles of 1 plasma species. */
 class PlasmaParticleContainer
     : public amrex::ParticleContainerRTSoA<amrex::Real, int>
@@ -170,6 +182,10 @@ public:
         const amrex::RealVect& a_thermal_momentum_mean,
         const amrex::Real a_radius,
         const amrex::Real a_hollow_core_radius);
+
+    /** Initialize 1 xy slice of particles, from an openPMD file
+     */
+    void InitParticlesFromFile ();
 
     /** Initialize ADK prefactors of ionizable plasmas
      *
@@ -270,6 +286,10 @@ public:
     std::shared_ptr<double> m_d_density_data; /**< owns data for m_density_func */
     PlasmaDensityAccessor m_density_func; /**< Density function for the plasma */
     amrex::Real m_min_density {0.}; /**< minimal density at which particles are injected */
+    bool m_density_file_specified; /**< if a density value from file was specified */
+    std::string m_density_path = ""; /**< path of plasma density file */
+    bool m_read_density_per_slice = false; /**< if the density from file should be loaded per-slice */
+    std::string m_density_mesh_name = "density"; /**< name of mesh for density from file */
     bool m_use_density_table; /**< if a density value table was specified */
     /** plasma density value table, key: position=c*time, value=density function string */
     std::map<amrex::Real, std::string> m_density_table;
@@ -296,6 +316,11 @@ public:
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
+
+    // init from file:
+
+    bool m_particle_file_specified; /**< if particles from file was specified */
+    std::string m_particles_path = ""; /**< path to particles from file */
 
     // general:
 

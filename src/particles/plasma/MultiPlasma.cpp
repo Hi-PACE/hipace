@@ -28,7 +28,11 @@ MultiPlasma::ReadParameters ()
     DeprecatedInput("plasmas", "background_density_SI",
                     "hipace.background_density_SI", "", true);
 
-    if (m_names[0] == "no_plasma") return;
+    if (m_names[0] == "no_plasma") {
+        m_names.clear();
+        m_nplasmas = 0;
+        return;
+    }
     m_nplasmas = m_names.size();
     for (int i = 0; i < m_nplasmas; ++i) {
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_names[i]!="beam", "Cannot have plasma with name 'beam'");

@@ -6,7 +6,7 @@ amr.n_cell = 4095 4095 112000
 hipace.normalized_units = 1
 hipace.verbose = 1
 
-diagnostic.diag_type=xz
+diagnostic.dimensions=xz
 diagnostic.field_data = ExmBy Ez rhomjz jz_beam
 diagnostic.beam_data = none
 diagnostic.coarsening = 1 1 5

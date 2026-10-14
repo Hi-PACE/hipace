@@ -12,9 +12,11 @@ HiPACE++:
 
    #!/usr/bin/env zsh # Shell is assumed to be zsh
    module purge
-   module load maxwell gcc/12 cuda/12.8 openmpi/4 hdf5/1.10.6
+   module load maxwell gcc/12.2 cuda/13.0 openmpi/4.1.8-cuda13.0 hdf5/1.12.1
    # optimize CUDA compilation for A100
-   export AMREX_CUDA_ARCH=8.0 # use 7.0 for V100, 8.0 for A100 or 9.0 for H200
+   export CUDAARCHS=80 # use 70 for V100, 80 for A100 or 90 for H200
+   # Fix issue with the Python 3.13 jhub environment
+   export PATH="/usr/bin:$PATH"
 
 Install HiPACE++ (the first time, and whenever you want the latest version):
 
@@ -24,7 +26,7 @@ Install HiPACE++ (the first time, and whenever you want the latest version):
    git clone https://github.com/Hi-PACE/hipace.git $HOME/src/hipace # only the first time
    cd $HOME/src/hipace
    rm -rf build
-   cmake -S . -B build -DHiPACE_COMPUTE=CUDA -DopenPMD_USE_MPI=OFF
+   cmake -S . -B build -DHiPACE_COMPUTE=CUDA
    cmake --build build -j 16
 
 You can get familiar with the HiPACE++ input file format in our :doc:`../../run/get_started`

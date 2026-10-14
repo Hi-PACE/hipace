@@ -76,7 +76,10 @@ BeamParticleContainer::ReadParameters ()
     amrex::Array<int, 2> idx_array
         {Hipace::m_depos_order_xy % 2, Hipace::m_depos_order_xy % 2};
     queryWithParserAlt(pp, "reorder_idx_type", idx_array, pp_alt);
-    queryWithParserAlt(pp, "output_ratio", m_output_ratio, pp_alt);
+    if (queryWithParserAlt(pp, "output_ratio", m_output_ratio, pp_alt)) {
+        amrex::Print() << "WARNING: '<beam name> or beams.output_ratio' is deprecated! "
+                "Use '<diag name> or beam_diag.output_ratio' instead!\n";
+    }
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_output_ratio >= 1, "output_ratio must be >= 1");
     m_reorder_idx_type = amrex::IntVect(idx_array[0], idx_array[1], 0);
     amrex::Array<std::string, 3> field_str = {"0", "0", "0"};
@@ -186,7 +189,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             "Please either specify the peak density with '<beam name>.density', "
             "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + peak_density_is_specified == 1,
-            "Please specify exlusively either total_charge or density of the beam");
+            "Please specify exclusively either total_charge or density of the beam");
         queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
         if (m_do_symmetrize) AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
             "To symmetrize the beam, please specify a beam particle number divisible by 4.");
@@ -258,9 +261,73 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
             "The option 'beam.total_charge' is only valid in SI units."
             "Please either specify the peak density with '<beam name>.density', "
             "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified + m_peak_density_is_specified == 1,
-            "Please specify exlusively either total_charge or density of the beam");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified != m_peak_density_is_specified ,
+            "Please specify exclusively either total_charge or density of the beam");
 
+        InitBeamFixedWeightPDF3D();
+        m_total_num_particles = m_num_particles;
+
+    } else if (m_injection_type == "fixed_weight_twiss") {
+
+        std::string pdf_func_str = "";
+        getWithParser(pp, "pdf", pdf_func_str);
+        m_pdf_parsers.emplace_back();
+        m_pdf_func = makeFunctionWithParser<1>(pdf_func_str, m_pdf_parsers.back(), {"z"});
+
+        std::string energy_mean_MeV = "";
+        std::string energy_spread_MeV = "";
+        std::array<std::string, 2> pos_mean{"0","0"};
+        std::array<std::string, 2> twiss_alpha{"0","0"};
+        std::array<std::string, 2> twiss_beta{"",""};
+        std::array<std::string, 2> emittance{"",""};
+        getWithParser(pp, "energy_mean_MeV", energy_mean_MeV);
+        getWithParser(pp, "energy_spread_MeV", energy_spread_MeV);
+        queryWithParser(pp, "position_mean", pos_mean);
+        queryWithParser(pp, "twiss_alpha", twiss_alpha);
+        getWithParser(pp, "twiss_beta", twiss_beta);
+        getWithParser(pp, "emittance", emittance);
+
+        m_pdf_parsers.emplace_back();
+        m_twiss_func[0] = makeFunctionWithParser<1>(energy_mean_MeV, m_pdf_parsers.back(), {"z"});
+        m_pdf_parsers.emplace_back();
+        m_twiss_func[1] = makeFunctionWithParser<1>(energy_spread_MeV, m_pdf_parsers.back(), {"z"});
+        for (int i=0; i<2; ++i) {
+            m_pdf_parsers.emplace_back();
+            m_twiss_func[2+i] =
+                makeFunctionWithParser<1>(pos_mean[i], m_pdf_parsers.back(), {"z"});
+            m_pdf_parsers.emplace_back();
+            m_twiss_func[4+i] =
+                makeFunctionWithParser<1>(twiss_alpha[i], m_pdf_parsers.back(), {"z"});
+            m_pdf_parsers.emplace_back();
+            m_twiss_func[6+i] =
+                makeFunctionWithParser<1>(twiss_beta[i], m_pdf_parsers.back(), {"z"});
+            m_pdf_parsers.emplace_back();
+            m_twiss_func[8+i] =
+                makeFunctionWithParser<1>(emittance[i], m_pdf_parsers.back(), {"z"});
+        }
+
+        m_use_energy_from_twiss = true;
+
+        getWithParser(pp, "num_particles", m_num_particles);
+        queryWithParser(pp, "radius", m_radius);
+        queryWithParser(pp, "do_symmetrize", m_do_symmetrize);
+        queryWithParser(pp, "pdf_ref_ratio", m_pdf_ref_ratio);
+        if (m_do_symmetrize) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE( m_num_particles%4 == 0,
+                "To symmetrize the beam, please specify a beam particle number divisible by 4.");
+        }
+
+        bool charge_is_specified = queryWithParser(pp, "total_charge", m_total_charge);
+        m_peak_density_is_specified = queryWithParser(pp, "density", m_density);
+
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( !charge_is_specified || !Hipace::m_normalized_units,
+            "The option 'beam.total_charge' is only valid in SI units."
+            "Please either specify the peak density with '<beam name>.density', "
+            "or set 'hipace.normalized_units = 0' to run in SI units, and update the input file accordingly.");
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE( charge_is_specified != m_peak_density_is_specified,
+            "Please specify exclusively either total_charge or density of the beam");
+
+        // Use same function as fixed_weight_pdf
         InitBeamFixedWeightPDF3D();
         m_total_num_particles = m_num_particles;
 
@@ -271,6 +338,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
                                                         m_file_coordinates_xyz, pp_alt);
         queryWithParserAlt(pp, "plasma_density", m_plasma_density, pp_alt);
         queryWithParserAlt(pp, "iteration", m_num_iteration, pp_alt);
+        queryWithParserAlt(pp, "position_offset", m_position_offset, pp_alt);
         bool species_specified = queryWithParser(pp, "openPMD_species_name", m_species_name);
         if(!species_specified) {
             m_species_name = m_name;
@@ -300,8 +368,8 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
         }
     } else {
 
-        amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight, from_file"
-            " or from_list\n");
+        amrex::Abort("Unknown beam injection type. Must be fixed_ppc, fixed_weight, "
+            "fixed_weight_pdf, fixed_weight_twiss, from_file or from_list\n");
 
     }
 
@@ -321,7 +389,7 @@ BeamParticleContainer::InitData (const amrex::Geometry& geom)
     if (m_insitu_period.isNonZero()) {
 #ifdef HIPACE_USE_OPENPMD
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_insitu_file_prefix !=
-            Hipace::GetInstance().m_openpmd_writer.m_file_prefix,
+            Hipace::GetInstance().getDiagFilePrefix(),
             "Must choose a different beam insitu file prefix compared to the full diagnostics");
 #endif
         // Allocate memory for in-situ diagnostics
@@ -382,6 +450,8 @@ BeamParticleContainer::initializeSlice (int slice, int which_slice) {
         InitBeamFixedWeightSlice(slice, which_slice);
     } else if (m_injection_type == "fixed_weight_pdf") {
         InitBeamFixedWeightPDFSlice(slice, which_slice);
+    } else if (m_injection_type == "fixed_weight_twiss") {
+        InitBeamFixedWeightTwissSlice(slice, which_slice);
     } else { // from_file and from_list
         HIPACE_PROFILE("BeamParticleContainer::initializeSlice()");
         const int num_particles = m_init_sorter.m_box_counts_cpu[slice];
