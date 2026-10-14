@@ -36,7 +36,7 @@ elec.ppc = 1 1
 elec.element = electron
 
 diagnostic.output_period = 0
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz
 
 hipace.do_device_synchronize = true
 

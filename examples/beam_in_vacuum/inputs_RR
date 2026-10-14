@@ -22,7 +22,7 @@ hipace.dt = 30 /w_beta
 hipace.verbose = 1
 max_step = 5
 diagnostic.output_period = 5
-diagnostic.diag_type = xz
+diagnostic.dimensions = xz
 
 boundary.field = Dirichlet
 boundary.particle = Periodic

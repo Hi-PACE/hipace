@@ -137,7 +137,8 @@ struct PlasmaDensityAccessor {
 
     void define_parser (const amrex::ParserExecutor<3>& exe);
 
-    void define_from_file (const std::string& path, std::shared_ptr<float>& f_data,
+    void define_from_file (const amrex::Real z_pos, bool per_slice,
+                           const std::string& path, std::shared_ptr<float>& f_data,
                            std::shared_ptr<double>& d_data,
                            const std::string& density_mesh_name);
 };

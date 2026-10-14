@@ -40,6 +40,7 @@ HistogramDepositionPlasma (PlasmaParticleContainer& plasma, DiagnosticData& fd, 
     const CheckDomainBounds realspace_bounds{fd.m_realspace_geom};
 
     const bool use_second_dim = fd.m_hist_num_dims == 2;
+    const bool is_boundary_hist = fd.m_hist_exit_boundary;
 
     const bool can_ionize = plasma.m_can_ionize;
 
@@ -51,14 +52,17 @@ HistogramDepositionPlasma (PlasmaParticleContainer& plasma, DiagnosticData& fd, 
 
         amrex::ParallelFor(pti.numParticles(),
             [=] AMREX_GPU_DEVICE (int ip) {
-                if (!ptd.id(ip).is_valid()) {
+                if (is_boundary_hist ?
+                    ptd.id(ip) != PlasmaID::invalid_at_boundary :
+                    !ptd.id(ip).is_valid())
+                {
                     return;
                 }
 
                 const amrex::Real xp = ptd.pos(0, ip);
                 const amrex::Real yp = ptd.pos(1, ip);
 
-                if (!realspace_bounds.contains(xp, yp)) {
+                if (!is_boundary_hist && !realspace_bounds.contains(xp, yp)) {
                     return;
                 }
 
@@ -122,6 +126,7 @@ HistogramDepositionBeam (BeamParticleContainer& beam, DiagnosticData& fd)
     const CheckDomainBounds realspace_bounds{fd.m_realspace_geom};
 
     const bool use_second_dim = fd.m_hist_num_dims == 2;
+    const bool is_boundary_hist = fd.m_hist_exit_boundary;
 
     // Loop over particle boxes
     auto ptd = beam.getBeamSlice(WhichBeamSlice::This).getConstParticleTileData();
@@ -129,7 +134,10 @@ HistogramDepositionBeam (BeamParticleContainer& beam, DiagnosticData& fd)
 
     amrex::ParallelFor(beam.getNumParticles(WhichBeamSlice::This),
         [=] AMREX_GPU_DEVICE (int ip) {
-            if (!ptd.id(ip).is_valid()) {
+            if (is_boundary_hist ?
+                ptd.id(ip) != PlasmaID::invalid_at_boundary :
+                !ptd.id(ip).is_valid())
+            {
                 return;
             }
 
@@ -137,7 +145,7 @@ HistogramDepositionBeam (BeamParticleContainer& beam, DiagnosticData& fd)
             const amrex::Real yp = ptd.pos(1, ip);
             const amrex::Real zp = ptd.pos(2, ip);
 
-            if (!realspace_bounds.contains(xp, yp)) {
+            if (!is_boundary_hist && !realspace_bounds.contains(xp, yp)) {
                 return;
             }
 

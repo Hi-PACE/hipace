@@ -258,6 +258,7 @@ if(BUILD_TESTING)
             reset.2Rank
             beam_in_vacuum.SI.1Rank
             beam_in_vacuum.normalized.1Rank
+            beam_in_vacuum_twiss.SI.1Rank
             slice_IO.1Rank
             output_coarsening.2Rank
             beam_in_vacuum_open_boundary.normalized.1Rank
@@ -279,6 +280,7 @@ if(BUILD_TESTING)
                 from_file.normalized.1Rank
                 from_file.SI.1Rank
                 restart.normalized.1Rank
+                plasma_restart.SI.1Rank
                 blowout_wake_explicit.2Rank
                 laser_blowout_wake_explicit.1Rank
                 laser_blowout_wake_explicit.SI.1Rank

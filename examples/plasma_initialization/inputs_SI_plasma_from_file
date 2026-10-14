@@ -29,7 +29,7 @@ elec_file_xyz.element = electron
 elec_file_rz.element = electron
 
 diagnostic.output_period = 1
-diagnostic.diag_type = xyz
+diagnostic.dimensions = xyz
 diagnostic.field_data = rho_elec_parser rho_elec_file_xyz rho_elec_file_rz
 diagnostic.patch_lo = -50e-6 -50e-6  0
 diagnostic.patch_hi =  50e-6  50e-6  0

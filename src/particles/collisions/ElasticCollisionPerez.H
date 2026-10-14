@@ -94,11 +94,27 @@ void ElasticCollisionPerez (
     T_R n1  = T_R(0.0);
     T_R n2  = T_R(0.0);
     T_R n12 = T_R(0.0);
-    for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) { n1 += w1[ I1[i1] ]; }
-    for (int i2=I2s; i2<static_cast<int>(I2e); ++i2) { n2 += w2[ I2[i2] ]; }
+    T_R sum_wq1 = T_R(0.0);   // charge-weighted density accumulator, species 1
+    T_R sum_wq2 = T_R(0.0);   // charge-weighted density accumulator, species 2
+
+    for (int i1=I1s; i1<static_cast<int>(I1e); ++i1) {
+        n1 += w1[ I1[i1] ];
+        T_R const q1_i = can_ionize1 ? q1 * ion_lev1[I1[i1]] : q1;
+        sum_wq1 += w1[ I1[i1] ] * q1_i * q1_i;
+    }
+    for (int i2=I2s; i2<static_cast<int>(I2e); ++i2) {
+        n2 += w2[ I2[i2] ];
+        T_R const q2_i = can_ionize2 ? q2 * ion_lev2[I2[i2]] : q2;
+        sum_wq2 += w2[ I2[i2] ] * q2_i * q2_i;
+    }
+
+    if (sum_wq1 == T_R(0.0) || sum_wq2 == T_R(0.0)) return;
+
     if (is_same_species) {
         n1 = n1 + n2;
         n2 = n1;
+        sum_wq1 = sum_wq1 + sum_wq2;
+        sum_wq2 = sum_wq1;
     }
     if (n1 == 0 || n2 == 0) return;
     // compute n12 according to eq. 16 in Perez et al., Phys. Plasmas 19 (8) (2012) 083104
@@ -120,10 +136,14 @@ void ElasticCollisionPerez (
         n1 *= background_density_SI;
         n2 *= background_density_SI;
         n12 *= background_density_SI;
+        sum_wq1 *= background_density_SI;
+        sum_wq2 *= background_density_SI;
     } else {
         n1 *= inv_dV;
         n2 *= inv_dV;
         n12 *= inv_dV;
+        sum_wq1 *= inv_dV;
+        sum_wq2 *= inv_dV;
     }
 
     // compute Debye length lmdD
@@ -132,8 +152,8 @@ void ElasticCollisionPerez (
         lmdD = T_R(0.0);
     }
     else {
-        lmdD = T_R(1.0)/std::sqrt( n1*q1*q1/(T1t*PhysConstSI::ep0) +
-                                   n2*q2*q2/(T2t*PhysConstSI::ep0) );
+        lmdD = T_R(1.0)/std::sqrt( sum_wq1 / (T1t*PhysConstSI::ep0) +
+                                   sum_wq2 / (T2t*PhysConstSI::ep0) );
     }
     // minimum mean interatomic distance rmin (see Perez et al., Phys. Plasmas 19 (8) (2012) 083104)
     T_R rmin = std::pow( T_R(4.0) * MathConst::pi / T_R(3.0) *
@@ -145,11 +165,17 @@ void ElasticCollisionPerez (
         int i1 = I1s; int i2 = I2s;
         for (int k = 0; k < amrex::max(NI1,NI2); ++k)
         {
-            // adjust the charge to the ionization level of the ion. This assumes that the impact
-            // parameter is much larger than the atomic radius, as the bound electrons are not
-            // treated separately
-            if (can_ionize1) q1 *= ion_lev1[I1[i1]];
-            if (can_ionize2) q2 *= ion_lev2[I2[i2]];
+            // compute this pair's actual charge fresh each time — do NOT mutate q1/q2
+            T_R const q1k = can_ionize1 ? q1 * ion_lev1[I1[i1]] : q1;
+            T_R const q2k = can_ionize2 ? q2 * ion_lev2[I2[i2]] : q2;
+
+            // skip collision entirely if either particle is neutral
+            if (q1k == T_R(0.0) || q2k == T_R(0.0)) {
+                ++i1; if ( i1 == static_cast<int>(I1e) ) { i1 = I1s; }
+                ++i2; if ( i2 == static_cast<int>(I2e) ) { i2 = I2s; }
+                continue;
+            }
+
             // particle's Lorentz factor
             amrex::Real g1 = is_beam_coll ? std::sqrt( 1._rt
                 + u1x[I1[i1]]*u1x[I1[i1]] + u1y[I1[i1]]*u1y[I1[i1]] + psi1[I1[i1]]*psi1[I1[i1]] )
@@ -170,7 +196,7 @@ void ElasticCollisionPerez (
             UpdateMomentumPerezElastic(
                 u1x[ I1[i1] ], u1y[ I1[i1] ], u1z, g1,
                 u2x[ I2[i2] ], u2y[ I2[i2] ], u2z, g2,
-                n1, n2, n12, q1, m1, w1[ I1[i1] ], q2, m2, w2[ I2[i2] ],
+                n1, n2, n12, q1k, m1, w1[ I1[i1] ], q2k, m2, w2[ I2[i2] ],
                 dt * dt_fac, L, lmdD, inv_c_SI, inv_c2_SI, normalized_units, engine);
 
             g1 = std::sqrt( T_R(1.0) + u1x[I1[i1]]*u1x[I1[i1]]+u1y[I1[i1]]*u1y[I1[i1]]+u1z*u1z);
