@@ -1,5 +1,6 @@
 # Beam
 my_constants.gamma = 587
+my_constants.energy_MeV = 0.511*(gamma-1)
 my_constants.Lbeam = floor(18e-6/lr)*lr
 my_constants.w0 = 22.6e-6
 my_constants.emit = 0.1e-6
@@ -54,24 +55,21 @@ plasmas.names = no_plasma
 beams.names = beam
 beams.insitu_period = insitu_period
 
-beam.injection_type = fixed_weight_pdf # fixed_weight_twiss
+beam.injection_type = fixed_weight_twiss
+beam.energy_mean_MeV = energy_MeV
+beam.energy_spread_MeV = energy_MeV/1e4
 beam.pdf = if (-Lbeam<z<=0,1,0)
 beam.pdf_ref_ratio = 10
-beam.position_mean = 0 0
-beam.position_std = w0 w0
 beam.total_charge = 300e-12
-beam.u_mean = 0 0 gamma
-beam.u_std = emit/w0 emit/w0 gamma*1e-4
 beam.num_particles = part_per_slice*Lbeam/lr
-beam.output_ratio = 100
 beam.n_subcycles = 10 # 1 for unaveraged
 
-beam.emittance = emit
+beam.emittance = emit emit
 beam.twiss_beta = 2.730286902098136 7.893718338131374
 beam.twiss_alpha = -0.7296188139497527 1.8520969040668664
 
 my_constants.ld = 0.3
-my_constants.k1 = 2.0218655
+my_constants.k1 = 2.226551421788379
 my_constants.k1ga = k1*gamma
 my_constants.lq = 0.2
 my_constants.Q1 = lu*nperiod + ld
@@ -83,7 +81,7 @@ my_constants.U3 = Q2+lq+ld
 
 beam.thickquad_z = Q1 Q2
 beam.thickquad_l = lq lq
-beam.thickquad_k1ga = -k1ga k1ga
+beam.thickquad_k1ga = k1ga -k1ga
 
 beam.undulator_B0 = B0 B0 B0
 beam.undulator_z = U1 U2 U3
@@ -100,9 +98,6 @@ beam.phaseshifter_gamma = gamma gamma
 helmholtz.use_helmholtz = 1
 helmholtz.mode = "envelope" # "full_field" for unaveraged
 helmholtz.lambda0 = lr
-helmholtz.use_mg = 0
-helmholtz.interp_z = 1
-helmholtz.zfilter_source = 1
 
 helmholtz.insitu_period = insitu_period
 helmholtz.field_real(x,y,z) = "Fseed * exp(-(x**2+y**2)/Wseed**2) * cos(krcos*z)"

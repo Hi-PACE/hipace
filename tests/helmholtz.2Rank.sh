@@ -52,14 +52,17 @@ rm -rf $TEST_NAME
 ### UNAVERAGED ###
 ##################
 
-mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
-        my_constants.part_per_slice = 128 \
-        my_constants.Fseed = Eseed \
-        my_constants.nsteps_per_period = 10 \
-        my_constants.dz_per_wavelength = 10 \
-        beam.n_subcycles = 1 \
-        helmholtz.mode = "full_field" \
-        hipace.file_prefix = $TEST_NAME
+
+ mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
+         my_constants.nsteps_per_period = 8 \
+         my_constants.dz_per_wavelength = 8 \
+         beam.n_subcycles = 1 \
+         helmholtz.mode = "full_field" \
+         my_constants.part_per_slice = 128 \
+         my_constants.Fseed = Eseed \
+         my_constants.nx=64 \
+         max_step="nsteps_per_period*(Q1+lq/2)/lu" \
+         hipace.file_prefix = $TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py --mode='unaveraged' --output-dir=$TEST_NAME
