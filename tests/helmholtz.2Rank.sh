@@ -44,7 +44,7 @@ $HIPACE_EXAMPLE_DIR/analysis.py --mode='averaged' --output-dir=$TEST_NAME
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --rtol $RTOL \
-    --file_name $TEST_NAME \
+    --file_name $TEST_NAME/hdf5 \
     --test-name helmholtz.averaged
 
 rm -rf $TEST_NAME
@@ -62,7 +62,7 @@ rm -rf $TEST_NAME
          my_constants.Fseed = Eseed \
          my_constants.nx=32 \
          max_step="nsteps_per_period*(Q1+lq/2)/lu" \
-         hipace.file_prefix = $TEST_NAME
+         hipace.output_folder = $TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py --mode='unaveraged' --output-dir=$TEST_NAME
@@ -71,7 +71,7 @@ $HIPACE_EXAMPLE_DIR/analysis.py --mode='unaveraged' --output-dir=$TEST_NAME
 $HIPACE_TEST_DIR/checksum/checksumAPI.py \
     --evaluate \
     --rtol $RTOL \
-    --file_name $TEST_NAME \
+    --file_name $TEST_NAME/hdf5 \
     --test-name helmholtz.unaveraged
 
 rm -rf $TEST_NAME
