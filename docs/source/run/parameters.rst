@@ -1586,7 +1586,7 @@ Helmholtz solver (FEL simulations)
 ----------------------------------
 
 The Helmholtz solver models the radiation field of a beam in an undulator and pushes the beam in the
-undulator and radiation fields. It has two modes:``Envelope`` solves for the complex, slowly varying envelope of the radiation field, with an
+undulator and radiation fields. It has two modes: ``Envelope`` solves for the complex, slowly varying envelope of the radiation field, with an
 undulator-period-averaged beam push. ``FullWave`` resolves the radiation field on the scale of the
 wavelength, and the electron wiggle is resolved in the beam push.
 When it is used, the plasma/beam current deposition and Poisson solves of the standard field solver are skipped,

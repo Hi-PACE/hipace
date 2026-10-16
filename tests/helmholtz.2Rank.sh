@@ -43,16 +43,16 @@ rm -rf $TEST_NAME
 #################
 
 
- mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
-         my_constants.nsteps_per_period = 8 \
-         my_constants.dz_per_wavelength = 8 \
-         beam.n_subcycles = 1 \
-         helmholtz.mode = FullWave \
-         my_constants.part_per_slice = 128 \
-         my_constants.Fseed = Eseed \
-         my_constants.nx=32 \
-         max_step="nsteps_per_period*(Q1+lq/2)/lu" \
-         hipace.output_folder = $TEST_NAME
+mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
+        my_constants.nsteps_per_period = 8 \
+        my_constants.dz_per_wavelength = 8 \
+        beam.n_subcycles = 1 \
+        helmholtz.mode = FullWave \
+        my_constants.part_per_slice = 128 \
+        my_constants.Fseed = Eseed \
+        my_constants.nx=32 \
+        max_step="nsteps_per_period*(Q1+lq/2)/lu" \
+        hipace.output_folder = $TEST_NAME
 
 # Compare the result with theory
 $HIPACE_EXAMPLE_DIR/analysis.py --mode='FullWave' --output-dir=$TEST_NAME
