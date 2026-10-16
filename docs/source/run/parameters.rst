@@ -1582,12 +1582,11 @@ Parser
 
         Parser Debug Print "10*x + y" = [2, 12, 22, 32, 42, 52, 62, 72, 82, 92]
 
-Helmholtz solver (FEL simulations) CAUTION this is an 
+Helmholtz solver (FEL simulations)
 ----------------------------------
 
 The Helmholtz solver models the radiation field of a beam in an undulator and pushes the beam in the
-undulator and radiation fields. It has two modes:
-``Envelope`` solves for the complex, slowly varying envelope of the radiation field, with an
+undulator and radiation fields. It has two modes:``Envelope`` solves for the complex, slowly varying envelope of the radiation field, with an
 undulator-period-averaged beam push. ``FullWave`` resolves the radiation field on the scale of the
 wavelength, and the electron wiggle is resolved in the beam push.
 When it is used, the plasma/beam current deposition and Poisson solves of the standard field solver are skipped,
@@ -1613,6 +1612,9 @@ See ``examples/helmholtz`` for an input file that switches between the two modes
 * ``helmholtz.use_mg`` (`bool`) optional (default `0`)
     ``Envelope`` mode only. Solve the envelope equation with the multigrid solver instead of the FFT solver.
     ``FullWave`` mode always uses the FFT solver.
+
+* ``helmholtz.MG_tolerance_rel`` (`float`) optional (default `1e-4`) and ``helmholtz.MG_tolerance_abs`` (`float`) optional (default `0`)
+    Relative and absolute tolerance of the multigrid solver. Only used with ``helmholtz.use_mg = 1``.
 
 * ``helmholtz.use_phase`` (`bool`) optional (default `1`)
     ``Envelope`` mode with the multigrid solver only. Include the longitudinal phase gradient of the envelope,
@@ -1652,9 +1654,6 @@ See ``examples/helmholtz`` for an input file that switches between the two modes
     :math:`\epsilon_0 (m_e c\omega_0/e)^2 \int |a|^2 \,\mathrm{d}V / 2`. In ``FullWave`` mode,
     ``[|a|^2]`` is :math:`\int E_x^2\,\mathrm{d}V`.
 
-* ``helmholtz.insitu_file_prefix`` (`string`) optional (default `<hipace.output_folder>/insitu`)
-    Path of the in-situ output files. It is recommended to use ``hipace.output_folder`` instead.
-
 When ``helmholtz.use_helmholtz = 1``, a field diagnostic called ``helmholtz_diag`` is added automatically.
 It writes the Helmholtz slices (e.g. ``Ex_n00j00`` and ``Ei_n00j00`` for the real and imaginary parts) and can be
 configured with the usual ``helmholtz_diag.*`` options.
@@ -1664,8 +1663,7 @@ Beamline elements
 
 The following parameters are set per beam, with the prefix ``<beam name>.``, and are only applied when
 ``helmholtz.use_helmholtz = 1``. Each takes a list with one entry per element.
-Use ``<beam name>.n_subcycles`` to sub-cycle the beam push within a time step
-(e.g. 10 in the ``Envelope`` example, 1 in the ``FullWave`` example).
+Use ``<beam name>.n_subcycles`` to sub-cycle the beam push within a time step (e.g. 10 in the ``Envelope`` example, 1 in the ``FullWave`` example).
 
 * ``<beam name>.undulator_z``, ``<beam name>.undulator_B0``, ``<beam name>.undulator_period``, ``<beam name>.undulator_nperiod`` (lists of `float`)
     Start position (m), peak field (T), period (m) and number of periods of each planar undulator. The electrons
@@ -1683,13 +1681,18 @@ Use ``<beam name>.n_subcycles`` to sub-cycle the beam push within a time step
 
 * ``<beam name>.phaseshifter_z`` (list of `float`)
     Positions (m) of the phase shifters. When the beam crosses one, its longitudinal position is shifted by
-    ``phaseshifter_dz`` plus an amount that rounds up the slippage accumulated over the drift
-    (``phaseshifter_drift``, in m) to a whole number of wavelengths ``phaseshifter_lr``.
+    ``phaseshifter_dz``, plus, if ``phaseshifter_drift`` is given, an amount that rounds up the slippage
+    accumulated over that drift to a whole number of wavelengths ``phaseshifter_lr``.
 
-* ``<beam name>.phaseshifter_dz``, ``<beam name>.phaseshifter_drift``, ``<beam name>.phaseshifter_lr``, ``<beam name>.phaseshifter_gamma`` (lists of `float`) optional
-    Extra longitudinal shift in m (default `0`), drift length in m (default `-1`: no slippage rounding), resonant
-    wavelength in m (default `1`) and the :math:`\gamma` used for the slippage (default `-1`: use the average
-    :math:`u_z` from the last beam in-situ diagnostic, which requires ``beams.insitu_period`` to be set).
+* ``<beam name>.phaseshifter_dz`` (list of `float`) optional (default `0`)
+    Extra longitudinal shift (m) applied at each phase shifter.
+
+* ``<beam name>.phaseshifter_drift`` (list of `float`) optional
+    Length (m) of the drift section over which the slippage is computed. If specified,
+    ``<beam name>.phaseshifter_lr`` (resonant wavelength in m) and ``<beam name>.phaseshifter_gamma`` (beam
+    :math:`\gamma` used for the slippage) are required. If ``phaseshifter_gamma`` is not positive, the average
+    :math:`u_z` of the last beam in-situ diagnostic is used instead, which is only available once the beam
+    in-situ diagnostic has been written (``beams.insitu_period``). Otherwise the simulation aborts.
     Drift and quadrupole lengths should be divisible by the undulator period. This is not checked.
 
 * ``<beam name>.output_ids`` (2 `int`) optional (default `-1 -1`)
