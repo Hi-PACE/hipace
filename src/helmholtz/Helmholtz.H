@@ -159,7 +159,7 @@ public:
 
     bool DepositNext () const { return m_centered_dz + m_zfilter_source; }
     bool InterpZ () const { return m_interp_z; }
-    bool ModeIsEnvelope () const { return m_mode == "envelope"; }
+    bool ModeIsEnvelope () const { return m_mode == "Envelope"; }
     amrex::Real getLambda0 () const { return m_lambda0; }
     amrex::Real getk0 () const { return m_k0; }
     bool FirstOrder (int step) {return m_first_order || step == 0; }
