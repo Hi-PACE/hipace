@@ -28,8 +28,7 @@ TEST_NAME="${FILE_NAME%.*}"
 
 rm -rf $TEST_NAME
 
-# Relative tolerance for checksum tests depends on the platform
-RTOL=1e-12 && [[ "$HIPACE_EXECUTABLE" == *"hipace"*".CUDA."* ]] && RTOL=2e-5
+export OMP_NUM_THREADS=1 # Avoid annoying random failing
 
 ### AVERAGED ###
 ################
