@@ -1581,3 +1581,120 @@ Parser
     .. code-block:: bash
 
         Parser Debug Print "10*x + y" = [2, 12, 22, 32, 42, 52, 62, 72, 82, 92]
+
+Helmholtz solver (FEL simulations) CAUTION this is an 
+----------------------------------
+
+The Helmholtz solver models the radiation field of a beam in an undulator and pushes the beam in the
+undulator and radiation fields. It has two modes:
+``Envelope`` solves for the complex, slowly varying envelope of the radiation field, with an
+undulator-period-averaged beam push. ``FullWave`` resolves the radiation field on the scale of the
+wavelength, and the electron wiggle is resolved in the beam push.
+When it is used, the plasma/beam current deposition and Poisson solves of the standard field solver are skipped,
+and the beam is advanced by a dedicated pusher. The adaptive time step cannot be used.
+See ``examples/helmholtz`` for an input file that switches between the two modes.
+
+* ``helmholtz.use_helmholtz`` (`bool`) optional (default `0`)
+    Whether to use the Helmholtz solver.
+
+* ``helmholtz.mode`` (`string`)
+    Required if ``helmholtz.use_helmholtz = 1``. Either ``Envelope`` or ``FullWave``.
+
+* ``helmholtz.lambda0`` (`float`)
+    Required in ``Envelope`` mode. Reference wavelength (in m) of the radiation, giving the carrier
+    wavenumber :math:`k_0 = 2\pi/\lambda_0`. Typically the resonant wavelength of the undulator.
+
+* ``helmholtz.field_real(x,y,z)`` and ``helmholtz.field_imag(x,y,z)`` (`string`) optional (default `0`)
+    Initial field as a function of ``x``, ``y`` and ``z``, evaluated on each longitudinal slice when it enters
+    the domain. In ``Envelope`` mode, these are the real and imaginary parts of the dimensionless envelope
+    :math:`a = eE/(m_e c\omega_0)`. In ``FullWave`` mode, ``field_real`` is the electric field :math:`E_x` (in V/m)
+    and ``field_imag`` is unused.
+
+* ``helmholtz.use_mg`` (`bool`) optional (default `0`)
+    ``Envelope`` mode only. Solve the envelope equation with the multigrid solver instead of the FFT solver.
+    ``FullWave`` mode always uses the FFT solver.
+
+* ``helmholtz.use_phase`` (`bool`) optional (default `1`)
+    ``Envelope`` mode with the multigrid solver only. Include the longitudinal phase gradient of the envelope,
+    evaluated on axis. It has no effect with the FFT solver.
+
+* ``helmholtz.zfilter_source`` (`bool`) optional (default `1`)
+    ``Envelope`` mode only. Smooth the source term over three slices with weights (0.25, 0.5, 0.25).
+
+* ``helmholtz.add_dz_jx`` (`bool`) optional (default `1`) and ``helmholtz.add_dx_jz`` (`bool`) optional (default `0`)
+    ``FullWave`` mode only. Include the :math:`\partial_z j_x` and :math:`\partial_x j_z` terms in the source.
+
+* ``helmholtz.centered_dz`` (`bool`) optional (default `1`)
+    ``FullWave`` mode only. Use a centered stencil for :math:`\partial_z j_x`. If ``0``, a one-sided
+    second-order stencil is used. A centered stencil (or ``zfilter_source``) requires the beam source of the
+    next slice, which is then deposited after the next slice has been received.
+
+* ``helmholtz.interp_z`` (`bool`) optional (default `1`)
+    Whether the field acting on the beam is interpolated longitudinally between three slices, with weights
+    (0.25, 0.5, 0.25). If ``0``, only the current slice is used.
+
+* ``helmholtz.first_order`` (`bool`) optional (default `1`)
+    Advance the field with the first-order (non-centered in time) scheme at every step. If ``0``, a second-order
+    scheme using the previous time step is used, except at step 0.
+
+* ``helmholtz.n_cell`` (2 `int`) optional (default: transverse number of cells of the main field grid)
+    Number of cells of the Helmholtz grid in x and y.
+
+* ``helmholtz.patch_lo`` and ``helmholtz.patch_hi`` (3 `float`) optional (default: the main field domain)
+    Bounds of the Helmholtz domain. The longitudinal bounds are rounded to full cells of the main grid.
+
+* ``helmholtz.insitu_period`` (`int`) optional (default `0`)
+    Period of the in-situ diagnostics. ``0`` disables them. The files are written to
+    ``<hipace.output_folder>/insitu/reduced_helmholtz.<rank>.txt`` and contain per-slice and integrated values of
+    ``max(|a|^2)``, ``[|a|^2]``, ``[|a|^2*x]``, ``[|a|^2*x*x]``, ``[|a|^2*y]``, ``[|a|^2*y*y]``, the source terms
+    ``[s1]`` and ``[s2]``, and the complex on-axis amplitude ``axis(a)``. They can be read with
+    ``tools/read_insitu_diagnostics.py``. In ``Envelope`` mode the radiated energy is
+    :math:`\epsilon_0 (m_e c\omega_0/e)^2 \int |a|^2 \,\mathrm{d}V / 2`. In ``FullWave`` mode,
+    ``[|a|^2]`` is :math:`\int E_x^2\,\mathrm{d}V`.
+
+* ``helmholtz.insitu_file_prefix`` (`string`) optional (default `<hipace.output_folder>/insitu`)
+    Path of the in-situ output files. It is recommended to use ``hipace.output_folder`` instead.
+
+When ``helmholtz.use_helmholtz = 1``, a field diagnostic called ``helmholtz_diag`` is added automatically.
+It writes the Helmholtz slices (e.g. ``Ex_n00j00`` and ``Ei_n00j00`` for the real and imaginary parts) and can be
+configured with the usual ``helmholtz_diag.*`` options.
+
+Beamline elements
+"""""""""""""""""
+
+The following parameters are set per beam, with the prefix ``<beam name>.``, and are only applied when
+``helmholtz.use_helmholtz = 1``. Each takes a list with one entry per element.
+Use ``<beam name>.n_subcycles`` to sub-cycle the beam push within a time step
+(e.g. 10 in the ``Envelope`` example, 1 in the ``FullWave`` example).
+
+* ``<beam name>.undulator_z``, ``<beam name>.undulator_B0``, ``<beam name>.undulator_period``, ``<beam name>.undulator_nperiod`` (lists of `float`)
+    Start position (m), peak field (T), period (m) and number of periods of each planar undulator. The electrons
+    wiggle in x, and :math:`K` is computed from ``B0`` and the period. In ``Envelope`` mode, the period and
+    ``B0`` of the first undulator are used for all undulators, so they must be identical, and at least one
+    undulator is required. Every beam must define the undulators when the Helmholtz solver is used.
+
+* ``<beam name>.thickquad_z``, ``<beam name>.thickquad_l``, ``<beam name>.thickquad_k1ga`` (lists of `float`)
+    Start position (m), length (m) and strength of thick quadrupoles. ``thickquad_k1ga`` is the gradient
+    :math:`k_1` (1/m^2) multiplied by :math:`\gamma`. A positive value focuses in x and defocuses in y.
+
+* ``<beam name>.thinquad_z`` and ``<beam name>.thinquad_K`` (lists of `float`)
+    Position (m) and strength of thin quadrupoles. The normalized momentum changes by
+    :math:`\Delta u_x = -K x` and :math:`\Delta u_y = +K y`, i.e. ``K`` (in 1/m) is :math:`\gamma/f`.
+
+* ``<beam name>.phaseshifter_z`` (list of `float`)
+    Positions (m) of the phase shifters. When the beam crosses one, its longitudinal position is shifted by
+    ``phaseshifter_dz`` plus an amount that rounds up the slippage accumulated over the drift
+    (``phaseshifter_drift``, in m) to a whole number of wavelengths ``phaseshifter_lr``.
+
+* ``<beam name>.phaseshifter_dz``, ``<beam name>.phaseshifter_drift``, ``<beam name>.phaseshifter_lr``, ``<beam name>.phaseshifter_gamma`` (lists of `float`) optional
+    Extra longitudinal shift in m (default `0`), drift length in m (default `-1`: no slippage rounding), resonant
+    wavelength in m (default `1`) and the :math:`\gamma` used for the slippage (default `-1`: use the average
+    :math:`u_z` from the last beam in-situ diagnostic, which requires ``beams.insitu_period`` to be set).
+    Drift and quadrupole lengths should be divisible by the undulator period. This is not checked.
+
+* ``<beam name>.output_ids`` (2 `int`) optional (default `-1 -1`)
+    If set, only beam particles with an id in this inclusive range are written to the openPMD output.
+    It cannot be combined with ``output_ratio``.
+
+* ``beams.tstart_push`` (`float`) optional (default `0`)
+    Physical time (s) before which beam particles are not pushed.

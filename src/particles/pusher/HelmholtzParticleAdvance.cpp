@@ -167,7 +167,7 @@ AdvanceBeamParticlesHelmholtz (
             "phaseshifter_gamma[" + std::to_string(iz) + "] negative, but average uz of the beam cannot be "
             "read from the simulation. Please specify a valid value for phaseshifter_gamma.");
     }
-        
+
     // don't include slipped particles in count as they were already pushed
     Hipace::m_num_beam_particles_pushed += double(beam.getNumParticles(WhichBeamSlice::This));
 
