@@ -110,9 +110,11 @@ BeamParticleContainer::ReadParameters ()
             m_phaseshifter_gamma[i] = -1;
             m_phaseshifter_dz[i] = 0;
         }
-        queryWithParser(pp, "phaseshifter_drift", m_phaseshifter_drift);
-        queryWithParser(pp, "phaseshifter_lr", m_phaseshifter_lr);
-        queryWithParser(pp, "phaseshifter_gamma", m_phaseshifter_gamma);
+        bool drift_specified = queryWithParser(pp, "phaseshifter_drift", m_phaseshifter_drift);
+        if (drift_specified) {
+            getWithParser(pp, "phaseshifter_lr", m_phaseshifter_lr);
+            getWithParser(pp, "phaseshifter_gamma", m_phaseshifter_gamma);
+        }
         queryWithParser(pp, "phaseshifter_dz", m_phaseshifter_dz);
     }
 

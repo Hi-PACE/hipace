@@ -26,8 +26,8 @@ my_constants.Fseed = Useed # Eseed for FullWave
 my_constants.krcos = 0. # kr for FullWave
 
 # Numerics
-my_constants.nsteps_per_period = 0.5 # 10 for FullWave
-my_constants.dz_per_wavelength = 0.5 # 10 for FullWave
+my_constants.nsteps_per_period = 0.5 # 20 for FullWave
+my_constants.dz_per_wavelength = 0.5 # 20 for FullWave
 my_constants.zmin = "-floor(36e-6/dz)*dz+10*dz" # integer number of dz
 my_constants.zmax =  10*dz # integer number of dz
 my_constants.dz = lr / dz_per_wavelength

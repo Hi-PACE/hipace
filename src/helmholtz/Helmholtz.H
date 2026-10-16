@@ -181,8 +181,6 @@ private:
     amrex::DistributionMapping m_helmholtz_slice_dm;
     /** slice box of helmholtz  */
     amrex::Box m_slice_box;
-    /** interpolation order for helmholtz to field and field to helmholtz operations */
-    int m_interp_order = 1;
     bool m_add_dx_jz {false};
     bool m_add_dz_jx {true};
     /** Whether laser force is interpolated (order 2) in z. Otherwise order 0 */

@@ -63,6 +63,6 @@ else:
 
     # Check radiated energy
     Er_t = epsilon_0*insitu_helm.avg_data("[|a|^2]")
-    energy_genesis_uJ = 6 # after 2 undulators
+    energy_genesis_uJ = 6 # after 1 undulator
     print("x-ray energy = ", Er_t[-1]*1e6, 'uJ, benchmark = ', energy_genesis_uJ)
     assert np.isclose(Er_t[-1]*1e6, energy_genesis_uJ, rtol=0.4 )

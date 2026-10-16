@@ -82,7 +82,7 @@ AdvanceBeamParticlesHelmholtz (
     const amrex::FArrayBox& slice_fab_lev2 = fields.getSlices(lev2_idx)[0];
     const amrex::MultiFab& a_mf = helmholtz.getSlices();
 
-    // I suspect we use Ex_n00j00 to push particles but should be Ex_np1j00
+    // Currently pusing with Ex_n00j00 might need Ex_np1j00
     const amrex::GpuArray<int, 3> helm1 {
         WhichHelmholtzSlice::Ex_n00jm1, WhichHelmholtzSlice::Ex_n00j00, WhichHelmholtzSlice::Ex_n00jp1};
     const amrex::GpuArray<int, 3> helm2 {
@@ -162,7 +162,12 @@ AdvanceBeamParticlesHelmholtz (
     }
 
     amrex::Real const avg_uz_prev = beam.m_avg_uz_prev;
-
+    for (int iz=0; iz<nphaseshifter; iz++) {
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(phaseshifter_gamma[iz]>0 || avg_uz_prev>0,
+            "phaseshifter_gamma[" + std::to_string(iz) + "] negative, but average uz of the beam cannot be "
+            "read from the simulation. Please specify a valid value for phaseshifter_gamma.");
+    }
+        
     // don't include slipped particles in count as they were already pushed
     Hipace::m_num_beam_particles_pushed += double(beam.getNumParticles(WhichBeamSlice::This));
 
@@ -345,7 +350,7 @@ AdvanceBeamParticlesHelmholtz (
                         amrex::Real ku = 2.*MathConst::pi/undulator_period[0];
                         bool in_undulator = false;
                         for (int iu=0; iu<nundulator; iu++) {
-                            const amrex::Real zprop = clight*time + zp/clight*0._rt - undulator_z[iu]; // +i*dt? my_time?
+                            const amrex::Real zprop = clight*time + zp/clight*0._rt - undulator_z[iu]; // +i*dt? 0?
                             // Note the index 0 below. Envelope model: the period
                             // is the same for all undulators, the first element in the array.
                             // Likewise for B0 for now. Later, we could let both adjust provided
@@ -379,9 +384,8 @@ AdvanceBeamParticlesHelmholtz (
                         amrex::Real omegap = clight * std::sqrt(nep);
                         amrex::Real omega = std::sqrt( k*k*clight*clight + omegap*omegap );
                         amrex::Real betarsq = betax*betax + betay*betay;
-                        // does this impose nsubcycle=1?
                         amrex::Real theta = (k+ku)*zp + ku*clight*my_time;
-                        my_time += dt;//  ??
+                        my_time += dt;
                         // Here we assume gamma_j = gamma from Eq. (2.59) of Reiche's PhD thesis
                         amrex::Real theta_dot =
                             + clight*ku

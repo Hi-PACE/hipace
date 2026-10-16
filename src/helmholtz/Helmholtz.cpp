@@ -40,8 +40,6 @@ Helmholtz::ReadParameters ()
         queryWithParser(pp, "use_phase", m_use_phase);
         queryWithParser(pp, "zfilter_source", m_zfilter_source);
     }
-    queryWithParser(pp, "interp_order", m_interp_order);
-    AMREX_ALWAYS_ASSERT(m_interp_order <= 3 && m_interp_order >= 0);
     queryWithParser(pp, "insitu_period", m_insitu_period.m_func_str);
     m_insitu_period.compile();
     queryWithParser(pp, "centered_dz", m_centered_dz);
@@ -49,6 +47,8 @@ Helmholtz::ReadParameters ()
     queryWithParser(pp, "add_dz_jx", m_add_dz_jx);
     queryWithParser(pp, "interp_z", m_interp_z);
     queryWithParser(pp, "first_order", m_first_order);
+    queryWithParser(pp, "MG_tolerance_rel", m_MG_tolerance_rel);
+    queryWithParser(pp, "MG_tolerance_abs", m_MG_tolerance_abs);
 
     std::string profile_real_str = "0.";
     std::string profile_imag_str = "0.";
@@ -61,7 +61,7 @@ Helmholtz::ReadParameters ()
     const bool set_file_prefix =  queryWithParser(pp, "insitu_file_prefix", m_insitu_file_prefix);
     if (set_file_prefix) {
         amrex::Print() <<
-            "It is recommended to use hipace.output_folder instead of lasers.insitu_file_prefix\n";
+            "It is recommended to use hipace.output_folder instead of helmtoltz.insitu_file_prefix\n";
     }
 }
 

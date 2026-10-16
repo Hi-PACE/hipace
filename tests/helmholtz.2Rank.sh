@@ -10,8 +10,8 @@
 
 
 # This file is part of the HiPACE++ test suite.
-# It runs a Hipace simulation in the blowout regime and compares the result
-# with SI units.
+# It runs a Hipace simulation of FEL with both Envelope and FullWave solvers
+# and compares with Genesis
 
 # abort on first encounted error
 set -eu -o pipefail
