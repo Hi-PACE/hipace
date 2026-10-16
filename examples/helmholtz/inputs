@@ -3,7 +3,7 @@ my_constants.gamma = 587
 my_constants.energy_MeV = 0.511*(gamma-1)
 my_constants.Lbeam = floor(18e-6/lr)*lr
 my_constants.emit = 0.1e-6
-my_constants.part_per_slice = 1024 # 128 for unaveraged
+my_constants.part_per_slice = 1024 # 128 for FullWave
 
 # Undulator
 my_constants.lu = 0.05
@@ -17,17 +17,17 @@ my_constants.kr = 2*pi/lr
 # Seed
 my_constants.Pseed = .2e6 # SI
 my_constants.Wseed = 100e-6 # Width of the seed laser
-# Amplitude for the seed: unaveraged
+# Amplitude for the seed: FullWave
 my_constants.Eseed = sqrt(4*Pseed/(pi*epsilon0*clight*Wseed*Wseed))
-# Amplitude for the seed: averaged
+# Amplitude for the seed: Envelope
 my_constants.Useed = q_e * Eseed / (m_e * clight * clight * kr)
-my_constants.Fseed = Useed # Eseed for unaveraged
-# Trick to easily swith from averaged to unaveraged in
-my_constants.krcos = 0. # kr for unaveraged
+my_constants.Fseed = Useed # Eseed for FullWave
+# Trick to easily swith from Envelope to FullWave
+my_constants.krcos = 0. # kr for FullWave
 
 # Numerics
-my_constants.nsteps_per_period = 0.5 # 10 for unaveraged
-my_constants.dz_per_wavelength = 0.5 # 10 for unaveraged
+my_constants.nsteps_per_period = 0.5 # 10 for FullWave
+my_constants.dz_per_wavelength = 0.5 # 10 for FullWave
 my_constants.zmin = "-floor(36e-6/dz)*dz+10*dz" # integer number of dz
 my_constants.zmax =  10*dz # integer number of dz
 my_constants.dz = lr / dz_per_wavelength
@@ -62,7 +62,7 @@ beam.pdf = if (-Lbeam<z<=0,1,0)
 beam.pdf_ref_ratio = 10
 beam.total_charge = 300e-12
 beam.num_particles = part_per_slice*Lbeam/lr
-beam.n_subcycles = 10 # 1 for unaveraged
+beam.n_subcycles = 10 # 1 for FullWave
 
 beam.emittance = emit emit
 beam.twiss_beta = 2.730286902098136 7.893718338131374
@@ -98,7 +98,7 @@ beam.phaseshifter_lr = lr lr
 beam.phaseshifter_gamma = gamma gamma
 
 helmholtz.use_helmholtz = 1
-helmholtz.mode = Envelope # FullWave for unaveraged
+helmholtz.mode = Envelope # FullWave
 helmholtz.lambda0 = lr
 
 helmholtz.insitu_period = insitu_period

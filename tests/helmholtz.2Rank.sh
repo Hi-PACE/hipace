@@ -28,19 +28,19 @@ TEST_NAME="${FILE_NAME%.*}"
 
 rm -rf $TEST_NAME
 
-### AVERAGED ###
+### ENVELOPE ###
 ################
 
 mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
         hipace.output_folder = $TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --mode='averaged' --output-dir=$TEST_NAME
+$HIPACE_EXAMPLE_DIR/analysis.py --mode='Envelope' --output-dir=$TEST_NAME
 
 rm -rf $TEST_NAME
 
-### UNAVERAGED ###
-##################
+### FULL-WAVE ###
+#################
 
 
  mpiexec -n 2 $HIPACE_EXECUTABLE $HIPACE_EXAMPLE_DIR/inputs \
@@ -55,6 +55,6 @@ rm -rf $TEST_NAME
          hipace.output_folder = $TEST_NAME
 
 # Compare the result with theory
-$HIPACE_EXAMPLE_DIR/analysis.py --mode='unaveraged' --output-dir=$TEST_NAME
+$HIPACE_EXAMPLE_DIR/analysis.py --mode='FullWave' --output-dir=$TEST_NAME
 
 rm -rf $TEST_NAME

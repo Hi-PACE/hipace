@@ -284,7 +284,7 @@ AdvanceBeamParticlesHelmholtz (
                 Ezp *= inv_clight;
 
                 if (c_use_helmholtz.value) {
-                    // If Helmholtz unaveraged model, add magnetic force from undulator
+                    // If Helmholtz FullWave model, add magnetic force from undulator
                     for (int iu=0; iu<nundulator; iu++) {
                         const amrex::Real zprop = clight*(time+i*dt) + zp/clight*0._rt - undulator_z[iu];
                         const amrex::Real undulator_l = undulator_nperiod[iu]*undulator_period[iu];
@@ -334,8 +334,8 @@ AdvanceBeamParticlesHelmholtz (
                 }
 
                 if (c_use_helmholtz.value) {
-                    // If Helmholtz envelope model, push from undulator + Helmholtz field
-                    // If Helmholtz unaveraged model, push from Helmholtz
+                    // If Helmholtz Envelope model, push from undulator + Helmholtz field
+                    // If Helmholtz FullWave model, push from Helmholtz
                     amrex::Real betax = ux * gammap_inv;
                     amrex::Real betay = uy * gammap_inv;
                     if (helm_mode_is_envelope) {

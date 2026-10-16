@@ -7,9 +7,6 @@
 # Authors: MaxThevenet, Tianyun Long, Alexander Sinn
 # License: BSD-3-Clause-LBNL
 
-import sys
-sys.path.append('/Users/maxencethevenet/src/hipace/tools')
-
 import argparse
 import numpy as np
 from scipy.constants import c, epsilon_0, e, m_e, pi, eV
@@ -18,7 +15,7 @@ import read_insitu_diagnostics as isd
 parser = argparse.ArgumentParser(description='Compare laser propagation in vacuum with theory')
 parser.add_argument('--mode',
                     dest='mode',
-                    help='Mode for the Helmholtz solver. "averaged" or "unaveraged"')
+                    help='Mode for the Helmholtz solver. "Envelope" or "FullWave"')
 parser.add_argument('--output-dir',
                     dest='output_dir',
                     default='diags/hdf5',
@@ -48,7 +45,7 @@ alphay = -insitu_beam.avg_data('[y*uy]') / gamma / emity
 print("betax[0], betax[10], betax[-1]", betax[0], betax[10], betax[-1])
 print("betay[0], betay[10], betay[-1]", betay[0], betay[10], betay[-1])
 
-if args.mode == 'averaged':
+if args.mode == 'Envelope':
     # Check beam optics
     assert np.isclose(betax[-1], betay[0], rtol=0.02)
     assert np.isclose(betay[-1], betax[0], rtol=0.02)
@@ -59,7 +56,7 @@ if args.mode == 'averaged':
     print("x-ray energy = ", Er_t[-1]*1e6, 'uJ, benchmark = ', energy_genesis_uJ)
     assert np.isclose(Er_t[-1]*1e6, energy_genesis_uJ, rtol=0.1 )
 else:
-    # Note that unaveraged runs shorter
+    # Note that full-wave runs shorter
     # Check beam optics
     assert np.isclose(betax[-1], 9.2, rtol=0.01)
     assert np.isclose(betay[-1], 2.3, rtol=0.1)
