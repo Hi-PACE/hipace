@@ -28,8 +28,6 @@ TEST_NAME="${FILE_NAME%.*}"
 
 rm -rf $TEST_NAME
 
-export OMP_NUM_THREADS=1 # Avoid annoying random failing
-
 ### AVERAGED ###
 ################
 

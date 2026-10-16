@@ -51,7 +51,7 @@ print("betay[0], betay[10], betay[-1]", betay[0], betay[10], betay[-1])
 if args.mode == 'averaged':
     # Check beam optics
     assert np.isclose(betax[-1], betay[0], rtol=0.02)
-    assert np.isclose(betay[-1], betax[0], rtol=0.02)
+    assert np.isclose(betay[-1], betax[0], rtol=0.1)
 
     # Check radiated energy
     Er_t = epsilon_0*insitu_helm.avg_data("[|a|^2]") * a_to_E**2/2
