@@ -17,7 +17,6 @@
 #   include <openPMD/auxiliary/Filesystem.hpp>
 #endif
 #include "particles/pusher/PlasmaParticleAdvance.H"
-#include "particles/pusher/BeamParticleAdvance.H"
 #include "particles/particles_utils/FieldGather.H"
 #include "particles/pusher/GetAndSetPosition.H"
 #include <cmath>
