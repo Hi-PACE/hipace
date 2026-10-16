@@ -50,7 +50,7 @@ rm -rf $TEST_NAME
          my_constants.nsteps_per_period = 8 \
          my_constants.dz_per_wavelength = 8 \
          beam.n_subcycles = 1 \
-         helmholtz.mode = "full_field" \
+         helmholtz.mode = FullWave \
          my_constants.part_per_slice = 128 \
          my_constants.Fseed = Eseed \
          my_constants.nx=32 \

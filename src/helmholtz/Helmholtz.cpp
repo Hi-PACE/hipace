@@ -32,7 +32,7 @@ Helmholtz::ReadParameters ()
     if (!m_use_helmholtz) return;
 
     getWithParser(pp, "mode", m_mode);
-    AMREX_ALWAYS_ASSERT(m_mode == "envelope" || m_mode == "full_field");
+    AMREX_ALWAYS_ASSERT(m_mode == "Envelope" || m_mode == "FullWave");
     if (ModeIsEnvelope()) {
         getWithParser(pp, "lambda0", m_lambda0);
         queryWithParser(pp, "use_mg", m_use_mg);
@@ -272,15 +272,15 @@ Helmholtz::AdvanceSlice (const int islice, amrex::Real dt, int step)
             AdvanceSliceFFTEnvelope(dt, step);
         }
     } else {
-        AdvanceSliceFFT(dt, step);
+        AdvanceSliceFullWaveFFT(dt, step);
     }
 }
 
 void
-Helmholtz::AdvanceSliceFFT (const amrex::Real dt, int step)
+Helmholtz::AdvanceSliceFullWaveFFT (const amrex::Real dt, int step)
 {
 
-    HIPACE_PROFILE("Helmholtz::AdvanceSliceFFT()");
+    HIPACE_PROFILE("Helmholtz::AdvanceSliceFullWaveFFT()");
 
     using namespace amrex::literals;
     using Complex = amrex::GpuComplex<amrex::Real>;

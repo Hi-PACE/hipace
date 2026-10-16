@@ -2,7 +2,6 @@
 my_constants.gamma = 587
 my_constants.energy_MeV = 0.511*(gamma-1)
 my_constants.Lbeam = floor(18e-6/lr)*lr
-my_constants.w0 = 22.6e-6
 my_constants.emit = 0.1e-6
 my_constants.part_per_slice = 1024 # 128 for unaveraged
 
@@ -14,20 +13,23 @@ my_constants.ku = 2*pi/lu
 my_constants.B0 = m_e*clight*ku*K/q_e
 my_constants.lr = lu/2/gamma**2*(1+K**2/2)
 my_constants.kr = 2*pi/lr
-my_constants.krcos = 0.
 
 # Seed
-my_constants.Pseed = .2e6
-my_constants.Wseed = 100e-6
-my_constants.Eseed = sqrt( 4*Pseed / (pi * epsilon0 * clight * Wseed * Wseed) )
+my_constants.Pseed = .2e6 # SI
+my_constants.Wseed = 100e-6 # Width of the seed laser
+# Amplitude for the seed: unaveraged
+my_constants.Eseed = sqrt(4*Pseed/(pi*epsilon0*clight*Wseed*Wseed))
+# Amplitude for the seed: averaged
 my_constants.Useed = q_e * Eseed / (m_e * clight * clight * kr)
 my_constants.Fseed = Useed # Eseed for unaveraged
+# Trick to easily swith from averaged to unaveraged in
+my_constants.krcos = 0. # kr for unaveraged
 
 # Numerics
 my_constants.nsteps_per_period = 0.5 # 10 for unaveraged
 my_constants.dz_per_wavelength = 0.5 # 10 for unaveraged
-my_constants.zmin = "-floor(36e-6/dz)*dz+10*dz"
-my_constants.zmax =  10*dz
+my_constants.zmin = "-floor(36e-6/dz)*dz+10*dz" # integer number of dz
+my_constants.zmax =  10*dz # integer number of dz
 my_constants.dz = lr / dz_per_wavelength
 my_constants.nx = 64
 my_constants.nz = "((zmax-zmin)/lr*dz_per_wavelength)"
@@ -36,12 +38,10 @@ my_constants.insitu_period = max(1,nsteps_per_period)
 
 hipace.dt = lu/clight/nsteps_per_period
 max_step = nsteps_per_period*(U3/lu+nperiod)
-comms_buffer.on_gpu = 1
-hipace.do_device_synchronize = 0
+comms_buffer.on_gpu = 1 # Only used when running on GPU
 comms_buffer.max_size_GiB = 40
 
 hipace.verbose = 4
-hipace.output_input = 0
 
 comms_buffer.async_memcpy = 1
 boundary.field = Dirichlet
@@ -88,6 +88,8 @@ beam.undulator_z = U1 U2 U3
 beam.undulator_period = lu lu lu
 beam.undulator_nperiod = nperiod nperiod nperiod
 
+# All lengths (quad length, drift) should be divisible by lu
+# Careful, this is not ensured in the code.
 my_constants.drift = 2*ld+lq
 beam.phaseshifter_z = Q1 Q2
 beam.phaseshifter_dz = lr lr
@@ -96,11 +98,11 @@ beam.phaseshifter_lr = lr lr
 beam.phaseshifter_gamma = gamma gamma
 
 helmholtz.use_helmholtz = 1
-helmholtz.mode = "envelope" # "full_field" for unaveraged
+helmholtz.mode = Envelope # FullWave for unaveraged
 helmholtz.lambda0 = lr
 
 helmholtz.insitu_period = insitu_period
-helmholtz.field_real(x,y,z) = "Fseed * exp(-(x**2+y**2)/Wseed**2) * cos(krcos*z)"
+helmholtz.field_real(x,y,z) = "Fseed*exp(-(x**2+y**2)/Wseed**2)*cos(krcos*z)"
 
 diagnostic.dimensions = xz
 diagnostic.beam_output_period = output_period

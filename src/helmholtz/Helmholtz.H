@@ -96,7 +96,7 @@ public:
      * \param[in] dt time step of the simulation
      * \param[in] step current iteration. Needed because step 0 needs a specific treatment.
      */
-    void AdvanceSliceFFT (amrex::Real dt, int step);
+    void AdvanceSliceFullWaveFFT (amrex::Real dt, int step);
 
     /** Advance a Helmholtz slice by 1 time step using a multigrid solver.
      * This assumes the FEL envelope equations.

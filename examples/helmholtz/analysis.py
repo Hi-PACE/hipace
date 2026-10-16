@@ -1,10 +1,10 @@
 #! /usr/bin/env python3
 
-# Copyright 2022
+# Copyright 2026
 #
 # This file is part of HiPACE++.
 #
-# Authors: MaxThevenet, Tianyun Long
+# Authors: MaxThevenet, Tianyun Long, Alexander Sinn
 # License: BSD-3-Clause-LBNL
 
 import sys
