@@ -1488,7 +1488,6 @@ WARNING: this module is in development.
 HiPACE++ proposes an implementation of [Perez et al., Phys. Plasmas 19, 083104 (2012)], inherited from WarpX,
 for collisions between plasma-plasma and beam-plasma.
 As collisions depend on the physical density, in normalized units `hipace.background_density_SI` must be specified.
-Please note that the impact ionization module is currently under development, and SI units are always required.
 
 * ``hipace.collisions`` (list of `strings`) optional
     List of names of binary elastic Coulomb collisions.
@@ -1505,7 +1504,7 @@ Please note that the impact ionization module is currently under development, an
 
 * ``<collision_name>.collision_period`` (`integer`) optional (default `1`)
     Number of :math:`\zeta` slices between applying the elastic collision operator (useful when you are in a fairly collisionless regime, but still want to calculate elastic collisions). The timestep used for collisions is multiplied by this factor. Only applies to plasma-plasma collisions.
-    
+
 * ``hipace.impact_ionization`` (list of `strings`) optional
     List of names of binary inelastic Coulomb collisions.
     Each will represent collisions between 2 plasma species.

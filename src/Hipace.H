@@ -22,7 +22,6 @@
 #include "utils/Parser.H"
 #include "utils/MultiBuffer.H"
 #include "diagnostics/Diagnostic.H"
-#include "diagnostics/OpenPMDWriter.H"
 #include "particles/collisions/Collision.H"
 
 #include <AMReX_AmrCore.H>

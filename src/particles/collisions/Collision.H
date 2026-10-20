@@ -4,8 +4,10 @@
 #include "particles/plasma/MultiPlasma.H"
 
 #include <AMReX.H>
+#include <AMReX_GpuBuffer.H>
 
 #include <string>
+#include <vector>
 
 /**
  * \brief This class handles inelastic Coulomb collisions between 2 plasma species,
@@ -19,6 +21,7 @@ class Collision
     std::string m_collision_type = "";
     std::string m_physical_element ="";
     bool m_has_collision_product = false;
+    int m_atomic_number = 0;
     amrex::Gpu::Buffer<amrex::Real> m_binding_energies;
     amrex::Gpu::Buffer<amrex::Real> m_ionization_energies;
 
@@ -42,11 +45,12 @@ public:
      * \param[in] lev MR level
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
-     * \param[in] collision_function return if a pair of particles collides
-     * \param[in] ionization_function initialize product particle
+     * \param[in] collision_function check if a collision between two particles produces a new electron,
+     *  redistribute the energies and the momenta and update the old particle properties accordingly
+     * \param[in] ionization_function initialize newly produced electrons
      **/
     template <class F, class G>
-    void doCollisionImp (
+    void doCollisionTemplate (
         int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma,
         F const& collision_function,

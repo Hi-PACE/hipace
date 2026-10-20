@@ -15,7 +15,7 @@ int get_energy_index(int Z)
     if (Z == 2)  return 8;   // He —  2 entries (indices 8–9)
     if (Z == 18) return 10;  // Ar — 18 entries (indices 10–27)
 
-    return 0;   // !!!
+    return 0;
 }
 
 namespace coll_ion
@@ -155,10 +155,8 @@ namespace coll_ion
 
         // Kinetic energy available to the 3 outgoing particles in COM [J]
         Real const Eout = Ecm - Eion;
-        if (Eout <= 0.0_rt)   // Energy not sufficient for ionization
-        { return false;
-        } else { return true;
-        }
+
+        return (Eout > 0.0_rt);  // false if energy is not sufficient for ionization
     }
 
     struct IonizationResult
@@ -184,18 +182,20 @@ namespace coll_ion
      * \return Ionization cross section: sigma (m^2) and ionization energy: ionization_en (eV)
      */
     AMREX_GPU_HOST_DEVICE inline
-    IonizationResult sigma_E(int atomic_number, int zstar, Real e, const Real* p_binding_energies, const Real* p_ionization_energies)
+    IonizationResult sigma_E(int atomic_number, int zstar, Real e,
+        const Real* p_binding_energies, const Real* p_ionization_energies)
     {
-        Real sigma = 0.0;
+        Real sigma = 0.0_rt;
         Real ionization_en = 0.0;
 
         int n = 0;      // degeneracy counter
 
-        int base_idx = get_energy_index(atomic_number);
-        const Real me_c2 = 510998.0;        // electron rest energy [eV]
+        const int base_idx = 0;
+        const Real me_c2 = 510998.95_rt;    // electron rest energy [eV]
 
         // Convert incident energy to m_e c^2 units
         const Real ep = e / me_c2;
+        const Real shift = p_ionization_energies[zstar] - p_binding_energies[atomic_number - zstar - 1];
 
         // Sum over all bound electrons (k = 0 … n_bound-1)
         for (int k = 0; k < atomic_number - zstar; k++) {
@@ -206,7 +206,7 @@ namespace coll_ion
             // Add current electron to the running group
             n++;
 
-            Real bp = p_binding_energies[idx_k] / me_c2;  // binding energy in m_e c^2 units
+            Real bp = (p_binding_energies[idx_k] + shift) / me_c2;  // binding energy in m_e c^2 units
 
             // Accumulate degenerate sub-shells (same binding energy)
             if (k < atomic_number - zstar - 1 &&
@@ -216,28 +216,28 @@ namespace coll_ion
 
             Real e_red = ep / bp;    // reduced energy  T / B
 
-            if (e_red > 1.0) {
+            if (e_red > 1.0_rt) {
                 // Relativistic beta^2 factors
-                Real betae2 = 1.0 - 1.0 / ((1.0 + ep) * (1.0 + ep));
-                Real betab2 = 1.0 - 1.0 / ((1.0 + bp) * (1.0 + bp));
+                Real betae2 = 1.0_rt - 1.0_rt / ((1.0_rt + ep) * (1.0_rt + ep));
+                Real betab2 = 1.0_rt - 1.0_rt / ((1.0_rt + bp) * (1.0_rt + bp));
                 Real betau2 = betab2;   // RBEB: U ≈ B
 
                 // Pre-factor  s0 = (r_e / 2c) * n / [B (beta_e^2 + beta_b^2 + beta_u^2)]
                 Real s0 = normalization * n /
-                          (2.0 * bp * (betae2 + betab2 + betau2));
+                          (2.0_rt * bp * (betae2 + betab2 + betau2));
 
-                Real ep2 = 1.0 / (1.0 + 0.5 * ep);
+                Real ep2 = 1.0_rt / (1.0_rt + 0.5_rt * ep);
                 ep2 *= ep2;
 
                 // RBEB kernel terms
-                Real a1c = (1.0 + 2.0 * ep) / (1.0 + e_red) * ep2;
-                Real a2c = (e_red - 1.0) * bp * bp * 0.5 * ep2;
-                Real a3  = std::log(betae2 / (1.0 - betae2))
+                Real a1c = (1.0_rt + 2.0_rt * ep) / (1.0_rt + e_red) * ep2;
+                Real a2c = (e_red - 1.0_rt) * bp * bp * 0.5_rt * ep2;
+                Real a3  = std::log(betae2 / (1.0_rt - betae2))
                          - betae2
-                         - std::log(2.0 * bp);
+                         - std::log(2.0_rt * bp);
 
-                Real sk = s0 * (0.5 * a3 * (1.0 - 1.0 / (e_red * e_red))
-                              + 1.0 - 1.0 / e_red
+                Real sk = s0 * (0.5_rt * a3 * (1.0_rt - 1.0_rt / (e_red * e_red))
+                              + 1.0_rt - 1.0_rt / e_red
                               + a2c
                               - a1c * std::log(e_red));
 
