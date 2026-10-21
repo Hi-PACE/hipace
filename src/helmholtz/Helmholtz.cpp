@@ -431,7 +431,6 @@ Helmholtz::AdvanceSliceMGEnvelope (amrex::Real dt, int step)
     const PhysConst phc = get_phys_const();
     const amrex::Real c = phc.c;
     const amrex::Real k0 = m_k0;
-    const bool do_avg_rhs = m_MG_average_rhs;
     const bool zfilter_source = m_zfilter_source;
     const bool first_order = FirstOrder(step);
 
@@ -552,8 +551,7 @@ Helmholtz::AdvanceSliceMGEnvelope (amrex::Real dt, int step)
                     :           arr(i, j, jz_n00j00) + I * arr(i, j, rho_n00j00);
                 // 1/ga      cos(t)/ga sin(t)/ga
                 // jx_n00j00 jz_n00j00 rho_n00j00
-                acoeff_real_arr(i,j,0) = do_avg_rhs ?
-                    acoeff_real_scalar + chi : acoeff_real_scalar;
+                acoeff_real_arr(i,j,0) = acoeff_real_scalar + chi;
 
                 Complex rhs;
                 if (first_order) {
@@ -565,12 +563,8 @@ Helmholtz::AdvanceSliceMGEnvelope (amrex::Real dt, int step)
                         + 8._rt/(c*dt*dz)*(-anp1jp1+an00jp1)*exp1
                         + 2._rt/(c*dt*dz)*(+anp1jp2-an00jp2)*exp2
                         - lapA
-                        + ( -6._rt/(c*dt*dz) + 4._rt*I*djn/(c*dt) + I*4._rt*k0/(c*dt) ) * an00j00;
-                    if (do_avg_rhs) {
-                        rhs += chi * an00j00;
-                    } else {
-                        rhs += chi * an00j00 * 2._rt;
-                    }
+                        + ( -6._rt/(c*dt*dz) + 4._rt*I*djn/(c*dt) + I*4._rt*k0/(c*dt) ) * an00j00
+                        + chi * an00j00;
                 } else {
                     const Complex anm1jp1 = arr(i, j, Ex_nm1jp1) + I * arr(i, j, Ei_nm1jp1);
                     const Complex anm1jp2 = arr(i, j, Ex_nm1jp2) + I * arr(i, j, Ei_nm1jp2);
@@ -580,12 +574,8 @@ Helmholtz::AdvanceSliceMGEnvelope (amrex::Real dt, int step)
                         + 1._rt/(c*dt*dz)*(+anp1jp2-anm1jp2)*exp2
                         - 4._rt/(c*c*dt*dt)*an00j00
                         - lapA
-                        + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00;
-                    if (do_avg_rhs) {
-                        rhs += chi * anm1j00;
-                    } else {
-                        rhs += chi * an00j00 * 2._rt;
-                    }
+                        + ( -3._rt/(c*dt*dz) + 2._rt*I*djn/(c*dt) + 2._rt/(c*c*dt*dt) + I*2._rt*k0/(c*dt) ) * anm1j00
+                        + chi * anm1j00;
                 }
                 rhs += 2._rt * source; // usual factor of 2 from discr. of dzeta in lhs
                 rhs_mg_arr(i,j,0) = rhs.real();
