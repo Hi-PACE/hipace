@@ -21,6 +21,7 @@ class Fields;
 class MultiBeam;
 class MultiLaser;
 class MultiPlasma;
+class Helmholtz;
 
 
 /** \brief This struct holds data for one field diagnostic on one MR level */
@@ -30,6 +31,7 @@ struct DiagnosticData
     enum struct diag_type {
         field,
         laser,
+        helmholtz,
         histogram,
         beam,
         plasma_slice,
@@ -102,10 +104,10 @@ class Diagnostic
 public:
 
     /** Read parameters from the input file */
-    void ReadParameters (int nlev, bool use_laser, bool has_beam);
+    void ReadParameters (int nlev, bool use_laser, bool use_helmholtz, bool has_beam);
 
     /** \brief Determine which data to output */
-    void Initialize (int nlev, bool use_laser,
+    void Initialize (int nlev, bool use_laser, bool use_helmholtz,
         const amrex::Vector<std::string>& beam_names,
         const amrex::Vector<std::string>& plasma_names);
 
@@ -137,6 +139,7 @@ public:
      *
      * \param[in] field_geom geometry of the full simulation domain for all field MR levels
      * \param[in] laser_geom geometry of the full simulation domain for the laser
+     * \param[in] helmholtz_geom geometry of the full simulation domain for the helmholtz grid
      * \param[in] plasmas MultiPlasma object
      * \param[in] beams MultiBeam object
      * \param[in] output_step current step index
@@ -146,6 +149,7 @@ public:
     void
     InitDiagnosticsStep (amrex::Vector<amrex::Geometry>& field_geom,
                          amrex::Geometry const& laser_geom,
+                         amrex::Geometry const& helmholtz_geom,
                          MultiPlasma& plasmas, MultiBeam& beams, int output_step,
                          amrex::Real output_time, bool is_last_step);
 
@@ -157,12 +161,13 @@ public:
      * \param[in] lasers MultiLaser object
      * \param[in] plasmas MultiPlasma object
      * \param[in] beams MultiBeam object
+     * \param[in] helmholtz Helmholtz object
      * \param[in] field_geom geometry for all field MR levels
      */
     void
     FillDiagnostics (int islice, int current_N_level,
                      Fields& fields, MultiLaser& lasers,
-                     MultiPlasma& plasmas, MultiBeam& beams,
+                     MultiPlasma& plasmas, MultiBeam& beams, Helmholtz& helmholtz,
                      const amrex::Vector<amrex::Geometry>& field_geom);
 
     /** \brief Collect histograms from particles that exited the domain

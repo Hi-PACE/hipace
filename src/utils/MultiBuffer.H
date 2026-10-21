@@ -11,6 +11,7 @@
 #include <AMReX_AmrCore.H>
 #include "particles/beam/MultiBeam.H"
 #include "laser/MultiLaser.H"
+#include "helmholtz/Helmholtz.H"
 
 // declare MPI datatypes if compiled without MPI
 using namespace amrex::mpidatatypes;
@@ -21,14 +22,15 @@ class MultiBuffer
 public:
 
     // initialize MultiBuffer and open initial receive requests
-    void initialize (int nslices, MultiBeam& beams, MultiLaser& laser);
+    void initialize (int nslices, MultiBeam& beams, MultiLaser& laser, Helmholtz& helmholtz);
 
     // receive data from previous rank and unpack it into MultiBeam and MultiLaser
-    void get_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
+    void get_data (int slice, MultiBeam& beams, MultiLaser& laser, Helmholtz& helmholtz,
+                   int beam_slice);
 
     // pack data from MultiBeam and MultiLaser into buffer and send it to the next rank
-    void put_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice,
-                   bool is_last_time_step);
+    void put_data (int slice, MultiBeam& beams, MultiLaser& laser, Helmholtz& helmholtz,
+                   int beam_slice, bool is_last_time_step);
 
     // receive physical time from previous rank
     amrex::Real get_time ();
@@ -70,6 +72,7 @@ private:
         std::vector<std::map<int, std::size_t>> m_beam_real;
         std::vector<std::map<int, std::size_t>> m_beam_int;
         std::map<int, std::size_t> m_laser;
+        std::map<int, std::size_t> m_helmholtz;
         std::size_t m_total;
     };
 
@@ -117,6 +120,7 @@ private:
     int m_nslices = 0;
     int m_nbeams = 0;
     int m_laser_ncomp = 4;
+    int m_helmholtz_ncomp = 0;
     /** How many slices of beam particles can be received in advance */
     int m_max_leading_slices = std::numeric_limits<int>::max();
     /** How many slices of beam particles can be stored before being sent */
@@ -127,8 +131,10 @@ private:
 
     // parameters to send physical time
     amrex::Real m_time_send_buffer = 0.;
+#ifdef AMREX_USE_MPI
     MPI_Request m_time_send_request = MPI_REQUEST_NULL;
     bool m_time_send_started = false;
+#endif
 
     // slice index of where to continue making async progress
     std::array<int, comm_progress::nprogress> m_async_metadata_slice {};
@@ -162,10 +168,12 @@ private:
     void async_progress (int slice);
 
     // write MultiBeam sizes into the metadata array
-    void write_metadata (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
+    void write_metadata (int slice, MultiBeam& beams, MultiLaser& laser, Helmholtz& helmholtz,
+                         int beam_slice);
 
     // helper function to get location of individual arrays inside a buffer
-    BufferOffset get_buffer_offset (int slice, MultiBeam& beams, MultiLaser& laser);
+    BufferOffset get_buffer_offset (int slice, MultiBeam& beams, MultiLaser& laser,
+                                    Helmholtz& helmholtz);
 
     // copy gpu array into buffer at buffer_offset, either dtoh or dtod
     void memcpy_to_buffer (int slice, std::size_t buffer_offset,
@@ -184,12 +192,14 @@ private:
     void async_memcpy_from_buffer_finish ();
 
     // pack MultiBeam and MultiLaser into buffer
-    void pack_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
+    void pack_data (int slice, MultiBeam& beams, MultiLaser& laser, Helmholtz& helmholtz,
+                    int beam_slice);
 
 public: // needed for ParallelFor
 
     // unpack MultiBeam and MultiLaser from buffer
-    void unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, int beam_slice);
+    void unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, Helmholtz& helmholtz,
+                      int beam_slice);
 
 };
 

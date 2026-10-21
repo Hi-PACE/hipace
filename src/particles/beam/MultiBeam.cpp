@@ -7,8 +7,10 @@
  */
 #include "MultiBeam.H"
 #include "particles/deposition/BeamDepositCurrent.H"
+#include "particles/deposition/HelmholtzDeposition.H"
 #include "particles/sorting/SliceSort.H"
 #include "particles/pusher/BeamParticleAdvance.H"
+#include "particles/pusher/HelmholtzParticleAdvance.H"
 #include "utils/DeprecatedInput.H"
 #include "utils/IOUtil.H"
 #include "utils/HipaceProfilerWrapper.H"
@@ -23,6 +25,7 @@ MultiBeam::ReadParameters ()
         m_nbeams = 0;
         return;
     }
+    queryWithParser(pp, "tstart_push", m_tstart_push);
     DeprecatedInput("beams", "insitu_freq", "insitu_period");
     DeprecatedInput("beams", "all_from_file",
         "injection_type = from_file\nand beams.input_file = <file name>\n");
@@ -66,6 +69,14 @@ MultiBeam::DepositCurrentSlice (
 }
 
 void
+MultiBeam::HelmholtzDeposition (Helmholtz& helmholtz, const int which_beam_slice, amrex::Real time)
+{
+    for (int i=0; i<m_nbeams; i++) {
+        ::HelmholtzDeposition(m_all_beams[i], helmholtz, which_beam_slice, time);
+    }
+}
+
+void
 MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 {
     for (int i=0; i<m_nbeams; i++) {
@@ -76,14 +87,21 @@ MultiBeam::shiftSlippedParticles (const int slice, amrex::Geometry const& geom)
 void
 MultiBeam::AdvanceBeamParticlesSlice (
     const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
-    int const current_N_level)
+    int const current_N_level, const Helmholtz& helmholtz)
 {
+    if (Hipace::GetInstance().m_physical_time < m_tstart_push) return;
     for (int i=0; i<m_nbeams; i++) {
         if (m_all_beams[i].m_do_push){
-            ::AdvanceBeamParticlesSlice(m_all_beams[i], fields, gm, slice, current_N_level);
+
+            if (helmholtz.UseHelmholtz()) {
+                ::AdvanceBeamParticlesHelmholtz(
+                    m_all_beams[i], fields, gm, slice, current_N_level, helmholtz);
+            } else {
+                ::AdvanceBeamParticlesSlice(
+                    m_all_beams[i], fields, gm, slice, current_N_level);
+            }
         }
     }
-
 }
 
 void

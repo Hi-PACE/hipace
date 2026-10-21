@@ -258,6 +258,52 @@ void doLaserGatherShapeN (const amrex::Real xp,
 }
 
 /**
+ * \brief Helmholtz field gather for a single particle
+ *
+ * \tparam depos_order_xy Order of the transverse shape factor for the field gather
+ * \param[in] xp Particle position x
+ * \param[in] yp Particle position y
+ * \param[in,out] val Value gathered from array and returned
+ * \param[in] a_arr field array for field a
+ * \param[in] dx_inv inverse cell spacing in x direction
+ * \param[in] dy_inv inverse cell spacing in y direction
+ * \param[in] x_pos_offset offset for converting positions to indexes
+ * \param[in] y_pos_offset offset for converting positions to indexes
+ * \param[in] helm_comps 3 Components of the Helmholtz fields from which we gather 0.25 0.5 0.25
+ */
+template <int depos_order_xy>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void doHelmholtzGatherShapeN (const amrex::Real xp,
+                              const amrex::Real yp,
+                              amrex::Real& val,
+                              Array3<amrex::Real const> const& a_arr,
+                              const amrex::Real dx_inv,
+                              const amrex::Real dy_inv,
+                              const amrex::Real x_pos_offset,
+                              const amrex::Real y_pos_offset,
+                              const amrex::GpuArray<int, 3> helm_comps)
+{
+    using namespace amrex::literals;
+
+    // x,y direction
+    const amrex::Real x = (xp-x_pos_offset)*dx_inv;
+    const amrex::Real y = (yp-y_pos_offset)*dy_inv;
+
+    // Gather field Aabssq, on particle from field on grid a_arr
+    for (int iy=0; iy<=depos_order_xy; iy++){
+        for (int ix=0; ix<=depos_order_xy; ix++){
+            // --- Compute shape factors
+            auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
+            auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
+
+            val += 0.25_rt * shape_x * shape_y * a_arr(i, j, helm_comps[0])
+                 + 0.50_rt * shape_x * shape_y * a_arr(i, j, helm_comps[1] )
+                 + 0.25_rt * shape_x * shape_y * a_arr(i, j, helm_comps[2]);
+        }
+    }
+}
+
+/**
  * \brief Laser field gather for a single particle
  *
  * \tparam depos_order_xy Order of the transverse shape factor for the field gather

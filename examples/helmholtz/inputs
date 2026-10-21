@@ -1,0 +1,110 @@
+# Beam
+my_constants.gamma = 587
+my_constants.energy_MeV = 0.511*(gamma-1)
+my_constants.Lbeam = floor(18e-6/lr)*lr
+my_constants.emit = 0.1e-6
+my_constants.part_per_slice = 1024 # 128 for FullWave
+
+# Undulator
+my_constants.lu = 0.05
+my_constants.K = 0.5
+my_constants.nperiod = 40
+my_constants.ku = 2*pi/lu
+my_constants.B0 = m_e*clight*ku*K/q_e
+my_constants.lr = lu/2/gamma**2*(1+K**2/2)
+my_constants.kr = 2*pi/lr
+
+# Seed
+my_constants.Pseed = .2e6 # SI
+my_constants.Wseed = 100e-6 # Width of the seed laser
+# Amplitude for the seed: FullWave
+my_constants.Eseed = sqrt(4*Pseed/(pi*epsilon0*clight*Wseed*Wseed))
+# Amplitude for the seed: Envelope
+my_constants.Useed = q_e * Eseed / (m_e * clight * clight * kr)
+my_constants.Fseed = Useed # Eseed for FullWave
+# Trick to easily swith from Envelope to FullWave
+my_constants.krcos = 0. # kr for FullWave
+
+# Numerics
+my_constants.nsteps_per_period = 0.5 # 20 for FullWave
+my_constants.dz_per_wavelength = 0.5 # 20 for FullWave
+my_constants.zmin = "-floor(36e-6/dz)*dz+10*dz" # integer number of dz
+my_constants.zmax =  10*dz # integer number of dz
+my_constants.dz = lr / dz_per_wavelength
+my_constants.nx = 64
+my_constants.nz = "((zmax-zmin)/lr*dz_per_wavelength)"
+my_constants.output_period = max(1,10*nsteps_per_period)
+my_constants.insitu_period = max(1,nsteps_per_period)
+
+hipace.dt = lu/clight/nsteps_per_period
+max_step = nsteps_per_period*(U3/lu+nperiod)
+comms_buffer.on_gpu = 1 # Only used when running on GPU
+comms_buffer.max_size_GiB = 40
+
+hipace.verbose = 4
+
+comms_buffer.async_memcpy = 1
+boundary.field = Dirichlet
+boundary.particle = Reflecting
+geometry.prob_lo     = -500e-6 -500e-6 zmin
+geometry.prob_hi     =  500e-6  500e-6 zmax
+amr.n_cell = nx nx nz
+
+plasmas.names = no_plasma
+
+beams.names = beam
+beams.insitu_period = insitu_period
+
+beam.injection_type = fixed_weight_twiss
+beam.energy_mean_MeV = energy_MeV
+beam.energy_spread_MeV = energy_MeV/1e4
+beam.pdf = if (-Lbeam<z<=0,1,0)
+beam.pdf_ref_ratio = 10
+beam.total_charge = 300e-12
+beam.num_particles = part_per_slice*Lbeam/lr
+beam.n_subcycles = 10 # 1 for FullWave
+
+beam.emittance = emit emit
+beam.twiss_beta = 2.730286902098136 7.893718338131374
+beam.twiss_alpha = -0.7296188139497527 1.8520969040668664
+
+my_constants.ld = 0.3
+my_constants.k1 = 2.226551421788379
+my_constants.k1ga = k1*gamma
+my_constants.lq = 0.2
+my_constants.Q1 = lu*nperiod + ld
+my_constants.Q2 = Q1 + lq + ld + lu*nperiod + ld
+
+my_constants.U1 = 0
+my_constants.U2 = Q1+lq+ld
+my_constants.U3 = Q2+lq+ld
+
+beam.thickquad_z = Q1 Q2
+beam.thickquad_l = lq lq
+beam.thickquad_k1ga = k1ga -k1ga
+
+beam.undulator_B0 = B0 B0 B0
+beam.undulator_z = U1 U2 U3
+beam.undulator_period = lu lu lu
+beam.undulator_nperiod = nperiod nperiod nperiod
+
+# All lengths (quad length, drift) should be divisible by lu
+# Careful, this is not ensured in the code.
+my_constants.drift = 2*ld+lq
+beam.phaseshifter_z = Q1 Q2
+beam.phaseshifter_dz = lr lr
+beam.phaseshifter_drift = drift drift
+beam.phaseshifter_lr = lr lr
+beam.phaseshifter_gamma = gamma gamma
+
+helmholtz.use_helmholtz = 1
+helmholtz.mode = Envelope # FullWave
+helmholtz.lambda0 = lr
+
+helmholtz.insitu_period = insitu_period
+helmholtz.field_real(x,y,z) = "Fseed*exp(-(x**2+y**2)/Wseed**2)*cos(krcos*z)"
+
+diagnostic.dimensions = xz
+diagnostic.beam_output_period = output_period
+diagnostic.output_period = output_period
+hipace.output_folder = diags

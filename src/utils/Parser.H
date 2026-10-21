@@ -15,6 +15,7 @@
 #include <AMReX_RealVect.H>
 #include <AMReX_IntVect.H>
 #include <AMReX_PODVector.H>
+#include <AMReX_GpuBuffer.H>
 
 #include <algorithm>
 #include <array>
@@ -276,6 +277,18 @@ namespace Parser
         for (auto i=0ul ; i != n ; ++i) {
             fillWithParser(pp, str_arr[i], val_arr[i]);
         }
+    }
+
+    template<class T>
+    inline void
+    fillWithParserArr (const amrex::ParmParse& pp, std::vector<std::string> const& str_arr,
+                       amrex::Gpu::Buffer<T>& val_arr) {
+        auto const n = str_arr.size();
+        val_arr.resize(n);
+        for (auto i=0ul ; i != n ; ++i) {
+            fillWithParser(pp, str_arr[i], val_arr[i]);
+        }
+        val_arr.copyToDeviceAsync();
     }
 
     template<class T, std::size_t size>
