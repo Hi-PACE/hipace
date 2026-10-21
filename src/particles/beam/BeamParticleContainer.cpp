@@ -116,6 +116,11 @@ BeamParticleContainer::ReadParameters ()
             getWithParser(pp, "phaseshifter_gamma", m_phaseshifter_gamma);
         }
         queryWithParser(pp, "phaseshifter_dz", m_phaseshifter_dz);
+        m_phaseshifter_z.copyToDeviceAsync();
+        m_phaseshifter_dz.copyToDeviceAsync();
+        m_phaseshifter_drift.copyToDeviceAsync();
+        m_phaseshifter_lr.copyToDeviceAsync();
+        m_phaseshifter_gamma.copyToDeviceAsync();
     }
 
     queryWithParserAlt(pp, "insitu_period", m_insitu_period.m_func_str, pp_alt);
