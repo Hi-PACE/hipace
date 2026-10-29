@@ -185,7 +185,6 @@ PlasmaParticleContainer::ReadParameters ()
 
     // boundary temperature of this species, defaults to boundary.temperature_in_ev
     amrex::ParmParse ppb("boundary");
-    m_boundary_temperature = 1e-4;
     queryWithParser(ppb, "temperature_in_ev", m_boundary_temperature);
     queryWithParser(pp, "boundary_temperature_in_ev", m_boundary_temperature);
 

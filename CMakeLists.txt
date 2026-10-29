@@ -294,6 +294,7 @@ if(BUILD_TESTING)
                 Poisson_odd.1Rank
                 salame.SI.1Rank
                 plasma_ionisation_p_lev.1Rank
+                impact_ionization.SI.1Rank
             )
 
         else()

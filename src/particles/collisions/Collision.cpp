@@ -18,12 +18,12 @@ using namespace amrex::literals;
 // Innermost shell first, progressing outward
 namespace {
     constexpr amrex::Real bindingEnergies[28] = {
-        /* Z=1  (H)  — 1 electron  */   13.5981,
-        /* Z=7  (N)  — 7 electrons */   403.78, 403.78,
+        /* Z=1  (H)  - 1 electron  */   13.5981,
+        /* Z=7  (N)  - 7 electrons */   403.78, 403.78,
                                         20.33, 20.33,
                                         14.534, 14.534, 14.534,
-        /* Z=2  (He) — 2 electrons */   24.588, 24.588,
-        /* Z=18 (Ar) — 18 electrons */  3206.2, 3206.2,
+        /* Z=2  (He) - 2 electrons */   24.588, 24.588,
+        /* Z=18 (Ar) - 18 electrons */  3206.2, 3206.2,
                                         324.2, 324.2,
                                         247.74, 247.74, 247.74, 247.74, 247.74, 247.74,
                                         29.24, 29.24,
@@ -114,7 +114,7 @@ Collision::ReadParameters(
     queryWithParser(pp_s2, "can_impact_ionize", target_can_impact_ionize);
     AMREX_ALWAYS_ASSERT_WITH_MESSAGE(target_can_impact_ionize,
         "The target of an electron_impact collision needs " + m_target_name + ".can_impact_ionize = 1");
-    
+
     const int ion_element_id = ion_map_ids.at(m_physical_element);
     m_atomic_number = ion_atomic_numbers[ion_element_id];
     const int Z = m_atomic_number;
@@ -404,6 +404,8 @@ Collision::pairAndIonize (
 
     PlasmaBins bins1 = findParticlesInEachTile(geom.Domain(), 1, species1, geom);
     PlasmaBins bins2 = findParticlesInEachTile(geom.Domain(), 1, species2, geom);
+    // Skip empty tiles, so the bins of an empty species are never built
+    if (bins1.numItems() == 0 || bins2.numItems() == 0) { return; }
 
     // offset: start/end positions of particles for each cell
     // perm: permutation array mapping cell entries to particle indices

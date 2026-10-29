@@ -10,10 +10,10 @@
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 int get_energy_index(int Z)
 {
-    if (Z == 1)  return 0;   // H  —  1 entry  (indices 0)
-    if (Z == 7)  return 1;   // N  —  7 entries (indices 1–7)
-    if (Z == 2)  return 8;   // He —  2 entries (indices 8–9)
-    if (Z == 18) return 10;  // Ar — 18 entries (indices 10–27)
+    if (Z == 1)  return 0;   // H  -  1 entry  (indices 0)
+    if (Z == 7)  return 1;   // N  -  7 entries (indices 1-7)
+    if (Z == 2)  return 8;   // He -  2 entries (indices 8-9)
+    if (Z == 18) return 10;  // Ar - 18 entries (indices 10-27)
 
     return 0;
 }
@@ -197,7 +197,7 @@ namespace coll_ion
         const Real ep = e / me_c2;
         const Real shift = p_ionization_energies[zstar] - p_binding_energies[atomic_number - zstar - 1];
 
-        // Sum over all bound electrons (k = 0 … n_bound-1)
+        // Sum over all bound electrons (k = 0 ... n_bound-1)
         for (int k = 0; k < atomic_number - zstar; k++) {
 
             int  idx_k   = base_idx + k;
@@ -220,7 +220,7 @@ namespace coll_ion
                 // Relativistic beta^2 factors
                 Real betae2 = 1.0_rt - 1.0_rt / ((1.0_rt + ep) * (1.0_rt + ep));
                 Real betab2 = 1.0_rt - 1.0_rt / ((1.0_rt + bp) * (1.0_rt + bp));
-                Real betau2 = betab2;   // RBEB: U ≈ B
+                Real betau2 = betab2;   // RBEB: U ~ B
 
                 // Pre-factor  s0 = (r_e / 2c) * n / [B (beta_e^2 + beta_b^2 + beta_u^2)]
                 Real s0 = normalization * n /

@@ -122,6 +122,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
                 false,
                 "ImpactIonization: beta < 0!"
             );
+            return out;
         }
     }
 
@@ -130,6 +131,7 @@ ImpactIonizationOutgoing<T_R> ComputeImpactIonizationOutgoing (
             false,
             "ImpactIonization: beta too close to 1!"
         );
+        return out;
     }
 
     T_R const gc = T_R(1.0) / std::sqrt( T_R(1.0) - beta2 );

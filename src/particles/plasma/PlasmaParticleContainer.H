@@ -283,7 +283,7 @@ public:
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
     /** Temperature (eV) given to particles of this species at the thermal boundary */
-    amrex::Real m_boundary_temperature {0.};
+    amrex::Real m_boundary_temperature {1.e-4};
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
 

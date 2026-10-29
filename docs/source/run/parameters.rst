@@ -231,7 +231,8 @@ Geometry
 
         * ``Absorbing`` Particles exiting the domain are deleted.
 
-        * ``Thermal`` Particles hitting the boundary are reflected back in with a thermalised velocity. Can then specify the temperature using ``boundary.temperature_in_ev``.
+        * ``Thermal`` Particles hitting the boundary are reflected back in with a thermalised velocity.
+            Can then specify the temperature using ``boundary.temperature_in_ev`` or ``<plasma name>.boundary_temperature_in_ev``.
 
         * ``Thermal_Cylindrical`` Same as ``Thermal`` but the boundary has the shape of a circle transversely.
 
@@ -548,6 +549,10 @@ When both are specified, the per-species value is used.
     | Note: Using a temperature can affect the performance since the plasma particles loose their order and thus their favorable memory access pattern. The performance can be mostly recovered by reordering the plasma particles (see ``<plasma name> or plasmas.reorder_period``).
       Furthermore, the noise of the temperature can seed the hosing instability. The amplitude of the seeding is unphysical, because the number of macro-particles is typically orders of magnitude below the number of actual plasma electrons.
       Since it is often unfeasible to use a sufficient amount of plasma macro-particles per cell to suppress this numerical seed, the plasma can be symmetrized to prevent the onset of the hosing instability (see ``<plasma name> or plasmas.do_symmetrize``).
+
+* ``<plasma name>.boundary_temperature_in_ev`` (`float`) optional (default ``boundary.temperature_in_ev``)
+    Temperature of the thermal particle boundary for this plasma species only.
+    Overrides ``boundary.temperature_in_ev`` for this species.
 
 * ``<plasma name> or plasmas.do_symmetrize`` (`bool`) optional (default `0`)
     Symmetrizes the plasma in the transverse phase space. For each particle with (`x`, `y`, `ux`,
