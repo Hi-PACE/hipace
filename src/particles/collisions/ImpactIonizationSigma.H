@@ -1,3 +1,19 @@
+/* Copyright 2026
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: Emanuele Marchetti
+ *
+ * The RBEB cross-section model (sigma_E) and the binding-energy shift
+ * (Carlson et al., At. Data Nucl. Data Tables 2, 63 (1970)) were derived from
+ * https://github.com/SmileiPIC/Smilei/blob/master/src/Collisions/CollisionalIonization.cpp
+ * https://github.com/SmileiPIC/Smilei/blob/master/src/Ionization/IonizationTables.cpp
+ *
+ * Copyright The Smilei Development Team
+ *
+ * License: CeCILL-B
+ */
+
 #ifndef HIPACE_IMPACT_IONIZATION_SIGMA_H_
 #define HIPACE_IMPACT_IONIZATION_SIGMA_H_
 
@@ -186,7 +202,7 @@ namespace coll_ion
         const Real* p_binding_energies, const Real* p_ionization_energies)
     {
         Real sigma = 0.0_rt;
-        Real ionization_en = 0.0;
+        Real ionization_en = 0.0_rt;
 
         int n = 0;      // degeneracy counter
 

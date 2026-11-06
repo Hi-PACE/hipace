@@ -1,9 +1,13 @@
-/* This file has been derived from
+/* Copyright 2026
+ *
+ * This file is part of HiPACE++.
+ *
+ * Authors: AlexanderSinn, Emanuele Marchetti, MaxThevenet
+ *
+ * This file was derived from
  * https://github.com/BLAST-WarpX/warpx/blob/development/Source/Particles/Collision/BinaryCollision/DSMC/SplitAndScatterFunc.H
  *
  * Copyright 2023-2024 The WarpX Community
- *
- * This file is part of WarpX.
  *
  * Authors: Roelof Groenewald (TAE Technologies)
  *

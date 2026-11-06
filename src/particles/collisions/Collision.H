@@ -37,7 +37,8 @@ public:
         const MultiPlasma& multi_plasma,
         std::string const collision_name);
 
-    /**
+    /** public wrapper function to handle the collision
+     *
      * \param[in] lev MR level
      * \param[in] geom corresponding geometry object
      * \param[in,out] multi_plasma all plasmas
@@ -45,6 +46,7 @@ public:
     void doCollision (
         int lev, const amrex::Geometry& geom,
         MultiPlasma& multi_plasma);
+
     /**
      * \brief Pair projectile and target particles cell by cell (random pairing as in
      * Perez et al. 2012) and apply collision_function to each pair; create the new

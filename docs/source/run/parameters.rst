@@ -1511,7 +1511,7 @@ As collisions depend on the physical density, in normalized units `hipace.backgr
     Number of :math:`\zeta` slices between applying the elastic collision operator (useful when you are in a fairly collisionless regime, but still want to calculate elastic collisions). The timestep used for collisions is multiplied by this factor. Only applies to plasma-plasma collisions.
 
 * ``hipace.impact_ionization`` (list of `strings`) optional
-    List of names of binary inelastic Coulomb collisions.
+    List of names of binary inelastic collisions for impact ionization.
     Each will represent collisions between 2 plasma species.
     Three species must be specified: the projectile, the target (ion or neutral atom), and the product (electron).
     Currently only impact ionization between electrons and another species, which might be ions or neutral atoms, is implemented.
