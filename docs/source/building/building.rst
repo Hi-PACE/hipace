@@ -33,7 +33,7 @@ Please see installation instructions below in the Developers section.
 - a mature `C++20 <https://en.wikipedia.org/wiki/C%2B%2B20>`__ compiler: e.g. GCC 11, Clang 14, NVCC 12.2, MSVC 19.34 or newer
 - `CMake 3.24.0+ <https://cmake.org/>`__
 - `AMReX development <https://amrex-codes.github.io>`__: we automatically download and compile a copy of AMReX
-- `openPMD-api 0.17.0+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
+- `openPMD-api 0.17.1+ <https://github.com/openPMD/openPMD-api>`__: we automatically download and compile a copy of openPMD-api
 
   - `HDF5 <https://support.hdfgroup.org/HDF5>`__ 1.8.13+ (optional; for ``.h5`` file support)
   - `ADIOS2 <https://github.com/ornladios/ADIOS2>`__ 2.7.0+ (optional; for ``.bp`` file support)
