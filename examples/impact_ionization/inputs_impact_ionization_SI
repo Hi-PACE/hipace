@@ -1,0 +1,41 @@
+# Electron-impact ionization of neutral hydrogen (H -> H+) by thermal electrons.
+# Quiet, uniform, neutral plasma without driver: the ionized fraction along the box can be
+# compared with the rate n_e n_H <sigma v> (see analysis_impact_ionization.py).
+
+hipace.do_tiling = 0
+max_step = 10                        # steps 0..10: 11 independent repeats
+hipace.dt = 1e-12                    # no beam: the time step only labels the output
+
+amr.n_cell = 32 32 100
+geometry.prob_lo = -40e-6 -40e-6 -50e-6
+geometry.prob_hi =  40e-6  40e-6  50e-6
+boundary.field = Dirichlet
+boundary.particle = Reflecting
+
+beams.names = no_beam
+
+plasmas.names = elec hyd
+
+elec.element = electron              # neutralizing background is on by default
+elec.density(x,y,z) = 1e24
+elec.ppc = 4 4
+elec.temperature_in_ev = 50
+
+hyd.element = H                      # neutral hydrogen: no charge, no fields
+hyd.initial_ion_level = 0
+hyd.can_impact_ionize = 1
+hyd.density(x,y,z) = 1e24
+hyd.ppc = 4 4
+
+hipace.impact_ionization = impact
+impact.type = electron_impact
+impact.projectile = elec
+impact.target = hyd
+impact.new_electron = elec
+
+# plasma in-situ diagnostics
+plasmas.insitu_period = 1
+
+# full output, only used by the checksum
+diagnostic.output_period = 10
+diagnostic.dimensions = xz

@@ -232,10 +232,8 @@ Hipace::ReadParameters ()
         m_boundary_particles = ParticleBoundary::Absorbing;
     } else if (particle_boundary == "Thermal") {
         m_boundary_particles = ParticleBoundary::Thermal;
-        queryWithParser(ppb, "temperature_in_ev", m_boundary_temperature);
     } else if (particle_boundary == "Thermal_Cylindrical") {
         m_boundary_particles = ParticleBoundary::Thermal_Cylindrical;
-        queryWithParser(ppb, "temperature_in_ev", m_boundary_temperature);
     } else {
         amrex::Abort("Unknown particle boundary '" + particle_boundary +
             "', must be 'Reflecting', 'Periodic', 'Absorbing', 'Thermal', "
@@ -271,6 +269,12 @@ Hipace::ReadParameters ()
         AMREX_ALWAYS_ASSERT_WITH_MESSAGE(m_background_density_SI!=0,
             "For collisions with normalized units, a background plasma density must "
             "be specified via 'hipace.background_density_SI'");
+    }
+
+    queryWithParser(pph, "impact_ionization", m_impact_names);
+    for (int i = 0; i != m_impact_names.size(); ++i) {
+        m_all_impacts.emplace_back(Collision());
+        m_all_impacts.back().ReadParameters(m_multi_plasma, m_impact_names[i]);
     }
 
     // external fields applied to the grid
@@ -866,6 +870,10 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
 
     // collisions for plasmas and beams
     doCoulombCollision(islice);
+
+    for (auto& impact : m_all_impacts) {
+        impact.doCollision(0, m_slice_geom[0], m_multi_plasma);
+    }
 
     // get minimum beam uz after push
     m_adaptive_time_step.GatherMinUzSlice(m_multi_beam, false);

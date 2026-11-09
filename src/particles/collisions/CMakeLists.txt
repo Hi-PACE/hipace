@@ -8,4 +8,5 @@
 target_sources(HiPACE
   PRIVATE
     CoulombCollision.cpp
+    Collision.cpp
 )

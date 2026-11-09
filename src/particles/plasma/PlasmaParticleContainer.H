@@ -282,6 +282,8 @@ public:
     amrex::RealVect m_u_mean {0,0,0}; /**< Avg momentum in each direction normalized by m*c */
     amrex::RealVect m_u_std {0,0,0}; /**< Thermal momentum in each direction normalized by m*c */
     amrex::Real m_temperature_in_ev {0.}; /**< Temperature of the plasma in eV */
+    /** Temperature (eV) given to particles of this species at the thermal boundary */
+    amrex::Real m_boundary_temperature {1.e-4};
     /** whether to add a neutralizing background of immobile particles of opposite charge */
     bool m_neutralize_background = true;
 
@@ -303,6 +305,7 @@ public:
     bool m_can_ionize = false; /**< whether this plasma can ionize from anything */
     bool m_can_field_ionize = false; /**< whether this plasma can ionize from the field */
     bool m_can_laser_ionize = false; /**< whether this plasma can ionize from a laser */
+    bool m_can_impact_ionize = false; /**< whether this plasma can ionize from particle impact */
     int m_init_ion_lev = -1; /**< initial Ion level of each particle */
     int m_max_ion_lev = 0; /**< maximum ionization level */
     std::string m_product_name = ""; /**< name of Ionization product plasma */
@@ -334,7 +337,7 @@ private:
     std::string m_name; /**< name of the species */
     int m_nslices; /**< number of z slices of the domain */
     /** Number of real plasma properties for in-situ per-slice reduced diagnostics. */
-    static constexpr int m_insitu_nrp = 14;
+    static constexpr int m_insitu_nrp = 15;
     /** Number of int plasma properties for in-situ per-slice reduced diagnostics. */
     static constexpr int m_insitu_nip = 1;
     /** Per-slice real plasma properties */
