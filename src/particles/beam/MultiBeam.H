@@ -10,6 +10,7 @@
 
 #include "BeamParticleContainer.H"
 #include "fields/Fields.H"
+#include "helmholtz/Helmholtz.H"
 
 class MultiBeam
 {
@@ -38,6 +39,8 @@ public:
         const bool do_beam_rhomjz_deposition, const int which_slice, const int which_beam_slice,
         const bool only_highest=false);
 
+    void HelmholtzDeposition (Helmholtz& helmholtz, const int which_beam_slice, amrex::Real time);
+
     void shiftSlippedParticles (const int slice, amrex::Geometry const& geom);
 
     /** Loop over all beam species and advance slice islice of all beam species
@@ -45,10 +48,11 @@ public:
      * \param[in] gm Geometry object at level lev
      * \param[in] slice longitudinal slice
      * \param[in] current_N_level number of MR levels active on the current slice
+     * \param[in] helmholtz the helmholtz grid
      */
     void AdvanceBeamParticlesSlice (
         const Fields& fields, amrex::Vector<amrex::Geometry> const& gm, const int slice,
-        int const current_N_level);
+        int const current_N_level, const Helmholtz& helmholtz);
 
     /** Compute reduced beam diagnostics of current slice, store in member variable.
      * \param[in] step time step of simulation
@@ -154,6 +158,9 @@ public:
 private:
 
     int m_nbeams {0}; /**< number of beam containers */
+
+    amrex::Real m_tstart_push {0.};
+
     /** number of real particles per beam, as opposed to ghost particles */
     amrex::Vector<amrex::Long> m_n_real_particles;
 };

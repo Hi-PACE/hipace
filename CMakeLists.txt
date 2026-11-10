@@ -266,6 +266,7 @@ if(BUILD_TESTING)
             laser_ionization.1Rank
             laser_STC.1Rank
             plasma_density_from_file.SI.1Rank
+            helmholtz.2Rank
         )
 
         if (NOT HiPACE_COMPUTE STREQUAL CUDA)
