@@ -163,8 +163,8 @@ AdvanceBeamParticlesHelmholtz (
 
     amrex::Real const avg_uz_prev = beam.m_avg_uz_prev;
     for (int iz=0; iz<nphaseshifter; iz++) {
-        if (phaseshifter_drift[iz] > 0) {
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(phaseshifter_gamma[iz]>0 || avg_uz_prev>0,
+        if (beam.m_phaseshifter_drift[iz] > 0) {
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(beam.m_phaseshifter_gamma[iz]>0 || avg_uz_prev>0,
                 "phaseshifter_gamma[" + std::to_string(iz) + "] negative, but average uz of the beam cannot be "
                 "read from the simulation. Please specify a valid value for phaseshifter_gamma.");
         }
