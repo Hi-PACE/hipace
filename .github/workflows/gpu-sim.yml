@@ -1,0 +1,79 @@
+name: GPU Simulator
+
+# Optional, non-required check. The hosted runners have no GPU, so this builds
+# HiPACE++ for gfx90a with HIP and runs a few of the serial tests on a
+# simulated AMD Instinct MI250X (https://github.com/pantheongpu/pantheonsim).
+# A simulator cannot reproduce hardware-specific behavior or timing, so it
+# complements real-GPU testing and does not replace it.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "cmake/**"
+      - "tests/**"
+      - "examples/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/gpu-sim.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  hip_sim:
+    name: HIP gfx90a (ROCm 7.1 and simulated MI250X)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up the simulated GPU and ROCm
+        uses: pantheongpu/setup-pantheonsim@ca87fe3143b29166822b923d6050945c5179408c # v0.1.5
+        with:
+          gpu: amd/mi250x
+          cuda-toolkit: none
+          rocm: "7.1"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              build-essential ninja-build libhdf5-dev libnuma-dev \
+              rocfft-dev rocprim-dev rocrand-dev hiprand-dev
+          python3 -m venv "$HOME/venv"
+          "$HOME/venv/bin/pip" install numpy scipy matplotlib openpmd-viewer openpmd-api
+          echo "$HOME/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Build
+        run: |
+          export CC=/opt/rocm/llvm/bin/clang CXX=/opt/rocm/bin/hipcc
+          cmake -S . -B build -G Ninja         \
+              -DCMAKE_BUILD_TYPE=Release       \
+              -DAMReX_AMD_ARCH=gfx90a          \
+              -DHiPACE_COMPUTE=HIP             \
+              -DHiPACE_MPI=OFF
+          cmake --build build -j3
+
+      - name: Test
+        run: |
+          # The tests run an example input and compare the output with a
+          # checksum benchmark (and with theory for beam_in_vacuum), so a
+          # wrong result on the simulated GPU fails the test.
+          #
+          # The benchmarks were made on CPU and beam_in_vacuum compares them
+          # at the default relative tolerance of 1e-9; GPU results differ from
+          # the CPU benchmark by up to about 1e-4 (relative, field sums).
+          # Loosen that one tolerance to 1e-3 in the checked-out test scripts
+          # (blowout_wake.Serial already uses 2e-2); the repository itself is
+          # not changed.
+          sed -i 's|--test-name|--rtol 1e-3 --test-name|' \
+              tests/beam_in_vacuum.SI.Serial.sh tests/beam_in_vacuum.normalized.Serial.sh
+          vgpu run ctest --test-dir build --output-on-failure --no-tests=error \
+              -R '^(blowout_wake|beam_in_vacuum\.SI|beam_in_vacuum\.normalized)\.Serial$'
