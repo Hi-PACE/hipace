@@ -41,7 +41,9 @@ struct EnforceBC
         using namespace amrex::literals;
 
         m_particle_boundary = Hipace::m_boundary_particles;
-        if (m_particle_boundary == ParticleBoundary::Thermal_Cylindrical) {
+        if (m_particle_boundary == ParticleBoundary::Thermal_Cylindrical ||
+            m_particle_boundary == ParticleBoundary::Absorbing_Cylindrical)
+        {
             // -xmid
             m_plo[0] =
                 -0.5_rt * (Hipace::m_boundary_particle_lo[0] + Hipace::m_boundary_particle_hi[0]);
@@ -84,6 +86,11 @@ struct EnforceBC
             if ((x + m_plo[0]) * (x + m_plo[0]) + (y + m_plo[1]) * (y + m_plo[1]) > m_phi[0]) {
                 ptd.id(ip) = PlasmaID::to_be_thermalised;
                 invalid = false;
+            }
+        } else if (m_particle_boundary == ParticleBoundary::Absorbing_Cylindrical) {
+            if ((x + m_plo[0]) * (x + m_plo[0]) + (y + m_plo[1]) * (y + m_plo[1]) > m_phi[0]) {
+                ptd.id(ip) = PlasmaID::invalid_at_boundary;
+                invalid = true;
             }
         } else if (x < m_plo[0] || y < m_plo[1] || x > m_phi[0] || y > m_phi[1]) {
             const amrex::Real len_x = m_phi[0] - m_plo[0];

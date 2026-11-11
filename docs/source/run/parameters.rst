@@ -231,6 +231,8 @@ Geometry
 
         * ``Absorbing`` Particles exiting the domain are deleted.
 
+        * ``Absorbing_Cylindrical`` Same as ``Absorbing`` but the boundary has the shape of a circle transversely.
+
         * ``Thermal`` Particles hitting the boundary are reflected back in with a thermalised velocity.
             Can then specify the temperature using ``boundary.temperature_in_ev`` or ``<plasma name>.boundary_temperature_in_ev``.
 
