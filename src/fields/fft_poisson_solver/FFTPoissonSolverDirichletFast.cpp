@@ -102,7 +102,7 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
         return to_sine(in, j, i, n_data, sine_factor);
     };
 
-#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+#if defined(AMREX_USE_GPU)
     constexpr int tile_dim_x = 16;
     constexpr int tile_dim_x_ex = 34;
     constexpr int tile_dim_y = 32;
@@ -118,13 +118,11 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
     const int num_blocks_x = (nx + tile_dim_x - 1)/tile_dim_x;
     const int num_blocks_y = (ny + tile_dim_y - 1)/tile_dim_y;
 
-    amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
+    amrex::LaunchRaw<tile_dim_x*block_rows_y, amrex::Real>(
+        amrex::IntVectND<2>{num_blocks_x, num_blocks_y}, tile_dim_x_ex * tile_dim_y,
+        [=] AMREX_GPU_DEVICE(auto lh) noexcept
         {
-            __shared__ amrex::Real tile_ptr[tile_dim_x_ex * tile_dim_y];
-
-            const int block_y = blockIdx.x / num_blocks_x;
-            const int block_x = blockIdx.x - block_y*num_blocks_x;
+            const auto [block_x, block_y] = lh.blockIdxND();
 
             const int tile_begin_x = 2 * block_x * tile_dim_x - 2;
             const int tile_begin_y = block_y * tile_dim_y;
@@ -132,12 +130,13 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
             const int tile_end_x = tile_begin_x + tile_dim_x_ex;
             const int tile_end_y = tile_begin_y + tile_dim_y;
 
-            Array2<amrex::Real> shared{{tile_ptr, {tile_begin_x, tile_begin_y, 0},
-                                                  {tile_end_x, tile_end_y, 1}, 1}};
+            Array2<amrex::Real> shared{{lh.shared_memory(),
+                                        {tile_begin_x, tile_begin_y, 0},
+                                        {tile_end_x, tile_end_y, 1}, 1}};
 
             {
-                const int thread_x = threadIdx.x / tile_dim_y;
-                const int thread_y = threadIdx.x - thread_x*tile_dim_y;
+                const auto [thread_y, thread_x] =
+                    lh.template threadIdxND<tile_dim_y, block_rows_x>();
 
                 for (int tx = thread_x; tx < tile_dim_x_ex; tx += block_rows_x) {
                     const int i = tile_begin_x + tx;
@@ -149,11 +148,11 @@ void ToSine_Transpose_ToComplex (const Array2<amrex::Real> in,
                 }
             }
 
-            __syncthreads();
+            lh.syncthreads();
 
             {
-                const int thread_y = threadIdx.x / tile_dim_x;
-                const int thread_x = threadIdx.x - thread_y*tile_dim_x;
+                const auto [thread_x, thread_y] =
+                    lh.template threadIdxND<tile_dim_x, block_rows_y>();
 
                 for (int ty = thread_y; ty < tile_dim_y; ty += block_rows_y) {
                     const int i = block_x * tile_dim_x + thread_x;

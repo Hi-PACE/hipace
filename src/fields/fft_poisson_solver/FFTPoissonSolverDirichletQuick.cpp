@@ -96,7 +96,7 @@ dst2_out_mult_dst3_in (Array2<amrex::GpuComplex<amrex::Real>> const& inout, int 
 inline void
 dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::Real> const& out,
                int nx, int ny, const amrex::GpuComplex<amrex::Real>* omega) {
-#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+#if defined(AMREX_USE_GPU)
     static constexpr int tile_dim_x = 16;
     static constexpr int tile_dim_y = 64;
     static constexpr int elem_per_thread = 2;
@@ -108,58 +108,60 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
     const int num_blocks_x = (nx - tile_begin_x + tile_dim_x - 1)/tile_dim_x;
     const int num_blocks_y = (ny + tile_dim_y - 1)/tile_dim_y;
 
-    amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
+    amrex::LaunchRaw<tile_dim_x*block_rows_y, amrex::Real>(
+        amrex::IntVectND<2>{num_blocks_y, num_blocks_x}, tile_dim_x * (tile_dim_y+1) * 2,
+        [=] AMREX_GPU_DEVICE(auto lh) noexcept
         {
-            __shared__ amrex::Real tile_real[tile_dim_x][tile_dim_y+1];
-            __shared__ amrex::Real tile_imag[tile_dim_x][tile_dim_y+1];
+            Array3<amrex::Real> shared{{lh.shared_memory(), {0, 0, 0},
+                                        {tile_dim_y+1, tile_dim_x, 1}, 2}};
 
-            const int block_x = blockIdx.x / num_blocks_y;
-            const int block_y = blockIdx.x - block_x*num_blocks_y;
+            const auto [block_y, block_x] = lh.blockIdxND();
 
             const int tile_start_x = tile_begin_x + block_x* tile_dim_x;
             const int tile_start_y = block_y * tile_dim_y;
 
-            int thread_y = threadIdx.x / tile_dim_x;
-            int thread_x = threadIdx.x - thread_y*tile_dim_x;
-
-            #pragma unroll elem_per_thread
-            for (; thread_y < tile_dim_y; thread_y += block_rows_y)
             {
-                const int thread_xr = tile_dim_x - thread_x - 1;
-                const int iout = tile_start_x + thread_xr;
-                const int jout = tile_start_y + thread_y;
-                const int iin = nx-iout-1;
-                const int jin = 2*jout < ny ? 2*jout : 2*(ny-jout)-1;
+                auto [thread_x, thread_y] = lh.template threadIdxND<tile_dim_x, block_rows_y>();
 
-                if (iout < nx && jout < ny) {
-                    auto val = in(iin, jin) * omega[iin];
-                    if (2*jout < ny) {
-                        val = -val;
+                #pragma unroll elem_per_thread
+                for (; thread_y < tile_dim_y; thread_y += block_rows_y)
+                {
+                    const int thread_xr = tile_dim_x - thread_x - 1;
+                    const int iout = tile_start_x + thread_xr;
+                    const int jout = tile_start_y + thread_y;
+                    const int iin = nx-iout-1;
+                    const int jin = 2*jout < ny ? 2*jout : 2*(ny-jout)-1;
+
+                    if (iout < nx && jout < ny) {
+                        auto val = in(iin, jin) * omega[iin];
+                        if (2*jout < ny) {
+                            val = -val;
+                        }
+                        shared(thread_y, thread_xr, 0) = val.real();
+                        shared(thread_y, thread_xr, 1) = val.imag();
                     }
-                    tile_real[thread_xr][thread_y] = val.real();
-                    tile_imag[thread_xr][thread_y] = val.imag();
                 }
             }
 
-            __syncthreads();
+            lh.syncthreads();
 
-            thread_x = threadIdx.x / tile_dim_y;
-            thread_y = threadIdx.x - thread_x*tile_dim_y;
-
-            #pragma unroll elem_per_thread
-            for (; thread_x < tile_dim_x; thread_x += block_rows_x)
             {
-                const int iout = tile_start_x + thread_x;
-                const int jout = tile_start_y + thread_y;
-                const int iin = nx-iout-1;
-                const int iout2 = iin-1;
-                const bool do_iout2 = iout2 >= 0 && iout2 != iout;
+                auto [thread_y, thread_x] = lh.template threadIdxND<tile_dim_y, block_rows_x>();
 
-                if (iout < nx && jout < ny) {
-                    out(jout, iout) = -tile_real[thread_x][thread_y];
-                    if (do_iout2) {
-                        out(jout, iout2) = tile_imag[thread_x][thread_y];
+                #pragma unroll elem_per_thread
+                for (; thread_x < tile_dim_x; thread_x += block_rows_x)
+                {
+                    const int iout = tile_start_x + thread_x;
+                    const int jout = tile_start_y + thread_y;
+                    const int iin = nx-iout-1;
+                    const int iout2 = iin-1;
+                    const bool do_iout2 = iout2 >= 0 && iout2 != iout;
+
+                    if (iout < nx && jout < ny) {
+                        out(jout, iout) = -shared(thread_y, thread_x, 0);
+                        if (do_iout2) {
+                            out(jout, iout2) = shared(thread_y, thread_x, 1);
+                        }
                     }
                 }
             }
@@ -180,7 +182,7 @@ dst2_out_t_in (Array2<amrex::GpuComplex<amrex::Real>> const& in, Array2<amrex::R
 inline void
 dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Real>> const& out,
                int nx, int ny, const amrex::GpuComplex<amrex::Real>* omega) {
-#if defined(AMREX_USE_CUDA) || defined(AMREX_USE_HIP)
+#if defined(AMREX_USE_GPU)
     static constexpr int tile_dim_x = 16;
     static constexpr int tile_dim_y = 64;
     static constexpr int elem_per_thread = 2;
@@ -192,63 +194,65 @@ dst3_out_t_in (Array2<amrex::Real> const& in, Array2<amrex::GpuComplex<amrex::Re
     const int num_blocks_x = (tile_end_x + tile_dim_x - 1)/tile_dim_x;
     const int num_blocks_y = (ny + tile_dim_y - 1)/tile_dim_y;
 
-    amrex::launch<tile_dim_x*block_rows_y>(num_blocks_x*num_blocks_y, amrex::Gpu::gpuStream(),
-        [=] AMREX_GPU_DEVICE() noexcept
+    amrex::LaunchRaw<tile_dim_x*block_rows_y, amrex::Real>(
+        amrex::IntVectND<2>{num_blocks_x, num_blocks_y}, tile_dim_y * (tile_dim_x+1) * 2,
+        [=] AMREX_GPU_DEVICE(auto lh) noexcept
         {
-            __shared__ amrex::Real tile_real[tile_dim_y][tile_dim_x+1];
-            __shared__ amrex::Real tile_imag[tile_dim_y][tile_dim_x+1];
+            Array3<amrex::Real> shared{{lh.shared_memory(), {0, 0, 0},
+                                        {tile_dim_x+1, tile_dim_y, 1}, 2}};
 
-            const int block_y = blockIdx.x / num_blocks_x;
-            const int block_x = blockIdx.x - block_y*num_blocks_x;
+            const auto [block_x, block_y] = lh.blockIdxND();
 
             const int tile_start_x = block_x * tile_dim_x;
             const int tile_start_y = block_y * tile_dim_y;
 
-            int thread_x = threadIdx.x / tile_dim_y;
-            int thread_y = threadIdx.x - thread_x*tile_dim_y;
-
-            #pragma unroll elem_per_thread
-            for (; thread_x < tile_dim_x; thread_x += block_rows_x)
             {
-                const int thread_yp = (thread_y*2) % tile_dim_y + (thread_y*2) / tile_dim_y;
-                const int iout = tile_start_x + thread_x;
-                const int jout = tile_start_y + thread_yp;
-                const int jin = jout%2 == 0 ? jout/2 : ny-1-jout/2;
-                const int iin1 = nx-iout-1;
-                const int iin2 = iout - 1;
+                auto [thread_y, thread_x] = lh.template threadIdxND<tile_dim_y, block_rows_x>();
 
-                if (iout < tile_end_x && jout < ny) {
-                    amrex::GpuComplex<amrex::Real> val {
-                        in(jin, iin1),
-                        iout != 0 ? -in(jin, iin2) : 0
-                    };
-                    auto o = omega[iout];
-                    o.m_imag = - o.m_imag;
-                    if (jout%2 != 0) {
-                        val = -val;
+                #pragma unroll elem_per_thread
+                for (; thread_x < tile_dim_x; thread_x += block_rows_x)
+                {
+                    const int thread_yp = (thread_y*2) % tile_dim_y + (thread_y*2) / tile_dim_y;
+                    const int iout = tile_start_x + thread_x;
+                    const int jout = tile_start_y + thread_yp;
+                    const int jin = jout%2 == 0 ? jout/2 : ny-1-jout/2;
+                    const int iin1 = nx-iout-1;
+                    const int iin2 = iout - 1;
+
+                    if (iout < tile_end_x && jout < ny) {
+                        amrex::GpuComplex<amrex::Real> val {
+                            in(jin, iin1),
+                            iout != 0 ? -in(jin, iin2) : 0
+                        };
+                        auto o = omega[iout];
+                        o.m_imag = - o.m_imag;
+                        if (jout%2 != 0) {
+                            val = -val;
+                        }
+                        val *= o;
+                        shared(thread_x, thread_yp, 0) = val.real();
+                        shared(thread_x, thread_yp, 1) = val.imag();
                     }
-                    val *= o;
-                    tile_real[thread_yp][thread_x] = val.real();
-                    tile_imag[thread_yp][thread_x] = val.imag();
                 }
             }
 
-            __syncthreads();
+            lh.syncthreads();
 
-            thread_y = threadIdx.x / tile_dim_x;
-            thread_x = threadIdx.x - thread_y*tile_dim_x;
-
-            #pragma unroll elem_per_thread
-            for (; thread_y < tile_dim_y; thread_y += block_rows_y)
             {
-                const int iout = tile_start_x + thread_x;
-                const int jout = tile_start_y + thread_y;
+                auto [thread_x, thread_y] = lh.template threadIdxND<tile_dim_x, block_rows_y>();
 
-                if (iout < tile_end_x && jout < ny) {
-                    out(iout, jout) = {
-                        tile_real[thread_y][thread_x],
-                        tile_imag[thread_y][thread_x]
-                    };
+                #pragma unroll elem_per_thread
+                for (; thread_y < tile_dim_y; thread_y += block_rows_y)
+                {
+                    const int iout = tile_start_x + thread_x;
+                    const int jout = tile_start_y + thread_y;
+
+                    if (iout < tile_end_x && jout < ny) {
+                        out(iout, jout) = {
+                            shared(thread_x, thread_y, 0),
+                            shared(thread_x, thread_y, 1)
+                        };
+                    }
                 }
             }
         });
