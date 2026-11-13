@@ -28,7 +28,7 @@ class Helmholtz;
 struct DiagnosticData
 {
     std::string m_diag_name; /**< name used for input parameters and in the output */
-    enum struct diag_type {
+    enum struct diag_type : int {
         field,
         laser,
         helmholtz,

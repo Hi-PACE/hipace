@@ -36,7 +36,7 @@
 namespace hpmg { class MultiGrid; }
 
 namespace FieldBoundary {
-    enum type {
+    enum type : int {
         Dirichlet,
         Periodic,
         Open
@@ -44,7 +44,7 @@ namespace FieldBoundary {
 }
 
 namespace ParticleBoundary {
-    enum type {
+    enum type : int {
         Reflecting,
         Periodic,
         Absorbing,
@@ -63,6 +63,11 @@ struct Hipace_early_init
 
     /** Destructor for FFT cleanup */
     ~Hipace_early_init ();
+
+    Hipace_early_init (const Hipace_early_init& rhs) = delete;
+    Hipace_early_init (Hipace_early_init&& rhs) = delete;
+    Hipace_early_init& operator= (const Hipace_early_init& rhs) = delete;
+    Hipace_early_init& operator= (Hipace_early_init&& rhs) = delete;
 
     /** Struct containing physical constants (which values depends on the unit system, determined
      * at runtime): SI or normalized units. */

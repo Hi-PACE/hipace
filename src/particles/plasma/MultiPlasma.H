@@ -27,9 +27,10 @@ public:
      * \param[in] slice_gm slice geometry
      * \param[in] gm Geometry of the simulation, to get the cell size
      */
-    void InitData (amrex::Vector<amrex::BoxArray> slice_ba,
-                   amrex::Vector<amrex::DistributionMapping> slice_dm,
-                   amrex::Vector<amrex::Geometry> slice_gm, amrex::Vector<amrex::Geometry> gm);
+    void InitData (const amrex::Vector<amrex::BoxArray>& slice_ba,
+                   const amrex::Vector<amrex::DistributionMapping>& slice_dm,
+                   const amrex::Vector<amrex::Geometry>& slice_gm,
+                   const amrex::Vector<amrex::Geometry>& gm);
 
     /** \brief Loop over plasma species and initialize values used for ionization.
      *
@@ -162,6 +163,7 @@ public:
     void InSituWriteToFile (int step, amrex::Real time, const amrex::Geometry& geom,
                             bool is_last_step);
 
+    [[nodiscard]]
     PlasmaParticleContainer& GetPlasma (const std::string& name) {
         for (int i = 0; i < m_nplasmas; ++i) {
             if (m_names[i] == name) {
@@ -172,6 +174,7 @@ public:
         return m_all_plasmas[0];
     }
 
+    [[nodiscard]]
     const PlasmaParticleContainer& GetPlasma (const std::string& name) const {
         for (int i = 0; i < m_nplasmas; ++i) {
             if (m_names[i] == name) {

@@ -26,7 +26,7 @@ using amrex::ParallelFor;
 
 // 1D ParallelFor
 template <typename T, typename F>
-void ParallelFor (T n, F&& f) noexcept
+void ParallelFor (T n, const F& f) noexcept
 {
 #pragma omp parallel for simd
     for (T i = 0; i < n; ++i) {

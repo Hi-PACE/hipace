@@ -14,7 +14,7 @@
 #include "helmholtz/Helmholtz.H"
 
 // declare MPI datatypes if compiled without MPI
-using namespace amrex::mpidatatypes;
+using namespace amrex::mpidatatypes; // NOLINT(google-global-names-in-headers)
 
 class MultiBuffer
 {
@@ -41,10 +41,16 @@ public:
     // destructor to clean up all open MPI requests
     ~MultiBuffer();
 
+    MultiBuffer () = default;
+    MultiBuffer (const MultiBuffer& rhs) = delete;
+    MultiBuffer (MultiBuffer&& rhs) = delete;
+    MultiBuffer& operator= (const MultiBuffer& rhs) = delete;
+    MultiBuffer& operator= (MultiBuffer&& rhs) = delete;
+
 private:
 
     // to keep track of per-slice buffer location
-    enum struct memory_location {
+    enum struct memory_location : int {
         nowhere,
         pinned,
         device

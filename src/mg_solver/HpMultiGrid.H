@@ -50,6 +50,11 @@ public:
     /** \brief Dtor */
     ~MultiGrid ();
 
+    MultiGrid (const MultiGrid& rhs) = delete;
+    MultiGrid (MultiGrid&& rhs) = delete;
+    MultiGrid& operator= (const MultiGrid& rhs) = delete;
+    MultiGrid& operator= (MultiGrid&& rhs) = delete;
+
     /** \brief Solve the Type I equation given the initial guess, right hand side,
      * and the coefficient.
      *
@@ -288,7 +293,7 @@ using amrex::ParallelFor;
 // amrex::ParallelFor does not do OpenMP.  Thus we have hpmg::ParallelFor.
 
 template <typename T, typename F>
-void ParallelFor (T n, F&& f) noexcept
+void ParallelFor (T n, const F& f) noexcept
 {
     if (n < 1000) {
         for (T i = 0; i < n; ++i) {
@@ -303,7 +308,7 @@ void ParallelFor (T n, F&& f) noexcept
 }
 
 template <typename F>
-void ParallelFor (amrex::BoxND<2> const& box, F&& f) noexcept
+void ParallelFor (amrex::BoxND<2> const& box, const F& f) noexcept
 {
     if (box.numPts() < 1000) {
         const auto lo = amrex::lbound(box);
@@ -329,7 +334,7 @@ void ParallelFor (amrex::BoxND<2> const& box, F&& f) noexcept
 }
 
 template <typename F>
-void ParallelFor (amrex::BoxND<2> const& box, int ncomp, F&& f) noexcept
+void ParallelFor (amrex::BoxND<2> const& box, int ncomp, const F& f) noexcept
 {
     if (box.numPts()*ncomp < 1000) {
         const auto lo = amrex::lbound(box);

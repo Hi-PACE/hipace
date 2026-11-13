@@ -31,16 +31,16 @@ GridIonization::GetFieldComponents (const MultiPlasma& multi_plasma)
         return ret;
     }
 
-    ret.push_back("grid_ionization_w_elec");
-    ret.push_back("grid_ionization_ux^2_elec");
-    ret.push_back("grid_ionization_uy^2_elec");
-    ret.push_back("grid_ionization_uz_elec");
-    ret.push_back("grid_ionization_uz^2_elec");
+    ret.emplace_back("grid_ionization_w_elec");
+    ret.emplace_back("grid_ionization_ux^2_elec");
+    ret.emplace_back("grid_ionization_uy^2_elec");
+    ret.emplace_back("grid_ionization_uz_elec");
+    ret.emplace_back("grid_ionization_uz^2_elec");
 
     for (auto& plasma_name : m_names) {
         const auto& plasma = multi_plasma.GetPlasma(plasma_name);
         for (int ionlev=0; ionlev <= plasma.m_max_ion_lev; ++ionlev) {
-            ret.push_back("grid_ionization_w_" + plasma_name + "_" + std::to_string(ionlev));
+            ret.emplace_back("grid_ionization_w_" + plasma_name + "_" + std::to_string(ionlev));
         }
     }
 
@@ -101,8 +101,8 @@ GridIonization::InitData (Fields& fields, const MultiPlasma& multi_plasma,
 
             amrex::ParallelFor(to2D(bx),
                 [=] AMREX_GPU_DEVICE (int i, int j) {
-                    const amrex::Real x = i * dx + poff_x;
-                    const amrex::Real y = j * dy + poff_y;
+                    const amrex::Real x = amrex::Real(i) * dx + poff_x;
+                    const amrex::Real y = amrex::Real(j) * dy + poff_y;
 
                     const amrex::Real rsq = x * x + y * y;
 
@@ -168,13 +168,14 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
             const amrex::Real poff_y = GetPosOffset(1, geom, geom.Domain());
 
             // Calcuation of E0 in SI units for denormalization
-            const amrex::Real wp = std::sqrt(static_cast<double>(Hipace::m_background_density_SI) *
-                                            PhysConstSI::q_e*PhysConstSI::q_e /
-                                            (PhysConstSI::ep0 * PhysConstSI::m_e) );
+            const amrex::Real wp = amrex::Real(
+                std::sqrt(static_cast<double>(Hipace::m_background_density_SI) *
+                    PhysConstSI::q_e * PhysConstSI::q_e /
+                    (PhysConstSI::ep0 * PhysConstSI::m_e)));
             const amrex::Real E0 = Hipace::m_normalized_units ?
                                 wp * PhysConstSI::m_e * PhysConstSI::c / PhysConstSI::q_e : 1;
             const amrex::Real lambda0 = laser.GetLambda0();
-            const amrex::Real omega0 = 2.0 * MathConst::pi * phys_const.c / lambda0;
+            const amrex::Real omega0 = 2._rt * MathConst::pi * phys_const.c / lambda0;
             const bool linear_polarization = laser.LinearPolarization();
 
             const amrex::Real* adk_prefactor = plasma.m_adk_prefactor.data();
@@ -206,8 +207,8 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
 
             amrex::ParallelFor(to2D(bx),
                 [=] AMREX_GPU_DEVICE (int i, int j) {
-                    const amrex::Real x = i * dx + poff_x;
-                    const amrex::Real y = j * dy + poff_y;
+                    const amrex::Real x = amrex::Real(i) * dx + poff_x;
+                    const amrex::Real y = amrex::Real(j) * dy + poff_y;
 
                     Complex A = 0;
                     Complex A_dx = 0;
@@ -247,7 +248,7 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
                         const amrex::Real old_weight = arr(i, j, ion_weight_comp + ion_lev);
                         const amrex::Real transferred_weight = old_weight * p;
                         const amrex::Real new_weight = old_weight - transferred_weight;
-                        chi += new_weight * chi_factor_ion * ion_lev * ion_lev;
+                        chi += new_weight * chi_factor_ion * amrex::Real(ion_lev * ion_lev);
 
                         arr(i, j, ion_weight_comp + ion_lev) = new_weight;
                         arr(i, j, ion_weight_comp + ion_lev + 1) += transferred_weight;
@@ -303,7 +304,7 @@ GridIonization::IonizeGrid (Fields& fields, const MultiPlasma& multi_plasma,
 
                     // last ion level
                     chi += arr(i, j, ion_weight_comp + max_ion_lev) *
-                        chi_factor_ion * max_ion_lev * max_ion_lev;
+                        chi_factor_ion * amrex::Real(max_ion_lev * max_ion_lev);
 
                     arr(i, j, comps[0]) += chi;
                 }

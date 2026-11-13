@@ -33,6 +33,11 @@ public:
     /** Abstract class needs a virtual destructor */
     virtual ~FFTPoissonSolver () = default;
 
+    FFTPoissonSolver (const FFTPoissonSolver& rhs) = delete;
+    FFTPoissonSolver (FFTPoissonSolver&& rhs) = delete;
+    FFTPoissonSolver& operator= (const FFTPoissonSolver& rhs) = delete;
+    FFTPoissonSolver& operator= (FFTPoissonSolver&& rhs) = delete;
+
     /**
      * Solve Poisson equation. The source term must be stored in the staging area m_stagingArea prior to this call.
      *
