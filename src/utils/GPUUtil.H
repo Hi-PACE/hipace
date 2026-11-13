@@ -26,8 +26,8 @@ struct Array2 {
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Array2 (const amrex::Array4<T>& rhs) noexcept
         : p(rhs.p),
-          jstride(rhs.stride.a[0]),
-          start(-rhs.begin[0] - rhs.begin[1] * rhs.stride.a[0])
+          jstride(rhs.template get_stride<1>()),
+          start(-rhs.begin[0] - rhs.begin[1] * rhs.template get_stride<1>())
 #if defined(AMREX_DEBUG) || defined(AMREX_BOUND_CHECK)
           ,begin{rhs.begin[0], rhs.begin[1], rhs.begin[2]},
           end{rhs.end[0], rhs.end[1], rhs.end[2]},
@@ -127,9 +127,9 @@ struct Array3 {
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Array3 (const amrex::Array4<T>& rhs) noexcept
         : p(rhs.p),
-          jstride(rhs.stride.a[0]),
-          nstride(rhs.stride.a[2]),
-          start(-rhs.begin[0] - rhs.begin[1] * rhs.stride.a[0])
+          jstride(rhs.template get_stride<1>()),
+          nstride(rhs.template get_stride<3>()),
+          start(-rhs.begin[0] - rhs.begin[1] * rhs.template get_stride<1>())
 #if defined(AMREX_DEBUG) || defined(AMREX_BOUND_CHECK)
           ,begin{rhs.begin[0], rhs.begin[1], rhs.begin[2]},
           end{rhs.end[0], rhs.end[1], rhs.end[2]},
