@@ -251,8 +251,7 @@ void doLaserGatherShapeN (const amrex::Real xp,
             auto [shape_y, j] = shape_factor<depos_order_xy>(y, iy);
             auto [shape_x, i] = shape_factor<depos_order_xy>(x, ix);
 
-            const amrex::Real x00y00 = slice_arr(i, j, aabs_comp);
-            Aabssqp += shape_x * shape_y * x00y00;
+            Aabssqp += shape_x * shape_y * slice_arr(i, j, aabs_comp);
         }
     }
 }
