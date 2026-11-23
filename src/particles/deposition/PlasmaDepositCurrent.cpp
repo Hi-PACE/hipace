@@ -228,11 +228,14 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
                         // y direction
                         auto [shape_y, j] = shape_factor<depos_order>(ymid, iy);
 
+                        auto [shape2_y, shape_dy, j2] = derivative_shape_factor<0, depos_order>(ymid, iy);
+                        auto [shape2_x, shape_dx, i2] = derivative_shape_factor<0, depos_order>(xmid, ix);
+
                         const amrex::Real charge_density = q_invvol * shape_x * shape_y;
                         const amrex::Real num_density = invvol * shape_x * shape_y * w;
                         // wqx, wqy wqz are particle current in each direction
-                        const amrex::Real wqx     = charge_density * clight * vx;
-                        const amrex::Real wqy     = charge_density * clight * vy;
+                        const amrex::Real wqx     = q_invvol * shape_dx * shape2_y * clight * vx * dx_inv;
+                        const amrex::Real wqy     = q_invvol * shape2_x * shape_dy * clight * vy * dy_inv;
                         const amrex::Real wqz     = charge_density * clight * (gamma_psi-1._rt);
                         const amrex::Real wq      = charge_density * gamma_psi;
                         const amrex::Real wchi    = charge_density * q_mu0_mass_ratio * psi_inv;
@@ -241,8 +244,10 @@ DepositCurrent (PlasmaParticleContainer& plasma, Fields & fields,
 
                         // Deposit current into arr
                         if (depos_idx[0] != -1) { // deposit_jx_jy
-                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), wqx);
-                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), wqy);
+//                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[0]), wqx);
+//                            amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[1]), wqy);
+                            amrex::Gpu::Atomic::Add(arr.ptr(i2, j2, depos_idx[0]), wqx);
+                            amrex::Gpu::Atomic::Add(arr.ptr(i2, j2, depos_idx[1]), wqy);
                         }
                         if (depos_idx[2] != -1) { // deposit_jz
                             amrex::Gpu::Atomic::Add(arr.ptr(i, j, depos_idx[2]), wqz);
