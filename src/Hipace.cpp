@@ -749,8 +749,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
     // deposit current
     for (int lev=0; lev<current_N_level; ++lev) {
 
-        // do nothing if Helmholtz on
-        if (m_use_helmholtz) { break; }
+        // if (m_use_helmholtz) { break; }
 
         if (m_explicit) {
             // deposit jx, jy, chi and rhomjz for all plasmas
@@ -784,10 +783,10 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         m_helmholtz.AdvanceSlice(islice, m_dt, step);
     }
 
-    if (!m_use_helmholtz) {
+    // if (!m_use_helmholtz) {
         // Psi ExmBy EypBx Ez Bz solve
         m_fields.SolvePoissonPsiExmByEypBxEzBz(m_3D_geom, current_N_level);
-    }
+    // }
 
     // Calculate grid ionization and update chi
     for (int lev=0; lev<current_N_level; ++lev) {
@@ -818,7 +817,7 @@ Hipace::SolveOneSlice (int islice, int step, bool is_first_step, bool is_last_st
         for (int lev=0; lev<current_N_level; ++lev) {
 
             // do nothing if Helmholtz on
-            if (m_use_helmholtz) { break; }
+            // if (m_use_helmholtz) { break; }
 
             // The algorithm used was derived in
             // [Wang, T. et al. Phys. Rev. Accel. Beams 25, 104603 (2022)],

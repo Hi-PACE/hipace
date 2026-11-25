@@ -267,11 +267,11 @@ AdvanceBeamParticlesHelmholtz (
                 amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                if (!c_use_helmholtz.value) {
+                // if (!c_use_helmholtz.value) {
                     doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                         slice_arr, psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                         dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                }
+                // }
 
                 if (c_do_ez_inzerp.value) {
                     // Update Ez
