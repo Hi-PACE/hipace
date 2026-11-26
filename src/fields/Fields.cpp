@@ -494,7 +494,7 @@ Multiply (amrex::MultiFab dst, const amrex::Real factor, const FV& src)
 }
 
 void
-Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
+Fields::Copy (const int current_N_level, const int i_slice_total, DiagnosticData& fd,
               const amrex::Vector<amrex::Geometry>& field_geom, MultiLaser& multi_laser,
               Helmholtz& helmholtz)
 {
@@ -503,17 +503,28 @@ Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
     constexpr int depos_order_z = 1;
     constexpr int depos_order_offset = depos_order_z / 2 + 1;
 
-    const amrex::Real poff_calc_z = GetPosOffset(2, field_geom[0], field_geom[0].Domain());
+    const amrex::Geometry& zgeom =
+        fd.m_base_diag_type == DiagnosticData::diag_type::helmholtz ?
+        helmholtz.GetHelmholtzGeom() : field_geom[0];
+
+    const amrex::Real poff_calc_z = GetPosOffset(2, zgeom, zgeom.Domain());
     const amrex::Real poff_diag_x = GetPosOffset(0, fd.m_geom_io, fd.m_geom_io.Domain());
     const amrex::Real poff_diag_y = GetPosOffset(1, fd.m_geom_io, fd.m_geom_io.Domain());
     const amrex::Real poff_diag_z = GetPosOffset(2, fd.m_geom_io, fd.m_geom_io.Domain());
 
     // Interpolation in z Direction, done as if looped over diag_fab not i_slice
     // Calculate to which diag_fab slices this slice could contribute
+    auto [field_slice, helm_slice] = Hipace::m_zaxis.SplitSlice(i_slice_total);
+    const int i_slice = fd.m_base_diag_type == DiagnosticData::diag_type::helmholtz ?
+        helm_slice : field_slice;
+    if (i_slice < 0) {
+        return;
+    }
+
     const int i_slice_min = i_slice - depos_order_offset;
     const int i_slice_max = i_slice + depos_order_offset;
-    const amrex::Real pos_slice_min = i_slice_min * field_geom[0].CellSize(2) + poff_calc_z;
-    const amrex::Real pos_slice_max = i_slice_max * field_geom[0].CellSize(2) + poff_calc_z;
+    const amrex::Real pos_slice_min = i_slice_min * zgeom.CellSize(2) + poff_calc_z;
+    const amrex::Real pos_slice_max = i_slice_max * zgeom.CellSize(2) + poff_calc_z;
     int k_min = static_cast<int>(amrex::Math::round((pos_slice_min - poff_diag_z)
                                                           * fd.m_geom_io.InvCellSize(2)));
     const int k_max = static_cast<int>(amrex::Math::round((pos_slice_max - poff_diag_z)
@@ -525,7 +536,7 @@ Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
         m_rel_z_vec.resize(k_max+1-k_min);
         for (int k=k_min; k<=k_max; ++k) {
             const amrex::Real pos = k * fd.m_geom_io.CellSize(2) + poff_diag_z;
-            const amrex::Real mid_i_slice = (pos - poff_calc_z)*field_geom[0].InvCellSize(2);
+            const amrex::Real mid_i_slice = (pos - poff_calc_z)*zgeom.InvCellSize(2);
             m_rel_z_vec[k-k_min] = 0;
             for (int i=0; i<=depos_order_z; ++i) {
                 auto [shape_z, k_cell] = shape_factor<depos_order_z>(mid_i_slice, i);
@@ -550,9 +561,9 @@ Fields::Copy (const int current_N_level, const int i_slice, DiagnosticData& fd,
         diag_box.setBig(2, amrex::min(diag_box.bigEnd(2), k_stop));
     } else {
         m_rel_z_vec.resize(1);
-        const amrex::Real pos_z = i_slice * field_geom[0].CellSize(2) + poff_calc_z;
+        const amrex::Real pos_z = i_slice * zgeom.CellSize(2) + poff_calc_z;
         if (fd.m_geom_io.ProbLo(2) <= pos_z && pos_z <= fd.m_geom_io.ProbHi(2)) {
-            m_rel_z_vec[0] = field_geom[0].CellSize(2);
+            m_rel_z_vec[0] = zgeom.CellSize(2);
             k_min = 0;
         } else {
             return;

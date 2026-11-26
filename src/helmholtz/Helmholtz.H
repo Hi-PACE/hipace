@@ -167,6 +167,7 @@ public:
 private:
 
     bool m_use_helmholtz {false}; /**< whether a helmholtz is used or not */
+    int m_z_ref_ratio = 1;
     bool m_use_phase {true};
     std::string m_mode = "";
     amrex::Real m_lambda0 {0.};

@@ -541,21 +541,22 @@ void MultiBuffer::get_data (int slice, MultiBeam& beams, MultiLaser& laser, Helm
     HIPACE_PROFILE("MultiBuffer::get_data()");
     if (m_datanodes[slice].m_progress == comm_progress::ready_to_define) {
         // initialize MultiBeam and MultiLaser per slice on the first timestep
+        auto [field_slice, helm_slice] = Hipace::m_zaxis.SplitSlice(slice);
         for (int b = 0; b < m_nbeams; ++b) {
             beams.getBeam(b).initializeSlice(slice, beam_slice);
         }
-        if (laser.UseLaser(slice)) {
+        if (field_slice >= 0 && laser.UseLaser(field_slice)) {
             using namespace WhichLaserSlice;
             const int laser_comp = (beam_slice == WhichBeamSlice::Next) ? n00jp2_r : n00j00_r;
-            laser.InitSliceEnvelope(slice, laser_comp);
+            laser.InitSliceEnvelope(field_slice, laser_comp);
         }
-        if (helmholtz.UseHelmholtz(slice)) {
+        if (helm_slice >= 0 && helmholtz.UseHelmholtz(helm_slice)) {
             using namespace WhichHelmholtzSlice;
             int helmholtz_comp = (beam_slice == WhichBeamSlice::Next) ? Ex_n00jm1 : Ex_n00j00;
-            helmholtz.InitSliceEnvelope(slice, helmholtz_comp);
+            helmholtz.InitSliceEnvelope(helm_slice, helmholtz_comp);
             if (helmholtz.ModeIsEnvelope()) {
                 helmholtz_comp = (beam_slice == WhichBeamSlice::Next) ? Ei_n00jm1 : Ei_n00j00;
-                helmholtz.InitSliceEnvelope(slice, helmholtz_comp);
+                helmholtz.InitSliceEnvelope(helm_slice, helmholtz_comp);
             }
         }
     } else {
@@ -741,9 +742,10 @@ MultiBuffer::BufferOffset MultiBuffer::get_buffer_offset (int slice, MultiBeam& 
             }
         }
     }
+    auto [field_slice, helm_slice] = Hipace::m_zaxis.SplitSlice(slice);
 
     // add offset for laser, if used
-    if (laser.UseLaser(slice)) {
+    if (field_slice >= 0 && laser.UseLaser(field_slice)) {
         for (int lcomp = 0; lcomp < m_laser_ncomp; ++lcomp) {
             buffer_offset.m_laser[lcomp] = offset;
             offset += laser.getSlices()[0].box().numPts() * sizeof(amrex::Real);
@@ -751,7 +753,7 @@ MultiBuffer::BufferOffset MultiBuffer::get_buffer_offset (int slice, MultiBeam& 
     }
 
     // add offset for helmoltz, if used
-    if (helmholtz.UseHelmholtz(slice)) {
+    if (helm_slice >= 0 && helmholtz.UseHelmholtz(helm_slice)) {
         for (int hcomp = 0; hcomp < m_helmholtz_ncomp; ++hcomp) {
             buffer_offset.m_helmholtz[hcomp] = offset;
             offset += helmholtz.getSlices()[0].box().numPts() * sizeof(amrex::Real);
@@ -858,7 +860,8 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, Hel
             }
         }
     }
-    if (laser.UseLaser(slice)) {
+    auto [field_slice, helm_slice] = Hipace::m_zaxis.SplitSlice(slice);
+    if (field_slice >= 0 && laser.UseLaser(field_slice)) {
         using namespace WhichLaserSlice;
         const int laser_comp_0_1 = (beam_slice == WhichBeamSlice::Next) ? np1jp2_r : np1j00_r;
         const int laser_comp_2_3 = (beam_slice == WhichBeamSlice::Next) ? n00jp2_r : n00j00_r;
@@ -870,7 +873,7 @@ void MultiBuffer::pack_data (int slice, MultiBeam& beams, MultiLaser& laser, Hel
                          laser.getSlices()[0].dataPtr(laser_comp_2_3),
                          2 * laser.getSlices()[0].box().numPts() * sizeof(amrex::Real));
     }
-    if (helmholtz.UseHelmholtz(slice)) {
+    if (helm_slice >= 0 && helmholtz.UseHelmholtz(helm_slice)) {
         using namespace WhichHelmholtzSlice;
         if (beam_slice == WhichBeamSlice::Next) {
             amrex::Abort("You shouldn't be here, or maybe Ex_np1jm1 needs to be implemented?");
@@ -962,7 +965,8 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, H
             }
         }
     }
-    if (laser.UseLaser(slice)) {
+    auto [field_slice, helm_slice] = Hipace::m_zaxis.SplitSlice(slice);
+    if (field_slice >= 0 && laser.UseLaser(field_slice)) {
         using namespace WhichLaserSlice;
         const int laser_comp_0_1 = (beam_slice == WhichBeamSlice::Next) ? n00jp2_r : n00j00_r;
         const int laser_comp_2_3 = (beam_slice == WhichBeamSlice::Next) ? nm1jp2_r : nm1j00_r;
@@ -974,7 +978,7 @@ void MultiBuffer::unpack_data (int slice, MultiBeam& beams, MultiLaser& laser, H
                            laser.getSlices()[0].dataPtr(laser_comp_2_3),
                            2 * laser.getSlices()[0].box().numPts() * sizeof(amrex::Real));
     }
-    if (helmholtz.UseHelmholtz(slice)) {
+    if (helm_slice >= 0 && helmholtz.UseHelmholtz(helm_slice)) {
         using namespace WhichHelmholtzSlice;
 
         // copy real

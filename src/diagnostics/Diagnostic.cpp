@@ -1129,6 +1129,7 @@ Diagnostic::FillDiagnostics (int islice, int current_N_level,
                              MultiPlasma& plasmas, MultiBeam& beams, Helmholtz& helmholtz,
                              const amrex::Vector<amrex::Geometry>& field_geom)
 {
+    auto [field_slice, helm_slice] = Hipace::m_zaxis.SplitSlice(islice);
     for (auto& fd : m_diag_data) {
         if (!fd.m_has_output) {
             continue;
@@ -1141,14 +1142,14 @@ Diagnostic::FillDiagnostics (int islice, int current_N_level,
                 break;
             case DiagnosticData::diag_type::histogram:
                 if (!fd.m_hist_exit_boundary) {
-                    HistogramDepositionCopy(fd, islice, plasmas, beams, field_geom);
+                    HistogramDepositionCopy(fd, field_slice, plasmas, beams, field_geom);
                 }
                 break;
             case DiagnosticData::diag_type::beam:
                 CopyBeams(fd, beams);
                 break;
             case DiagnosticData::diag_type::plasma_slice:
-                if (islice == fd.m_plasma_output_slice) {
+                if (field_slice>= 0 && field_slice == fd.m_plasma_output_slice) {
                     CopyPlasmas(fd, plasmas);
                 }
                 break;
