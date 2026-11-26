@@ -56,7 +56,7 @@ HelmholtzDeposition (BeamParticleContainer& beam, Helmholtz& helmholtz,
     // Extract box properties
     const amrex::Real dxi = gm.InvCellSize(0);
     const amrex::Real dyi = gm.InvCellSize(1);
-    const amrex::Real dzi = gm.InvCellSize(2);
+    const amrex::Real dzi = Hipace::GetInstance().m_3D_geom[0].InvCellSize(2); // ???
     amrex::Real invvol = dxi * dyi * dzi;
 
     if (Hipace::m_normalized_units) {
