@@ -73,6 +73,7 @@ jobs:
         Invoke-WebRequest http://fftw.org/fftw-3.3.10.tar.gz -OutFile fftw-3.3.10.tar.gz
         7z.exe x -r fftw-3.3.10.tar.gz
         7z.exe x -r fftw-3.3.10.tar
+        choco upgrade llvm -y --no-progress
     - name: install dependencies
       shell: cmd
       env:
