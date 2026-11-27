@@ -49,9 +49,9 @@ HelmholtzDeposition (BeamParticleContainer& beam, Helmholtz& helmholtz,
         if (!in_undulator) return;
     }
 
-    const amrex::Real ku = 2.*MathConst::pi/beam.m_undulator_period[0];
-    const amrex::Real kr = helmholtz.getk0();
-    const amrex::Real fcK = beam.m_undulator_fcK[0];
+    const amrex::Real ku = mode_is_envelope ? 2.*MathConst::pi/beam.m_undulator_period[0] : 1.;
+    const amrex::Real kr = mode_is_envelope ? helmholtz.getk0() : 1.;
+    const amrex::Real fcK = mode_is_envelope ? beam.m_undulator_fcK[0] : 1.;
 
     // Extract box properties
     const amrex::Real dxi = gm.InvCellSize(0);
