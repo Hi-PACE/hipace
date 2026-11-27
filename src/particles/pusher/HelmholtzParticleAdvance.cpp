@@ -146,7 +146,7 @@ AdvanceBeamParticlesHelmholtz (
     const amrex::Real clight = phys_const.c;
     const amrex::Real inv_clight = 1.0_rt/phys_const.c;
     const amrex::Real charge_mass_ratio = beam.m_charge / beam.m_mass;
-    const amrex::Real min_z = gm[0].ProbLo(2) + (slice-gm[0].Domain().smallEnd(2))*gm[0].CellSize(2);
+    const amrex::Real min_z = Hipace::m_zaxis.TotalMinZ(slice);
     const bool use_external_fields = beam.m_use_external_fields;
     const auto external_fields = beam.m_external_fields;
 
@@ -267,11 +267,11 @@ AdvanceBeamParticlesHelmholtz (
                 amrex::Real Bxp = 0._rt, Byp = 0._rt, Bzp = 0._rt;
 
                 // field gather for a single particle
-                if (!c_use_helmholtz.value) {
+                // if (!c_use_helmholtz.value) {
                     doGatherShapeN<depos_order.value>(xp, yp, ExmByp, EypBxp, Ezp, Bxp, Byp, Bzp,
                         slice_arr, psi_comp, ez_comp, bx_comp, by_comp, bz_comp,
                         dx_inv, dy_inv, x_pos_offset, y_pos_offset);
-                }
+                // }
 
                 if (c_do_ez_inzerp.value) {
                     // Update Ez

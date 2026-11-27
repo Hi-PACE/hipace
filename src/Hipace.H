@@ -22,6 +22,7 @@
 #include "utils/GridIonization.H"
 #include "utils/Parser.H"
 #include "utils/MultiBuffer.H"
+#include "utils/ZAxis.H"
 #include "diagnostics/Diagnostic.H"
 #include "particles/collisions/Collision.H"
 
@@ -188,6 +189,7 @@ public:
     /** \brief get diagnostics file prefix */
     const std::string_view getDiagFilePrefix () const { return m_diags.getFilePrefix(); }
 
+    inline static ZAxis m_zaxis;
     /** 3D Geometry, vector over MR levels */
     amrex::Vector<amrex::Geometry> m_3D_geom;
     /** 3D DistributionMapping. Does not represent the parallelization pipeline correctly */

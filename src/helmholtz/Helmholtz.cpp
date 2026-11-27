@@ -82,6 +82,7 @@ Helmholtz::MakeHelmholtzGeometry (const amrex::Geometry& field_geom_3D)
     queryWithParser(pp, "n_cell", n_cells_helmholtz);
     queryWithParser(pp, "patch_lo", patch_lo_helmholtz);
     queryWithParser(pp, "patch_hi", patch_hi_helmholtz);
+    queryWithParser(pp, "z_ref_ratio", m_z_ref_ratio);
 
     // round zeta lo and hi to full cells
     const amrex::Real pos_offset_z = GetPosOffset(2, field_geom_3D, field_geom_3D.Domain());
@@ -98,8 +99,9 @@ Helmholtz::MakeHelmholtzGeometry (const amrex::Geometry& field_geom_3D)
     patch_hi_helmholtz[2] = (zeta_hi+0.5)*field_geom_3D.CellSize(2) + pos_offset_z;
 
     // make the boxes
-    const amrex::Box domain_3D_helmholtz{amrex::IntVect(0, 0, zeta_lo),
-        amrex::IntVect(n_cells_helmholtz[0]-1, n_cells_helmholtz[1]-1, zeta_hi)};
+    const amrex::Box domain_3D_helmholtz{amrex::IntVect(0, 0, m_z_ref_ratio * zeta_lo),
+        amrex::IntVect(n_cells_helmholtz[0]-1, n_cells_helmholtz[1]-1,
+            m_z_ref_ratio * (zeta_hi + 1) - 1)};
 
     const amrex::RealBox real_box(patch_lo_helmholtz, patch_hi_helmholtz);
 

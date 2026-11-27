@@ -486,12 +486,9 @@ InitBeamFixedWeightPDF3D ()
     if (m_do_symmetrize) num_to_add /= 4;
 
     const amrex::Geometry geom = Hipace::GetInstance().m_3D_geom[0];
-    const amrex::Box domain = geom.Domain();
+    const auto zaxis = Hipace::m_zaxis;
 
-    m_num_particles_slice.resize(domain.length(2) * m_pdf_ref_ratio);
-
-    const amrex::Real zoffset = geom.ProbLo(2);
-    const amrex::Real zscale = geom.CellSize(2) / m_pdf_ref_ratio;
+    m_num_particles_slice.resize(zaxis.m_total_num_slices * m_pdf_ref_ratio);
 
     amrex::Real integral = 0._rt;
     amrex::Real max_density = 0._rt;
@@ -504,9 +501,14 @@ InitBeamFixedWeightPDF3D ()
     const amrex::Real gamma_factor =
         1e6_rt * pc_SI.q_e / (m_mass * (pc_SI.m_e / pc.m_e) * pc_SI.c * pc_SI.c);
 
-    for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice>=0; --slice) {
-        const amrex::Real zmin = zoffset + slice*zscale;
-        const amrex::Real zmax = zoffset + (slice+1)*zscale;
+    for (int slice=zaxis.m_total_num_slices*m_pdf_ref_ratio-1; slice>=0; --slice) {
+
+        const amrex::Real zmin_total = zaxis.TotalMinZ(slice/m_pdf_ref_ratio);
+        const amrex::Real zmax_total = zaxis.TotalMinZ(slice/m_pdf_ref_ratio + 1);
+        const amrex::Real dz = (zmax_total - zmin_total) / m_pdf_ref_ratio;
+        const int r = slice % m_pdf_ref_ratio;
+        const amrex::Real zmin = zmin_total + r*dz;
+        const amrex::Real zmax = zmin_total + (r+1)*dz;
         const amrex::Real zmid = 0.5_rt*(zmin + zmax);
 
         const amrex::Real pdf_zmin = m_pdf_func(zmin);
@@ -518,7 +520,8 @@ InitBeamFixedWeightPDF3D ()
 
         if (m_peak_density_is_specified) {
             max_density = std::max(max_density, local_weight
-                / (zscale * m_pdf_pos_func[2](zmid) * m_pdf_pos_func[3](zmid) * 2._rt*MathConst::pi)
+                / (geom.CellSize(2) / m_pdf_ref_ratio * m_pdf_pos_func[2](zmid)
+                * m_pdf_pos_func[3](zmid) * 2._rt*MathConst::pi)
             );
         }
 
@@ -567,9 +570,13 @@ InitBeamFixedWeightPDF3D ()
         // resulting in a time complexity of O(num_slices*log(log(num_to_add)))
         const amrex::Long num_to_add_now = num_to_add - num_added;
 
-        for (int slice=domain.length(2)*m_pdf_ref_ratio-1; slice >=0; --slice) {
-            const amrex::Real zmin = zoffset + slice*zscale;
-            const amrex::Real zmax = zoffset + (slice+1)*zscale;
+        for (int slice=zaxis.m_total_num_slices*m_pdf_ref_ratio-1; slice >=0; --slice) {
+            const amrex::Real zmin_total = zaxis.TotalMinZ(slice/m_pdf_ref_ratio);
+            const amrex::Real zmax_total = zaxis.TotalMinZ(slice/m_pdf_ref_ratio + 1);
+            const amrex::Real dz = (zmax_total - zmin_total) / m_pdf_ref_ratio;
+            const int r = slice % m_pdf_ref_ratio;
+            const amrex::Real zmin = zmin_total + r*dz;
+            const amrex::Real zmax = zmin_total + (r+1)*dz;
 
             const amrex::Real pdf_zmin = m_pdf_func(zmin);
             const amrex::Real pdf_zmax = m_pdf_func(zmax);
@@ -634,10 +641,12 @@ InitBeamFixedWeightPDFSlice (int slice, int which_slice)
         const amrex::Real weight = m_total_weight / m_num_particles;
         const auto pos_func = m_pdf_pos_func;
         const auto u_func = m_pdf_u_func;
-        const amrex::Geometry& geom = Hipace::GetInstance().m_3D_geom[0];
-        const amrex::Real dz = geom.CellSize(2) / m_pdf_ref_ratio;
-        const amrex::Real zmin = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r)*dz;
-        const amrex::Real zmax = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r+1)*dz;
+        const auto zaxis = Hipace::m_zaxis;
+        const amrex::Real zmin_total = zaxis.TotalMinZ(slice);
+        const amrex::Real zmax_total = zaxis.TotalMinZ(slice+1);
+        const amrex::Real dz = (zmax_total - zmin_total) / m_pdf_ref_ratio;
+        const amrex::Real zmin = zmin_total + r*dz;
+        const amrex::Real zmax = zmin_total + (r+1)*dz;
         const amrex::Real lo_weight = m_pdf_func(zmin);
         const amrex::Real hi_weight = m_pdf_func(zmax);
         AMREX_ALWAYS_ASSERT(lo_weight + hi_weight > 0._rt);
@@ -747,10 +756,12 @@ InitBeamFixedWeightTwissSlice (int slice, int which_slice)
             std::numeric_limits<amrex::Real>::max() : m_radius * m_radius;
         const amrex::Real weight = m_total_weight / m_num_particles;
         const auto twiss_func = m_twiss_func;
-        const amrex::Geometry& geom = Hipace::GetInstance().m_3D_geom[0];
-        const amrex::Real dz = geom.CellSize(2) / m_pdf_ref_ratio;
-        const amrex::Real zmin = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r)*dz;
-        const amrex::Real zmax = geom.ProbLo(2) + (slice*m_pdf_ref_ratio+r+1)*dz;
+        const auto zaxis = Hipace::m_zaxis;
+        const amrex::Real zmin_total = zaxis.TotalMinZ(slice);
+        const amrex::Real zmax_total = zaxis.TotalMinZ(slice+1);
+        const amrex::Real dz = (zmax_total - zmin_total) / m_pdf_ref_ratio;
+        const amrex::Real zmin = zmin_total + r*dz;
+        const amrex::Real zmax = zmin_total + (r+1)*dz;
         const amrex::Real lo_weight = m_pdf_func(zmin);
         const amrex::Real hi_weight = m_pdf_func(zmax);
         AMREX_ALWAYS_ASSERT(lo_weight + hi_weight > 0._rt);

@@ -10,7 +10,7 @@
 #include "Hipace.H"
 
 void
-shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geometry const& geom)
+shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geometry const&)
 {
     if (beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This) == 0) {
         // nothing to do
@@ -22,7 +22,8 @@ shiftSlippedParticles (BeamParticleContainer& beam, const int slice, amrex::Geom
     const int num_particles = beam.getNumParticlesIncludingSlipped(WhichBeamSlice::This);
     const auto ptdr = beam.getBeamSlice(WhichBeamSlice::This).getParticleTileData();
     // min_z is the lower end of WhichBeamSlice::This
-    const amrex::Real min_z = geom.ProbLo(2) + (slice-geom.Domain().smallEnd(2))*geom.CellSize(2);
+    const auto zaxis = Hipace::m_zaxis;
+    const amrex::Real min_z = zaxis.TotalMinZ(slice);
 
     amrex::ReduceOps<amrex::ReduceOpSum, amrex::ReduceOpSum> reduce_op;
     amrex::ReduceData<int, int> reduce_data(reduce_op);

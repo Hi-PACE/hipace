@@ -8,6 +8,7 @@
 #include "BoxSort.H"
 #include "particles/beam/BeamParticleContainer.H"
 #include "utils/HipaceProfilerWrapper.H"
+#include "Hipace.H"
 
 #include <AMReX_ParticleTransformation.H>
 
@@ -31,12 +32,11 @@ void BoxSorter::sortParticlesByBox (const amrex::Real * z_array, const index_typ
     auto p_permutations = m_box_permutations.dataPtr();
 
     // Extract box properties
-    const amrex::Real dzi = a_geom.InvCellSize(2);
-    const amrex::Real plo_z = a_geom.ProbLo(2);
+    const auto zaxis = Hipace::m_zaxis;
 
     amrex::ParallelFor(num_particles,
         [=] AMREX_GPU_DEVICE (const index_type i) {
-            int dst_box = static_cast<int>((z_array[i] - plo_z) * dzi);
+            int dst_box = zaxis.ZToGlobalSlice(z_array[i]);
             if (dst_box < 0 || dst_box > num_boxes) {
                 // particle has left domain transversely, stick it at the end and invalidate
                 dst_box = num_boxes;
@@ -52,7 +52,7 @@ void BoxSorter::sortParticlesByBox (const amrex::Real * z_array, const index_typ
 
     amrex::ParallelFor(num_particles,
         [=] AMREX_GPU_DEVICE (const index_type i) {
-            int dst_box = static_cast<int>((z_array[i] - plo_z) * dzi);
+            int dst_box = zaxis.ZToGlobalSlice(z_array[i]);
             if (dst_box < 0 || dst_box > num_boxes) {
                 dst_box = num_boxes;
             }
